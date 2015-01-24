@@ -33,7 +33,8 @@ hangouts:coolguy@example.com
 ```
 # URLs:
 feed:http://example.com/sampleblog.xml
-rss://example.com/sampleblog.xml```
+rss://example.com/sampleblog.xml
+```
 
   If you are surfing a blog in Safari and want to subscribe to it in your Digg Reader account:
   * click Safari's Sharing button
@@ -48,9 +49,11 @@ Mind-mapper and project planner extraordinaire. Pinterest for geeks :-)
   ![screenie](/sites/Trello/screenshot.jpg?raw=true)
 ```
 URLs:
-trello:<search keywords>```  
+trello:<search keywords>
+```
+
 Opening these urls will pop a tab with a search of your Trello boards and cards for the supplied keywords.
-  PROTIP: Install Alfred, Quicksilver, or Spotlight to facilitate really fast searches.
+PROTIP: Install Alfred, Quicksilver, or Spotlight to facilitate really fast searches.
 
 Creating an App
 ====
