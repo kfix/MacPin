@@ -356,7 +356,7 @@ class WebTabViewController: NSTabViewController { // & NSViewController
 	//deinit { }
 }
 
-public class MacPin2: NSObject, WebAppScriptExports  {
+public class MacPin: NSObject, WebAppScriptExports  {
 	var app: NSApplication? = nil //the OSX app we are delegating methods for
 
 	var windowController = NSWindowController(window: NSWindow(
@@ -822,21 +822,21 @@ public class MacPin2: NSObject, WebAppScriptExports  {
 	func editSiteApp() { NSWorkspace.sharedWorkspace().openFile(resourcePath) }
 }
 
-extension MacPin2: NSSharingServicePickerDelegate { }
+extension MacPin: NSSharingServicePickerDelegate { }
 
-extension MacPin2: NSWindowDelegate {
+extension MacPin: NSWindowDelegate {
 	// these just handle tabless-background drags
 	func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
 	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true }
 	//func cancelOperation(sender: AnyObject?) { NSApplication.sharedApplication().sendAction(Selector("stopLoading"), to: nil, from: sender) }
 }
 
-extension MacPin2: NSWindowRestoration {
+extension MacPin: NSWindowRestoration {
 	class public func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow!,NSError!) -> Void)) {
 		warn("restoreWindowWithIdentifier: \(identifier)") // state: \(state)")
 		switch identifier {
 			case "browser":
-				var appdel = (NSApplication.sharedApplication().delegate as MacPin2)
+				var appdel = (NSApplication.sharedApplication().delegate as MacPin)
 				completionHandler(appdel.windowController.window!, nil)
 			default:
 				//have app remake window from scratch
@@ -861,7 +861,7 @@ extension NSMenu {
 	}
 }
 
-extension MacPin2: NSApplicationDelegate {
+extension MacPin: NSApplicationDelegate {
 	//optional func applicationDockMenu(_ sender: NSApplication) -> NSMenu?
 
 	public func applicationShouldOpenUntitledFile(app: NSApplication) -> Bool { return false }
@@ -941,7 +941,7 @@ extension MacPin2: NSApplicationDelegate {
 	public func applicationShouldTerminateAfterLastWindowClosed(app: NSApplication) -> Bool { return true }
 }
 
-extension MacPin2: NSUserNotificationCenterDelegate {
+extension MacPin: NSUserNotificationCenterDelegate {
 	//didDeliverNotification
 	public func userNotificationCenter(center: NSUserNotificationCenter, didActivateNotification notification: NSUserNotification) {
 		conlog("user clicked notification")
@@ -957,7 +957,7 @@ extension MacPin2: NSUserNotificationCenterDelegate {
 	public func userNotificationCenter(center: NSUserNotificationCenter, shouldPresentNotification notification: NSUserNotification) -> Bool { return true }
 }
 
-extension MacPin2: WKUIDelegate {
+extension MacPin: WKUIDelegate {
 	// could attach this to the window or view controllers instead
 
 	func webView(webView: WKWebView!, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
@@ -1025,7 +1025,7 @@ extension MacPin2: WKUIDelegate {
 
 }
 
-extension MacPin2: WKScriptMessageHandler {
+extension MacPin: WKScriptMessageHandler {
 	public func userContentController(userContentController: WKUserContentController, didReceiveScriptMessage message: WKScriptMessage) {
 		//called from JS: webkit.messageHandlers.<messsage.name>.postMessage(<message.body>);
 		switch message.name {
@@ -1039,7 +1039,7 @@ extension MacPin2: WKScriptMessageHandler {
 	}
 }
 
-extension MacPin2: WKNavigationDelegate {
+extension MacPin: WKNavigationDelegate {
 
 	//func webView(webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { }
 

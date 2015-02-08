@@ -32,7 +32,7 @@ bridgecode	= $(wildcard $(patsubst %.h, %.m, $(bridgeincs)))
 bridgeobj	= $(patsubst %.m, %.o, $(bridgecode))
 
 srcs		= main.swift
-modsrcs		= MacPin2.swift
+modsrcs		= MacPin.swift
 #^things that are @import'ed
 objs		= $(patsubst %.swift, %.o, $(modsrcs) $(srcs))
 
