@@ -20,12 +20,17 @@ if (window == top) {
 	<script>window.jstiming.load.tick('streamEnd');</script>*/
 
 	var getRoster = function() { return document.getElementById('gtn-roster-iframe-id-b'); } 
-	var xssRoster = function(req) { getRoster().contentWindow.postMessage(req, '*'); }
+	var xssRoster = function(req) { 
+		// FIXME: check getRoster() and retry until it yields - timeout ~30s
+		// ^ won't that stall the single JS thread? one per frame?
+		getRoster().contentWindow.postMessage(req, '*');
+	 }
 
 	var myGAIA = function(){ return document.querySelector('a[aria-label^=Profile]').getAttribute('href').slice(1); }
 	// this is your UID for G+: https://developers.google.com/apis-explorer/#p/plus/v1/plus.people.get?userId=me&_h=6&
 
 	//addEventListener("message", xss_eval, false); // intercept new chat window dispositions in the main content pane
+
 } else {
 	var evalMain = function(req) { top.postMessage(req, '*'); }
 	//addEventListener("message", xss_eval, false); // intercept loooots of data to individual chat iframes
@@ -41,13 +46,15 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 	// cathartic messages just have cpar=<YourGAIA>
 
 	var notifyMessages = function(msgs) { 
-		for (el of msgs) {
-			var from = el.innerText.split('\n').shift(); // from\ntimestamp
+		for (el of msgs) { // el should be a <button>
+			msg = el.innerText.split('\n').filter( function(v) { return (v.length > 0) }) //filter blank lines
+			var from = msg.shift();
+			var rcvd = msg.shift();
 			// naked sms: '(NNN) NNN-NNNN'
 			// shortcode sms: NNNNNN
 			// sms from number in your Gmail Contacts: 'Firstname Lastname \U2022 (NNN) NNN-NNNN'
 			// pure hangout messages can be named anything -- fixme: must differentiate these with hangouts:<foo@gmail>
-			var body = el.nextElementSibling.innerText;
+			var body = msg.join('\n');
 
 			//var replyTo = (el.parentNode.querySelector('div[title="This user may not be on Hangouts"]') != null) ?
 			//	 'sms:' + from.replace(/[^[0-9]/g, '') : // could discriminate with https://github.com/googlei18n/libphonenumber
@@ -60,7 +67,6 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 				 replyTo = 'hangouts:' + from;
 			}
 			if (body == "is video calling you" || body == "is calling you" || body == "You're in a call" || body == "You're in a video call") {
-				//webkit.messageHandlers.stealAppFocus.postMessage([]); //get in the user's face right now!!
 				webkit.messageHandlers.unhideApp.postMessage([]); //get in the user's face right now!!
 			} else {
 				webkit.messageHandlers.receivedHangoutsMessage.postMessage([from, replyTo, body]);
@@ -68,35 +74,54 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 		}
 	}
 
+	var findParentNodeOfTag = function(tagName, childObj) {
+		var testObj = childObj.parentNode;
+		var count = 1;
+		while(testObj.tagName != tagName) {
+			testObj = testObj.parentNode;
+			count++;
+		}
+		return testObj
+	}
+
+	var WatchForRoster = function() {
+		var cfg = { attributes: false, childList: true, characterData: false, subtree: true };
+		var watch = new MutationObserver(function(muts) { 
+			for (var mut of muts) {
+				if (mut.type === 'childList')
+					//if (mut.addedNodes.length > 0)
+						if (roster = mut.target.querySelector('div[tabindex="-1"]')) {
+							console.log("Found Hangouts chat roster, dispatching HangoutsRosterReady event");
+							setTimeout(function(){
+								window.dispatchEvent(new window.CustomEvent('HangoutsRosterReady',{'detail':{'roster': roster}}));
+							}, 10000); //need a little lag so hangouts can load up the contacts
+							window.rosterWatcher.unobserve(); // FIXME: use 'this'
+							break;
+						}
+			}
+		});
+		watch.observe(document.body, cfg);
+		return watch
+	}
+
 	var WatchForNewMessages = function(roster) {
 		//look for changed element attributes in the chat list representing new messages and send them to the notifier
-
-		//var watchcfg = { attributes: true, childList: true, characterData: true, subtree: true };
-		var watchcfg = { attributes: true, childList: false, attributeFilter: ['aria-label'], attributeOldValue: true, characterData: false, subtree: true };
-
-		var chatwatch = new MutationObserver(function(muts) {
+		var cfg = { attributes: true, childList: false, attributeFilter: ['aria-label'], attributeOldValue: true, characterData: false, subtree: true };
+		var watch = new MutationObserver(function(muts) {
 			for (var mut of muts) {
-				/* console.log(mut.type);
-				console.log(mut.target);
-				if (mut.type === 'childList') {
-					for (var el of mut.addedNodes) { //fixme: el == undefined
-							console.log(el.data);
-					}
-				} */
 				if (mut.type === 'attributes')
 					if (mut.target.nodeName == 'DIV') 
 						if (mut.target.getAttribute('aria-label') != mut.oldValue) //prevent duplicate notifications of fed-back identical messages from chats with myself
 							if (mut.target.getAttribute('aria-label').match(/ ([1-9]\d?) unread message/) != null) { //if more than 0 unreads, notify
 								console.log(Date() + ' [new message seen from:] ' + mut.target.innerText);
-								console.log('aria-label=' + mut.target.getAttribute('aria-label') + '!=' + mut.oldValue) //debug
-								notifyMessages([mut.target.parentElement.parentElement.parentElement.parentElement.parentElement]) // FIXME: make this less brittle
-								// how to get an upwards query selector?
+								//console.log('aria-label=' + mut.target.getAttribute('aria-label') + '!=' + mut.oldValue) //debug
+								notifyMessages([findParentNodeOfTag('BUTTON', mut.target)])
 							}
 			}
 			
 		});
-		chatwatch.observe(roster, watchcfg);
-		return chatwatch;
+		watch.observe(roster, cfg);
+		return watch;
 	}
 
 	var getCallBox = function() { return document.querySelector('input[spellcheck]'); }
@@ -159,13 +184,28 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 	//var openAVchat = function() { document.querySelector('a[title="Click to send SMS"]').previousSibling.previousSibling.children[0].dispatchEvent(evClick); } // Phone icon is second div before SMS link
 	//var openAVchat = function() { document.querySelector('img[src$="/phone-avatar.png"]').dispatchEvent(evClick); } // Phone icon is second div before SMS link
 	//var openAVchat = function() { document.querySelector('li[title="Call"]').dispatchEvent(evClick); } // Phone icon is second div before SMS link
+	var newAVChat = function() { document.querySelector('button[tabindex="-1"]').click() }; //Start a video Hangout
 
 	addEventListener("message", xss_eval, false);
 
-	var chatWatcher;
+	/* var chatWatcher;
 	setTimeout(function(){
 		window.chatWatcher = window.WatchForNewMessages(window.getTopConversation().parentNode.parentNode); //watch the whole roster
-		//FIXME sometimes win.gTC isnt ready yet!
-		// put it in a try block? pass it a closure? or just find a more stable ref
-	}, 10000);
+	}, 10000); */
+	//var rosterWatcher = window.WatchForNewMessages(); //watch the whole roster
+
+	var rosterWatcher;
+	window.addEventListener("HangoutsRosterReady", function(event) {
+		console.log("Caught HangoutsRosterReady event, dispatching message watcher");
+		webkit.messageHandlers.HangoutsRosterReady.postMessage([]); //callback JSCore to accept queued new message URLs
+		var chatWatcher = window.WatchForNewMessages(event.detail['roster']); //watch the whole roster
+		rosterWatcher.disconnect();
+	}, false);
+	rosterWatcher = window.WatchForRoster();
+
+
 } // -gtn-roster-iframe-id-b?
+
+if (~window.name.indexOf('gtn_') && false) { // chat convo
+	// need to un-redirect recv'd urls. "do no evil?" quit harvesting conversations google.
+}

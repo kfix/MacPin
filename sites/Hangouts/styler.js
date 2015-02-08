@@ -20,7 +20,7 @@ if (~window.name.indexOf('h_gtn_')) { //this is an incoming phone call notifcati
 			default:
 		}
 	});
-}
+};
 
 if (window == top)
 (function(){
@@ -36,6 +36,13 @@ if (window == top)
 			cssf.setAttribute("href", "file://restyle.css")
 			document.head.appendChild(cssf);
 			*/
+
+			// allow correct zooming
+			var vp = document.createElement("meta");
+			vp.setAttribute("name", "viewport");
+			vp.setAttribute("content", "initial-scale=1.0");
+			document.head.appendChild(vp);
+			//<meta name="viewport" content="initial-scale=1.0" />
 
 			var css = document.createElement("style");
 			css.type = 'text/css';
@@ -57,7 +64,7 @@ if (window == top)
 			//document.head.insertBefore(css,document.head.childNodes[0]); //prepend
 		}
 	}
-	document.addEventListener('DOMSubtreeModified', injectCSS, false);
+	document.addEventListener('DOMSubtreeModified', injectCSS, false); //mutation events are deprecated
 })()
 
 if (window == top)
@@ -67,4 +74,4 @@ window.addEventListener('resize', function(e){
 	if (roster = document.getElementById('ozIdRtRibbonChatRoster'))
 		roster.style.height = document.height - 1 + "px";
 	//return false;
-})
+});
