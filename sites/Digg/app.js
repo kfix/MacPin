@@ -1,6 +1,3 @@
-$.registerURLScheme('feed');
-$.registerURLScheme('rss');
-
 var delegate = {}; // our delegate to receive events from the osx app
 
 delegate.launchURL = function(url) {
@@ -10,9 +7,13 @@ delegate.launchURL = function(url) {
 	$.newAppTabWithJS("http://digg.com/reader/search/"+encodeURIComponent(feed), {'postinject':["styler"]});
 }
 
-if ($.lastLaunchedURL != '')
-	delegate.launchURL($.lastLaunchedURL);
-else
-	$.newAppTabWithJS("http://digg.com/reader", {'postinject':["styler"]});
-$.log('Digg setup script complete');
-delegate; //return this to osx
+delegate.AppFinishedLaunching = function() {
+	$.registerURLScheme('feed');
+	$.registerURLScheme('rss');
+
+	if ($.lastLaunchedURL != '')
+		delegate.launchURL($.lastLaunchedURL);
+	else
+		$.newAppTabWithJS("http://digg.com/reader", {'postinject':["styler"]});
+}
+delegate; //return delegate to app

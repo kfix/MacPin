@@ -4,6 +4,8 @@ MacPin creates a hybrid OSX & Web app from a simple Javascript.
 It appears as a very stripped down browser with just a tab-bar (aka. "Site Specific Browser").  
 You can see it in your App Switcher and it can post to Notification Center and recieve custom-scheme URLs opened on your Mac via Launch Services.
 
+(OSX 10.10 "Yosemite" required)
+
 Included Apps
 ======
 
@@ -55,6 +57,11 @@ trello:<search keywords>
 Opening these urls will pop a tab with a search of your Trello boards and cards for the supplied keywords.
 PROTIP: Install Alfred, Quicksilver, or Spotlight to facilitate really fast searches.
 
+* [Vine.app](http://vine.co)
+===
+It shows the mobile version of the site and does not preload any videos,  
+so you can choose how to spend your bandwidth & time.
+
 Creating an App
 ====
 ```
@@ -75,10 +82,13 @@ cp ~/Pictures/MySite.png icons/
 
 Develop
 ===
-Its mostly written in Swift using WKWebView and NSTabViewController. NIBless beacuse I felt like it.
-You need Xcode intalled on OSX Yosemite to get the Swift compiler and Cocoa headers.
+It's mostly written in Swift using WKWebView and NSTabViewController.
+No NIBs, fully programmatic UI layout.
+You need Xcode installed on OSX Yosemite to get the Swift compiler and Cocoa headers.
 ```
 vim webview.swift
 make test
 ```
 Web Inspector is available in the app, and remote debugging via Safari too when debug= is set in the Makefile.
+
+Check out https://github.com/mozilla/firefox-ios/ to see a another Swift-based browser for iOS.
