@@ -1,10 +1,17 @@
 #!/usr/bin/make -f
+# thanks to hints from:
+#   http://stackoverflow.com/a/24154763/3878712
+#   http://owensd.io/2015/01/14/compiling-swift-without-xcode.html
+#   http://railsware.com/blog/2014/06/26/creation-of-pure-swift-module/
+
 exec := macpin
 appdir := apps
-apps := Hangouts.app Trello.app Digg.app
+apps := Hangouts.app Trello.app Digg.app Vine.app
 #apps := $(addsuffix .app, $(basename $(wildcard sites/*)))
+#apps := $(patsubst %, %.app, $(basename $(wildcard sites/*)))
 debug ?=
-debug += -D APP2JSLOG
+debug += -D APP2JSLOG -D SAFARIDBG
+#^ need to make sure !release target
 
 VERSION := 1.0.0
 LAST_TAG != git describe --abbrev=0 --tags
@@ -15,19 +22,34 @@ GH_RELEASE_JSON = '{"tag_name": "v$(VERSION)","target_commitish": "master","name
 
 all: $(apps)
 
-%-objc-bridging.h:
-	touch $*-objc-bridging.h
-	#need to parse this to find .m's to compile
+swiftc		= xcrun -sdk macosx swiftc
+sdkpath		= $(shell xcrun --show-sdk-path --sdk macosx)
+frameworks	= -F $(sdkpath)/System/Library/Frameworks
+bridgehdr	= $(exec)-objc-bridging.h
+bridgeopt	= -import-objc-header $(bridgehdr)
+bridgeincs	= $(filter %.h, $(shell clang -E -H -fmodules -ObjC $(bridgehdr) -o /dev/null 2>&1))
+bridgecode	= $(wildcard $(patsubst %.h, %.m, $(bridgeincs)))
+bridgeobj	= $(patsubst %.m, %.o, $(bridgecode))
 
-# http://stackoverflow.com/a/24154763/3878712
-%.o: %.swift
-	xcrun -sdk macosx swiftc -c $(debug) -F $(shell xcrun --show-sdk-path)/System/Library/Frameworks -import-objc-header $*-objc-bridging.h -o $@ $<
+srcs		= main.swift
+modsrcs		= MacPin2.swift
+#^things that are @import'ed
+objs		= $(patsubst %.swift, %.o, $(modsrcs) $(srcs))
+
+%-objc-bridging.h:
+	[ -f $@ ] || touch $@
+
+$(exec): $(objs) $(bridgeobj)
+	$(swiftc) -emit-executable -I "./" -o $@ $+
+
+main.o: main.swift $(bridgehdr)
+	$(swiftc) -emit-object $(debug) $(frameworks) $(bridgeopt) -I "./" -o $@ $<
+
+%.o: %.swift $(bridgehdr)
+	$(swiftc) -emit-object -emit-library -module-name $* -emit-module-path $*.swiftmodule $(debug) $(frameworks) $(bridgeopt) -I "./" -o $@ $<
 
 %.o: %.m
 	xcrun -sdk macosx clang -c -F $(shell xcrun --show-sdk-path)/System/Library/Frameworks -fmodules -o $@ $<
-
-$(exec): $(exec).o 
-	xcrun -sdk macosx swiftc -o $@ $<
 
 icons/%.icns: icons/%.png
 	python icons/AppleIcnsMaker.py -p $<
@@ -36,7 +58,8 @@ icons/%.icns: icons/WebKit.icns
 	cp $< $@
 
 # https://developer.apple.com/library/mac/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
-%.app: $(exec) icons/%.icns sites/% sites/$(exec)_onload.js entitlements.plist
+# https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html
+%.app: $(exec) icons/%.icns sites/% entitlements.plist
 	python2.7 -m bundlebuilder \
 	--name=$* \
 	--bundle-id=com.github.kfix.$(exec).$* \
@@ -44,23 +67,24 @@ icons/%.icns: icons/WebKit.icns
 	--executable=$(exec) \
 	--iconfile=icons/$*.icns \
 	--file=sites/$*:Contents/Resources \
-	--file=sites/$(exec)_onload.js:Contents/Resources \
 	build
 	plutil -replace CFBundleShortVersionString -string "$(VERSION)" $(appdir)/$*.app/Contents/Info.plist 
 	plutil -replace CFBundleVersion -string "0.0.0" $(appdir)/$*.app/Contents/Info.plist
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $(appdir)/$*.app/Contents/Info.plist
-	[ -z "$(debug)" ] || codesign -s - -f --entitlements entitlements.plist $(appdir)/$*.app && codesign -dv $(appdir)/$*.app
+	#codesign -s - -f --entitlements entitlements.plist $(appdir)/$*.app && codesign -dv $(appdir)/$*.app
+	asctl container acl list -file $(appdir)/$*.app || true
 
 install: $(apps)
 	cd $(appdir); cp -R $+ ~/Applications
 
 clean:
-	rm -rf $(exec) *.o *.zip $(appdir)/*.app
+	rm -rf $(exec) *.o *.swiftmodule *.swiftdoc *.d *.zip $(appdir)/*.app 
 
 uninstall:
 	defaults delete $(exec) || true
 	rm -rf ~/Library/Caches/com.github.kfix.$(exec).* ~/Library/WebKit/com.github.kfix.$(exec).* ~/Library/WebKit/$(exec)
 	rm -rf ~/Library/Saved\ Application\ State/com.github.kfix.macpin.*
+	rm -rf ~/Library/Preferences/com.github.kfix.macpin.*
 	cd ~/Applications; rm -rf $(apps)
 	defaults read com.apple.spaces app-bindings | grep com.githib.kfix.macpin. || true
 	# open ~/Library/Preferences/com.apple.spaces.plist
@@ -70,7 +94,7 @@ install_exec: $(exec)
 
 test: $(exec)
 	#defaults delete $(exec)
-	$(exec)
+	$(exec) http://browsingtest.appspot.com
 
 Xcode:
 	cd $@
@@ -81,7 +105,8 @@ tag:
 	git tag -f -a v$(VERSION) -m 'release $(VERSION)'
 
 $(ZIP): tag
-	git archive --format=zip --output=$@ v$(VERSION) apps sites $(exec) *.swift *.h *.m Makefile
+	rm $(ZIP) || true
+	zip -r $@ apps/*.app --exclude .DS_Store/
 
 release: $(ZIP)
 	git push -f --tags
