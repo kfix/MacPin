@@ -1,3 +1,5 @@
+func warn(msg:String) { NSFileHandle.fileHandleWithStandardError().writeData((msg + "\n").dataUsingEncoding(NSUTF8StringEncoding)!) }
+
 public extension NSPasteboard {
 	func dump() {
 		if let items = self.pasteboardItems {
@@ -114,5 +116,21 @@ public extension JSValue {
 			// exec passed closure here?
 		}
 		return false
+	}
+}
+
+extension NSMenu {
+	func easyAddItem(title: String , _ action: String , _ key: String? = nil, _ keyflags: [NSEventModifierFlags] = []) {
+		var mi = NSMenuItem(
+			title: title,
+	    	action: Selector(action),
+		    keyEquivalent: (key ?? "")
+		)	
+		for keyflag in keyflags {
+			mi.keyEquivalentModifierMask |= Int(keyflag.rawValue)
+			 // .[AlphaShift|Shift|Control|Alternate|Command|Numeric|Function|Help]KeyMask
+		}
+		addItem(mi)
+		//return mi? or apply closure to it before add?
 	}
 }

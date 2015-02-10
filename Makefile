@@ -29,29 +29,32 @@ swiftc		:= xcrun -sdk macosx swiftc
 sdkpath		:= $(shell xcrun --show-sdk-path --sdk macosx)
 frameworks	:= -F $(sdkpath)/System/Library/Frameworks
 bridgehdr	:= $(wildcard $(exec)-objc-bridging.h)
-bridgeopt	:= $(patsubst %,-import-objc-header %, $(bridgehdr))
+bridgeopt	:= $(addprefix -import-objc-header , $(bridgehdr))
 bridgeincs	= $(filter %.h, $(shell clang -E -H -fmodules -ObjC $(bridgehdr) -o /dev/null 2>&1))
 bridgecode	= $(wildcard $(bridgeincs:.h=.m))
 bridgeobj	= $(bridgecode:.m=.o)
 
-mods		= $(filter-out %.o %.swiftmodule %.swiftdoc, $(wildcard modules/*))
+moddirs		= $(filter-out %.o %.swiftmodule %.swiftdoc %.a, $(wildcard modules/*))
 #^ sourcedirs that are @import'ed
-modobjs		= $(mods:=.o)
-modincs		= -I"./modules/"
+modobjs		= $(moddirs:=.o)
+#^ these are really .dylib's ..
+modarcs		= $(moddirs:=.a)
+modincdirs	= -Imodules -Lmodules
 
-objs		= $(modobjs) $(exec:=.o)
+objs		= $(modobjs) $(bridgeobj) $(exec:=.o) 
 
-$(exec): $(objs) $(bridgeobj)
-	$(swiftc) -emit-executable -I "./" -o $@ $+
+$(exec): $(objs)
+	$(swiftc) -emit-executable $(debug) $(frameworks) $(bridgeopt) $(modincdirs) -o $@ $+
+	for mod in $(modobjs); do install_name_tool -change $$mod @executable_path/$$mod $@; done
 
 $(exec).o: $(execsrcs)
-	$(swiftc) -emit-object $(debug) $(frameworks) $(bridgeopt) $(modincs) -o $@ $<
+	$(swiftc) -emit-object $(debug) $(frameworks) $(bridgeopt) $(modincdirs) -o $@ $<
 
 modules/%.o modules/%.swiftmodule modules/%.swiftdoc: modules/%/*.swift
-	$(swiftc) -emit-object -emit-library -module-name $* -emit-module-path $(@D)/$*.swiftmodule $(debug) $(frameworks) $(bridgeopt) -o $@ $+
+	$(swiftc) -emit-object -emit-library -module-name $* $(debug) $(frameworks) $(bridgeopt) -o $(@D)/$*.o $+ -emit-module-path $(@D)/$*.swiftmodule
 
-%.o %.swiftmodule %.swiftdoc: %.swift
-	$(swiftc) -emit-object -emit-library -module-name $* -emit-module-path $*.swiftmodule $(debug) $(frameworks) $(bridgeopt) $(modincs) -o $@ $<
+modules/%.a: modules/%.o
+	ar rcs $@ $<
 
 %.o: %.m
 	xcrun -sdk macosx clang -c $(frameworks) -fmodules -o $@ $<
@@ -73,18 +76,20 @@ icons/%.icns: icons/WebKit.icns
 	--iconfile=icons/$*.icns \
 	--file=sites/$*:Contents/Resources \
 	build
+	install -d $(appdir)/$*.app/Contents/MacOS/modules
+	install $(modobjs) $(appdir)/$*.app/Contents/MacOS/modules
 	plutil -replace CFBundleShortVersionString -string "$(VERSION)" $(appdir)/$*.app/Contents/Info.plist 
 	plutil -replace CFBundleVersion -string "0.0.0" $(appdir)/$*.app/Contents/Info.plist
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $(appdir)/$*.app/Contents/Info.plist
-	#codesign -s - -f --entitlements entitlements.plist $(appdir)/$*.app && codesign -dv $(appdir)/$*.app
-	asctl container acl list -file $(appdir)/$*.app || true
+	-codesign -s - -f --entitlements entitlements.plist $(appdir)/$*.app && codesign -dv $(appdir)/$*.app
+	-asctl container acl list -file $(appdir)/$*.app
 
 install: $(apps)
 	cd $(appdir); cp -R $+ ~/Applications
 
 clean:
 	-rm $(exec) *.o *.d *.zip 
-	-cd modules && rm *.o *.swiftmodule *.swiftdoc
+	-cd modules && rm *.o *.a *.swiftmodule *.swiftdoc
 	-cd appdir && rm -rf *.app 
 
 uninstall:

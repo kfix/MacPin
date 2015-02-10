@@ -1,3 +1,6 @@
+let URLBoxId = "urlbox"
+let ShareButton = "sharing"
+
 class URLBox: NSSearchField { //NSTextField
 	var tab: NSTabViewItem? {
 		didSet { //KVO to copy updates to webviews url & title (user navigations, history.pushState(), window.title=)
@@ -35,6 +38,7 @@ public extension NSTabViewItem {
 		return nil
 	}}
 
+	//swift 1.3 will safely perform `if let url = webview?.URL`
 	var URL: NSURL? { get { 
 		if let webview = webview { return webview.URL }
 		return nil
