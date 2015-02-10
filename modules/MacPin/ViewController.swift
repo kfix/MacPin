@@ -76,7 +76,7 @@ public extension NSTabViewItem {
     }
 }
 
-class WebTabViewController: NSTabViewController { // & NSViewController
+class TabViewController: NSTabViewController { // & NSViewController
 
 	let urlbox = URLBox() // retains some state and serves as a history go-between for WKNavigation / WKBackForwardList
 
@@ -196,6 +196,34 @@ class WebTabViewController: NSTabViewController { // & NSViewController
 	}
 	override func toolbarDidRemoveItem(notification: NSNotification) {}
 	*/
+
+	override func loadView() {
+		tabView = NSTabView()
+		tabView.identifier = "NSTabView"
+		tabView.tabViewType = .NoTabsNoBorder
+		tabView.drawsBackground = false // let the window be the background
+		super.loadView()
+	}
+
+	override func viewDidLoad() {
+		identifier = "NSTabViewController"
+		view.wantsLayer = true //use CALayer to coalesce views
+		view.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable //resize tabview's subviews to match its size
+		tabStyle = .Toolbar // this will reinit window.toolbar to mirror the tabview itembar
+		transitionOptions = .None //.Crossfade .SlideUp/Down/Left/Right/Forward/Backward
+		super.viewDidLoad()
+	}
+	
+	override func viewWillAppear() {
+		super.viewWillAppear()
+		if let window = view.window {
+			view.frame = window.contentLayoutRect //make it fit the entire window +/- toolbar movement
+			window.toolbar!.allowsUserCustomization = true
+			//window.toolbar!.identifier = "toolbar" // yikes, private setter hax to fix autosave, but it needs to happen before subview bind
+			//window.toolbar!.autosavesConfiguration = true
+			window.showsToolbarButton = true
+		}
+	}
 
 	//deinit { }
 }

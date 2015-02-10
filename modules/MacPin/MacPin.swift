@@ -38,14 +38,14 @@ import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/Ja
 public class MacPin: NSObject, WebAppScriptExports  {
 	var app: NSApplication? = nil //the OSX app we are delegating methods for
 
-	var windowController = NSWindowController(window: NSWindow(
+	var windowController = WindowController(window: NSWindow(
 		contentRect: NSMakeRect(0, 0, 600, 800),
 		styleMask: NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask | NSUnifiedTitleAndToolbarWindowMask | NSFullSizeContentViewWindowMask,
 		backing: .Buffered,
 		defer: true
 	))
 
-	var viewController = WebTabViewController() //also available as windowController.contentViewController
+	var viewController = TabViewController() //also available as windowController.contentViewController
 
 	var readyForClickedNotifications = true
 
@@ -86,7 +86,10 @@ public class MacPin: NSObject, WebAppScriptExports  {
 			prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 			//prefs.minimumFontSize = 14 //for blindies
 			prefs.javaScriptCanOpenWindowsAutomatically = true;
-			prefs._developerExtrasEnabled = true // http://trac.webkit.org/changeset/172406 will land in OSX 10.10.2?
+			prefs._developerExtrasEnabled = true // http://trac.webkit.org/changeset/172406 will land in OSX 10.10.3?
+#if WK2LOG
+			//prefs._diagnosticLoggingEnabled = true //10.10.3?
+#endif
 			return prefs
 		}
 	}
@@ -147,6 +150,19 @@ public class MacPin: NSObject, WebAppScriptExports  {
 		// LSOpenFromURLSpec(inLaunchSpec: launchurl, outLaunchedURL: nil)
 		// https://src.chromium.org/svn/trunk/src/chrome/browser/app_controller_mac.mm
 		}
+	}
+
+	func askToOpenURL(url: NSURL) {
+		conlog("prompting to Open URL: [\(url)]")
+		var alert = NSAlert()
+		alert.messageText = "Open URL with App?"
+		alert.addButtonWithTitle("OK")
+		alert.addButtonWithTitle("Cancel")
+		alert.informativeText = url.description
+		alert.icon = app?.applicationIconImage
+		alert.beginSheetModalForWindow(windowController.window!, completionHandler:{(response:NSModalResponse) -> Void in
+			if response == NSAlertFirstButtonReturn { NSWorkspace.sharedWorkspace().openURL(url) }
+ 		})
 	}
 
 /*
@@ -294,9 +310,11 @@ public class MacPin: NSObject, WebAppScriptExports  {
 	}
 
 	func validateURL(urlstr: String) -> NSURL? {
+		// https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 		if urlstr.isEmpty { return nil }
 		if let urlp = NSURLComponents(string: urlstr) {
 			if !((urlp.path ?? "").isEmpty) && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
+				// starts with '/' or '~/': scheme = "file"
 				urlp.scheme = "http"
 				urlp.host = urlp.path
 				urlp.path = nil
@@ -343,86 +361,18 @@ public class MacPin: NSObject, WebAppScriptExports  {
 	func zoomIn() { if let webview = currentTab?.webview { webview.magnification += 0.2 } }
 	func zoomOut() { if let webview = currentTab?.webview { webview.magnification -= 0.2 } }
 
-	func showApplication(sender: AnyObject?) {
-
-		if let window = windowController.window {
-			window.collectionBehavior = .FullScreenPrimary | .ParticipatesInCycle | .Managed | .CanJoinAllSpaces //.FullScreenAuxiliary | .MoveToActiveSpace 
-			window.movableByWindowBackground = true
-			window.backgroundColor = NSColor.whiteColor()
-			window.opaque = true
-			window.hasShadow = true
-			window.titleVisibility = .Hidden
-			window.appearance = NSAppearance(named: NSAppearanceNameVibrantDark) // Aqua LightContent VibrantDark VibrantLight //FIXME add a setter?
-
-			window.toolbar = NSToolbar(identifier: "toolbar") //placeholder, will be re-init'd by NSTabViewController
-
-			window.title = NSProcessInfo.processInfo().processName
-			app?.windowsMenu = NSMenu() 
-			app?.addWindowsItem(window, title: window.title!, filename: false)
-			
-			window.identifier = "browser"
-			//window.restorationClass = MacPin.self //NSWindowRestoration Protocol - not a multi-window app, so not needed yet
-
-			// build a tabview to hold all the webviews
-			//viewController.identifier = "NSTabViewController"
-			
-			viewController.tabView = NSTabView()
-			viewController.tabView.identifier = "NSTabView"
-			viewController.tabView.tabViewType = .NoTabsNoBorder
-			viewController.tabView.drawsBackground = false // let the window be the background
-			viewController.view.wantsLayer = true //use CALayer to coalesce views
-			viewController.view.frame = window.contentLayoutRect //make it fit the entire window +/- toolbar movement
- 			viewController.view.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable //resize tabview's subviews to match its size
-			viewController.tabStyle = .Toolbar // this will reinit window.toolbar to mirror the tabview itembar
-			viewController.transitionOptions = .None //.Crossfade .SlideUp/Down/Left/Right/Forward/Backward
-			//viewController.canPropagateSelectedChildViewControllerTitle = true
-			//viewController.title = nil //will autofill with selected tabView's title on tab switch
-			//viewController.addObserver(self, forKeyPath: "title", options: .Initial | .New, context: nil) //use KVO to copy updates to window.title
-
-			// lay down a blurry view underneath, only seen when transparency is toggled
-			var blurView = NSVisualEffectView(frame: window.contentLayoutRect)
-			blurView.blendingMode = .BehindWindow
-			blurView.material = .AppearanceBased //.Dark .Light .Titlebar
-			blurView.state = NSVisualEffectState.Active // set it to always be blurry regardless of window state
- 			blurView.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable
-			blurView.wantsLayer = true
-			blurView.layer?.cornerRadius = cornerRadius
-			blurView.layer?.masksToBounds = true
-
-			let cView = (window.contentView as NSView)
-			cView.wantsLayer = true
-			cView.layer?.cornerRadius = cornerRadius
-			cView.layer?.masksToBounds = true
-			//cView.autoresizesSubviews = false //ignore resizemasks
-			cView.addSubview(blurView)
-			cView.addSubview(viewController.view)
-
-			window.toolbar!.allowsUserCustomization = true
-			//window.toolbar!.identifier = "toolbar" // yikes, private setter hax to fix autosave, but it needs to happen before subview bind
-			//window.toolbar!.autosavesConfiguration = true
-			window.showsToolbarButton = true
-
-			//window.delegate = self // default is windowController
-			//window.registerForDraggedTypes([NSPasteboardTypeString,NSURLPboardType,NSFilenamesPboardType]) // DnD http://stackoverflow.com/a/26733085/3878712
-
-			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
-		}
-		windowController.shouldCascadeWindows = false // messes with Autosave
-		windowController.windowFrameAutosaveName = "browser"
-		windowController.showWindow(sender)
-	}
-
 	func toggleFullscreen() { windowController.window!.toggleFullScreen(nil) } //FIXME: super toggleFullScreen so that we can notify the webviews
 
 	func toggleTransparency() {
 		conlog("toggling transparency")
 		isTransparent = !isTransparent
-		let window: NSWindow = windowController.window!
-		window.backgroundColor = window.backgroundColor.colorWithAlphaComponent(abs(window.backgroundColor.alphaComponent - 1)) // 0|1 flip-flop
-		window.opaque = !window.opaque
-		window.hasShadow = !window.hasShadow
-		window.toolbar!.showsBaselineSeparator = !window.toolbar!.showsBaselineSeparator //super flat
-		
+		if let window = windowController.window {
+			window.backgroundColor = window.backgroundColor.colorWithAlphaComponent(abs(window.backgroundColor.alphaComponent - 1)) // 0|1 flip-flop
+			window.opaque = !window.opaque
+			window.hasShadow = !window.hasShadow
+			window.toolbar!.showsBaselineSeparator = !window.toolbar!.showsBaselineSeparator //super flat
+		}
+
 		/*
 		if let webview = (currentTab?.view as? WKWebView) {
 			webview.retain()

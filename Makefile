@@ -13,7 +13,7 @@ apps		 := Hangouts.app Trello.app Digg.app Vine.app
 #apps		 := $(addsuffix .app, $(basename $(wildcard sites/*)))
 #apps		 := $(patsubst %, %.app, $(basename $(wildcard sites/*)))
 debug		 ?=
-debug += -D APP2JSLOG -D SAFARIDBG
+debug += -D APP2JSLOG -D SAFARIDBG -D WK2LOG
 #^ need to make sure !release target
 
 VERSION		 := 1.0.0

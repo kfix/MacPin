@@ -13,9 +13,6 @@ extension MacPin: NSApplicationDelegate {
 		appMenu.submenu = NSMenu()
 		appMenu.submenu?.easyAddItem("Quit \(NSProcessInfo.processInfo().processName)", "terminate:", "q")
 		appMenu.submenu?.easyAddItem("About", "orderFrontStandardAboutPanel:")
-		appMenu.submenu?.easyAddItem("", "toggleFullScreen:")
-		appMenu.submenu?.easyAddItem("Toggle Translucency", "toggleTransparency")
-		appMenu.submenu?.easyAddItem("", "toggleToolbarShown:")
 		appMenu.submenu?.easyAddItem("Load Site App", "loadSiteApp")
 		appMenu.submenu?.easyAddItem("Edit Site App...", "editSiteApp")
 		app!.mainMenu?.addItem(appMenu) // 1st item shows up as CFPrintableName
@@ -40,13 +37,17 @@ extension MacPin: NSApplicationDelegate {
 		tabMenu.submenu?.easyAddItem("Close Tab", "closeCurrentTab", "w", [.CommandKeyMask])
 		tabMenu.submenu?.easyAddItem("Go Back", "goBack", "[", [.CommandKeyMask])
 		tabMenu.submenu?.easyAddItem("Go Forward", "goForward", "]", [.CommandKeyMask])	
-		tabMenu.submenu?.easyAddItem("Print", "print:")
-		tabMenu.submenu?.easyAddItem("Stop Loading", "stopLoading:", String(format:"%c", 27))  //ESC
+		tabMenu.submenu?.easyAddItem("Print Page", "print:")
+		//tabMenu.submenu?.easyAddItem("Stop Loading", "stopLoading:", String(format:"%c", 27))  //ESC -- need to handle with cancelOperation: instead
+		tabMenu.submenu?.easyAddItem("Stop Loading", "stopLoading:", ".", [.CommandKeyMask])
 		app!.mainMenu?.addItem(tabMenu) 
 
 		var winMenu = NSMenuItem()
 		winMenu.submenu = NSMenu()
 		winMenu.submenu?.title = "Window"
+		winMenu.submenu?.easyAddItem("", "toggleFullScreen:")
+		winMenu.submenu?.easyAddItem("Toggle Translucency", "toggleTransparency")
+		winMenu.submenu?.easyAddItem("", "toggleToolbarShown:")
 		winMenu.submenu?.easyAddItem("Open New Tab", "newTabPrompt", "t", [.CommandKeyMask])
 		winMenu.submenu?.easyAddItem("Show Next Tab", "selectNextTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask]) // \t
 		winMenu.submenu?.easyAddItem("Show Previous Tab", "selectPreviousTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask, .ShiftKeyMask])
@@ -56,7 +57,9 @@ extension MacPin: NSApplicationDelegate {
 		var newDnD = class_getInstanceMethod(WKView.self, "shimmedPerformDragOperation:")
 		method_exchangeImplementations(origDnD, newDnD) //swizzle that shizzlee to enable logging of DnD's
 
-		showApplication(self) //configure window and view controllers
+		//showApplication(self) //configure window and view controllers
+		windowController.window?.contentView.addSubview(viewController.view)
+		windowController.showWindow(self)
 	}
 
     public func applicationDidFinishLaunching(notification: NSNotification?) { //dock icon stops bouncing
@@ -96,23 +99,4 @@ extension MacPin: NSUserNotificationCenterDelegate {
 
 extension MacPin: NSSharingServicePickerDelegate { }
 
-extension MacPin: NSWindowDelegate {
-	// these just handle tabless-background drags
-	func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
-	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true }
-	//func cancelOperation(sender: AnyObject?) { NSApplication.sharedApplication().sendAction(Selector("stopLoading"), to: nil, from: sender) }
-}
 
-extension MacPin: NSWindowRestoration {
-	class public func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow!,NSError!) -> Void)) {
-		warn("restoreWindowWithIdentifier: \(identifier)") // state: \(state)")
-		switch identifier {
-			case "browser":
-				var appdel = (NSApplication.sharedApplication().delegate as MacPin)
-				completionHandler(appdel.windowController.window!, nil)
-			default:
-				//have app remake window from scratch
-				completionHandler(nil, nil) //FIXME: should ret an NSError
-		}
-	}
-}

@@ -1,6 +1,8 @@
-extension MacPin: WKUIDelegate {
-	// could attach this to the window or view controllers instead
+public extension WKWebView {
+	override func cancelOperation(sender: AnyObject?) { stopLoading(sender) } //make Esc key stop page load
+}
 
+extension MacPin: WKUIDelegate {
 	func webView(webView: WKWebView!, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
 		conlog("JS window.alert() -> \(message)")
 		var alert = NSAlert()
@@ -87,14 +89,22 @@ extension MacPin: WKNavigationDelegate {
 	func webView(webView: WKWebView!, decidePolicyForNavigationAction navigationAction: WKNavigationAction, decisionHandler: (WKNavigationActionPolicy) -> Void) {
 		let url = navigationAction.request.URL
 
-		// not registering this scheme globally for inter-app deep-linking, but maybe use it with buttons added to DOM
 		if let scheme = url.scheme? {
-			if scheme == "macpin" {
-				switch url.resourceSpecifier! {
-					case "resizeTo": fallthrough
-					default:
-    	    	    	decisionHandler(.Cancel)
-				}
+			switch scheme {
+				case "macpin": 
+					switch url.resourceSpecifier! {
+						case "resizeTo": fallthrough
+						default:
+    		    	    	decisionHandler(.Cancel)
+					}
+				//case "ftp": fallthrough
+				case "file": fallthrough
+				case "about": fallthrough
+				case "http": fallthrough
+				case "https": break
+				default: //weird protocols, or app launches like itmss:
+					askToOpenURL(url)
+    	        	decisionHandler(.Cancel)
 			}
 		}
 
@@ -168,9 +178,10 @@ extension MacPin: WKNavigationDelegate {
 		//  fixed?: https://github.com/WebKit/webkit/commit/9f890e75fcf7e94aad588881b7ed973c742d3cc8
 		if let url = (viewController.urlbox.cell() as NSSearchFieldCell).recentSearches.last as? String ?? webView.URL?.absoluteString ?? "about:blank" {
 			conlog("webView.didFailProvisionalNavigation() [\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())`")
-			if error.domain == NSURLErrorDomain && error.code != -999 && !webView.loading {
-				//`The operation couldn't be completed. (NSURLErrorDomain error -999.)` [NSURLErrorDomain] [-999] thrown often on working links
+			if error.domain == NSURLErrorDomain && error.code != -999 && !webView.loading { // thrown often on working links
+				//`The operation couldn't be completed. (NSURLErrorDomain error -999.)` [NSURLErrorDomain] [-999]
 				webView.loadHTMLString("<html><body><pre>`\(error.localizedDescription)`\n\(error.domain)\n\(error.code)\n`\(error.localizedFailureReason ?? String())`\n\(url)</pre></body></html>", baseURL: NSURL(string: url)!)
+				// FIXME: use status bar or alert panel instead of clobbering page
 			}
 		}
 	}
@@ -181,7 +192,6 @@ extension MacPin: WKNavigationDelegate {
 		let mime = navigationResponse.response.MIMEType!
 		let url = navigationResponse.response.URL!
 		let fn = navigationResponse.response.suggestedFilename!
-		//conlog("webView.decidePolicyForNavigationResponse() MIME-type:\(mime)\n\t`\(fn)`\n\t\(url)")
 
 		if _jsapi.tryFunc("decideNavigationForMIME", mime, url.description) { decisionHandler(.Cancel); return } //FIXME perf hit?
 
@@ -189,6 +199,7 @@ extension MacPin: WKNavigationDelegate {
 			decisionHandler(.Allow)
 		} else {
 			conlog("webView cannot render requested MIME-type:\(mime) @ \(url)")
+			if !_jsapi.tryFunc("handleUnrenderableMIME", mime, url.description, fn) { askToOpenURL(url) }
 			decisionHandler(.Cancel)
 		}
 	}
@@ -197,8 +208,11 @@ extension MacPin: WKNavigationDelegate {
 		// like server-issued error Statuses with no page content
 		if let url = webView.URL { 
 			conlog("webView.didFailNavigation() [\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())`")
-			if error.domain == WebKitErrorDomain && error.code == 204 { NSWorkspace.sharedWorkspace().openURL(url) } // `Plug-in handled load!` video/mp4 Open in New Window
-			webView.loadHTMLString("<html><body><pre>`\(error.localizedDescription)`\n\(error.domain)\n\(error.code)\n`\(error.localizedFailureReason ?? String())`\n\(url)</pre></body></html>", baseURL: url)
+			if error.domain == WebKitErrorDomain && error.code == 204 { askToOpenURL(url) } // `Plug-in handled load!` video/mp4 Open in New Window
+			if error.domain == NSURLErrorDomain && error.code != -999 { // thrown on stopLoading()
+				webView.loadHTMLString("<html><body><pre>`\(error.localizedDescription)`\n\(error.domain)\n\(error.code)\n`\(error.localizedFailureReason ?? String())`\n\(url)</pre></body></html>", baseURL: url)
+				// FIXME: use status bar or alert panel instead of clobbering page
+			}
 		}
     }
 	
@@ -233,13 +247,6 @@ extension MacPin: WKNavigationDelegate {
 
 		if url.description.isEmpty { 
 			conlog("url-less JS popup request!")
-		} else if url.scheme!.hasPrefix("chrome-http") { //reroute iOS-style chrome-http and chrome-https schemes to Chrome.app
-			conlog("redirecting JS popup to Chrome")
-			self.sysOpenURL(((url.scheme!.hasSuffix("s") ? "https:" : "http:") + url.resourceSpecifier!), "com.google.Chrome")	
-			//perhaps firing a Cocoa Share Extension would be more appropriate? deep-linking is spotty at best
-		} else if url.description == "macpin:resizeTo" {
-			 // WKWebView doesn't natively support window.resizeTo, use this target to simply resize existing NSWindow
-			window.setFrame(newframe, display: true)
 		} else if (windowFeatures.allowsResizing ?? 0) == 1 { 
 			conlog("JS popup request with size settings, origin,size[\(newframe)]")
 			windowController.window!.setFrame(newframe, display: true)

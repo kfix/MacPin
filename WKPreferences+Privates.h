@@ -18,10 +18,14 @@ RefPtr<WebKit::WebPreferences> _preferences;
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKPreferencesPrivate.h
 @property (nonatomic, setter=_setDeveloperExtrasEnabled:) BOOL _developerExtrasEnabled;
 @property (nonatomic, setter=_setFullScreenEnabled:) BOOL _fullScreenIsEnabled;
+@property (nonatomic, setter=_setDiagnosticLoggingEnabled:) BOOL _diagnosticLoggingEnabled;
 
-// need to be able to compile an ObjC++ class catergory/extension/continuation 
+// need to be able to compile an ObjC++ to C-API bridge
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/C/WKPreferencesRefPrivate.h
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/C/WKPreferences.cpp
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
 //@property (nonatomic, setter=_setFileAccessFromFileURLsAllowed:) BOOL _fileAccessFromFileURLsAllowed;
 //@property (nonatomic, setter=_setUniversalAccessFromFileURLsAllowed:) BOOL _universalAccessFromFileURLsAllowed;
+//@property (nonatomic, setter=_setForceFTPDDirectoryListings:) BOOL _forceFTPDDirectoryListings;
+
 @end
