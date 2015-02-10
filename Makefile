@@ -4,52 +4,57 @@
 #   http://owensd.io/2015/01/14/compiling-swift-without-xcode.html
 #   http://railsware.com/blog/2014/06/26/creation-of-pure-swift-module/
 
-exec := macpin
-appdir := apps
-apps := Hangouts.app Trello.app Digg.app Vine.app
-#apps := $(addsuffix .app, $(basename $(wildcard sites/*)))
-#apps := $(patsubst %, %.app, $(basename $(wildcard sites/*)))
-debug ?=
+exec		 := macpin
+execsrcs	 := main.swift
+#if defined output a named executable
+
+appdir		 := apps
+apps		 := Hangouts.app Trello.app Digg.app Vine.app
+#apps		 := $(addsuffix .app, $(basename $(wildcard sites/*)))
+#apps		 := $(patsubst %, %.app, $(basename $(wildcard sites/*)))
+debug		 ?=
 debug += -D APP2JSLOG -D SAFARIDBG
 #^ need to make sure !release target
 
-VERSION := 1.0.0
-LAST_TAG != git describe --abbrev=0 --tags
-USER := kfix
-REPO := MacPin
-ZIP := $(exec).zip
+VERSION		 := 1.0.0
+LAST_TAG	 != git describe --abbrev=0 --tags
+USER		 := kfix
+REPO		 := MacPin
+ZIP			 := $(exec).zip
 GH_RELEASE_JSON = '{"tag_name": "v$(VERSION)","target_commitish": "master","name": "v$(VERSION)","body": "MacPin build of version $(VERSION)","draft": false,"prerelease": false}'
 
 all: $(apps)
 
-swiftc		= xcrun -sdk macosx swiftc
-sdkpath		= $(shell xcrun --show-sdk-path --sdk macosx)
-frameworks	= -F $(sdkpath)/System/Library/Frameworks
-bridgehdr	= $(exec)-objc-bridging.h
-bridgeopt	= -import-objc-header $(bridgehdr)
+swiftc		:= xcrun -sdk macosx swiftc
+sdkpath		:= $(shell xcrun --show-sdk-path --sdk macosx)
+frameworks	:= -F $(sdkpath)/System/Library/Frameworks
+bridgehdr	:= $(wildcard $(exec)-objc-bridging.h)
+bridgeopt	:= $(patsubst %,-import-objc-header %, $(bridgehdr))
 bridgeincs	= $(filter %.h, $(shell clang -E -H -fmodules -ObjC $(bridgehdr) -o /dev/null 2>&1))
-bridgecode	= $(wildcard $(patsubst %.h, %.m, $(bridgeincs)))
-bridgeobj	= $(patsubst %.m, %.o, $(bridgecode))
+bridgecode	= $(wildcard $(bridgeincs:.h=.m))
+bridgeobj	= $(bridgecode:.m=.o)
 
-srcs		= main.swift
-modsrcs		= MacPin.swift
-#^things that are @import'ed
-objs		= $(patsubst %.swift, %.o, $(modsrcs) $(srcs))
+mods		= $(filter-out %.o %.swiftmodule %.swiftdoc, $(wildcard modules/*))
+#^ sourcedirs that are @import'ed
+modobjs		= $(mods:=.o)
+modincs		= -I"./modules/"
 
-%-objc-bridging.h:
-	[ -f $@ ] || touch $@
+objs		= $(modobjs) $(exec:=.o)
 
 $(exec): $(objs) $(bridgeobj)
 	$(swiftc) -emit-executable -I "./" -o $@ $+
 
-main.o: main.swift $(bridgehdr)
-	$(swiftc) -emit-object $(debug) $(frameworks) $(bridgeopt) -I "./" -o $@ $<
+$(exec).o: $(execsrcs)
+	$(swiftc) -emit-object $(debug) $(frameworks) $(bridgeopt) $(modincs) -o $@ $<
 
-%.o: %.swift $(bridgehdr)
-	$(swiftc) -emit-object -emit-library -module-name $* -emit-module-path $*.swiftmodule $(debug) $(frameworks) $(bridgeopt) -I "./" -o $@ $<
+modules/%.o modules/%.swiftmodule modules/%.swiftdoc: modules/%/*.swift
+	$(swiftc) -emit-object -emit-library -module-name $* -emit-module-path $(@D)/$*.swiftmodule $(debug) $(frameworks) $(bridgeopt) -o $@ $+
+
+%.o %.swiftmodule %.swiftdoc: %.swift
+	$(swiftc) -emit-object -emit-library -module-name $* -emit-module-path $*.swiftmodule $(debug) $(frameworks) $(bridgeopt) $(modincs) -o $@ $<
 
 %.o: %.m
-	xcrun -sdk macosx clang -c -F $(shell xcrun --show-sdk-path)/System/Library/Frameworks -fmodules -o $@ $<
+	xcrun -sdk macosx clang -c $(frameworks) -fmodules -o $@ $<
 
 icons/%.icns: icons/%.png
 	python icons/AppleIcnsMaker.py -p $<
@@ -78,7 +83,9 @@ install: $(apps)
 	cd $(appdir); cp -R $+ ~/Applications
 
 clean:
-	rm -rf $(exec) *.o *.swiftmodule *.swiftdoc *.d *.zip $(appdir)/*.app 
+	-rm $(exec) *.o *.d *.zip 
+	-cd modules && rm *.o *.swiftmodule *.swiftdoc
+	-cd appdir && rm -rf *.app 
 
 uninstall:
 	defaults delete $(exec) || true
