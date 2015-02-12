@@ -38,7 +38,6 @@ extension MacPin: NSApplicationDelegate {
 		tabMenu.submenu?.easyAddItem("Go Back", "goBack", "[", [.CommandKeyMask])
 		tabMenu.submenu?.easyAddItem("Go Forward", "goForward", "]", [.CommandKeyMask])	
 		tabMenu.submenu?.easyAddItem("Print Page", "print:")
-		//tabMenu.submenu?.easyAddItem("Stop Loading", "stopLoading:", String(format:"%c", 27))  //ESC -- need to handle with cancelOperation: instead
 		tabMenu.submenu?.easyAddItem("Stop Loading", "stopLoading:", ".", [.CommandKeyMask])
 		app!.mainMenu?.addItem(tabMenu) 
 
@@ -48,6 +47,7 @@ extension MacPin: NSApplicationDelegate {
 		winMenu.submenu?.easyAddItem("", "toggleFullScreen:")
 		winMenu.submenu?.easyAddItem("Toggle Translucency", "toggleTransparency")
 		winMenu.submenu?.easyAddItem("", "toggleToolbarShown:")
+		//winMenu.submenu?.easyAddItem("Toggle Toolbar", "toggleToolbar")
 		winMenu.submenu?.easyAddItem("Open New Tab", "newTabPrompt", "t", [.CommandKeyMask])
 		winMenu.submenu?.easyAddItem("Show Next Tab", "selectNextTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask]) // \t
 		winMenu.submenu?.easyAddItem("Show Previous Tab", "selectPreviousTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask, .ShiftKeyMask])
@@ -57,8 +57,7 @@ extension MacPin: NSApplicationDelegate {
 		var newDnD = class_getInstanceMethod(WKView.self, "shimmedPerformDragOperation:")
 		method_exchangeImplementations(origDnD, newDnD) //swizzle that shizzlee to enable logging of DnD's
 
-		//showApplication(self) //configure window and view controllers
-		windowController.window?.contentView.addSubview(viewController.view)
+		windowController.window!.contentView.addSubview(viewController.view)
 		windowController.showWindow(self)
 	}
 
@@ -90,7 +89,6 @@ extension MacPin: NSUserNotificationCenterDelegate {
 			conlog("handleClickedNotification fired!")
 			center.removeDeliveredNotification(notification)
 		}
-		//NSWorkspace.sharedWorkspace().openURL(NSURL(string: notification.subtitle ?? "")!)
 	}
 
 	// always display notifcations, even if app is active in foreground (for alert sounds)

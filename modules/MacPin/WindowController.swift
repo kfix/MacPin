@@ -1,13 +1,15 @@
-class WindowController: NSWindowController {
-	var cornerRadius = CGFloat(0.0) // increment to put nice corners on the window
+import CoreGraphics
+
+class WindowController: NSWindowController, NSWindowDelegate {
+	var cornerRadius = CGFloat(0.0) // increment to put nice corners on the window FIXME userDefaults
 
 	required init?(coder: NSCoder) { super.init(coder: coder) }
 
 	override init(window: NSWindow?) {
-		// since this is NIB-less, take care of awakeFromNib()s / windowDidLoad() tasks
+		// take care of awakeFromNib() & windowDidLoad() tasks, which are not called for NIBless windows
 		super.init(window: window)
 		if let window = window {
-			window.collectionBehavior = .FullScreenPrimary | .ParticipatesInCycle | .Managed | .CanJoinAllSpaces //.FullScreenAuxiliary | .MoveToActiveSpace 
+			window.collectionBehavior = .FullScreenPrimary | .ParticipatesInCycle | .Managed | .CanJoinAllSpaces | .FullScreenAuxiliary //| .MoveToActiveSpace 
 			window.movableByWindowBackground = true
 			window.backgroundColor = NSColor.whiteColor()
 			window.opaque = true
@@ -22,7 +24,11 @@ class WindowController: NSWindowController {
 			NSApplication.sharedApplication().addWindowsItem(window, title: window.title!, filename: false)
 			
 			window.identifier = "browser"
-			//window.restorationClass = MacPin.self //NSWindowRestoration Protocol - not a multi-window app, so not needed yet
+
+			let cView = (window.contentView as NSView)
+			cView.wantsLayer = true
+			cView.layer?.cornerRadius = cornerRadius
+			cView.layer?.masksToBounds = true
 
 			// lay down a blurry view underneath, only seen when transparency is toggled
 			var blurView = NSVisualEffectView(frame: window.contentLayoutRect)
@@ -33,41 +39,21 @@ class WindowController: NSWindowController {
 			blurView.wantsLayer = true
 			blurView.layer?.cornerRadius = cornerRadius
 			blurView.layer?.masksToBounds = true
-
-			let cView = (window.contentView as NSView)
-			cView.wantsLayer = true
-			cView.layer?.cornerRadius = cornerRadius
-			cView.layer?.masksToBounds = true
-			//cView.autoresizesSubviews = false //ignore resizemasks
 			cView.addSubview(blurView)
-			//cView.addSubview(viewController.view)
-
-			//window.delegate = self // default is windowController
-			//window.registerForDraggedTypes([NSPasteboardTypeString,NSURLPboardType,NSFilenamesPboardType]) // DnD http://stackoverflow.com/a/26733085/3878712
-
-			//window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
+			
+			window.registerForDraggedTypes([NSPasteboardTypeString,NSURLPboardType,NSFilenamesPboardType])
+			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
+			window.delegate = self
 		}
 		shouldCascadeWindows = false // messes with Autosave
 		windowFrameAutosaveName = "browser"
 	}
-}
 
-extension MacPin: NSWindowDelegate {
-	// these just handle tabless-background drags
+	// these just handle drags to a tabless-background, webviews define their own
 	func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
-	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true }
-}
+	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
 
-extension MacPin: NSWindowRestoration {
-	class public func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow!,NSError!) -> Void)) {
-		warn("restoreWindowWithIdentifier: \(identifier)") // state: \(state)")
-		switch identifier {
-			case "browser":
-				var appdel = (NSApplication.sharedApplication().delegate as MacPin)
-				completionHandler(appdel.windowController.window!, nil)
-			default:
-				//have app remake window from scratch
-				completionHandler(nil, nil) //FIXME: should ret an NSError
-		}
+	func window(window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplicationPresentationOptions) -> NSApplicationPresentationOptions {
+		return NSApplicationPresentationOptions.AutoHideToolbar | NSApplicationPresentationOptions.AutoHideMenuBar | NSApplicationPresentationOptions.FullScreen | proposedOptions
 	}
 }

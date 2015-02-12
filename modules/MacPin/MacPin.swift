@@ -9,8 +9,9 @@ import ObjectiveC
 import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
 
 @objc protocol WebAppScriptExports : JSExport { // '$' in app.js
-	var isTransparent: Bool { get }
-	var isFullscreen: Bool { get }
+	var isTransparent: Bool { get set }
+	var isFullscreen: Bool { get set }
+	var isToolbarShown: Bool { get set }
 	var readyForClickedNotifications: Bool { get set }
 	var lastLaunchedURL: String { get }
 	var tabCount: Int { get }
@@ -18,8 +19,6 @@ import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/Ja
 	var resourcePath: String { get }
 	var globalUserScripts: [String] { get set } // list of postinjects that any new webview will get
 	func conlog(msg: String)
-	func toggleTransparency()
-	func toggleFullscreen()
 	func closeCurrentTab()
 	func stealAppFocus()
 	func unhideApp()
@@ -40,7 +39,7 @@ public class MacPin: NSObject, WebAppScriptExports  {
 
 	var windowController = WindowController(window: NSWindow(
 		contentRect: NSMakeRect(0, 0, 600, 800),
-		styleMask: NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask | NSUnifiedTitleAndToolbarWindowMask | NSFullSizeContentViewWindowMask,
+		styleMask: NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask | NSUnifiedTitleAndToolbarWindowMask,
 		backing: .Buffered,
 		defer: true
 	))
@@ -49,14 +48,51 @@ public class MacPin: NSObject, WebAppScriptExports  {
 
 	var readyForClickedNotifications = true
 
-	var isTransparent = false
-	var isFullscreen: Bool { get { return (windowController.window?.contentView as NSView).inFullScreenMode } }
+	var isTransparent: Bool = false {
+		didSet {
+			if let window = windowController.window {
+				window.backgroundColor = window.backgroundColor.colorWithAlphaComponent(isTransparent ? 0 : 1) //clearColor | fooColor
+				window.opaque = !isTransparent
+				window.hasShadow = !isTransparent
+				window.toolbar!.showsBaselineSeparator = !isTransparent
+			}
+
+			for tab in viewController.tabViewItems {
+				if let webview = (tab as NSTabViewItem).webview {
+					webview._drawsTransparentBackground = isTransparent
+					//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
+					webview.needsDisplay = true
+					webview.setFrameSize(NSSize(width: webview.frame.size.width, height: webview.frame.size.height - 1)) //needed to fully redraw w/ dom-reflow or reload! 
+					webview.evaluateJavaScript("window.dispatchEvent(new window.CustomEvent('macpinTransparencyChanged',{'detail':{'isTransparent': \(isTransparent)}}));", completionHandler: nil)
+					webview.evaluateJavaScript("document.head.appendChild(document.createElement('style')).remove();", completionHandler: nil) //force redraw in case event didn't
+				}
+			}
+		}
+	}
+
+	var isFullscreen: Bool { 
+		get { return (windowController.window?.contentView as NSView).inFullScreenMode ?? false }
+		set(bool) { if bool != isFullscreen { windowController.window!.toggleFullScreen(nil)  }
+		}
+	}
+
+	var isToolbarShown: Bool { 
+		get { return windowController.window?.toolbar?.visible ?? true }
+		set(bool) {
+			if bool != isToolbarShown {
+				windowController.window!.toggleToolbarShown(nil) 
+				//windowController.window!.titlebarAppearsTransparent = !windowController.window!.titlebarAppearsTransparent
+				// ^ shifts contentView.x between the top of window : bottom edge of title(+tool)bar
+				//only seems to matter in fullscreen
+			}
+		}
+	}
 
 	var cornerRadius = CGFloat(0.0) // increment to put nice corners on the window
 
 	var lastLaunchedURL = "" //deferment state for cold opening URLs
 
-	var resourcePath: String { get { return ( NSBundle.mainBundle().resourcePath ?? String() ) } } // prepend file: ?
+	var resourcePath: String { get { return ( NSBundle.mainBundle().resourcePath ?? String() ) } }
 
 	var tabCount: Int { get { return viewController.tabViewItems.count } }
 
@@ -98,6 +134,7 @@ public class MacPin: NSObject, WebAppScriptExports  {
 	var globalUserScripts: [String] { // protect the app from bad JS settings?
 		get { return self._globalUserScripts }
 		set(newarr) { self._globalUserScripts = newarr }
+		//auto-replace loaded scripts in contentController?
 	}
 
 	//var defaultUserAgent: String {
@@ -145,10 +182,6 @@ public class MacPin: NSObject, WebAppScriptExports  {
 		if let url = NSURL(string: urlstr) {
 			NSWorkspace.sharedWorkspace().openURLs([url], withAppBundleIdentifier: appid, options: .AndHideOthers, additionalEventParamDescriptor: nil, launchIdentifiers: nil)
 			//options: .Default .NewInstance .AndHideOthers
-		//open -a "Google Chrome.app" --args --kiosk @url ....  // --args only works if the process isn't already running
-		// launchurl = LSLaunchURLSpec(appURL: nil, itemURLs: url, launchFlags: .kLSLaunchDefualts)
-		// LSOpenFromURLSpec(inLaunchSpec: launchurl, outLaunchedURL: nil)
-		// https://src.chromium.org/svn/trunk/src/chrome/browser/app_controller_mac.mm
 		}
 	}
 
@@ -165,24 +198,6 @@ public class MacPin: NSObject, WebAppScriptExports  {
  		})
 	}
 
-/*
-	func handleGetURLEvent(event: NSAppleEventDescriptor!, replyEvent: NSAppleEventDescriptor?) {
-		var url = NSURLComponents(string: event.paramDescriptorForKeyword(AEKeyword(keyDirectObject))!.stringValue!)!
-		conlog("OSX is asking me to launch \(url.URL!)")
-		var addr = url.path? ?? ""
-		switch url.scheme? ?? "" {
-			case "macpin-http", "macpin-https":
-				url.scheme = url.scheme!.hasSuffix("s") ? "https:" : "http:"
-        		newAppTab(url.URL!.description)
-			default:
-				lastLaunchedURL = url.URL!.description // in case jsapi or site's remote JS isn't finished loading yet, like `open uri://blah` when app is closed
-				conlog("Dispatching OSX-app-launched URL to JSCore: launchURL(\(url.URL!))")
-				_jsapi.tryFunc("launchURL", url.URL!.description)
-		}
-		//replyEvent == ??
-	}
-*/
-
 	func handleGetURLEvent(event: NSAppleEventDescriptor!, replyEvent: NSAppleEventDescriptor?) {
 		if let url = event.paramDescriptorForKeyword(AEKeyword(keyDirectObject))!.stringValue {
 			conlog("OSX is asking me to launch \(url)")
@@ -195,6 +210,7 @@ public class MacPin: NSObject, WebAppScriptExports  {
 	}
 
 	func newTab(withView: NSView, withIcon: String? = nil) -> String {
+		//var tab = TabViewItem(viewController: NSViewController(nibName: nil, bundle: nil)!)
 		var tab = NSTabViewItem(viewController: NSViewController())
 		tab.viewController!.view = withView 
 		//withView.translatesAutoresizingMaskIntoConstraints = false
@@ -351,8 +367,10 @@ public class MacPin: NSObject, WebAppScriptExports  {
 		if let tab = currentTab { 
 			tab.unwatchWebview()
 			viewController.removeTabViewItem(tab)
-		 }
+		}
+
 		if viewController.tabView.numberOfTabViewItems == 0 { windowController.window?.performClose(self) }
+		else { switchToNextTab() } //safari behavior
 	}
 
 	func switchToPreviousTab() { viewController.tabView.selectPreviousTabViewItem(self) }
@@ -361,38 +379,11 @@ public class MacPin: NSObject, WebAppScriptExports  {
 	func zoomIn() { if let webview = currentTab?.webview { webview.magnification += 0.2 } }
 	func zoomOut() { if let webview = currentTab?.webview { webview.magnification -= 0.2 } }
 
-	func toggleFullscreen() { windowController.window!.toggleFullScreen(nil) } //FIXME: super toggleFullScreen so that we can notify the webviews
+	//func toggleFullscreen() { windowController.window!.toggleFullScreen(nil) } //FIXME: super toggleFullScreen so that we can notify the webviews
 
-	func toggleTransparency() {
-		conlog("toggling transparency")
-		isTransparent = !isTransparent
-		if let window = windowController.window {
-			window.backgroundColor = window.backgroundColor.colorWithAlphaComponent(abs(window.backgroundColor.alphaComponent - 1)) // 0|1 flip-flop
-			window.opaque = !window.opaque
-			window.hasShadow = !window.hasShadow
-			window.toolbar!.showsBaselineSeparator = !window.toolbar!.showsBaselineSeparator //super flat
-		}
+	func toggleToolbar() { isToolbarShown = !isToolbarShown }
 
-		/*
-		if let webview = (currentTab?.view as? WKWebView) {
-			webview.retain()
-			webview.removeFromSuperView()
-			currentTab!.view = webview // .addSubview(webview)
- 		}
-		*/
-
-		for i in 0..<viewController.tabView.numberOfTabViewItems {
-			if let webview = (viewController.tabViewItems[i].view as? WKWebView) {
-				webview._drawsTransparentBackground = !webview._drawsTransparentBackground
-				//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
-				webview.needsDisplay = true
-				webview.setFrameSize(NSSize(width: webview.frame.size.width, height: webview.frame.size.height - 1)) //needed to fully redraw w/ dom-reflow or reload! 
-				webview.evaluateJavaScript("window.dispatchEvent(new window.CustomEvent('macpinTransparencyChanged',{'detail':{'isTransparent': \(isTransparent)}}));", completionHandler: nil)
-				webview.evaluateJavaScript("document.head.appendChild(document.createElement('style')).remove();", completionHandler: nil) //force redraw in case event didn't
-			}
-		}
-		//window.titlebarAppearsTransparent = !window.titlebarAppearsTransparent //this shifts the contentView between the top and bottom edges of the title(+tool)bar
-	}
+	func toggleTransparency() { isTransparent = !isTransparent }
 
 	func stealAppFocus() { app?.activateIgnoringOtherApps(true) }
 	func unhideApp() {

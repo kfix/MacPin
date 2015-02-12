@@ -34,7 +34,8 @@ class URLBox: NSSearchField { //NSTextField
 public extension NSTabViewItem {
 	// convenience props to get webview pertinents
 	var webview: WKWebView? { get {
-		if let webview = viewController?.view as? WKWebView { return webview }
+		//if let webview = viewController?.view as? WKWebView { return webview }
+		if let webview = view as? WKWebView { return webview }
 		return nil
 	}}
 
@@ -56,7 +57,7 @@ public extension NSTabViewItem {
 		 }
 	}
 
-	func unwatchWebview() { 
+	func unwatchWebview() {
 		if let webview = webview { 
 			webview.removeObserver(self, forKeyPath: "title")
 			webview.removeObserver(self, forKeyPath: "URL")
@@ -76,23 +77,33 @@ public extension NSTabViewItem {
     }
 }
 
+class TabViewItem: NSTabViewItem {
+	//viewController.view is where the webview is set ...
+
+	override func watchWebview() { }
+	override func unwatchWebview() { }
+
+	override var view: NSView? {
+		willSet(newview) {
+			if let newview = newview {
+				newview.addObserver(self, forKeyPath: "title", options: .Initial | .New, context: nil)
+				newview.addObserver(self, forKeyPath: "URL", options: .Initial | .New, context: nil)
+			}
+		}
+		didSet(oldview) {
+			if let oldview = oldview {
+				//oldview.removeObserver(self, forKeyPath: "title")
+				//oldview.removeObserver(self, forKeyPath: "URL")
+			}
+		}
+	}
+
+	deinit { view = nil }
+}
+
 class TabViewController: NSTabViewController { // & NSViewController
 
 	let urlbox = URLBox() // retains some state and serves as a history go-between for WKNavigation / WKBackForwardList
-
-/*
-	convenience override init() { // crashes, even with no instructions
-		self.init()
-		tabView = NSTabView()
-		tabView.identifier = "NSTabView"
-		tabView.tabViewType = .NoTabsNoBorder
-		tabView.drawsBackground = false // let the window be the background
-		view.wantsLayer = true //use CALayer to coalesce views
- 		view.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable //resize tabview's subviews to match its size
-		tabStyle = .Toolbar // this will reinit window.toolbar to mirror the tabview itembar
-		transitionOptions = .None //.Crossfade .SlideUp/Down/Left/Right/Forward/Backward
-	}
-*/
 
 	var currentTab: NSTabViewItem? { get {
 		if selectedTabViewItemIndex == -1 { return nil }
@@ -157,8 +168,7 @@ class TabViewController: NSTabViewController { // & NSViewController
 
 				urlbox.bezelStyle = .RoundedBezel
 				urlbox.drawsBackground = false
-				//urlbox.textColor = NSColor.whiteColor() 
-				//urlbox.backgroundColor =
+				urlbox.textColor = NSColor.controlTextColor() 
 				urlbox.toolTip = ""
  
 				if let cell = urlbox.cell() as? NSSearchFieldCell {
@@ -185,18 +195,6 @@ class TabViewController: NSTabViewController { // & NSViewController
 
 	}
 	
-	//override func toolbarSelectableItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] { return super.toolbarSelectableItemIdentifiers(toolbar) }
-
-	/*
-	override func toolbarWillAddItem(notification: NSNotification) {
-		if let item = notification.userInfo?["item"] as? NSToolbarItem {
-			warn("new toolbar item")
-			// .target? .action?
-		}
-	}
-	override func toolbarDidRemoveItem(notification: NSNotification) {}
-	*/
-
 	override func loadView() {
 		tabView = NSTabView()
 		tabView.identifier = "NSTabView"
@@ -208,7 +206,7 @@ class TabViewController: NSTabViewController { // & NSViewController
 	override func viewDidLoad() {
 		identifier = "NSTabViewController"
 		view.wantsLayer = true //use CALayer to coalesce views
-		view.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable //resize tabview's subviews to match its size
+		view.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable //resize tabview to match parent ContentView size
 		tabStyle = .Toolbar // this will reinit window.toolbar to mirror the tabview itembar
 		transitionOptions = .None //.Crossfade .SlideUp/Down/Left/Right/Forward/Backward
 		super.viewDidLoad()
@@ -217,13 +215,16 @@ class TabViewController: NSTabViewController { // & NSViewController
 	override func viewWillAppear() {
 		super.viewWillAppear()
 		if let window = view.window {
-			view.frame = window.contentLayoutRect //make it fit the entire window +/- toolbar movement
-			window.toolbar!.allowsUserCustomization = true
-			//window.toolbar!.identifier = "toolbar" // yikes, private setter hax to fix autosave, but it needs to happen before subview bind
-			//window.toolbar!.autosavesConfiguration = true
-			window.showsToolbarButton = true
+			view.frame = window.contentLayoutRect //initial size to entire window +/- toolbar movement
+			window.toolbar!.allowsUserCustomization = false
+			window.showsToolbarButton = false
 		}
 	}
 
-	//deinit { }
+	/*
+	override func viewWillLayout() {
+		println("viewWillLayout() \(view.frame)")
+		super.viewWillLayout()
+	}
+	*/
 }
