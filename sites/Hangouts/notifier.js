@@ -92,10 +92,8 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 					//if (mut.addedNodes.length > 0)
 						if (roster = mut.target.querySelector('div[tabindex="-1"]')) {
 							console.log("Found Hangouts chat roster, dispatching HangoutsRosterReady event");
-							setTimeout(function(){
-								window.dispatchEvent(new window.CustomEvent('HangoutsRosterReady',{'detail':{'roster': roster}}));
-							}, 10000); //need a little lag so hangouts can load up the contacts
-							window.rosterWatcher.unobserve(); // FIXME: use 'this'
+							window.dispatchEvent(new window.CustomEvent('HangoutsRosterReady',{'detail':{'roster': roster}}));
+							window.rosterWatcher.disconnect(); // FIXME: use 'this'
 							break;
 						}
 			}
@@ -197,9 +195,11 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 	var rosterWatcher;
 	window.addEventListener("HangoutsRosterReady", function(event) {
 		console.log("Caught HangoutsRosterReady event, dispatching message watcher");
-		webkit.messageHandlers.HangoutsRosterReady.postMessage([]); //callback JSCore to accept queued new message URLs
+		window.rosterWatcher.disconnect();
+		setTimeout(function(){
+			webkit.messageHandlers.HangoutsRosterReady.postMessage([]); //callback JSCore to accept queued new message URLs
+		}, 10000); //need a little lag so hangouts can finish populating contacts in the roster
 		var chatWatcher = window.WatchForNewMessages(event.detail['roster']); //watch the whole roster
-		rosterWatcher.disconnect();
 	}, false);
 	rosterWatcher = window.WatchForRoster();
 

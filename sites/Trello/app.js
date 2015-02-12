@@ -44,7 +44,7 @@ delegate.handleClickedNotifcation = function(from, url, msg) { $.sysOpenURL(url)
 
 delegate.AppFinishedLaunching = function() {
 	$.registerURLScheme('trello');
-	$.toggleTransparency();
+	$.isTransparent = true;
 
 	if ($.lastLaunchedURL != '') {
 		 delegate.launchURL($.lastLaunchedURL);
@@ -54,6 +54,5 @@ delegate.AppFinishedLaunching = function() {
 			'postinject':['dnd','styler','notifier'],
 			'handlers':['TrelloNotification']
 		});
-	}
 }
 delegate; //return this to macpin

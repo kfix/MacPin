@@ -1,14 +1,16 @@
 //$.readyForClickedNotifications = false; // the hangouts site takes some time to load...
+// https://webrtchacks.com/hangout-analysis-philipp-hancke/
 
 var delegate = {}; // our delegate to receive events from the webview app
 
 delegate.decideNavigationForClickedURL = function(url) { $.sysOpenURL(url); return true; }
 delegate.decideNavigationForMIME = function(url) { return false; }
 delegate.decideWindowOpenForURL = function(url) {
-	if (~url.indexOf("https://plus.google.com/hangouts/_")) { //G+ hangouts a/v chat
-		//$.sysOpenURL(url, "com.google.Chrome"); // use Hangouts Pepper WebRTC plugin
-		$.newAppTabWithJS(url);
-		$.switchToNextTab();
+	$.conlog("JScore: catching window.open() " + url);
+	if (~url.indexOf("https://plus.google.com/hangouts/_/")) { //G+ hangouts a/v chat
+		$.sysOpenURL(url, "com.google.Chrome"); // use Hangouts Pepper WebRTC plugin
+		//$.newAppTabWithJS(url);
+		//$.switchToNextTab();
 		return true;
 	};
 	//if url ^= https://talkgadget.google.com/u/0/talkgadget/_/frame
@@ -41,6 +43,7 @@ delegate.launchURL = function(url) { // $.sysOpenURL(/[sms|hangouts|tel]:.*/) ca
 	};
 };
 
+//addEventListener('receivedHangoutsMessage', function(e){...}, false); ??
 delegate.receivedHangoutsMessage = function(msg) {
 	// receives events from JS in 1st AppTab
 	// -> webkit.messageHandlers.receivedHangoutMessage.postMessage([from, replyTo, msg]);
@@ -51,12 +54,13 @@ delegate.receivedHangoutsMessage = function(msg) {
 
 delegate.handleClickedNotification = function(from, url, msg) { 
 	$.conlog("JS: opening notification for: "+ [from, url, msg]);
-	//$.sysOpenURL(url); //will end back up at launchURL
+	$.sysOpenURL(url); //will end back up at launchURL
 	return true;
 };
 
 delegate.unhideApp = function(msg) { $.unhideApp(); };
 
+//addEventListener('HangoutsRosterReady', function(e){...}, false); ??
 delegate.HangoutsRosterReady = function(msg) { // notifier.js will call this when roster div is created
 	//$.readyForClickedNotifications = true;
 	if ($.lastLaunchedURL != '') { //app was launched by an opened URL or a clicked notification - probably a [sms|tel]: link 
@@ -66,7 +70,7 @@ delegate.HangoutsRosterReady = function(msg) { // notifier.js will call this whe
 };
 
 delegate.AppFinishedLaunching = function() {
-	$.toggleTransparency();
+	$.isTransparent = true;
 	$.registerURLScheme('sms');
 	$.registerURLScheme('tel');
 	$.registerURLScheme('hangouts');
