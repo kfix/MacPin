@@ -13,10 +13,10 @@ apps		 := Hangouts.app Trello.app Digg.app Vine.app
 #apps		 := $(addsuffix .app, $(basename $(wildcard sites/*)))
 #apps		 := $(patsubst %, %.app, $(basename $(wildcard sites/*)))
 debug		 ?=
-debug += -D APP2JSLOG -D SAFARIDBG -D WK2LOG
+#debug += -D APP2JSLOG -D SAFARIDBG -D WK2LOG
 #^ need to make sure !release target
 
-VERSION		 := 1.0.0
+VERSION		 := 1.1.0
 LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin
@@ -90,7 +90,7 @@ install: $(apps)
 clean:
 	-rm $(exec) *.o *.d *.zip 
 	-cd modules && rm *.o *.a *.swiftmodule *.swiftdoc
-	-cd appdir && rm -rf *.app 
+	-cd $(appdir) && rm -rf *.app 
 
 uninstall:
 	defaults delete $(exec) || true
@@ -118,9 +118,9 @@ tag:
 
 $(ZIP): tag
 	rm $(ZIP) || true
-	zip -r $@ apps/*.app --exclude .DS_Store/
+	cd $(appdir); zip -no-wild -r ../$@ $(apps) --exclude .DS_Store
 
-release: $(ZIP)
+release: clean $(apps) $(ZIP)
 	git push -f --tags
 	posturl=$$(curl --data $(GH_RELEASE_JSON) "https://api.github.com/repos/$(USER)/$(REPO)/releases?access_token=$(GITHUB_ACCESS_TOKEN)" | jq -r .upload_url | sed 's/[\{\}]//g') && \
 	dload=$$(curl --fail -X POST -H "Content-Type: application/gzip" --data-binary "@$(ZIP)" "$$posturl=$(ZIP)&access_token=$(GITHUB_ACCESS_TOKEN)" | jq -r .browser_download_url | sed 's/[\{\}]//g') && \
