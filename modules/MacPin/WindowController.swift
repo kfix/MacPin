@@ -10,6 +10,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 		super.init(window: window)
 		if let window = window {
 			window.collectionBehavior = .FullScreenPrimary | .ParticipatesInCycle | .Managed | .CanJoinAllSpaces | .FullScreenAuxiliary //| .MoveToActiveSpace 
+			window.styleMask |= NSUnifiedTitleAndToolbarWindowMask
 			window.movableByWindowBackground = true
 			window.backgroundColor = NSColor.whiteColor()
 			window.opaque = true
@@ -17,9 +18,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			window.titleVisibility = .Hidden
 			window.appearance = NSAppearance(named: NSAppearanceNameVibrantDark) // Aqua LightContent VibrantDark VibrantLight //FIXME add a setter?
 
-			window.toolbar = NSToolbar(identifier: "toolbar") //placeholder, will be re-init'd by NSTabViewController
 
-			window.title = NSProcessInfo.processInfo().processName
 			NSApplication.sharedApplication().windowsMenu = NSMenu()
 			NSApplication.sharedApplication().addWindowsItem(window, title: window.title!, filename: false)
 			
@@ -30,7 +29,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			cView.layer?.cornerRadius = cornerRadius
 			cView.layer?.masksToBounds = true
 
-			// lay down a blurry view underneath, only seen when transparency is toggled
+			// lay down a blurry view underneath, only seen when transparency is toggled * document.body.bgColor == transparent, or no tabs loaded
 			var blurView = NSVisualEffectView(frame: window.contentLayoutRect)
 			blurView.blendingMode = .BehindWindow
 			blurView.material = .AppearanceBased //.Dark .Light .Titlebar
@@ -39,7 +38,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			blurView.wantsLayer = true
 			blurView.layer?.cornerRadius = cornerRadius
 			blurView.layer?.masksToBounds = true
-			cView.addSubview(blurView)
+			cView.addSubview(blurView, positioned: .Below, relativeTo: cView)
 			
 			window.registerForDraggedTypes([NSPasteboardTypeString,NSURLPboardType,NSFilenamesPboardType])
 			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))

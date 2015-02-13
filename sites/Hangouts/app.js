@@ -1,4 +1,3 @@
-//$.readyForClickedNotifications = false; // the hangouts site takes some time to load...
 // https://webrtchacks.com/hangout-analysis-philipp-hancke/
 
 var delegate = {}; // our delegate to receive events from the webview app
@@ -62,7 +61,6 @@ delegate.unhideApp = function(msg) { $.unhideApp(); };
 
 //addEventListener('HangoutsRosterReady', function(e){...}, false); ??
 delegate.HangoutsRosterReady = function(msg) { // notifier.js will call this when roster div is created
-	//$.readyForClickedNotifications = true;
 	if ($.lastLaunchedURL != '') { //app was launched by an opened URL or a clicked notification - probably a [sms|tel]: link 
 		$.unhideApp(); //user might have switched apps while waiting for roster to load
 		delegate.launchURL($.lastLaunchedURL);

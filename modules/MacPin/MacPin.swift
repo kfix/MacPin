@@ -12,7 +12,6 @@ import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/Ja
 	var isTransparent: Bool { get set }
 	var isFullscreen: Bool { get set }
 	var isToolbarShown: Bool { get set }
-	var readyForClickedNotifications: Bool { get set }
 	var lastLaunchedURL: String { get }
 	var tabCount: Int { get }
 	var tabSelected: AnyObject? { get set }
@@ -37,16 +36,8 @@ import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/Ja
 public class MacPin: NSObject, WebAppScriptExports  {
 	var app: NSApplication? = nil //the OSX app we are delegating methods for
 
-	var windowController = WindowController(window: NSWindow(
-		contentRect: NSMakeRect(0, 0, 600, 800),
-		styleMask: NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask | NSUnifiedTitleAndToolbarWindowMask,
-		backing: .Buffered,
-		defer: true
-	))
-
-	var viewController = TabViewController() //also available as windowController.contentViewController
-
-	var readyForClickedNotifications = true
+	var windowController = WindowController(window: NSWindow(contentViewController: TabViewController()))
+	var viewController: TabViewController { get { return windowController.contentViewController! as TabViewController } }
 
 	var isTransparent: Bool = false {
 		didSet {
@@ -78,13 +69,7 @@ public class MacPin: NSObject, WebAppScriptExports  {
 
 	var isToolbarShown: Bool { 
 		get { return windowController.window?.toolbar?.visible ?? true }
-		set(bool) {
-			if bool != isToolbarShown {
-				windowController.window!.toggleToolbarShown(nil) 
-				//windowController.window!.titlebarAppearsTransparent = !windowController.window!.titlebarAppearsTransparent
-				// ^ shifts contentView.x between the top of window : bottom edge of title(+tool)bar
-				//only seems to matter in fullscreen
-			}
+		set(bool) { if bool != isToolbarShown { windowController.window!.toggleToolbarShown(nil) }
 		}
 	}
 
@@ -210,13 +195,8 @@ public class MacPin: NSObject, WebAppScriptExports  {
 	}
 
 	func newTab(withView: NSView, withIcon: String? = nil) -> String {
-		//var tab = TabViewItem(viewController: NSViewController(nibName: nil, bundle: nil)!)
 		var tab = NSTabViewItem(viewController: NSViewController())
 		tab.viewController!.view = withView 
-		//withView.translatesAutoresizingMaskIntoConstraints = false
-		//withView.autoresizingMask = .ViewMinXMargin | .ViewMaxXMargin | .ViewMinYMargin | .ViewMaxYMargin
-		//withView.autoresizingMask |= .ViewWidthSizable | .ViewHeightSizable
-		//withView.autoresizingMask = .ViewMinYMargin | .ViewMaxYMargin
 		withView.wantsLayer = true
 		withView.layer?.cornerRadius = cornerRadius
 		withView.layer?.masksToBounds = true
@@ -231,7 +211,6 @@ public class MacPin: NSObject, WebAppScriptExports  {
 
 		tab.identifier = withView.identifier //NSUserInterfaceItemIdentification
 
-		tab.watchWebview()
 		viewController.addTabViewItem(tab)
 		return (tab.identifier as? String) ?? "worthless non-unique identifer" // Cocoa serializer?
 	}
@@ -364,10 +343,7 @@ public class MacPin: NSObject, WebAppScriptExports  {
 	}
 
 	func closeCurrentTab() {
-		if let tab = currentTab { 
-			tab.unwatchWebview()
-			viewController.removeTabViewItem(tab)
-		}
+		if let tab = currentTab { viewController.removeTabViewItem(tab) }
 
 		if viewController.tabView.numberOfTabViewItems == 0 { windowController.window?.performClose(self) }
 		else { switchToNextTab() } //safari behavior
@@ -378,10 +354,6 @@ public class MacPin: NSObject, WebAppScriptExports  {
 
 	func zoomIn() { if let webview = currentTab?.webview { webview.magnification += 0.2 } }
 	func zoomOut() { if let webview = currentTab?.webview { webview.magnification -= 0.2 } }
-
-	//func toggleFullscreen() { windowController.window!.toggleFullScreen(nil) } //FIXME: super toggleFullScreen so that we can notify the webviews
-
-	func toggleToolbar() { isToolbarShown = !isToolbarShown }
 
 	func toggleTransparency() { isTransparent = !isTransparent }
 

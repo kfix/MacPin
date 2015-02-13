@@ -1,3 +1,5 @@
+// need a file-picker>uploader delegate
+
 public extension WKWebView {
 	override func cancelOperation(sender: AnyObject?) { stopLoading(sender) } //make Esc key stop page load
 }
@@ -91,13 +93,6 @@ extension MacPin: WKNavigationDelegate {
 
 		if let scheme = url.scheme? {
 			switch scheme {
-				case "macpin": 
-					switch url.resourceSpecifier! {
-						case "resizeTo": fallthrough
-						default:
-    		    	    	decisionHandler(.Cancel)
-					}
-				//case "ftp": fallthrough
 				case "file": fallthrough
 				case "about": fallthrough
 				case "http": fallthrough

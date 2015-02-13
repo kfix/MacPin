@@ -47,7 +47,6 @@ extension MacPin: NSApplicationDelegate {
 		winMenu.submenu?.easyAddItem("", "toggleFullScreen:")
 		winMenu.submenu?.easyAddItem("Toggle Translucency", "toggleTransparency")
 		winMenu.submenu?.easyAddItem("", "toggleToolbarShown:")
-		//winMenu.submenu?.easyAddItem("Toggle Toolbar", "toggleToolbar")
 		winMenu.submenu?.easyAddItem("Open New Tab", "newTabPrompt", "t", [.CommandKeyMask])
 		winMenu.submenu?.easyAddItem("Show Next Tab", "selectNextTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask]) // \t
 		winMenu.submenu?.easyAddItem("Show Previous Tab", "selectPreviousTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask, .ShiftKeyMask])
@@ -57,7 +56,6 @@ extension MacPin: NSApplicationDelegate {
 		var newDnD = class_getInstanceMethod(WKView.self, "shimmedPerformDragOperation:")
 		method_exchangeImplementations(origDnD, newDnD) //swizzle that shizzlee to enable logging of DnD's
 
-		windowController.window!.contentView.addSubview(viewController.view)
 		windowController.showWindow(self)
 	}
 

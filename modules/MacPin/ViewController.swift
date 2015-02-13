@@ -3,102 +3,27 @@ let ShareButton = "sharing"
 
 class URLBox: NSSearchField { //NSTextField
 	var tab: NSTabViewItem? {
-		didSet { //KVO to copy updates to webviews url & title (user navigations, history.pushState(), window.title=)
+		didSet { //KVC to copy updates to webviews url & title (user navigations, history.pushState(), window.title=)
 			if let newtab = tab { 
-				newtab.webview?.addObserver(self, forKeyPath: "title", options: .Initial | .New, context: nil)
-				newtab.webview?.addObserver(self, forKeyPath: "URL", options: .Initial | .New, context: nil)
+				bind(NSToolTipBinding, toObject: newtab.view!, withKeyPath: "title", options: nil)
+
+				//let ttPattern = "%{value1}@ [%{value2}@]";
+				//bind("displayPatternValue1", toObject:newtab.view!, withKeyPath: "title", options: [NSDisplayPatternBindingOption: ttPattern])
+				//bind("displayPatternValue2", toObject:newtab.view!, withKeyPath: "URL", options: [NSDisplayPatternBindingOption: ttPattern])
+
+				bind(NSValueBinding, toObject: newtab.view!, withKeyPath: "URL", options: nil)
+				//^ this seems to work bidirectionally, which crashes when user hand inputs a url
 			 }
 		}
 		willSet(newtab) { 
 			if let oldtab = tab { 
-				oldtab.webview?.removeObserver(self, forKeyPath: "title")
-				oldtab.webview?.removeObserver(self, forKeyPath: "URL")
+				unbind(NSToolTipBinding)
+				//unbind("displayPatternValue1")
+				//unbind("displayPatternValue2")
+				unbind(NSValueBinding)
 			 }
 		}
 	}
-
-    override func observeValueForKeyPath(keyPath: String, ofObject object: AnyObject, change: [NSObject : AnyObject], context: UnsafeMutablePointer<()>) {
-		switch keyPath {
-			case "title": if let title = tab?.title { 
-				toolTip = title
-				if let window = window { window.title = title.isEmpty ? NSProcessInfo.processInfo().processName : title }
-			};
-			case "URL": if let URL = tab?.URL { stringValue = URL.description }
-			default: super.observeValueForKeyPath(keyPath, ofObject: object, change: change, context: context);
-		}
-    }
-
-	deinit { tab = nil } // prevent crashing from left-behind KVO observers
-}
-
-public extension NSTabViewItem {
-	// convenience props to get webview pertinents
-	var webview: WKWebView? { get {
-		//if let webview = viewController?.view as? WKWebView { return webview }
-		if let webview = view as? WKWebView { return webview }
-		return nil
-	}}
-
-	//swift 1.3 will safely perform `if let url = webview?.URL`
-	var URL: NSURL? { get { 
-		if let webview = webview { return webview.URL }
-		return nil
-	}}
-
-	var title: String? { get { 
-		if let webview = webview { return webview.title }
-		return nil
-	}}
-
-	func watchWebview() { //KVO to copy updates to webviews url & title (user navigations, history.pushState(), window.title=)
-		if let webview = webview { 
-			webview.addObserver(self, forKeyPath: "title", options: .Initial | .New, context: nil)
-			webview.addObserver(self, forKeyPath: "URL", options: .Initial | .New, context: nil)
-		 }
-	}
-
-	func unwatchWebview() {
-		if let webview = webview { 
-			webview.removeObserver(self, forKeyPath: "title")
-			webview.removeObserver(self, forKeyPath: "URL")
-		 }
-	}
-
-    override public func observeValueForKeyPath(keyPath: String, ofObject object: AnyObject, change: [NSObject : AnyObject], context: UnsafeMutablePointer<()>) {
-		switch keyPath {
-			case "title": fallthrough
-			case "URL":
-				 if let URL = URL { 
-				 	if let title = title { toolTip = "\(title) [\(URL)]"; break }
-					toolTip = URL.description
-				 }
-			default: super.observeValueForKeyPath(keyPath, ofObject: object, change: change, context: context);
-		}
-    }
-}
-
-class TabViewItem: NSTabViewItem {
-	//viewController.view is where the webview is set ...
-
-	override func watchWebview() { }
-	override func unwatchWebview() { }
-
-	override var view: NSView? {
-		willSet(newview) {
-			if let newview = newview {
-				newview.addObserver(self, forKeyPath: "title", options: .Initial | .New, context: nil)
-				newview.addObserver(self, forKeyPath: "URL", options: .Initial | .New, context: nil)
-			}
-		}
-		didSet(oldview) {
-			if let oldview = oldview {
-				//oldview.removeObserver(self, forKeyPath: "title")
-				//oldview.removeObserver(self, forKeyPath: "URL")
-			}
-		}
-	}
-
-	deinit { view = nil }
 }
 
 class TabViewController: NSTabViewController { // & NSViewController
@@ -110,10 +35,22 @@ class TabViewController: NSTabViewController { // & NSViewController
 		return (tabViewItems[selectedTabViewItemIndex] as? NSTabViewItem) ?? nil
 	}}
 
+	override func addTabViewItem(tab: NSTabViewItem) {
+		super.addTabViewItem(tab)
+		if let view = tab.view {
+			tab.bind(NSLabelBinding, toObject: view, withKeyPath: "title", options: nil)
+			tab.bind(NSToolTipBinding, toObject: view, withKeyPath: "title", options: nil)
+		}
+	}
+
 	//shouldSelect didSelect
 	override func tabView(tabView: NSTabView, willSelectTabViewItem tabViewItem: NSTabViewItem) { 
 		super.tabView(tabView, willSelectTabViewItem: tabViewItem)
 		urlbox.tab = tabViewItem // make the urlbox monitor the newly-selected tab's webview (if any)
+		if let window = view.window {
+			window.unbind(NSTitleBinding)
+			window.bind(NSTitleBinding, toObject: tabViewItem.view!, withKeyPath: "title", options: nil)
+		}
 	}
 
 	func tabForView(view: NSView) -> NSTabViewItem? {
@@ -138,8 +75,6 @@ class TabViewController: NSTabViewController { // & NSViewController
 
 	override func toolbarDefaultItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] { 
 		let tabs = super.toolbarDefaultItemIdentifiers(toolbar)
-		//return ["urlbox", NSToolbarFlexibleSpaceItemIdentifier] + tabs! // + [NSToolbarFlexibleSpaceItemIdentifier]
-		//return [NSToolbarFlexibleSpaceItemIdentifier] + tabs! + [NSToolbarFlexibleSpaceItemIdentifier]
 		return [ShareButton, URLBoxId] + tabs! + [NSToolbarFlexibleSpaceItemIdentifier]
 		//tabviewcontroller somehow remembers where tabs! was and keeps putting new tabs in that position
 	}
@@ -194,7 +129,7 @@ class TabViewController: NSTabViewController { // & NSViewController
 		}
 
 	}
-	
+
 	override func loadView() {
 		tabView = NSTabView()
 		tabView.identifier = "NSTabView"
@@ -209,13 +144,13 @@ class TabViewController: NSTabViewController { // & NSViewController
 		view.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable //resize tabview to match parent ContentView size
 		tabStyle = .Toolbar // this will reinit window.toolbar to mirror the tabview itembar
 		transitionOptions = .None //.Crossfade .SlideUp/Down/Left/Right/Forward/Backward
+		view.frame = NSMakeRect(0, 0, 600, 800) // default size
 		super.viewDidLoad()
 	}
 	
 	override func viewWillAppear() {
 		super.viewWillAppear()
 		if let window = view.window {
-			view.frame = window.contentLayoutRect //initial size to entire window +/- toolbar movement
 			window.toolbar!.allowsUserCustomization = false
 			window.showsToolbarButton = false
 		}

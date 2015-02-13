@@ -54,5 +54,7 @@ delegate.AppFinishedLaunching = function() {
 			'postinject':['dnd','styler','notifier'],
 			'handlers':['TrelloNotification']
 		});
+	}
+
 }
 delegate; //return this to macpin

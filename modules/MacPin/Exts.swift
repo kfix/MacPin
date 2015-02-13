@@ -31,6 +31,12 @@ public extension NSPasteboard {
 	}
 }
 
+public extension WKWebView {
+	override func setValue(value: AnyObject?, forUndefinedKey key: String) {
+		if key != "URL" { super.setValue(value, forUndefinedKey: key) }
+	}
+}
+
 public extension WKView {
 	//override public func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
 
@@ -134,3 +140,27 @@ extension NSMenu {
 		//return mi? or apply closure to it before add?
 	}
 }
+
+public extension NSTabViewItem {
+	// convenience props to get webview pertinents
+	var webview: WKWebView? { get {
+		//if let webview = viewController?.representedObject as? WKWebView { return webview }
+		//if let webview = viewController?.view as? WKWebView { return webview }
+		if let webview = view as? WKWebView { return webview }
+		return nil
+	}}
+
+	//swift 1.3 will safely perform `if let url = webview?.URL`
+	var URL: NSURL? { get { 
+		if let webview = webview { return webview.URL }
+		return nil
+	}}
+
+	var title: String? { get { 
+		if let webview = webview { return webview.title }
+		return nil
+	}}
+
+}
+
+
