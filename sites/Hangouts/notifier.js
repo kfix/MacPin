@@ -2,14 +2,18 @@ function xss_eval(event) {
 	console.log('origin['+event.origin +'] called @'+window.name+'.postMessage() -> req: '+event.data);
 
 	if ( event.origin != "https://plus.google.com" ) return; //only handle messages from main frame
-	args = event.data.slice();
-	func = args.shift();
-	if ( func != null && eval("typeof "+func+" === 'function'") ){
-		console.log('@'+window.name+'.xss_eval() -> '+func+'() -> args: ' + args);
-		func = eval(func)
-		res = func.apply(this, args); //splat
-		//event.source is origin's .window, could send result of func there with postMessage()
+
+	calls = event.data.slice();
+	for (argv of calls) {
+		func = argv.shift();
+		if ( eval("typeof "+func+" === 'function'") ){
+			console.log('@'+window.name+'.xss_eval() -> '+func+'() -> args: ' + argv);
+			func = eval(func)
+			res = func.apply(this, argv); //splat
+			//event.source is origin's .window, could send result of func there with postMessage()
+		}
 	}
+	
 }
 
 if (window == top) {
@@ -20,10 +24,12 @@ if (window == top) {
 	<script>window.jstiming.load.tick('streamEnd');</script>*/
 
 	var getRoster = function() { return document.getElementById('gtn-roster-iframe-id-b'); } 
-	var xssRoster = function(req) { 
-		// FIXME: check getRoster() and retry until it yields - timeout ~30s
-		// ^ won't that stall the single JS thread? one per frame?
-		getRoster().contentWindow.postMessage(req, '*');
+	var xssRoster = function(call1) { /* ([func1, arg1, arg2], [func2, arg1, arg2])*/
+		getRoster().contentWindow.postMessage(Array.prototype.slice.call(arguments), '*'); // ordered dispatch
+		//for (var i = 0; i < arguments.length; i++) { // immediate dispatch
+		//	var call = arguments[i];
+		//	getRoster().contentWindow.postMessage(call, '*');
+		//}
 	 }
 
 	var myGAIA = function(){ return document.querySelector('a[aria-label^=Profile]').getAttribute('href').slice(1); }
@@ -32,7 +38,7 @@ if (window == top) {
 	//addEventListener("message", xss_eval, false); // intercept new chat window dispositions in the main content pane
 
 } else {
-	var evalMain = function(req) { top.postMessage(req, '*'); }
+	var evalMain = function(req) { top.postMessage([req], '*'); }
 	//addEventListener("message", xss_eval, false); // intercept loooots of data to individual chat iframes
 	// https://github.com/tdryer/hangups/blob/master/hangups/pblite.py
 	// https://github.com/tdryer/hangups/blob/master/hangups/schemas.py
@@ -89,13 +95,12 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 		var watch = new MutationObserver(function(muts) { 
 			for (var mut of muts) {
 				if (mut.type === 'childList')
-					//if (mut.addedNodes.length > 0)
-						if (roster = mut.target.querySelector('div[tabindex="-1"]')) {
-							console.log("Found Hangouts chat roster, dispatching HangoutsRosterReady event");
-							window.dispatchEvent(new window.CustomEvent('HangoutsRosterReady',{'detail':{'roster': roster}}));
-							window.rosterWatcher.disconnect(); // FIXME: use 'this'
-							break;
-						}
+					if (roster = mut.target.querySelector('div[tabindex="-1"]')) {
+						console.log("Found Hangouts chat roster, dispatching HangoutsRosterReady event");
+						window.dispatchEvent(new window.CustomEvent('HangoutsRosterReady',{'detail':{'roster': roster}}));
+						window.rosterWatcher.disconnect(); // FIXME: use 'this'
+						break;
+					}
 			}
 		});
 		watch.observe(document.body, cfg);
@@ -155,7 +160,7 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 			108: '.'
 		};
 		for (key of keys) {
-			var keycode = key.charCodeAt(0);
+			var keycode = key.charCodeAt(0); // String.fromCharCode(keycode)
 			var keyid = keyids[keycode];
 			for (kt of ["keydown", "keypress", "keyup"]) {
 				var kev = new KeyboardEvent(kt, { bubbles: true, cancelable: true, view: window, detail: 0, keyIdentifier: keyid, location: KeyboardEvent.DOM_KEY_LOCATION_STANDARD, ctrlKey: false, altKey: false, shiftKey: false, metaKey: false }); //key: keycode 
@@ -173,7 +178,9 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 		if (typeof el.value == 'string') el.value += key;
 	};
 
-	var openSMS = function() { document.querySelector('a[title="Click to send SMS"]').click(); } // a='Send SMS' -> @main window.frames['gtn_96gm6a']
+	var openSMS = function() { setTimeout(function(){
+ 		document.querySelector('a[title="Click to send SMS"]').click(); // a='Send SMS' -> @main window.frames['gtn_96gm6a']
+	}, 1000); } //wait for contact to get found
 	var openHangout = function() { document.querySelector('button[title="Message"]').click(); } // ||'Video call' -> @main window.frames['gtn_96gm6a']
 	var checkFirstFoundContact = function() { document.querySelector('input[type="checkbox"]').click(); } //input[name=select_result]
 	var getFirstFoundContact = function() { document.querySelector('li[oid]'); } //click, mouseover, mouseout
@@ -185,12 +192,6 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 	var newAVChat = function() { document.querySelector('button[tabindex="-1"]').click() }; //Start a video Hangout
 
 	addEventListener("message", xss_eval, false);
-
-	/* var chatWatcher;
-	setTimeout(function(){
-		window.chatWatcher = window.WatchForNewMessages(window.getTopConversation().parentNode.parentNode); //watch the whole roster
-	}, 10000); */
-	//var rosterWatcher = window.WatchForNewMessages(); //watch the whole roster
 
 	var rosterWatcher;
 	window.addEventListener("HangoutsRosterReady", function(event) {

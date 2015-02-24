@@ -1,13 +1,14 @@
 // https://webrtchacks.com/hangout-analysis-philipp-hancke/
+var lastLaunchedURL = '';
 
 var delegate = {}; // our delegate to receive events from the webview app
 
-delegate.decideNavigationForClickedURL = function(url) { $.sysOpenURL(url); return true; }
+delegate.decideNavigationForClickedURL = function(url) { $osx.openURL(url); return true; }
 delegate.decideNavigationForMIME = function(url) { return false; }
 delegate.decideWindowOpenForURL = function(url) {
-	$.conlog("JScore: catching window.open() " + url);
+	$browser.conlog("JScore: catching window.open() " + url);
 	if (~url.indexOf("https://plus.google.com/hangouts/_/")) { //G+ hangouts a/v chat
-		$.sysOpenURL(url, "com.google.Chrome"); // use Hangouts Pepper WebRTC plugin
+		$osx.openURL(url, "com.google.Chrome"); // use Hangouts Pepper WebRTC plugin
 		//$.newAppTabWithJS(url);
 		//$.switchToNextTab();
 		return true;
@@ -16,8 +17,8 @@ delegate.decideWindowOpenForURL = function(url) {
 	return false;
 };
 
-delegate.launchURL = function(url) { // $.sysOpenURL(/[sms|hangouts|tel]:.*/) calls this
-	$.conlog("JScore: launching " + url);
+delegate.launchURL = function(url) { // $osx.openURL(/[sms|hangouts|tel]:.*/) calls this
+	$browser.conlog("app.js: launching " + url);
 	comps = url.split(':');
 	scheme = comps.shift();
 	addr = comps.shift();
@@ -30,13 +31,15 @@ delegate.launchURL = function(url) { // $.sysOpenURL(/[sms|hangouts|tel]:.*/) ca
 			//$.firstTabEvalJS("xssRoster(['inputAddress', "+addr+", ['.','\b','\r']]);"); //calls into AppTab[1]:notifier.js
 		// https://developer.apple.com/library/ios/featuredarticles/iPhoneURLScheme_Reference/Introduction/Introduction.html#//apple_ref/doc/uid/TP40007899
 		case 'sms':
-			$.firstTabEvalJS("xssRoster(['inputAddress', '"+addr+"']);"); //calls into AppTab[1]:notifier.js
+			//$.firstTabEvalJS("xssRoster(['inputAddress', '"+addr+"']);"); //calls into AppTab[1]:notifier.js
+			lastLaunchedURL = url; // in case app isn't ready to handle url immediately, will get pulled from var after Ready event
+			$browser.firstTabEvalJS("xssRoster(['inputAddress', '"+addr+"'], ['openSMS']);"); //calls into AppTab[1]:notifier.js
 			//$.firstTabEvalJS("xssRoster(['openSMS']);"); //wait for button to show
 			//$.firstTab().frame('gtn-roster-iframe-id-b').evalJS("inputAddress("+addr+");");
 			break;
 		case 'tel':
 			//$.newAppTab("https://plus.google.com/hangouts/_/?hl=en&hpn="+addr+"&hip="+addr+"&hnc=0");
-			$.sysOpenURL("https://plus.google.com/hangouts/_/?hl=en&hpn="+addr+"&hip="+addr+"&hnc=0", "com.google.Chrome"); //use Chrome's NaCL+WebRTC client
+			$osx.openURL("https://plus.google.com/hangouts/_/?hl=en&hpn="+addr+"&hip="+addr+"&hnc=0", "com.google.Chrome"); //use Chrome's NaCL+WebRTC client
 			break;
 		default:
 	};
@@ -47,13 +50,14 @@ delegate.receivedHangoutsMessage = function(msg) {
 	// receives events from JS in 1st AppTab
 	// -> webkit.messageHandlers.receivedHangoutMessage.postMessage([from, replyTo, msg]);
 	//$.postOSXNotification.apply(this, msg); // why no workie?
-	$.postOSXNotification(msg[0], msg[1], msg[2]);
-	$.conlog(Date() + ' [posted osx notification] ' + msg);
+	$osx.postNotification(msg[0], msg[1], msg[2]);
+	$browser.conlog(Date() + ' [posted osx notification] ' + msg);
 };
 
 delegate.handleClickedNotification = function(from, url, msg) { 
-	$.conlog("JS: opening notification for: "+ [from, url, msg]);
-	$.sysOpenURL(url); //will end back up at launchURL
+	$browser.conlog("JS: opening notification for: "+ [from, url, msg]);
+	lastLaunchedURL = url; // in case app isn't ready to handle url immediately, will get pulled from var after Ready event
+	delegate.launchURL(lastLaunchedURL);
 	return true;
 };
 
@@ -61,25 +65,33 @@ delegate.unhideApp = function(msg) { $.unhideApp(); };
 
 //addEventListener('HangoutsRosterReady', function(e){...}, false); ??
 delegate.HangoutsRosterReady = function(msg) { // notifier.js will call this when roster div is created
-	if ($.lastLaunchedURL != '') { //app was launched by an opened URL or a clicked notification - probably a [sms|tel]: link 
-		$.unhideApp(); //user might have switched apps while waiting for roster to load
-		delegate.launchURL($.lastLaunchedURL);
+	if (lastLaunchedURL != '') { //app was launched by an opened URL or a clicked notification - probably a [sms|tel]: link 
+		$browser.unhideApp(); //user might have switched apps while waiting for roster to load
+		delegate.launchURL(lastLaunchedURL);
+		lastLaunchedURL = '';
 	};
 };
 
 delegate.AppFinishedLaunching = function() {
-	$.isTransparent = true;
-	$.registerURLScheme('sms');
-	$.registerURLScheme('tel');
-	$.registerURLScheme('hangouts');
+	$osx.registerURLScheme('sms');
+	$osx.registerURLScheme('tel');
+	$osx.registerURLScheme('hangouts');
+	$browser.isTransparent = true;
 	// OSX Yosemite safari recognizes and launches sms and tel links to any associated app
 	//  https://github.com/WebKit/webkit/blob/ce77bdb93dbd24df1af5d44a475fe29b5816f8f9/Source/WebKit2/UIProcess/mac/WKActionMenuController.mm#L691
 
-	$.newAppTabWithJS("https://plus.google.com/hangouts", {
+//	$browser.newTab("https://plus.google.com/hangouts", {
+//		'postinject': ["notifier"],
+//		'preinject':  ["styler"],
+//		'handlers': ['receivedHangoutsMessage','unhideApp','HangoutsRosterReady']
+//	});
+	$browser.newTab({
+		'url': "https://plus.google.com/hangouts",
 		'postinject': ["notifier"],
 		'preinject':  ["styler"],
 		'handlers': ['receivedHangoutsMessage','unhideApp','HangoutsRosterReady']
 	});
+
 };
 
 delegate; //return this to macpin

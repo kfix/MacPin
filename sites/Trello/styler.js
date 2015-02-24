@@ -1,5 +1,10 @@
 var macpinIsTransparent;
 
+window.addEventListener("MacPinTransparencyChanged", function(event) {
+	window.macpinIsTransparent = event.detail["isTransparent"];
+	window.customizeBG();
+}, false);
+
 var customizeBG = function() {
 	var css = document.getElementById('customizeBG');
 	if (!css) {
@@ -17,14 +22,10 @@ var customizeBG = function() {
 	document.head.appendChild(css);
 }
 
-window.addEventListener("load", function(event) { window.customizeBG(); }, false);
-
-window.addEventListener("macpinTransparencyChanged", function(event) {
-	window.macpinIsTransparent = event.detail["isTransparent"];
-	window.customizeBG();
+window.addEventListener("load", function(event) { 
+	//window.customizeBG();
+	webkit.messageHandlers.MacPinPollStates.postMessage(["isTransparent"]);
 }, false);
-
-/*
 
 //trello uses HTML5 pushState and Backbone.js, so this script needs to corrupt their machiniations
 (function(history){
@@ -37,12 +38,15 @@ window.addEventListener("macpinTransparencyChanged", function(event) {
 	}
 })(window.history);
 history.onpushstate = function(event) {
-	setTimeout(window.customizeBG, 20000) //wait for new HTML to be generated
+	//setTimeout(window.customizeBG, 20000) //wait for new HTML to be generated
+	webkit.messageHandlers.MacPinPollStates.postMessage(["isTransparent"]);
 };
 
+/*
 window.addEventListener("popstate", function(event) {
 	// happens onLoad (Safari bug) and on manual fwd/backs, but not through board/card navigation pushState()s
 	window.customizeBG();
+	webkit.messageHandlers.MacPinPollStates.postMessage(["isTransparent"]);
 }, false);
 
 */

@@ -1,5 +1,49 @@
+import Cocoa
+import WebKit
+import JavaScriptCore
+
 func warn(msg:String) { NSFileHandle.fileHandleWithStandardError().writeData((msg + "\n").dataUsingEncoding(NSUTF8StringEncoding)!) }
 
+func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true) -> Bool {
+	if let script_url = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") {
+		warn("loading userscript: \(script_url)")
+		var script = WKUserScript(
+			source: NSString(contentsOfURL: script_url, encoding: NSUTF8StringEncoding, error: nil)!,
+		    injectionTime: inject,
+		    forMainFrameOnly: onlyForTop
+		)
+		webctl.addUserScript(script)
+	} else {
+		return false //NSError?
+	}
+	return true
+}
+
+func validateURL(urlstr: String) -> NSURL? {
+	// https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
+	if urlstr.isEmpty { return nil }
+	if let urlp = NSURLComponents(string: urlstr) {
+		if !((urlp.path ?? "").isEmpty) && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
+			// FIXME check if starts with '/' or '~/': scheme = "file"
+			urlp.scheme = "http"
+			urlp.host = urlp.path
+			urlp.path = nil
+		}
+		if let url = urlp.URL { return url }
+	}
+
+	if jsruntime.delegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // the delegate function will open url directly
+
+	// maybe its a search query? check if blank and reformat it
+	if !urlstr.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty {
+		if let query = urlstr.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding) {
+			if let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") { return search }
+		}
+	}
+
+	return nil 
+}
+	
 public extension NSPasteboard {
 	func dump() {
 		if let items = self.pasteboardItems {
@@ -28,12 +72,6 @@ public extension NSPasteboard {
 				} //T
 			} //F
 		} // PewPewDIE!@#$!$#!@
-	}
-}
-
-public extension WKWebView {
-	override func setValue(value: AnyObject?, forUndefinedKey key: String) {
-		if key != "URL" { super.setValue(value, forUndefinedKey: key) }
 	}
 }
 
@@ -113,54 +151,3 @@ public extension WKView {
 		return self.shimmedPerformDragOperation(sender) //return pre-swizzled method		
 	}
 }
-
-public extension JSValue {
-	func tryFunc (method: String, _ args: AnyObject...) -> Bool {
-		if self.hasProperty(method) {
-			var ret = self.invokeMethod(method, withArguments: args)
-			if let bool = ret.toObject() as? Bool { return bool }
-			// exec passed closure here?
-		}
-		return false
-	}
-}
-
-extension NSMenu {
-	func easyAddItem(title: String , _ action: String , _ key: String? = nil, _ keyflags: [NSEventModifierFlags] = []) {
-		var mi = NSMenuItem(
-			title: title,
-	    	action: Selector(action),
-		    keyEquivalent: (key ?? "")
-		)	
-		for keyflag in keyflags {
-			mi.keyEquivalentModifierMask |= Int(keyflag.rawValue)
-			 // .[AlphaShift|Shift|Control|Alternate|Command|Numeric|Function|Help]KeyMask
-		}
-		addItem(mi)
-		//return mi? or apply closure to it before add?
-	}
-}
-
-public extension NSTabViewItem {
-	// convenience props to get webview pertinents
-	var webview: WKWebView? { get {
-		//if let webview = viewController?.representedObject as? WKWebView { return webview }
-		//if let webview = viewController?.view as? WKWebView { return webview }
-		if let webview = view as? WKWebView { return webview }
-		return nil
-	}}
-
-	//swift 1.3 will safely perform `if let url = webview?.URL`
-	var URL: NSURL? { get { 
-		if let webview = webview { return webview.URL }
-		return nil
-	}}
-
-	var title: String? { get { 
-		if let webview = webview { return webview.title }
-		return nil
-	}}
-
-}
-
-
