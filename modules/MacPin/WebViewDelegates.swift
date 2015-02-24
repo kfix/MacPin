@@ -5,21 +5,6 @@
 
 import WebKit
 
-public extension WKWebView {
-	func conlog(msg: String) { 
-		warn(msg)
-#if APP2JSLOG
-		evaluateJavaScript("console.log(\'<\(__FILE__)> \(msg)\')", completionHandler: nil)
-#endif
-	}
-
-	override func cancelOperation(sender: AnyObject?) { stopLoading(sender) } //make Esc key stop page load
-
-	override func setValue(value: AnyObject?, forUndefinedKey key: String) {
-		if key != "URL" { super.setValue(value, forUndefinedKey: key) }
-	}
-}
-
 extension WebViewController: WKScriptMessageHandler {
 	func userContentController(userContentController: WKUserContentController, didReceiveScriptMessage message: WKScriptMessage) {
 		//called from JS: webkit.messageHandlers.<messsage.name>.postMessage(<message.body>);
@@ -44,7 +29,7 @@ extension WebViewController: WKScriptMessageHandler {
 // alert.icons should be the current tab icon, which may not be the app icon
 extension WebViewController: WKUIDelegate {
 	func webView(webView: WKWebView!, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
-		webView.conlog("JS window.alert() -> \(message)")
+		conlog("JS window.alert() -> \(message)")
 		var alert = NSAlert()
 		alert.messageText = webView.title
 		alert.addButtonWithTitle("Dismiss")
@@ -59,7 +44,7 @@ extension WebViewController: WKUIDelegate {
 	}
 
 	func webView(webView: WKWebView!, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
-		webView.conlog("JS window.confirm() -> \(message)")
+		conlog("JS window.confirm() -> \(message)")
 		var alert = NSAlert()
 		alert.messageText = webView.title
 		alert.addButtonWithTitle("OK")
@@ -74,7 +59,7 @@ extension WebViewController: WKUIDelegate {
 	}
 
 	func webView(webView: WKWebView!, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String!) -> Void) {
-		webView.conlog("JS window.prompt() -> \(prompt)")
+		conlog("JS window.prompt() -> \(prompt)")
 		var alert = NSAlert()
 		alert.messageText = webView.title
 		alert.addButtonWithTitle("Submit")
@@ -97,7 +82,7 @@ extension WebViewController: WKUIDelegate {
 	// http://www.cocoawithlove.com/2009/09/whereismymac-snow-leopard-corelocation.html
 	func _webView(webView: WKWebView!, shouldRequestGeolocationAuthorizationForURL url: NSURL, isMainFrame: Bool, mainFrameURL: NSURL) -> Bool { return false } // always allow
 	func _webView(webView: WKWebView!, printFrame: WKFrameInfo) { 
-		webView.conlog("JS: window.print()")
+		conlog("JS: window.print()")
 		var printer = NSPrintOperation(view: webView, printInfo: NSPrintInfo.sharedPrintInfo())
 		// seems to work very early on in the first loaded page, then just becomes blank pages
 		// PDF = This view requires setWantsLayer:YES when blendingMode == NSVisualEffectBlendingModeWithinWindow
@@ -117,7 +102,7 @@ extension WebViewController: WKUIDelegate {
 extension WebViewController: WKNavigationDelegate {
 	func webView(webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { 
 		if let url = webView.URL {
-			webView.conlog("\(__FUNCTION__) [\(url)]")
+			conlog("\(__FUNCTION__) [\(url)]")
 			//browser.navigations[navigation] = url //make a backref for when we may have to present an error later
 		}
 	}
@@ -139,7 +124,7 @@ extension WebViewController: WKNavigationDelegate {
 
 		if jsruntime.delegate.tryFunc("decideNavigationForURL", url.description) { decisionHandler(.Cancel); return }
 
-		//webView.conlog("WebView decidePolicy() navType:\(navigationAction.navigationType.rawValue) sourceFrame:(\(navigationAction.sourceFrame?.request.URL)) -> \(url)")
+		//conlog("WebView decidePolicy() navType:\(navigationAction.navigationType.rawValue) sourceFrame:(\(navigationAction.sourceFrame?.request.URL)) -> \(url)")
 		switch navigationAction.navigationType {
 			case .LinkActivated:
 				let mousebtn = navigationAction.buttonNumber
@@ -150,7 +135,7 @@ extension WebViewController: WKNavigationDelegate {
 						if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
 						browser?.newTab(url) // middle-clicked, or out of frame target link
 					}
-				webView.conlog("\(__FUNCTION__) -> .Cancel -- user clicked <a href=\(url) target=_blank> or middle-clicked: opening externally")
+				conlog("\(__FUNCTION__) -> .Cancel -- user clicked <a href=\(url) target=_blank> or middle-clicked: opening externally")
     	        decisionHandler(.Cancel)
 			case .FormSubmitted: fallthrough
 			case .BackForward: fallthrough
@@ -174,7 +159,7 @@ extension WebViewController: WKNavigationDelegate {
 					return
 				case NSURLAuthenticationMethodDefault: fallthrough;
 				default:
-					webView.conlog("prompting user for \(authMethod) credentials: [\(webView.URL ?? String())]")	
+					conlog("prompting user for \(authMethod) credentials: [\(webView.URL ?? String())]")	
 			}
 		}
 
@@ -224,10 +209,10 @@ extension WebViewController: WKNavigationDelegate {
 		if let url = webView.URL { //?.absoluteString ?? "about:blank" {
 		//	URL is the last requested (And invalid) domain name, just the last sucessfully-loaded location
 		//   need to pull the URL back from didStartProvisionalNavigation
-			webView.conlog("\(__FUNCTION__) [\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())`")
+			conlog("\(__FUNCTION__) [\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 			if error.domain == NSURLErrorDomain && error.code != -999 && !webView.loading { // 999 is thrown often on working links
 				if let window = grabWindow() {
-					webView.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil) }
+					presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil) }
 				}
 		}
 	}
@@ -244,7 +229,7 @@ extension WebViewController: WKNavigationDelegate {
 		if navigationResponse.canShowMIMEType { 
 			decisionHandler(.Allow)
 		} else {
-			webView.conlog("webView cannot render requested MIME-type:\(mime) @ \(url)")
+			conlog("webView cannot render requested MIME-type:\(mime) @ \(url)")
 			if !jsruntime.delegate.tryFunc("handleUnrenderableMIME", mime, url.description, fn) { askToOpenURL(url) }
 			decisionHandler(.Cancel)
 		}
@@ -253,11 +238,11 @@ extension WebViewController: WKNavigationDelegate {
 	func webView(webView: WKWebView, didFailNavigation navigation: WKNavigation!, withError error: NSError) { //error during commited main frame navigation
 		// like server-issued error Statuses with no page content
 		if let url = webView.URL { 
-			webView.conlog("\(__FUNCTION__) [\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())`")
+			conlog("\(__FUNCTION__) [\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 			if error.domain == WebKitErrorDomain && error.code == 204 { askToOpenURL(url) } // `Plug-in handled load!` video/mp4
 			if error.domain == NSURLErrorDomain && error.code != -999 { // 999 is thrown on stopLoading()
 				if let window = grabWindow() {
-					webView.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil) }
+					presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil) }
 				}
 		}
     }
@@ -265,7 +250,7 @@ extension WebViewController: WKNavigationDelegate {
 	func webView(webView: WKWebView!, didFinishNavigation navigation: WKNavigation!) {
 		let title = webView.title ?? String()
 		let url = webView.URL ?? NSURL(string:"")!
-		webView.conlog("\(__FUNCTION__) \"\(title)\" [\(url)]")
+		conlog("\(__FUNCTION__) \"\(title)\" [\(url)]")
 	}
 	
 	func webView(webView: WKWebView!, createWebViewWithConfiguration configuration: WKWebViewConfiguration, forNavigationAction navigationAction: WKNavigationAction,
@@ -279,12 +264,12 @@ extension WebViewController: WKNavigationDelegate {
 		//^tgt is given as a string in JS and WKWebView synthesizes a WKFrameInfo from it _IF_ it matches an iframe title in the DOM
 		// otherwise == nil
 
-		webView.conlog("JS@\(navigationAction.sourceFrame?.request.URL ?? String()) window.open(\(url), \(tgt))")
+		conlog("JS@\(navigationAction.sourceFrame?.request.URL ?? String()) window.open(\(url), \(tgt))")
 
 		if jsruntime.delegate.tryFunc("decideWindowOpenForURL", url.description) { return nil }
 
 		if url.description.isEmpty { 
-			webView.conlog("url-less JS popup request!")
+			conlog("url-less JS popup request!")
 		} else if (windowFeatures.allowsResizing ?? 0) == 1 { 
 			if let window = grabWindow() {
 				var newframe = CGRect(
@@ -293,19 +278,19 @@ extension WebViewController: WKNavigationDelegate {
 					width: CGFloat(windowFeatures.width ?? window.frame.size.width as NSNumber),
 					height: CGFloat(windowFeatures.height ?? window.frame.size.height as NSNumber)
 				)
-				webView.conlog("adjusting window to match window.open() call with size settings: origin,size[\(newframe)]")
+				conlog("adjusting window to match window.open() call with size settings: origin,size[\(newframe)]")
 				window.setFrame(newframe, display: true)
 			}
 			if let wvc = WebViewController(agent: webView._customUserAgent, configuration: configuration) {
 				browser?.newTab(wvc)
 				wvc.gotoURL(url)
-				webView.conlog("window.open() completed for url[\(url)])")
+				conlog("window.open() completed for url[\(url)])")
 				return wvc.view as? WKWebView// window.open() -> Window()
 			}
 		} else if tgt.description.isEmpty { //target-less request, assuming == 'top' 
 			webView.loadRequest(navigationAction.request)
 		} else {
-			webView.conlog("redirecting JS popup to system browser")
+			conlog("redirecting JS popup to system browser")
 			askToOpenURL(url)
 		}
 
@@ -313,7 +298,7 @@ extension WebViewController: WKNavigationDelegate {
 	}
 
 	func _webViewWebProcessDidCrash(webView: WKWebView) {
-	    webView.conlog("WebContent process crashed; reloading")
+	    conlog("\(__FUNCTION__) reloading page")
 		webView.reload()
 	}
 }

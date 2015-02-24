@@ -1,3 +1,10 @@
+import WebKit
+public extension WKWebView {
+	override func setValue(value: AnyObject?, forUndefinedKey key: String) {
+		if key != "URL" { super.setValue(value, forUndefinedKey: key) } //prevents URLbox from trying to directly rewrite webView.URL
+	}
+}
+
 import Cocoa
 
 class URLBoxController: NSViewController {	
@@ -19,7 +26,7 @@ class URLBoxController: NSViewController {
 		}
 	}
 
-	init?(urlbox: NSTextField) {
+	init?(urlbox: NSTextField) { //prepareForReuse()?
 		super.init(nibName: nil, bundle:nil)
 		urlbox.bezelStyle = .RoundedBezel
 		urlbox.drawsBackground = false
@@ -46,11 +53,18 @@ class URLBoxController: NSViewController {
 			// http://stackoverflow.com/questions/3605438/validate-decimal-max-min-values-in-a-nstextfield?rq=1
 		}
 		view = urlbox
+		//view.addSubview(progbar)
 		preferredContentSize = CGSize(width: 600, height: 24)
 	}
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
+	}
+
+	override func viewWillAppear() {
+		super.viewWillAppear()
+		//progbar.removeFromSuperview()
+		//urlbox.sizeToFit()
 	}
 
 	override func viewDidAppear() {
@@ -68,6 +82,8 @@ class URLBoxController: NSViewController {
 			if let wvc = representedObject? as? WebViewController {
 				view.window?.makeFirstResponder(wvc.view)
 				wvc.gotoURL(url)
+				//view.addSubview(progbar)
+				//wait for isLoaded == true
 				presentingViewController?.dismissViewController(self) //if a thoust art a popover, close thyself
 			}
 		} else {

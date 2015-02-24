@@ -31,17 +31,14 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 		super.init()
 	}
 
-	func conlog(msg: String) {
-		browserController.conlog(msg)
-		//warn(msg)
-	}
+	func conlog(msg: String) { browserController.conlog(msg) }
 
-	//public func applicationDockMenu(_ sender: NSApplication) -> NSMenu?
+	//public func applicationDockMenu(sender: NSApplication) -> NSMenu?
 
 	public func applicationShouldOpenUntitledFile(app: NSApplication) -> Bool { return false }
 
 	//public func application(sender: AnyObject, openFileWithoutUI filename: String) -> Bool {} // app terminates on return!
-	//public func application(_ theApplication: NSApplication, printFile filename: String) -> Bool () //app terminates on return
+	//public func application(theApplication: NSApplication, printFile filename: String) -> Bool () //app terminates on return
 
 	public func applicationWillFinishLaunching(notification: NSNotification) { // dock icon bounces, also before self.openFile(foo.bar) is called
 		NSUserNotificationCenter.defaultUserNotificationCenter().delegate = self
@@ -50,12 +47,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 		// menu item actions walk the responder chain
 		// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/EventOverview/EventArchitecture/EventArchitecture.html#//apple_ref/doc/uid/10000060i-CH3-SW9
 		// https://developer.apple.com/library/mac/releasenotes/AppKit/RN-AppKit/#10_10ViewController
-		// ChildView -> ParentView -> ParentView's ViewController -> ParentView's ParentView -> Window -> Window's WindowController -> Window's Delegate -> NSApp -> App Delegate
-		// where do ChildViewControllers fit in here?	
-
-		//urlbox doesn't forward up to any viewcontrollers when it is first responder, seems to just sit directly under NSWindow in the chain as it is a NSToolBarItem's child
-
-		// make browserController forward all selectors to active childviewcontrollers http://stackoverflow.com/a/11468081/3878712
+		// ChildView -> ChildView ViewController -> ParentView -> ParentView's ViewController -> ParentView's ParentView -> Window -> Window's WindowController -> Window's Delegate -> NSApp -> App Delegate
 
 		app!.mainMenu = NSMenu()
 
@@ -118,6 +110,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 		dbgMenu.submenu?.title = "Debug"
 		dbgMenu.submenu?.easyAddItem("Highlight TabView Constraints", "highlightConstraints")
 		dbgMenu.submenu?.easyAddItem("Randomize TabView Layout", "exerciseAmbiguityInLayout")
+		dbgMenu.submenu?.easyAddItem("Replace contentView With Tab", "replaceContentView")
 #if DBGMENU
 #else
 		dbgMenu.hidden = true
@@ -142,13 +135,13 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 		jsruntime.loadSiteApp() // load app.js, if present
 
 		if let default_html = NSBundle.mainBundle().URLForResource("default", withExtension: "html") {
-			conlog("loading initial page from app bundle: \(default_html)")
+			conlog("\(__FUNCTION__) loading initial page from app bundle: \(default_html)")
 			browserController.newTab(default_html.description)
 		}
 
 		if countElements(Process.arguments) > 1 { // got argv
 			var urlstr = Process.arguments[1] ?? "about:blank"
-			conlog("loading initial page from argv[1]: \(urlstr)")
+			conlog("\(__FUNCTION__) loading initial page from argv[1]: \(urlstr)")
 			browserController.newTab(urlstr)
 			browserController.unhideApp()
 		}
@@ -168,8 +161,22 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 		//if application?.orderedDocuments?.count < 1 { showApplication(self) }
 	}
 
-	public func application(application: NSApplication, willPresentError error: NSError) -> NSError { return error } //customize error messages
-	// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/ErrorHandlingCocoa/HandleReceivedError/HandleReceivedError.html
+	public func application(application: NSApplication, willPresentError error: NSError) -> NSError { 
+		conlog("\(__FUNCTION__) `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
+		if error.domain == NSURLErrorDomain {
+			if let userInfo = error.userInfo {
+				if let errstr = userInfo[NSLocalizedDescriptionKey] as? String {
+					if let url = userInfo[NSURLErrorFailingURLStringErrorKey] as? String {
+						var newUserInfo = userInfo
+						newUserInfo[NSLocalizedDescriptionKey] = "\(errstr)\n\n\(url)" // add failed url to error message
+						let newerror = NSError(domain: error.domain, code: error.code, userInfo: newUserInfo)
+						return newerror
+					}
+				}
+			}
+		}
+		return error 
+	}
 
 	public func applicationWillTerminate(notification: NSNotification) { NSUserDefaults.standardUserDefaults().synchronize() }
     

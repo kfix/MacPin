@@ -8,16 +8,12 @@ import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/Ja
 	var isFullscreen: Bool { get set }
 	var isToolbarShown: Bool { get set }
 	var tabCount: Int { get }
-	var tabSelected: AnyObject? { get set }
-	func closeCurrentTab()
+	var tabSelected: WebViewController? { get set }
 	func switchToNextTab()
 	func switchToPreviousTab()
 	func conlog(msg: String) // FIXME: must kill
-	func firstTabEvalJS(js: String) // FIXME: must kill
-	func currentTabEvalJS(js: String) // FIXME: must kill
 	func newTabPrompt()
-	func newTab(params: [String:AnyObject]) -> String
-	//func newTab(params: JSValue) -> String
+	func newTab(params: [String:AnyObject]) -> WebViewController?
 	func stealAppFocus()
 	func unhideApp()
 }
@@ -77,7 +73,8 @@ public class TabViewController: NSTabViewController { // & NSViewController
 
 	override public func toolbarDefaultItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] { 
 		let tabs = super.toolbarDefaultItemIdentifiers(toolbar)
-		return [ShareButton, NewTabButton] + tabs! + [NSToolbarFlexibleSpaceItemIdentifier]
+		//return [ShareButton, NewTabButton] + tabs! + [NSToolbarFlexibleSpaceItemIdentifier]
+		return [ShareButton, NewTabButton, NSToolbarFlexibleSpaceItemIdentifier] + tabs!
 		//tabviewcontroller somehow remembers where tabs! was and keeps putting new tabs in that position
 	}
 
@@ -129,7 +126,9 @@ public class TabViewController: NSTabViewController { // & NSViewController
 
 			default:
 				// let NSTabViewController map a TabViewItem to this ToolbarItem
-				return super.toolbar(toolbar, itemForItemIdentifier: itemIdentifier, willBeInsertedIntoToolbar: flag)
+				let tvi = super.toolbar(toolbar, itemForItemIdentifier: itemIdentifier, willBeInsertedIntoToolbar: flag)
+				//warn("\(__FUNCTION__) \(itemIdentifier) \(tvi?.image) \(tvi?.action)")
+				return tvi
 		}
 		// optional func toolbarWillAddItem(_ notification: NSNotification)
 		// optional func toolbarDidRemoveItem(_ notification: NSNotification)
@@ -158,8 +157,6 @@ public class TabViewController: NSTabViewController { // & NSViewController
 		view.layer?.masksToBounds = true // include layer contents in clipping effects
 		view.canDrawSubviewsIntoLayer = true // coalesce all subviews' layers into this one
 
-		//view.autoresizesSubviews = false
-		//view.translatesAutoresizingMaskIntoConstraints = false
 		view.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable //resize tabview to match parent ContentView size
 		tabStyle = .Toolbar // this will reinit window.toolbar to mirror the tabview itembar
 		transitionOptions = .None //.Crossfade .SlideUp/Down/Left/Right/Forward/Backward
@@ -180,9 +177,8 @@ public class TabViewController: NSTabViewController { // & NSViewController
 	override public func viewWillAppear() {
 		super.viewWillAppear()
 		if let window = view.window {
-			//view.layer?.frame = window.contentLayoutRect
-			//window.toolbar!.allowsUserCustomization = false
-			//window.showsToolbarButton = false
+			window.toolbar!.allowsUserCustomization = true
+			window.toolbar!.displayMode = .IconOnly
 		}
 	}
 
@@ -191,15 +187,6 @@ public class TabViewController: NSTabViewController { // & NSViewController
 }
 
 public class BrowserViewController: TabViewController, BrowserScriptExports {
-	//var tabs: [String] = []
-	// didSet { for id, wvc in added { jsruntime.context.getObject(forKey: "$tabs").setValue(webVC, forKey: id) } }
-	/*
-	 as tabs are made and destroyed, the WvCs.identifiers are put in here
-	 then WebViewControllers can export their funcs so the script runtime can directly manipulate open tabs
-	 using $browser.tabs[id].print() and whatnot
-	*/	
-	//var tabs: [String: WebViewController] = [:]
-	// didSet { for id, wvc in added { jsruntime.setValue(tabs, forKey: "$tabs") } }
 
 	var _globalUserScripts: [String] = []
 	var globalUserScripts: [String] { // protect the app from bad JS settings?
@@ -253,39 +240,18 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 		set(bool) { if bool != isToolbarShown { view.window!.toggleToolbarShown(nil) } }
 	}
 
-	//var tabCount: Int { get { return tabViewItems.count } }
-	var firstTab: NSTabViewItem? { get { return (tabViewItems.first as? NSTabViewItem) ?? nil }}
-	var currentTab: NSTabViewItem? { get {
-		if selectedTabViewItemIndex == -1 { return nil }
-		return (tabViewItems[selectedTabViewItemIndex] as? NSTabViewItem) ?? nil
-	}}
-
 	var tabCount: Int { get { return childViewControllers.count } }
-	var firstWebVC: WebViewController? { get { return (childViewControllers.first as? WebViewController) ?? nil }}
-	var currentWebVC: WebViewController? { get {
-		if selectedTabViewItemIndex == -1 { return nil }
-		return (childViewControllers[selectedTabViewItemIndex] as? WebViewController) ?? nil
-	}}
-	var currentWebVC2: WebViewController? { get {
-		return ( presentedViewControllers?.first as? WebViewController )
-	}}
-
-	func firstTabEvalJS(js: String) { firstWebVC?.webview?.evaluateJavaScript(js, completionHandler: nil) }
-	func currentTabEvalJS(js: String) { currentWebVC?.webview?.evaluateJavaScript(js, completionHandler: nil) }
-
-	/* var tabSelected: Int { // the number goes stale when tabs are removed and rearranged
-		get { return viewController.selectedTabViewItemIndex }
-		set(idx) { viewController.tabView.selectTabViewItemAtIndex(idx) }
-	}*/
-
-	var tabSelected: AnyObject? {
-		get { return tabView.selectedTabViewItem?.identifier }
-		set(id) { tabView.selectTabViewItemWithIdentifier(id!) }
+	var firstTab: WebViewController? { get { return (childViewControllers.first as? WebViewController) ?? nil }}
+	var tabSelected: WebViewController? {
+		get {
+			if selectedTabViewItemIndex == -1 { return nil }
+			return (childViewControllers[selectedTabViewItemIndex] as? WebViewController) ?? nil
+		}
+		set(wvc) { tabView.selectTabViewItem(tabViewItemForViewController(wvc!)) }
 	}
 
 	func closeCurrentTab() {
-		//if let tab = currentTab { removeTabViewItem(tab) }
-		currentWebVC?.removeFromParentViewController()
+		tabSelected?.removeFromParentViewController()	//FIXME: not dealloc'ing the actual webviews
 		if tabView.numberOfTabViewItems == 0 { view.window?.performClose(self) }
 			else { switchToNextTab() } //safari behavior
 	}
@@ -299,7 +265,8 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 
 	func newTabPrompt() {
 		if let wvc = newTab(NSURL(string: "about:blank")!) {
-			if let id: AnyObject = tabViewItemForViewController(wvc)?.identifier { tabSelected = id }
+			//if let id: AnyObject = tabViewItemForViewController(wvc)?.identifier { tabSelected = id }
+			tabSelected = wvc
 			wvc.gotoButtonClicked(nil)
 		}
 	}
@@ -307,7 +274,7 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
  	// exported to jsruntime.context as $browser.newTab({url: 'http://example.com'})
 	// NEEDS TO BE DECLARED FIRST (above all other newTab overload funcs) in order for jsruntime to use this. crazy, amirite?
  	// FIXME: (params: JSValue)->JSValue would be safer? and prevent this selector confusion?
-	func newTab(params: [String:AnyObject]) -> String {
+	func newTab(params: [String:AnyObject]) -> WebViewController? {
 		// prototype vars
 		var url = NSURL(string: "about:blank")
 		var icon: String? = nil
@@ -346,10 +313,10 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 				for handler in msgHandlers { webctl.addScriptMessageHandler(wvc, name: handler) }
 				newTab(wvc, withIcon: icon)
 				wvc.gotoURL(url)
-				return wvc.identifier
+				return wvc
 			}
 		}
-		return "\(__FUNCTION__) failed: url invalid!"
+		return nil
 	}
 	func newTab(urlstr: String) { if let url = NSURL(string: urlstr) { newTab(url) } }
 	func newTab(url: NSURL) -> WebViewController? { 
@@ -372,6 +339,7 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 			// https://developer.apple.com/library/ios/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html
 			// just C, no Cocoa API yet: WKIconDatabaseCopyIconURLForPageURL(icodb, url) WKIconDatabaseCopyIconDataForPageURL(icodb, url)
 			// also https://github.com/WebKit/webkit/commit/660d1e55c2d1ee19ece4a7565d8df8cab2e15125
+			// OSX has libxml2 built-in https://developer.apple.com/library/mac/samplecode/LinkedImageFetcher/Listings/Read_Me_About_LinkedImageFetcher_txt.html
 		}
 		tab.initialFirstResponder = subvc.view
 		addTabViewItem(tab)
@@ -380,7 +348,7 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 	func conlog(msg: String) { // _ webview: WKWebView? = nil
 		warn(msg)
 #if APP2JSLOG
-		currentTabEvalJS("console.log(\'<\(__FILE__)> \(msg)\')")
+		tabSelected?.evalJS("console.log(\'<\(__FILE__)> \(msg)\')")
 #endif
 	}
 

@@ -20,6 +20,7 @@ public extension JSValue {
 
 @objc protocol OSXScriptExports : JSExport { // '$osx' in app.js
 	var resourcePath: String { get }
+	//func log(msg: String)
 	func registerURLScheme(scheme: String)
 	func postNotification(title: String, _ subtitle: String?, _ msg: String)
 	func openURL(urlstr: String, _ app: String?)
@@ -27,10 +28,8 @@ public extension JSValue {
 
 public class AppScriptRuntime: NSObject, OSXScriptExports  {
 
-	//var viewController: TabViewController
-
 	var context = JSContext(virtualMachine: JSVirtualMachine())
-	var delegate: JSValue //= JSContext().evaluateScript("{};")! //default property-less delegate obj
+	var delegate: JSValue
 
 	var resourcePath: String { get { return ( NSBundle.mainBundle().resourcePath ?? String() ) } }
 
@@ -38,6 +37,8 @@ public class AppScriptRuntime: NSObject, OSXScriptExports  {
 		delegate = context.evaluateScript("{};")! //default property-less delegate obj
 		super.init()
 	}
+
+	//func log(msg: String) { }
 
 	func loadSiteApp() {
 		if let app_js = NSBundle.mainBundle().URLForResource("app", withExtension: "js") {
@@ -51,8 +52,10 @@ public class AppScriptRuntime: NSObject, OSXScriptExports  {
 				context.exception = exception //default in JSContext.mm
 				return // gets returned to evaluateScript()?
 			} 
-			warn("loading setup script from app bundle: \(app_js)")
+			warn("\(__FUNCTION__): \(app_js)")
 			context.setObject(self, forKeyedSubscript: "$osx")
+			//context.setObject(log, forKeyedSubscript: "log")
+			// ^ pass in block that will also copy to $browser.conlog()
 			if let jsobj = loadJSCoreScriptFromBundle("app") {
 				delegate = jsobj
 				// FIXME JSValue is very ambiguous, should confirm it it is a {}
@@ -85,7 +88,7 @@ public class AppScriptRuntime: NSObject, OSXScriptExports  {
 		//replyEvent == ??
 	}
 
-	// func newAppTrayItem
+	// func newTrayTab
 	//  support opening a page as a NSStatusItem icon by the clock
 	// https://github.com/phranck/CCNStatusItem
 

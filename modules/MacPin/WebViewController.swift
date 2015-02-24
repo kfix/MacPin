@@ -2,7 +2,6 @@
 	func close()
 	func evalJS(js: String)
 	func gotoURL(urlstr: String)
-	func stealFocus()
 }
 
 class WebViewController: NSViewController {
@@ -47,7 +46,6 @@ class WebViewController: NSViewController {
 		// enables Safari.app->Develop-><computer name> remote debugging of JSCore and all webviews' JS threads
 		// http://stackoverflow.com/questions/11361822/debug-ios-67-mobile-safari-using-the-chrome-devtools
 #endif
-
 		//webview._editable = true // https://github.com/WebKit/webkit/tree/master/Tools/WebEditingTester
 
 		// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/mac/UserAgentMac.mm#L48
@@ -57,15 +55,11 @@ class WebViewController: NSViewController {
 		webview.navigationDelegate = self // allows/denies navigation actions
 		webview.UIDelegate = self //alert(), window.open()	
 
-		let wkview = (webview.subviews.first as WKView) // 1 per frame?
-		//wkview.shouldExpandToViewHeightForAutoLayout = false
-		//wkview.setValue(false, forKey: "shouldExpandToViewHeightForAutoLayout") //KVO
-
 		webview.identifier = "WKWebView:" + NSUUID().UUIDString //set before installing into a view/window, then get ... else crash!
 		view = webview
 		identifier = "WebViewController<\(webview.identifier)>"
-		bind(NSTitleBinding, toObject: view, withKeyPath: "title", options: nil)
-		bind("representedObject", toObject: view, withKeyPath: "URL", options: nil)
+		//bind(NSTitleBinding, toObject: view, withKeyPath: "title", options: nil)
+		//bind("representedObject", toObject: view, withKeyPath: "URL", options: nil)
     }
 
 	override func loadView() {
@@ -74,36 +68,22 @@ class WebViewController: NSViewController {
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		//view.frame = NSMakeRect(0, 0, 600, 800) // default size
-		//view.frame = parentViewController.view.bounds
-		//view.frame = parentViewController.view.window!.contentLayoutRect
-		//view.frame = CGRect(x: 0, y: 0, 
-	    //	width: CGRectGetWidth(parentViewController.view.bounds), 
-	    //	height: CGRectGetHeight(parentViewController.view.bounds))
-		//view.frame = view.window!.windowController.window!.contentView.frame
-		//view.frame = parentViewController.view.frame
-		// http://ashfurrow.com/blog/you-probably-dont-understand-frames-and-bounds/
-		// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/CocoaViewsGuide/WorkingWithAViewHierarchy/WorkingWithAViewHierarchy.html#//apple_ref/doc/uid/TP40002978-CH4-SW12
-
-
 		//view.wantsLayer = true //use CALayer to coalesce views
-		//view.layer?.frame = parentViewController!.view.frame
-		//view.layer?.frame = view.window!.contentLayoutRect
-
 		view.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable
-		view.postsFrameChangedNotifications = false //FIXME stop webinspector flicker?
+		if let wkview = view.subviews.first as? WKView {
+			//wkview.setValue(false, forKey: "shouldExpandToViewHeightForAutoLayout") //KVO
+			//wkview.shouldExpandToViewHeightForAutoLayout = false
+			//wkview.postsFrameChangedNotifications = false //FIXME stop webinspector flicker?
+			//view.postsBoundsChangedNotifications = false //FIXME stop webinspector flicker?
+		}
 	}
 	
 	override func viewWillAppear() { // window popping up with this tab already selected & showing
 		super.viewWillAppear()
-		if let window = view.window {
-			//window.makeFirstResponder(view)
-			//warn("\(__FUNCTION__) \(window.firstResponder)")
-		}
 		if let webview = webview { if let browser = browser { webview._drawsTransparentBackground = browser.isTransparent } } // use KVC to auto frob this?
 	}
 
-	override func viewDidAppear() { // window popping up. & tab switch?
+	override func viewDidAppear() {
 		super.viewDidAppear()
 		//view.autoresizesSubviews = false
 		//view.translatesAutoresizingMaskIntoConstraints = false
@@ -112,14 +92,21 @@ class WebViewController: NSViewController {
 	override func viewWillLayout() {
 #if WK2LOG
 		//warn("\(__FUNCTION__) WKWebView \(view.frame)")
-		warn("\(__FUNCTION__) WKWebView subviews #\(view.subviews.count)")
-		warn("\(__FUNCTION__) WKWebView autoResizes subviews #\(view.autoresizesSubviews)")
+		//warn("\(__FUNCTION__) WKWebView subviews #\(view.subviews.count)")
+		//warn("\(__FUNCTION__) WKWebView autoResizes subviews \(view.autoresizesSubviews)")i
+
+		// https://github.com/WebKit/webkit/blob/aefe74816c3a4db1b389893469e2d9475bbc0fd9/Source/WebKit2/UIProcess/mac/WebInspectorProxyMac.mm#L809
+		// inspectedViewFrameDidChange is looping itself
+		// ignoreNextInspectedViewFrameDidChange is supposed to prevent this
+
 		if let wkview = view.subviews.first? as? NSView {
-			if wkview.autoresizingMask == .ViewWidthSizable | .ViewMaxYMargin {
-				// https://github.com/WebKit/webkit/blob/aefe74816c3a4db1b389893469e2d9475bbc0fd9/Source/WebKit2/UIProcess/mac/WebInspectorProxyMac.mm#L809
-				warn("\(__FUNCTION__) got bottom-anchored WKView \(wkview.frame)")
-				if let pageView = view.subviews.last? as? NSView {
-					pageView.autoresizingMask = .ViewWidthSizable
+			if wkview.tag == 1000 { //WKInspectorViewTag
+				// wkview.autoresizingMask == .ViewWidthSizable | .ViewMaxYMargin {
+				warn("\(__FUNCTION__) webinpector layout \(wkview.frame)") //probably a webinspector
+				if let pageView = view.subviews.last? as? NSView { // tag=-1 should be the page content
+					warn("\(__FUNCTION__) page layout \(pageView.frame)")
+					//pageView.autoresizingMask = .ViewWidthSizable
+					//pageView.autoresizingMask = .ViewNotSizable
 				}
 			}
 		}
@@ -136,11 +123,10 @@ class WebViewController: NSViewController {
 		//view.removeConstraints(view.constraints)
 	}
 
-	//viewWillTransitionToSize(newSize: NSSize) { }
-
 }
 
 extension WebViewController: WebViewScriptExports { // AppGUI / ScriptRuntime funcs
+	override func cancelOperation(sender: AnyObject?) { webview?.stopLoading(sender) } //make Esc key stop page load
 
 	func evalJS(js: String) { webview?.evaluateJavaScript(js, completionHandler: nil) }
 
@@ -152,13 +138,9 @@ extension WebViewController: WebViewScriptExports { // AppGUI / ScriptRuntime fu
 	}
 
 	func close() { removeFromParentViewController() }
-	func stealFocus() { 
-		//presentingViewController.tabView.selectTabViewItem(presentingViewController.tabViewItemForViewController(self))
-		browser?.tabView.selectTabViewItem(browser?.tabViewItemForViewController(self))
-	}
 
 	func grabWindow() -> NSWindow? {
-		stealFocus()
+		browser?.tabSelected = self
 		if let window = view.window { return window }
 		return nil
 	}
@@ -169,6 +151,8 @@ extension WebViewController: WebViewScriptExports { // AppGUI / ScriptRuntime fu
 	func zoomOut() { if let webview = webview { webview.magnification -= 0.2 } }
 
 	func highlightConstraints() { view.window?.visualizeConstraints(view.constraints) }
+
+	func replaceContentView() { view.window?.contentView = view }
 
 	func shareButtonClicked(sender: AnyObject?) {
 		if let btn = sender? as? NSView {
@@ -206,25 +190,25 @@ extension WebViewController: WebViewScriptExports { // AppGUI / ScriptRuntime fu
 	}
 
 	func askToOpenURL(url: NSURL) {
-		if let opener = NSWorkspace.sharedWorkspace().URLForApplicationToOpenURL(url) {
-			conlog("prompting to externally open URL: [\(url)]")
-			let alert = NSAlert()
-			alert.messageText = "Open using App:\n\(opener)"
-			alert.addButtonWithTitle("OK")
-			alert.addButtonWithTitle("Cancel")
-			alert.informativeText = url.description
-			alert.icon = NSWorkspace.sharedWorkspace().iconForFile(opener.path!)
-			if let window = grabWindow() {
+		if let window = grabWindow() {
+			if let opener = NSWorkspace.sharedWorkspace().URLForApplicationToOpenURL(url) {
+				conlog("prompting to externally open URL: [\(url)]")
+				let alert = NSAlert()
+				alert.messageText = "Open using App:\n\(opener)"
+				alert.addButtonWithTitle("OK")
+				alert.addButtonWithTitle("Cancel")
+				alert.informativeText = url.description
+				alert.icon = NSWorkspace.sharedWorkspace().iconForFile(opener.path!)
 				alert.beginSheetModalForWindow(window, completionHandler:{(response:NSModalResponse) -> Void in
 					if response == NSAlertFirstButtonReturn { NSWorkspace.sharedWorkspace().openURL(url) }
 	 			})
+				return
 			}
-			return
-		}
-		//FIXME: complain here
-		if let window = view.window {
-			//var error = NSError(domain: "ProcessName", code: 2, userInfo: [:])
-			//view.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil) }
+			let error = NSError(domain: "MacPin", code: 2, userInfo: [
+				NSURLErrorKey: url,
+				NSLocalizedDescriptionKey: "No program present on this system is registered to open this non-browser URL.\n\n\(url)"
+			])
+			view.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
 		}
 	}
 

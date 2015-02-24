@@ -1,5 +1,6 @@
 // https://webrtchacks.com/hangout-analysis-philipp-hancke/
 var lastLaunchedURL = '';
+var hangoutsTab;
 
 var delegate = {}; // our delegate to receive events from the webview app
 
@@ -28,14 +29,11 @@ delegate.launchURL = function(url) { // $osx.openURL(/[sms|hangouts|tel]:.*/) ca
 			// http://handleopenurl.com/scheme/hangouts
 			// https://productforums.google.com/forum/#!topic/hangouts/-FgLeX50Jck	
 			//xssRoster(["inputAddress", addr, [' ','\r']]);
-			//$.firstTabEvalJS("xssRoster(['inputAddress', "+addr+", ['.','\b','\r']]);"); //calls into AppTab[1]:notifier.js
+			//xssRoster(['inputAddress', "+addr+", ['.','\b','\r']]);");
 		// https://developer.apple.com/library/ios/featuredarticles/iPhoneURLScheme_Reference/Introduction/Introduction.html#//apple_ref/doc/uid/TP40007899
 		case 'sms':
-			//$.firstTabEvalJS("xssRoster(['inputAddress', '"+addr+"']);"); //calls into AppTab[1]:notifier.js
 			lastLaunchedURL = url; // in case app isn't ready to handle url immediately, will get pulled from var after Ready event
-			$browser.firstTabEvalJS("xssRoster(['inputAddress', '"+addr+"'], ['openSMS']);"); //calls into AppTab[1]:notifier.js
-			//$.firstTabEvalJS("xssRoster(['openSMS']);"); //wait for button to show
-			//$.firstTab().frame('gtn-roster-iframe-id-b').evalJS("inputAddress("+addr+");");
+			hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['openSMS']);"); //calls into AppTab[1]:notifier.js
 			break;
 		case 'tel':
 			//$.newAppTab("https://plus.google.com/hangouts/_/?hl=en&hpn="+addr+"&hip="+addr+"&hnc=0");
@@ -61,7 +59,10 @@ delegate.handleClickedNotification = function(from, url, msg) {
 	return true;
 };
 
-delegate.unhideApp = function(msg) { $.unhideApp(); };
+delegate.unhideApp = function(msg) { 
+	$browser.tabSelected = hangoutsTab;
+	$browser.unhideApp();
+};
 
 //addEventListener('HangoutsRosterReady', function(e){...}, false); ??
 delegate.HangoutsRosterReady = function(msg) { // notifier.js will call this when roster div is created
@@ -80,12 +81,7 @@ delegate.AppFinishedLaunching = function() {
 	// OSX Yosemite safari recognizes and launches sms and tel links to any associated app
 	//  https://github.com/WebKit/webkit/blob/ce77bdb93dbd24df1af5d44a475fe29b5816f8f9/Source/WebKit2/UIProcess/mac/WKActionMenuController.mm#L691
 
-//	$browser.newTab("https://plus.google.com/hangouts", {
-//		'postinject': ["notifier"],
-//		'preinject':  ["styler"],
-//		'handlers': ['receivedHangoutsMessage','unhideApp','HangoutsRosterReady']
-//	});
-	$browser.newTab({
+	hangoutsTab = $browser.newTab({
 		'url': "https://plus.google.com/hangouts",
 		'postinject': ["notifier"],
 		'preinject':  ["styler"],
