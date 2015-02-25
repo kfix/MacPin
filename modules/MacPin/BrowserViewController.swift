@@ -20,7 +20,7 @@ import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/Ja
 
 public class TabViewController: NSTabViewController { // & NSViewController
 	let URLBox	= "Current URL"
-	let urlboxVC = URLBoxController(urlbox: NSTextField())!
+	let urlbox = URLBoxController(webViewController: nil)
 	let ShareButton = "Share URL"
 	let NewTabButton = "Open New Tab"
 	var cornerRadius = CGFloat(0.0) // increment above 0.0 to put nice corners on the window FIXME userDefaults
@@ -38,9 +38,7 @@ public class TabViewController: NSTabViewController { // & NSViewController
 
 	override public func tabView(tabView: NSTabView, didSelectTabViewItem tabViewItem: NSTabViewItem) { 
 		super.tabView(tabView, didSelectTabViewItem: tabViewItem)
-		urlboxVC.representedObject = tabViewItem.viewController // KVC bind webview title and URL to urlbox
-		urlboxVC.nextResponder = tabViewItem.view // ensure all menu bindings will walk responder tree starting from webview
-		urlboxVC.view.nextKeyView = tabViewItem.view // TABbing off the urlbox will move focus to selected webview
+		urlbox.representedObject = tabViewItem.viewController
 
 		if let window = view.window {
 			if let view = tabViewItem.view {
@@ -74,7 +72,9 @@ public class TabViewController: NSTabViewController { // & NSViewController
 	override public func toolbarDefaultItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] { 
 		let tabs = super.toolbarDefaultItemIdentifiers(toolbar)
 		//return [ShareButton, NewTabButton] + tabs! + [NSToolbarFlexibleSpaceItemIdentifier]
-		return [ShareButton, NewTabButton, NSToolbarFlexibleSpaceItemIdentifier] + tabs!
+		//return [ShareButton, NewTabButton, NSToolbarFlexibleSpaceItemIdentifier] + tabs!
+		//return [NSToolbarFlexibleSpaceItemIdentifier, ShareButton] + tabs! + [NewTabButton, NSToolbarFlexibleSpaceItemIdentifier]
+		return [NSToolbarFlexibleSpaceItemIdentifier, ShareButton, NSToolbarFlexibleSpaceItemIdentifier] + tabs! + [NSToolbarFlexibleSpaceItemIdentifier, NewTabButton, NSToolbarFlexibleSpaceItemIdentifier]
 		//tabviewcontroller somehow remembers where tabs! was and keeps putting new tabs in that position
 	}
 
@@ -121,7 +121,7 @@ public class TabViewController: NSTabViewController { // & NSViewController
 				ti.visibilityPriority = NSToolbarItemVisibilityPriorityLow
 				ti.minSize = CGSize(width: 70, height: 24)
 				ti.maxSize = CGSize(width: 600, height: 24)
-				ti.view = urlboxVC.view
+				ti.view = urlbox.view
 				return ti
 
 			default:
@@ -261,11 +261,11 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 
 	func toggleTransparency() { isTransparent = !isTransparent }
 
+	func loadSiteApp() { jsruntime.loadSiteApp() }
 	func editSiteApp() { NSWorkspace.sharedWorkspace().openFile(NSBundle.mainBundle().resourcePath!) }
 
 	func newTabPrompt() {
 		if let wvc = newTab(NSURL(string: "about:blank")!) {
-			//if let id: AnyObject = tabViewItemForViewController(wvc)?.identifier { tabSelected = id }
 			tabSelected = wvc
 			wvc.gotoButtonClicked(nil)
 		}
@@ -318,7 +318,6 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 		}
 		return nil
 	}
-	func newTab(urlstr: String) { if let url = NSURL(string: urlstr) { newTab(url) } }
 	func newTab(url: NSURL) -> WebViewController? { 
 		if let wvc = WebViewController(agent: nil) {
 			newTab(wvc)
@@ -344,6 +343,7 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 		tab.initialFirstResponder = subvc.view
 		addTabViewItem(tab)
 	}
+	func newTab(urlstr: String) { if let url = NSURL(string: urlstr) { newTab(url) } }
 
 	func conlog(msg: String) { // _ webview: WKWebView? = nil
 		warn(msg)

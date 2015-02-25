@@ -1,3 +1,4 @@
+import Cocoa
 import MacPin
 
 // gotta set these before MacPin()->NSWindow()
@@ -11,8 +12,6 @@ NSUserDefaults.standardUserDefaults().setInteger(0, forKey: "__WebInspectorPageG
 
 let app = NSApplication.sharedApplication() //connect to CG WindowServer, always accessible as var:NSApp
 app.setActivationPolicy(.Regular) //lets bundle-less binaries (`make test`) get app menu and fullscreen button
-//let applicationDelegate = MacPin()
-let applicationDelegate = AppDelegate()
+let applicationDelegate = MacPin.AppDelegate()
 app.delegate = applicationDelegate
-NSAppleEventManager.sharedAppleEventManager().setEventHandler(applicationDelegate, andSelector: "handleGetURLEvent:replyEvent:", forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //handle `open url`
 app.run()

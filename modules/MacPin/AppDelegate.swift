@@ -1,5 +1,6 @@
 import Cocoa
 import ObjectiveC
+import WebKitPrivates
 
 extension NSMenu {
 	func easyAddItem(title: String , _ action: String , _ key: String? = nil, _ keyflags: [NSEventModifierFlags] = []) {
@@ -19,10 +20,10 @@ extension NSMenu {
 }
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead :-(
-public class AppDelegate: NSObject, NSApplicationDelegate {
+public class AppDelegate: NSObject {
 
-	public var browserController = BrowserViewController()
-	public var windowController: WindowController
+	var browserController = BrowserViewController()
+	var windowController: WindowController
 
 	override public init() {
 		browserController.title = nil
@@ -32,6 +33,18 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 	}
 
 	func conlog(msg: String) { browserController.conlog(msg) }
+
+	func handleGetURLEvent(event: NSAppleEventDescriptor!, replyEvent: NSAppleEventDescriptor?) {
+		if let urlstr = event.paramDescriptorForKeyword(AEKeyword(keyDirectObject))!.stringValue {
+			warn("\(__FUNCTION__) `\(urlstr)` -> jsruntime.delegate.launchURL()")
+			jsruntime.delegate.tryFunc("launchURL", urlstr)
+			//replyEvent == ??
+		}
+		//replyEvent == ??
+	}
+}
+
+extension AppDelegate: NSApplicationDelegate {
 
 	//public func applicationDockMenu(sender: NSApplication) -> NSMenu?
 
@@ -125,7 +138,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 		windowController.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder, which is always a webview
 		windowController.showWindow(self)
 
-		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: "handleGetURLEvent:replyEvent:", forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //handle `open url`
+		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: "handleGetURLEvent:replyEvent:", forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url scehems
 	}
 
 	//public func application(theApplication: NSApplication, openFile filename: String) -> Bool {}

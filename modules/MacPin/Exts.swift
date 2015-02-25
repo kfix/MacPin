@@ -1,5 +1,6 @@
 import Cocoa
 import WebKit
+import WebKitPrivates
 import JavaScriptCore
 
 func warn(msg:String) { NSFileHandle.fileHandleWithStandardError().writeData((msg + "\n").dataUsingEncoding(NSUTF8StringEncoding)!) }

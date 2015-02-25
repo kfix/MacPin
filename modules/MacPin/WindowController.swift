@@ -8,7 +8,7 @@ public class WindowController: NSWindowController, NSWindowDelegate {
 		// take care of awakeFromNib() & windowDidLoad() tasks, which are not called for NIBless windows
 		super.init(window: window)
 		if let window = window {
-			window.collectionBehavior = .FullScreenPrimary | .ParticipatesInCycle | .Managed | .CanJoinAllSpaces | .FullScreenAuxiliary //| .MoveToActiveSpace 
+			window.collectionBehavior = .FullScreenPrimary | .ParticipatesInCycle | .Managed | .CanJoinAllSpaces
 			window.styleMask |= NSUnifiedTitleAndToolbarWindowMask
 			window.movableByWindowBackground = true
 			window.backgroundColor = NSColor.whiteColor()
@@ -25,6 +25,7 @@ public class WindowController: NSWindowController, NSWindowDelegate {
 			//window.registerForDraggedTypes([NSPasteboardTypeString,NSURLPboardType,NSFilenamesPboardType])
 			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
 			window.delegate = self
+			window.restorable = true
 			window.restorationClass = AppDelegate.self
 		}
 		shouldCascadeWindows = false // messes with Autosave

@@ -1,7 +1,10 @@
+import WebKit
+import WebKitPrivates
+
 @objc protocol WebViewScriptExports : JSExport { // 'var tab = $browser.newTab({...})' in app.js
 	func close()
 	func evalJS(js: String)
-	func gotoURL(urlstr: String)
+	func loadURL(urlstr: String) -> Bool
 }
 
 class WebViewController: NSViewController {
@@ -175,24 +178,28 @@ extension WebViewController: WebViewScriptExports { // AppGUI / ScriptRuntime fu
 			webview.loadRequest(NSURLRequest(URL: url))
 		}
 	}
-	func gotoURL(urlstr: String) { gotoURL(NSURL(string: urlstr)!) }
+	func loadURL(urlstr: String) -> Bool { // overloading gotoURL is crashing Cocoa selectors
+		if let url = NSURL(string: urlstr) { 
+			gotoURL(url as NSURL)
+			return true
+		}
+		return false // tell JS we were given a malformed URL
+	}
 
 	func gotoButtonClicked(sender: AnyObject?) {
-		var urlboxVC = URLBoxController(urlbox: NSTextField())!
-		urlboxVC.representedObject = self // KVC bind webview title and URL to urlbox
-		urlboxVC.nextResponder = self.view // ensure all menu bindings will walk responder tree starting from webview
-		urlboxVC.view.nextKeyView = self.view // TABbing off the urlbox will move focus to selected webview //FIXME not working
+		let urlbox = URLBoxController(webViewController: self)
+
 		if let btn = sender? as? NSView { 
-			presentViewController(urlboxVC, asPopoverRelativeToRect: btn.bounds, ofView: btn, preferredEdge:NSMinYEdge, behavior: .Semitransient)
+			presentViewController(urlbox, asPopoverRelativeToRect: btn.bounds, ofView: btn, preferredEdge:NSMinYEdge, behavior: .Semitransient)
 		} else {
-			presentViewControllerAsSheet(urlboxVC) //Keyboard shortcut
+			presentViewControllerAsSheet(urlbox) //Keyboard shortcut
 		}
 	}
 
 	func askToOpenURL(url: NSURL) {
 		if let window = grabWindow() {
 			if let opener = NSWorkspace.sharedWorkspace().URLForApplicationToOpenURL(url) {
-				conlog("prompting to externally open URL: [\(url)]")
+				conlog("\(__FUNCTION__): [\(url)]")
 				let alert = NSAlert()
 				alert.messageText = "Open using App:\n\(opener)"
 				alert.addButtonWithTitle("OK")

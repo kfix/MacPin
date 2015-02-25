@@ -8,15 +8,19 @@ public extension WKWebView {
 import Cocoa
 
 class URLBoxController: NSViewController {	
-	required init?(coder: NSCoder) { super.init(coder: coder) }
-
+	let urlbox = NSTextField()
 	//let progbar = NSProgressIndicator(frame: CGRectZero)
+
 	override var representedObject: AnyObject? {
 		didSet { //KVC to copy updates to webviews url & title (user navigations, history.pushState(), window.title=)
 			view.bind(NSToolTipBinding, toObject: self, withKeyPath: "representedObject.view.title", options: nil)
 			view.bind(NSValueBinding, toObject: self, withKeyPath: "representedObject.view.URL", options: nil)
 			view.bind(NSFontItalicBinding, toObject: self, withKeyPath: "representedObject.view.isLoading", options: nil)
 			//progbar.bind("doubleValue", toObject: self, withKeyPath: "representedObject.view.estimatedProgress", options: nil)
+			if let focusObj = representedObject as? NSViewController {
+				nextResponder = focusObj
+				view.nextKeyView = focusObj.view
+			}
 		}
 		willSet(newro) { 
 			view.unbind(NSToolTipBinding)
@@ -26,8 +30,18 @@ class URLBoxController: NSViewController {
 		}
 	}
 
-	init?(urlbox: NSTextField) { //prepareForReuse()?
-		super.init(nibName: nil, bundle:nil)
+	// NIBless  
+	required init?(coder: NSCoder) { super.init(coder: coder) }
+	override init?(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil) }
+	override init() { super.init() }
+	override func loadView() { view = urlbox }
+
+	convenience init(webViewController: WebViewController?) {
+		self.init()
+		preferredContentSize = CGSize(width: 600, height: 24) //app hangs on view presentation without this!
+		if let webVC = webViewController { representedObject = webVC }
+
+ 		// prepareForReuse() {...} ?
 		urlbox.bezelStyle = .RoundedBezel
 		urlbox.drawsBackground = false
 		urlbox.textColor = NSColor.controlTextColor() 
@@ -36,7 +50,7 @@ class URLBoxController: NSViewController {
 		//urlbox.editable = false
 		//urlbox.menu = NSMenu //ctrl-click context menu
 
-		//ti.minSize = CGSize(width: 70, height: 24)
+		urlbox.delegate = self
 
 		if let cell = urlbox.cell() as? NSTextFieldCell {
 			cell.placeholderString = "Navigate to URL"
@@ -47,14 +61,9 @@ class URLBoxController: NSViewController {
 			cell.sendsActionOnEndEditing = false //only send action when Return is pressed
 			cell.usesSingleLineMode = true
 			cell.focusRingType = .None
-			//cell.representedObject
-			//cell.currentEditor()?.delegate = blah
-			// do live validation of input URL before Enter is pressed
-			// http://stackoverflow.com/questions/3605438/validate-decimal-max-min-values-in-a-nstextfield?rq=1
+			//cell.currentEditor()?.delegate = self // do live validation of input URL before Enter is pressed
 		}
-		view = urlbox
 		//view.addSubview(progbar)
-		preferredContentSize = CGSize(width: 600, height: 24)
 	}
 
 	override func viewDidLoad() {
@@ -78,20 +87,31 @@ class URLBoxController: NSViewController {
 	func userEnteredURL() {
 		var urlstr = (view as NSTextField).stringValue
 		if let url = validateURL(urlstr) {
-			//would be cool if I could just kick up gotoURL up the responder chain?
-			if let wvc = representedObject? as? WebViewController {
+			if let wvc = representedObject? as? WebViewController { //would be cool if I could just kick up gotoURL to nextResponder as NSResponder
 				view.window?.makeFirstResponder(wvc.view)
-				wvc.gotoURL(url)
+				wvc.gotoURL(url as NSURL)
 				//view.addSubview(progbar)
 				//wait for isLoaded == true
 				presentingViewController?.dismissViewController(self) //if a thoust art a popover, close thyself
 			}
 		} else {
 			warn("\(__FUNCTION__): invalid url `\(urlstr)` was requested!")
+			//NSBeep()
 		}
 	}
 	
 	override func cancelOperation(sender: AnyObject?) { presentingViewController?.dismissViewController(self) } //if a thoust art a popover, close thyself
+}
+
+extension URLBoxController: NSTextFieldDelegate {
+	//func textShouldBeginEditing(textObject: NSText) -> Bool { return true } //allow editing
+	//func textDidChange(aNotification: NSNotification)
+	func textShouldEndEditing(textObject: NSText) -> Bool { //user attempting to focus out of field
+		if let url = validateURL(textObject.string ?? "") { return true } //allow focusout
+		warn("\(__FUNCTION__): invalid url entered: \(textObject.string)")
+		return false //NSBeep()s, keeps focus
+	}
+	//func textDidEndEditing(aNotification: NSNotification) {	}
 }
 
 extension URLBoxController: NSPopoverDelegate {	

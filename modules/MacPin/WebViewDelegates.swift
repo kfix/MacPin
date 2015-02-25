@@ -229,7 +229,7 @@ extension WebViewController: WKNavigationDelegate {
 		if navigationResponse.canShowMIMEType { 
 			decisionHandler(.Allow)
 		} else {
-			conlog("webView cannot render requested MIME-type:\(mime) @ \(url)")
+			conlog("\(__FUNCTION__) cannot render requested MIME-type:\(mime) @ \(url)")
 			if !jsruntime.delegate.tryFunc("handleUnrenderableMIME", mime, url.description, fn) { askToOpenURL(url) }
 			decisionHandler(.Cancel)
 		}

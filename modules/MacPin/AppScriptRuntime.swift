@@ -2,9 +2,12 @@
 	Joey Korkames (c)2015
 	Special thanks to Google for its horrible Hangouts App on Chrome for OSX :-)
 */
+// somehow get a JXA bridge working?
+//  https://developer.apple.com/library/mac/releasenotes/InterapplicationCommunication/RN-JavaScriptForAutomation/index.html
 
 let jsruntime = AppScriptRuntime() //singleton
 
+import Cocoa
 import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
 
 public extension JSValue {
@@ -24,6 +27,7 @@ public extension JSValue {
 	func registerURLScheme(scheme: String)
 	func postNotification(title: String, _ subtitle: String?, _ msg: String)
 	func openURL(urlstr: String, _ app: String?)
+	func sleep(secs: Double)
 }
 
 public class AppScriptRuntime: NSObject, OSXScriptExports  {
@@ -39,6 +43,22 @@ public class AppScriptRuntime: NSObject, OSXScriptExports  {
 	}
 
 	//func log(msg: String) { }
+
+	func sleep(secs: Double) {
+		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * secs))
+		dispatch_after(delayTime, dispatch_get_main_queue()){}
+	}
+
+/*
+	func delay(delay:Double, closure:()->()) {
+		dispatch_after(
+			dispatch_time(
+				DISPATCH_TIME_NOW,
+				Int64(delay * Double(NSEC_PER_SEC))
+			),
+ 		dispatch_get_main_queue(), closure)
+	}
+*/
 
 	func loadSiteApp() {
 		if let app_js = NSBundle.mainBundle().URLForResource("app", withExtension: "js") {
@@ -77,15 +97,6 @@ public class AppScriptRuntime: NSObject, OSXScriptExports  {
 			NSWorkspace.sharedWorkspace().openURLs([url], withAppBundleIdentifier: appid, options: .AndHideOthers, additionalEventParamDescriptor: nil, launchIdentifiers: nil)
 			//options: .Default .NewInstance .AndHideOthers
 		}
-	}
-
-	func handleGetURLEvent(event: NSAppleEventDescriptor!, replyEvent: NSAppleEventDescriptor?) {
-		if let urlstr = event.paramDescriptorForKeyword(AEKeyword(keyDirectObject))!.stringValue {
-			warn("\(__FUNCTION__) `\(urlstr)` -> jsruntime.delegate.launchURL()")
-			delegate.tryFunc("launchURL", urlstr)
-			//replyEvent == ??
-		}
-		//replyEvent == ??
 	}
 
 	// func newTrayTab
