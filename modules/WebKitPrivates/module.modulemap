@@ -1,5 +1,3 @@
-// http://stackoverflow.com/a/24794675/3878712
-// http://clang.llvm.org/docs/Modules.html
 module WebKitPrivates {
 	umbrella header "WebKitPrivates.h"
 	export *
