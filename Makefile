@@ -12,7 +12,7 @@ allapps		 := $(patsubst %,$(appdir)/%.app,$(apps))
 allapps:	 $(allapps)
 #allexts		 := $(patsubst %,$(appdir)/%.appex,$(apps))
 
-VERSION		 := 1.2.0
+VERSION		 := 1.2.1
 LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin
