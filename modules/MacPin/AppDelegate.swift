@@ -2,24 +2,26 @@ import Cocoa
 import ObjectiveC
 import WebKitPrivates
 
-extension NSMenu {
-	func easyAddItem(title: String , _ action: String , _ key: String? = nil, _ keyflags: [NSEventModifierFlags] = []) {
-		var mi = NSMenuItem(
-			title: title,
-	    	action: Selector(action),
-		    keyEquivalent: (key ?? "")
-		)	
+class MenuItem: NSMenuItem {
+	convenience init(_ itemName: String, _ anAction: String? , _ charCode: String? = nil, _ keyflags: [NSEventModifierFlags] = [], target aTarget: AnyObject? = nil) {
+		self.init(
+			title: itemName,
+			action: (anAction? != nil) ? Selector(anAction!) : nil,
+			keyEquivalent: charCode ?? ""
+		)
 		for keyflag in keyflags {
-			mi.keyEquivalentModifierMask |= Int(keyflag.rawValue)
+			keyEquivalentModifierMask |= Int(keyflag.rawValue)
 			 // .[AlphaShift|Shift|Control|Alternate|Command|Numeric|Function|Help]KeyMask
 		}
-		mi.target = nil // walk responder chain
-		addItem(mi)
-		//return mi? or apply closure to it before add?
+		target = aTarget
+		// menu item actions walk the responder chain if target == nil
+		// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/EventOverview/EventArchitecture/EventArchitecture.html#//apple_ref/doc/uid/10000060i-CH3-SW9
+		// https://developer.apple.com/library/mac/releasenotes/AppKit/RN-AppKit/#10_10ViewController
+		// ChildView -> ChildView ViewController -> ParentView -> ParentView's ViewController -> ParentView's ParentView -> Window -> Window's WindowController -> Window's Delegate -> NSApp -> App Delegate
 	}
 }
 
-//@NSApplicationMain // doesn't work without NIBs, using main.swift instead :-(
+//@NSApplicationMain // doesn't work without NIBs, using execs/MacPin.swift instead
 public class AppDelegate: NSObject {
 
 	var browserController = BrowserViewController()
@@ -46,7 +48,7 @@ public class AppDelegate: NSObject {
 
 extension AppDelegate: NSApplicationDelegate {
 
-	//public func applicationDockMenu(sender: NSApplication) -> NSMenu?
+	public func applicationDockMenu(sender: NSApplication) -> NSMenu? { return browserController.tabMenu }
 
 	public func applicationShouldOpenUntitledFile(app: NSApplication) -> Bool { return false }
 
@@ -57,19 +59,14 @@ extension AppDelegate: NSApplicationDelegate {
 		NSUserNotificationCenter.defaultUserNotificationCenter().delegate = self
 		let app = notification.object as? NSApplication
 
-		// menu item actions walk the responder chain
-		// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/EventOverview/EventArchitecture/EventArchitecture.html#//apple_ref/doc/uid/10000060i-CH3-SW9
-		// https://developer.apple.com/library/mac/releasenotes/AppKit/RN-AppKit/#10_10ViewController
-		// ChildView -> ChildView ViewController -> ParentView -> ParentView's ViewController -> ParentView's ParentView -> Window -> Window's WindowController -> Window's Delegate -> NSApp -> App Delegate
-
 		app!.mainMenu = NSMenu()
 
-		var appMenu = NSMenuItem()
+		let appMenu = NSMenuItem()
 		appMenu.submenu = NSMenu()
-		appMenu.submenu?.easyAddItem("Quit \(NSProcessInfo.processInfo().processName)", "terminate:", "q")
-		appMenu.submenu?.easyAddItem("About", "orderFrontStandardAboutPanel:")
-		appMenu.submenu?.easyAddItem("Restart App", "loadSiteApp")
-		appMenu.submenu?.easyAddItem("Edit App...", "editSiteApp")
+		appMenu.submenu?.addItem(MenuItem("Quit \(NSProcessInfo.processInfo().processName)", "terminate:", "q"))
+		appMenu.submenu?.addItem(MenuItem("About", "orderFrontStandardAboutPanel:"))
+		appMenu.submenu?.addItem(MenuItem("Restart App", "loadSiteApp"))
+		appMenu.submenu?.addItem(MenuItem("Edit App...", "editSiteApp"))
 		app!.mainMenu?.addItem(appMenu) // 1st item shows up as CFPrintableName
 
 		app!.servicesMenu = NSMenu()
@@ -77,53 +74,58 @@ extension AppDelegate: NSApplicationDelegate {
 		svcMenu.submenu = app!.servicesMenu!
 		appMenu.submenu?.addItem(svcMenu)
 
-		var editMenu = NSMenuItem() //NSTextArea funcs
+		let editMenu = NSMenuItem() //NSTextArea funcs
 		editMenu.submenu = NSMenu()
 		editMenu.submenu?.title = "Edit"
-		editMenu.submenu?.easyAddItem("Cut", "cut:", "x", [.CommandKeyMask]) 
-		editMenu.submenu?.easyAddItem("Copy", "copy:", "c", [.CommandKeyMask]) 
-		editMenu.submenu?.easyAddItem("Paste", "paste:", "p", [.CommandKeyMask])
-		editMenu.submenu?.easyAddItem("Select All", "selectAll:", "a", [.CommandKeyMask])
+		editMenu.submenu?.addItem(MenuItem("Cut", "cut:", "x", [.CommandKeyMask])) 
+		editMenu.submenu?.addItem(MenuItem("Copy", "copy:", "c", [.CommandKeyMask]))
+		editMenu.submenu?.addItem(MenuItem("Paste", "paste:", "p", [.CommandKeyMask]))
+		editMenu.submenu?.addItem(MenuItem("Select All", "selectAll:", "a", [.CommandKeyMask]))
 		app!.mainMenu?.addItem(editMenu) 
 
-		var tabMenu = NSMenuItem() //WebViewController and WKWebView funcs
+		let tabMenu = NSMenuItem() //WebViewController and WKWebView funcs
 		tabMenu.submenu = NSMenu()
 		tabMenu.submenu?.title = "Tab"
-		tabMenu.submenu?.easyAddItem("Zoom In", "zoomIn", "+", [.CommandKeyMask])
-		tabMenu.submenu?.easyAddItem("Zoom Out", "zoomOut", "-", [.CommandKeyMask])
-		tabMenu.submenu?.easyAddItem("Zoom Text Only", "zoomOut", "", [.CommandKeyMask])
-		//tabMenu.submenu?.easyAddItem("Web Inspector", "showConsole:", "i", [.CommandKeyMask, .AlternateKeyMask]) //need impl of WKInspectorShow
-		tabMenu.submenu?.easyAddItem("Reload", "reload:", "r", [.CommandKeyMask]) //webview
-		tabMenu.submenu?.easyAddItem("Uncache & Reload", "reloadFromOrigin:", "R", [.CommandKeyMask, .ShiftKeyMask]) //webview
-		tabMenu.submenu?.easyAddItem("Go Back", "goBack:", "[", [.CommandKeyMask]) //webview
-		tabMenu.submenu?.easyAddItem("Go Forward", "goForward:", "]", [.CommandKeyMask])	//webview
-		tabMenu.submenu?.easyAddItem("Stop Loading", "stopLoading:", ".", [.CommandKeyMask]) //webview
-		tabMenu.submenu?.easyAddItem("Print Page", "print:") //NSView
+		tabMenu.submenu?.addItem(MenuItem("Zoom In", "zoomIn", "+", [.CommandKeyMask]))
+		tabMenu.submenu?.addItem(MenuItem("Zoom Out", "zoomOut", "-", [.CommandKeyMask]))
+		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", "zoomOut", "", [.CommandKeyMask]))
+		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", "toggleTransparency"))
+		//tabMenu.submenu?.addItem(MenuItem("Web Inspector", "showConsole:", "i", [.CommandKeyMask, .AlternateKeyMask]) //need impl of WKInspectorShow
+		tabMenu.submenu?.addItem(MenuItem("Reload", "reload:", "r", [.CommandKeyMask])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Uncache & Reload", "reloadFromOrigin:", "R", [.CommandKeyMask, .ShiftKeyMask])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Go Back", "goBack:", "[", [.CommandKeyMask])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Go Forward", "goForward:", "]", [.CommandKeyMask]))	//webview
+		tabMenu.submenu?.addItem(MenuItem("Stop Loading", "stopLoading:", ".", [.CommandKeyMask])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Print Page", "print:")) //NSView
 		app!.mainMenu?.addItem(tabMenu) 
 
-		var winMenu = NSMenuItem() //BrowserViewController and NSWindow funcs
+		let winMenu = NSMenuItem() //BrowserViewController and NSWindow funcs
 		winMenu.submenu = NSMenu()
 		winMenu.submenu?.title = "Window"
-		//winMenu.submenu?.easyAddItem("Enter URL", "focusOnURLBox", "l", [.CommandKeyMask])
-		winMenu.submenu?.easyAddItem("Enter URL", "gotoButtonClicked:", "l", [.CommandKeyMask])
-		winMenu.submenu?.easyAddItem("Toggle Translucency", "toggleTransparency")
-		winMenu.submenu?.easyAddItem("", "toggleFullScreen:")
-		winMenu.submenu?.easyAddItem("", "toggleToolbarShown:")
-		//winMenu.submenu?.easyAddItem("Edit Toolbar", "runToolbarCustomizationPalette:")
-		winMenu.submenu?.easyAddItem("New Tab", "newTabPrompt", "t", [.CommandKeyMask])
-		winMenu.submenu?.easyAddItem("Close Tab", "closeCurrentTab", "w", [.CommandKeyMask])
-		winMenu.submenu?.easyAddItem("Show Next Tab", "selectNextTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask]) 
-		winMenu.submenu?.easyAddItem("Show Previous Tab", "selectPreviousTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask, .ShiftKeyMask])
+		//winMenu.submenu?.addItem(MenuItem("Enter URL", "focusOnURLBox", "l", [.CommandKeyMask]))
+		winMenu.submenu?.addItem(MenuItem("Enter URL", "gotoButtonClicked:", "l", [.CommandKeyMask]))
+		winMenu.submenu?.addItem(MenuItem("", "toggleFullScreen:"))
+		winMenu.submenu?.addItem(MenuItem("", "toggleToolbarShown:"))
+		//winMenu.submenu?.addItem(MenuItem("Edit Toolbar", "runToolbarCustomizationPalette:"))
+		winMenu.submenu?.addItem(MenuItem("New Tab", "newTabPrompt", "t", [.CommandKeyMask]))
+		winMenu.submenu?.addItem(MenuItem("Close Tab", "closeCurrentTab", "w", [.CommandKeyMask]))
+		winMenu.submenu?.addItem(MenuItem("Show Next Tab", "selectNextTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask]))
+		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", "selectPreviousTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask, .ShiftKeyMask]))
 		app!.mainMenu?.addItem(winMenu) 
-		
-		//app!.windowsMenu!
 
-		var dbgMenu = NSMenuItem()
+		let tabListMenu = NSMenuItem(title: "Tabs", action: nil, keyEquivalent: "")
+		tabListMenu.submenu = browserController.tabMenu
+		tabListMenu.submenu?.title = "Tabs"
+		app!.mainMenu?.addItem(tabListMenu)
+		////appMenu.submenu?.addItem(tabListMenu)
+
+		let dbgMenu = NSMenuItem()
 		dbgMenu.submenu = NSMenu()
 		dbgMenu.submenu?.title = "Debug"
-		dbgMenu.submenu?.easyAddItem("Highlight TabView Constraints", "highlightConstraints")
-		dbgMenu.submenu?.easyAddItem("Randomize TabView Layout", "exerciseAmbiguityInLayout")
-		dbgMenu.submenu?.easyAddItem("Replace contentView With Tab", "replaceContentView")
+		dbgMenu.submenu?.addItem(MenuItem("Highlight TabView Constraints", "highlightConstraints"))
+		dbgMenu.submenu?.addItem(MenuItem("Randomize TabView Layout", "exerciseAmbiguityInLayout"))
+		dbgMenu.submenu?.addItem(MenuItem("Replace contentView With Tab", "replaceContentView"))
+		dbgMenu.submenu?.addItem(MenuItem("Dismiss VC", "dismissController:"))
 #if DBGMENU
 #else
 		dbgMenu.hidden = true
@@ -132,10 +134,10 @@ extension AppDelegate: NSApplicationDelegate {
 
 		var origDnD = class_getInstanceMethod(WKView.self, "performDragOperation:")
 		var newDnD = class_getInstanceMethod(WKView.self, "shimmedPerformDragOperation:")
-		method_exchangeImplementations(origDnD, newDnD) //swizzle that shizzlee to enable logging of DnD's
+		method_exchangeImplementations(origDnD, newDnD) //swizzle that shizzle to enable logging of DnD's
 
+		windowController.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
 		windowController.window?.bind(NSTitleBinding, toObject: browserController, withKeyPath: "title", options: nil)
-		windowController.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder, which is always a webview
 		windowController.showWindow(self)
 
 		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: "handleGetURLEvent:replyEvent:", forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url scehems
@@ -159,7 +161,7 @@ extension AppDelegate: NSApplicationDelegate {
 			browserController.unhideApp()
 		}
 
-		if browserController.tabCount < 1 { browserController.newTabPrompt(); } //don't allow a tabless state
+		if browserController.tabCount < 1 { browserController.newTabPrompt() } //don't allow a tabless state
 
 		if let notification = notification {
 			if let userNotification = notification.userInfo?["NSApplicationLaunchUserNotificationKey"] as? NSUserNotification {

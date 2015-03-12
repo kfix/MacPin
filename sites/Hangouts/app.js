@@ -75,13 +75,13 @@ delegate.AppFinishedLaunching = function() {
 	// https://github.com/WebKit/webkit/blob/ce77bdb93dbd24df1af5d44a475fe29b5816f8f9/Source/WebKit2/UIProcess/mac/WKActionMenuController.mm#L691
 	// https://developer.apple.com/library/ios/featuredarticles/iPhoneURLScheme_Reference/Introduction/Introduction.html#//apple_ref/doc/uid/TP40007899
 
-	$browser.isTransparent = true;
 	hangoutsTab = $browser.newTab({
 		'url': "https://plus.google.com/hangouts",
 		'postinject': ["notifier"],
 		'preinject':  ["styler"],
 		'handlers': ['receivedHangoutsMessage','unhideApp','HangoutsRosterReady']
 	});
+	hangoutsTab.isTransparent = true;
 };
 
 //addEventListener('HangoutsRosterReady', function(e){...}, false); ??

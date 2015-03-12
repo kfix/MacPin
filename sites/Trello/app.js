@@ -45,7 +45,6 @@ delegate.handleClickedNotification = function(from, url, msg) { $osx.openURL(url
 
 delegate.AppFinishedLaunching = function() {
 	$osx.registerURLScheme('trello');
-	$browser.isTransparent = true;
 
 	if (lastLaunchedURL != '') {
 		delegate.launchURL(lastLaunchedURL);
@@ -55,7 +54,7 @@ delegate.AppFinishedLaunching = function() {
 			'url': "https://trello.com",
 			'postinject': ['dnd','styler','notifier'],
 			'handlers': ['TrelloNotification',"MacPinPollStates"] //styler.js does polls
-		});
+		}).isTransparent = true;
 /*
 		//$browser.newTab({'url':"about:blank", 'postinject':['dnd']}); allow:blank doesn't take userscripts??!
 		$browser.newTab({

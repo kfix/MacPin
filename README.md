@@ -24,7 +24,7 @@ which you can click on to reply back in the app.
 Under [extras/](/sites/Hangouts/extras) you'll find:  
 
 * `Call via Hangouts.service`: enables selecting and right-clicking a phone number in any App's text to make a Hangout Call
-* `HangoutsAddressBookPlugin`: allows click-to-call from Contacts.app phone number fields
+* `HangoutsAddressBookPlugin`: allows click-to-call from Contacts.app phone number fields and Maps results in Spotlight searches
 
 Several browser extensions can also make phone numbers found in webpages clickable.
 
@@ -110,3 +110,4 @@ And some things I just haven't had need to write:
 
 
 Check out [Firefox for iOS](https://github.com/mozilla/firefox-ios/) to see another Swift-based browser for iOS.
+[WebKit .NET](https://github.com/webkitdotnet/webkitdotnet) contains a WebKit-based browser implementation for the CLR.

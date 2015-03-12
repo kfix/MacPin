@@ -12,12 +12,12 @@ extension WebViewController: WKScriptMessageHandler {
 			case "MacPinPollStates": // direct poll. app.js needs to authorize this handler per tab
 				//FIXME: should iterate message.body's [varnames] to send events for. just shotgun them right now
 				//or send an omnibus event with all varnames values?
-				webview?.evaluateJavaScript(
+				webview.evaluateJavaScript(
 					"window.dispatchEvent(new window.CustomEvent('MacPinTransparencyChanged',{'detail':{'isTransparent': \(browser?.isTransparent ?? false)}})); ",	
 					completionHandler: nil)
 				fallthrough // also let jsruntime get the request
 			default:
-				warn("JS \(message.name)() -> \(message.body)")
+				warn("\(__FUNCTION__) \(message.name)() -> \(message.body)")
 				if jsruntime.delegate.hasProperty(message.name) {
 					warn("sending webkit.messageHandlers.\(message.name) to JSCore: postMessage(\(message.body))")
 					jsruntime.delegate.invokeMethod(message.name, withArguments: [message.body])
@@ -28,8 +28,8 @@ extension WebViewController: WKScriptMessageHandler {
 
 // alert.icons should be the current tab icon, which may not be the app icon
 extension WebViewController: WKUIDelegate {
+
 	func webView(webView: WKWebView!, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
-		conlog("JS window.alert() -> \(message)")
 		var alert = NSAlert()
 		alert.messageText = webView.title
 		alert.addButtonWithTitle("Dismiss")
@@ -44,7 +44,6 @@ extension WebViewController: WKUIDelegate {
 	}
 
 	func webView(webView: WKWebView!, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
-		conlog("JS window.confirm() -> \(message)")
 		var alert = NSAlert()
 		alert.messageText = webView.title
 		alert.addButtonWithTitle("OK")
@@ -59,7 +58,6 @@ extension WebViewController: WKUIDelegate {
 	}
 
 	func webView(webView: WKWebView!, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String!) -> Void) {
-		conlog("JS window.prompt() -> \(prompt)")
 		var alert = NSAlert()
 		alert.messageText = webView.title
 		alert.addButtonWithTitle("Submit")
@@ -81,8 +79,11 @@ extension WebViewController: WKUIDelegate {
 	// https://github.com/WebKit/webkit/search?q=GeolocationPosition.h http://support.apple.com/en-us/HT202080
 	// http://www.cocoawithlove.com/2009/09/whereismymac-snow-leopard-corelocation.html
 	func _webView(webView: WKWebView!, shouldRequestGeolocationAuthorizationForURL url: NSURL, isMainFrame: Bool, mainFrameURL: NSURL) -> Bool { return false } // always allow
+	// navigator.geolocation.getCurrentPosition(function(pos) { console.log(pos) } )
+	// https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/Using_geolocation?redirectlocale=en-US&redirectslug=Using_geolocation
+
 	func _webView(webView: WKWebView!, printFrame: WKFrameInfo) { 
-		conlog("JS: window.print()")
+		conlog("\(__FUNCTION__) JS:window.print()")
 		var printer = NSPrintOperation(view: webView, printInfo: NSPrintInfo.sharedPrintInfo())
 		// seems to work very early on in the first loaded page, then just becomes blank pages
 		// PDF = This view requires setWantsLayer:YES when blendingMode == NSVisualEffectBlendingModeWithinWindow
@@ -100,11 +101,8 @@ extension WebViewController: WKUIDelegate {
 }
 
 extension WebViewController: WKNavigationDelegate {
-	func webView(webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { 
-		if let url = webView.URL {
-			conlog("\(__FUNCTION__) [\(url)]")
-			//browser.navigations[navigation] = url //make a backref for when we may have to present an error later
-		}
+	func webView(webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+		 if let url = webView.URL { conlog("\(__FUNCTION__) [\(url)]") }
 	}
 
 	func webView(webView: WKWebView!, decidePolicyForNavigationAction navigationAction: WKNavigationAction, decisionHandler: (WKNavigationActionPolicy) -> Void) {
@@ -114,6 +112,7 @@ extension WebViewController: WKNavigationDelegate {
 			switch scheme {
 				case "file": fallthrough
 				case "about": fallthrough
+				case "javascript": fallthrough
 				case "http": fallthrough
 				case "https": break
 				default: //weird protocols, or app launches like itmss:
@@ -146,7 +145,9 @@ extension WebViewController: WKNavigationDelegate {
 		}
 	}
 
-	//func webView(webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {}
+	func webView(webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) { 
+		if let url = webView.URL { conlog("\(__FUNCTION__) ~> [\(url)]") }
+	}
 
 	func webView(webView: WKWebView, didReceiveAuthenticationChallenge challenge: NSURLAuthenticationChallenge,
 		completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
@@ -159,7 +160,7 @@ extension WebViewController: WKNavigationDelegate {
 					return
 				case NSURLAuthenticationMethodDefault: fallthrough;
 				default:
-					conlog("prompting user for \(authMethod) credentials: [\(webView.URL ?? String())]")	
+					conlog("\(__FUNCTION__) (\(authMethod)) [\(webView.URL ?? String())]")	
 			}
 		}
 
@@ -206,18 +207,18 @@ extension WebViewController: WKNavigationDelegate {
 	}
 
 	func webView(webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: NSError) { //error returned by webkit when loading content
-		if let url = webView.URL { //?.absoluteString ?? "about:blank" {
-		//	URL is the last requested (And invalid) domain name, just the last sucessfully-loaded location
-		//   need to pull the URL back from didStartProvisionalNavigation
+		if let url = webView.URL {
 			conlog("\(__FUNCTION__) [\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
-			if error.domain == NSURLErrorDomain && error.code != -999 && !webView.loading { // 999 is thrown often on working links
-				if let window = grabWindow() {
-					presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil) }
-				}
+			if error.domain == NSURLErrorDomain && error.code != -999 && !webView.loading { // 999 is thrown for HTTP redirects
+				if let window = grabWindow() { presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil) }
+			}
 		}
 	}
 
-	//func webView(webView: WKWebView!, didCommitNavigation navigation: WKNavigation!) { } //content starts arriving
+	func webView(webView: WKWebView!, didCommitNavigation navigation: WKNavigation!) {
+		//content starts arriving...I assume <body> has landed?
+		scrapeIcon(webView)
+	}
 
 	func webView(webView: WKWebView!, decidePolicyForNavigationResponse navigationResponse: WKNavigationResponse, decisionHandler: (WKNavigationResponsePolicy) -> Void) {
 		let mime = navigationResponse.response.MIMEType!
@@ -240,10 +241,9 @@ extension WebViewController: WKNavigationDelegate {
 		if let url = webView.URL { 
 			conlog("\(__FUNCTION__) [\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 			if error.domain == WebKitErrorDomain && error.code == 204 { askToOpenURL(url) } // `Plug-in handled load!` video/mp4
-			if error.domain == NSURLErrorDomain && error.code != -999 { // 999 is thrown on stopLoading()
-				if let window = grabWindow() {
-					presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil) }
-				}
+			if error.domain == NSURLErrorDomain && error.code != -999 { // 999 is thrown on stopLoading() and HTTP redirects
+				if let window = grabWindow() { presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil) }
+			}
 		}
     }
 	
@@ -251,6 +251,7 @@ extension WebViewController: WKNavigationDelegate {
 		let title = webView.title ?? String()
 		let url = webView.URL ?? NSURL(string:"")!
 		conlog("\(__FUNCTION__) \"\(title)\" [\(url)]")
+		//scrapeIcon(webView)
 	}
 	
 	func webView(webView: WKWebView!, createWebViewWithConfiguration configuration: WKWebViewConfiguration, forNavigationAction navigationAction: WKNavigationAction,
@@ -259,41 +260,37 @@ extension WebViewController: WKNavigationDelegate {
 		// https://developer.mozilla.org/en-US/docs/Web/API/window.open
 		// https://developer.apple.com/library/prerelease/ios/documentation/WebKit/Reference/WKWindowFeatures_Ref/index.html
 
-		var url = navigationAction.request.URL ?? NSURL(string:String())!
-		var tgt = (navigationAction.targetFrame == nil) ? NSURL(string:String())! : navigationAction.targetFrame!.request.URL
+		let srcurl = navigationAction.sourceFrame?.request.URL ?? NSURL(string:String())!
+		let openurl = navigationAction.request.URL ?? NSURL(string:String())!
+		let tgt = (navigationAction.targetFrame == nil) ? NSURL(string:String())! : navigationAction.targetFrame!.request.URL
+		let tgtdom = navigationAction.targetFrame?.request.mainDocumentURL ?? NSURL(string:String())!
 		//^tgt is given as a string in JS and WKWebView synthesizes a WKFrameInfo from it _IF_ it matches an iframe title in the DOM
 		// otherwise == nil
+		// RDAR? would like the tgt string to be passed here
 
-		conlog("JS@\(navigationAction.sourceFrame?.request.URL ?? String()) window.open(\(url), \(tgt))")
-
-		if jsruntime.delegate.tryFunc("decideWindowOpenForURL", url.description) { return nil }
-
-		if url.description.isEmpty { 
-			conlog("url-less JS popup request!")
-		} else if (windowFeatures.allowsResizing ?? 0) == 1 { 
-			if let window = grabWindow() {
-				var newframe = CGRect(
-					x: CGFloat(windowFeatures.x ?? window.frame.origin.x as NSNumber),
-					y: CGFloat(windowFeatures.y ?? window.frame.origin.y as NSNumber),
-					width: CGFloat(windowFeatures.width ?? window.frame.size.width as NSNumber),
-					height: CGFloat(windowFeatures.height ?? window.frame.size.height as NSNumber)
-				)
-				conlog("adjusting window to match window.open() call with size settings: origin,size[\(newframe)]")
-				window.setFrame(newframe, display: true)
+		conlog("\(__FUNCTION__) <\(srcurl)>: window.open(\(openurl), \(tgt))")
+		if jsruntime.delegate.tryFunc("decideWindowOpenForURL", openurl.description) { return nil }
+		if let browser = browser {
+			let wvc = WebViewController(agent: webView._customUserAgent, configuration: configuration)
+			browser.addChildViewController(wvc)
+			if (windowFeatures.allowsResizing ?? 0) == 1 { 
+				if let window = grabWindow() {
+					var newframe = CGRect(
+						x: CGFloat(windowFeatures.x ?? window.frame.origin.x as NSNumber),
+						y: CGFloat(windowFeatures.y ?? window.frame.origin.y as NSNumber),
+						width: CGFloat(windowFeatures.width ?? window.frame.size.width as NSNumber),
+						height: CGFloat(windowFeatures.height ?? window.frame.size.height as NSNumber)
+					)
+					if !webView.inFullScreenMode {
+						conlog("resizing window to match window.open() size parameters passed: origin,size[\(newframe)]")
+						window.setFrame(newframe, display: true)
+					}
+				}
 			}
-			if let wvc = WebViewController(agent: webView._customUserAgent, configuration: configuration) {
-				browser?.newTab(wvc)
-				wvc.gotoURL(url)
-				conlog("window.open() completed for url[\(url)])")
-				return wvc.view as? WKWebView// window.open() -> Window()
-			}
-		} else if tgt.description.isEmpty { //target-less request, assuming == 'top' 
-			webView.loadRequest(navigationAction.request)
-		} else {
-			conlog("redirecting JS popup to system browser")
-			askToOpenURL(url)
+			//if !tgt.description.isEmpty { evalJS("window.name = '\(tgt)';") }
+			if !openurl.description.isEmpty { wvc.gotoURL(openurl) } // this should be deferred until all chained JS calls on the window object have been executed
+			return wvc.view as? WKWebView// window.open() -> Window()
 		}
-
 		return nil //window.open() -> undefined
 	}
 

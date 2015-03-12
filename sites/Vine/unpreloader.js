@@ -1,5 +1,6 @@
-// pinched from the ClickToPlugin wizard Marc Hoyois
+// pinched from Marc Hoyois' ClickToPlugin extension
 // https://hoyois.github.io/safariextensions/universalextension/#html5_blocker
+// https://developer.apple.com/library/safari/documentation/AudioVideo/Conceptual/Using_HTML5_Audio_Video/Introduction/Introduction.html
 document.addEventListener('beforeload', handleBeforeLoadEvent, true);
 
 function handleBeforeLoadEvent(event) {

@@ -53,6 +53,7 @@ public extension NSPasteboard {
 				if let types = item.types? {
 					warn(types.description)
 					for uti in types { // https://developer.apple.com/library/mac/documentation/MobileCoreServices/Reference/UTTypeRef/
+						// http://arstechnica.com/apple/2005/04/macosx-10-4/11/ http://www.cocoanetics.com/2012/09/fun-with-uti/
 						if !uti.description.isEmpty {
 							if let value = item.stringForType(uti.description) {
 								if var cftype = UTTypeCopyDescription(uti as CFString) {

@@ -10,6 +10,7 @@ debug		 ?=
 #verbose		:= -v
 allapps		 := $(patsubst %,$(appdir)/%.app,$(apps))
 allapps:	 $(allapps)
+#allexts		 := $(patsubst %,$(appdir)/%.appex,$(apps))
 
 VERSION		 := 1.2.0
 LAST_TAG	 != git describe --abbrev=0 --tags
@@ -77,8 +78,25 @@ $(appdir)/%.app: $(appexec) icons/%.icns sites/% entitlements.plist build/Framew
 	-codesign -s - -f --entitlements entitlements.plist $@ && codesign -dv $@
 	-asctl container acl list -file $@
 
-$(appdir)/%.appex: $(appdir)/%.app build/%.ShareExtension.bundle appex.plist
-#	--bundle-id=com.github.kfix.macpin.$*.Extension
+# echo '{"CFBundleName": "Hangouts"}' | plutil -convert xml1 -o - -
+$(appdir)/%.share.appex: $(icons)/%.icns sites/$*/appex.share.plist sites/$*./appex.share.js
+	python2.7 -m bundlebuilder \
+	--name=$* \
+	--bundle-id=com.github.kfix.$(notdir $(appexec)).$* \
+	--builddir=$(appdir) \
+	--executable=$(appexec) \
+	--iconfile=icons/$*.icns \
+	--file=sites/$*:Contents/Resources \
+	$(addprefix --lib=,$(filter %.dylib,$+)) \
+	build
+	plutil -replace CFBundleShortVersionString -string "$(VERSION)" $@/Contents/Info.plist 
+	plutil -replace CFBundleVersion -string "1" $@/Contents/Info.plist
+	plutil -replace CFBundlePackageType -string "XPC!" $@/Contents/Info.plist
+	plutil -replace NSExtension xml "{}" \
+		$(shell plutil -extract NSExtension xml1 sites/$*/appex.share.plist -o -) \
+		$@/Contents/Info.plist
+	-codesign -s - -f --entitlements entitlements.plist $@ && codesign -dv $@
+	-asctl container acl list -file $@
 
 install: $(allapps)
 	cp -R $+ ~/Applications
@@ -100,6 +118,10 @@ test: $(appexec)
 	#-defaults delete $(notdir $(appexec))
 	$< http://browsingtest.appspot.com
 
+test.app: $(appdir)/test.app
+	open -F -a $$PWD/$^ --args http://browsingtest.appspot.com
+
+# need to gen static html with https://github.com/realm/jazzy
 doc: $(appexec) 
 	echo ":print_module $(notdir $(appexec))" | xcrun swift $(modincdirs) -deprecated-integrated-repl
 
@@ -107,6 +129,8 @@ nightly: $(appexec) DYLD_FRAMEWORK_PATH=/Volumes/WebKit/WebKit.app/Contents/Fram
 	-defaults delete $(notdir $(appexec))
 	-rm -rf ~/Library/WebKit/$(notdir $(appexec))
 	$<
+
+#.safariextz: http://developer.streak.com/2013/01/how-to-build-safari-extension-using.html
 
 tag:
 	git tag -f -a v$(VERSION) -m 'release $(VERSION)'
@@ -128,4 +152,4 @@ release:
 endif
 
 .PRECIOUS: icons/%.icns $(appdir)/%.app build/Frameworks/lib%.dylib
-.PHONY: clean install uninstall test allapps tag release nightly doc
+.PHONY: clean install uninstall test test.app allapps tag release nightly doc

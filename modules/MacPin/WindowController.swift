@@ -16,17 +16,14 @@ public class WindowController: NSWindowController, NSWindowDelegate {
 			window.hasShadow = true
 			window.titleVisibility = .Hidden
 			window.appearance = NSAppearance(named: NSAppearanceNameVibrantDark) // Aqua LightContent VibrantDark VibrantLight //FIXME add a setter?
-
-			NSApplication.sharedApplication().windowsMenu = NSMenu()
-			NSApplication.sharedApplication().addWindowsItem(window, title: window.title!, filename: false)
-			
 			window.identifier = "browser"
-
 			//window.registerForDraggedTypes([NSPasteboardTypeString,NSURLPboardType,NSFilenamesPboardType])
 			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
 			window.delegate = self
 			window.restorable = true
 			window.restorationClass = AppDelegate.self
+			NSApplication.sharedApplication().windowsMenu = NSMenu()
+			NSApplication.sharedApplication().addWindowsItem(window, title: window.title!, filename: false)
 		}
 		shouldCascadeWindows = false // messes with Autosave
 		windowFrameAutosaveName = "browser"

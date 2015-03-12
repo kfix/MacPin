@@ -28,6 +28,7 @@ public extension JSValue {
 	func postNotification(title: String, _ subtitle: String?, _ msg: String)
 	func openURL(urlstr: String, _ app: String?)
 	func sleep(secs: Double)
+	//func evalAppleScript(code: String) //expose NSAppleScript?
 }
 
 public class AppScriptRuntime: NSObject, OSXScriptExports  {
@@ -47,6 +48,7 @@ public class AppScriptRuntime: NSObject, OSXScriptExports  {
 	func sleep(secs: Double) {
 		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * secs))
 		dispatch_after(delayTime, dispatch_get_main_queue()){}
+		//NSThread.sleepForTimeInterval(secs)
 	}
 
 /*
