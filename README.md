@@ -1,4 +1,6 @@
 # MacPin
+
+[![Join the chat at https://gitter.im/kfix/MacPin](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kfix/MacPin?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 MacPin creates a Mac OSX App shell for websites & webapps from a short JavaScript you provide.  
 Some call these Apps [Site-specific Browsers](https://en.wikipedia.org/wiki/Site-specific_browser) or Hybrid apps.  
 
