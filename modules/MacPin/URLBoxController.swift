@@ -60,11 +60,11 @@ class URLBoxController: NSViewController {
 	}
 
 	required init?(coder: NSCoder) { super.init(coder: coder) }
-	override init?(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView() 
+	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView() 
 	override func loadView() { view = urlbox } // NIBless
  
-	init(webViewController: WebViewController?) {
-		super.init() //calls init(nibName) via ??
+	convenience init(webViewController: WebViewController?) {
+		self.init()
 		preferredContentSize = CGSize(width: 600, height: 24) //app hangs on view presentation without this!
 		if let wvc = webViewController { representedObject = wvc }
 	}
@@ -87,7 +87,6 @@ class URLBoxController: NSViewController {
 			cell.placeholderString = "Navigate to URL"
 			cell.scrollable = true
 			cell.action = Selector("userEnteredURL")
-			//cell.target = nil // on Enter, send action up the Responder chain
 			cell.target = self
 			cell.sendsActionOnEndEditing = false //only send action when Return is pressed
 			cell.usesSingleLineMode = true
@@ -109,15 +108,15 @@ class URLBoxController: NSViewController {
 	}
 
 	func userEnteredURL() {
-		var urlstr = (view as NSTextField).stringValue
+		var urlstr = (view as! NSTextField).stringValue
 		if let url = validateURL(urlstr) {
-			if let wvc = representedObject? as? WebViewController { //would be cool if I could just kick up gotoURL to nextResponder as NSResponder
-				view.window?.makeFirstResponder(wvc.view) //makes no difference if this vc was brought up as a modal sheet
+			if let wvc = representedObject as? WebViewController { //would be cool if I could just kick up gotoURL to nextResponder as NSResponder
+				view.window?.makeFirstResponder(wvc.view) // no effect if this vc was brought up as a modal sheet
 				wvc.gotoURL(url as NSURL)
 				cancelOperation(self)
 			}
 		} else {
-			warn("\(__FUNCTION__): invalid url `\(urlstr)` was requested!")
+			warn("invalid url `\(urlstr)` was requested!")
 			//NSBeep()
 		}
 	}
@@ -132,7 +131,7 @@ extension URLBoxController: NSTextFieldDelegate {
 	//func textDidChange(aNotification: NSNotification)
 	func textShouldEndEditing(textObject: NSText) -> Bool { //user attempting to focus out of field
 		if let url = validateURL(textObject.string ?? "") { return true } //allow focusout
-		warn("\(__FUNCTION__): invalid url entered: \(textObject.string)")
+		warn("invalid url entered: \(textObject.string)")
 		return false //NSBeep()s, keeps focus
 	}
 	//func textDidEndEditing(aNotification: NSNotification) {	}

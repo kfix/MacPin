@@ -1,12 +1,13 @@
 import Cocoa
 import ObjectiveC
 import WebKitPrivates
+import Darwin
 
 class MenuItem: NSMenuItem {
-	convenience init(_ itemName: String, _ anAction: String? , _ charCode: String? = nil, _ keyflags: [NSEventModifierFlags] = [], target aTarget: AnyObject? = nil) {
+	convenience init(_ itemName: String?, _ anAction: String?, _ charCode: String? = nil, _ keyflags: [NSEventModifierFlags] = [], target aTarget: AnyObject? = nil, represents: AnyObject? = nil) {
 		self.init(
-			title: itemName,
-			action: (anAction? != nil) ? Selector(anAction!) : nil,
+			title: itemName ?? "",
+			action: Selector(anAction!),
 			keyEquivalent: charCode ?? ""
 		)
 		for keyflag in keyflags {
@@ -14,6 +15,7 @@ class MenuItem: NSMenuItem {
 			 // .[AlphaShift|Shift|Control|Alternate|Command|Numeric|Function|Help]KeyMask
 		}
 		target = aTarget
+		representedObject = represents
 		// menu item actions walk the responder chain if target == nil
 		// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/EventOverview/EventArchitecture/EventArchitecture.html#//apple_ref/doc/uid/10000060i-CH3-SW9
 		// https://developer.apple.com/library/mac/releasenotes/AppKit/RN-AppKit/#10_10ViewController
@@ -24,13 +26,16 @@ class MenuItem: NSMenuItem {
 //@NSApplicationMain // doesn't work without NIBs, using execs/MacPin.swift instead
 public class AppDelegate: NSObject {
 
+	var effectController = EffectViewController()
 	var browserController = BrowserViewController()
 	var windowController: WindowController
 
 	override public init() {
 		browserController.title = nil
 		browserController.canPropagateSelectedChildViewControllerTitle = true
-		windowController = WindowController(window: NSWindow(contentViewController: browserController))
+		windowController = WindowController(window: NSWindow(contentViewController: effectController))
+		effectController.view.addSubview(browserController.view) 
+		browserController.view.frame = effectController.view.bounds
 		super.init()
 	}
 
@@ -38,12 +43,15 @@ public class AppDelegate: NSObject {
 
 	func handleGetURLEvent(event: NSAppleEventDescriptor!, replyEvent: NSAppleEventDescriptor?) {
 		if let urlstr = event.paramDescriptorForKeyword(AEKeyword(keyDirectObject))!.stringValue {
-			warn("\(__FUNCTION__) `\(urlstr)` -> jsruntime.delegate.launchURL()")
-			jsruntime.delegate.tryFunc("launchURL", urlstr)
+			warn("`\(urlstr)` -> JSRuntime.delegate.launchURL()")
+			JSRuntime.context.setObject(urlstr, forKeyedSubscript: "$launchedWithURL") //FIXME deprecated
+			JSRuntime.context.objectForKeyedSubscript("$").setObject(urlstr, forKeyedSubscript: "launchedWithURL")
+			JSRuntime.delegate.tryFunc("launchURL", urlstr)
 			//replyEvent == ??
 		}
 		//replyEvent == ??
 	}
+
 }
 
 extension AppDelegate: NSApplicationDelegate {
@@ -75,12 +83,15 @@ extension AppDelegate: NSApplicationDelegate {
 		appMenu.submenu?.addItem(svcMenu)
 
 		let editMenu = NSMenuItem() //NSTextArea funcs
+		// plutil -p /System/Library/Frameworks/AppKit.framework/Resources/StandardKeyBinding.dict
 		editMenu.submenu = NSMenu()
 		editMenu.submenu?.title = "Edit"
 		editMenu.submenu?.addItem(MenuItem("Cut", "cut:", "x", [.CommandKeyMask])) 
 		editMenu.submenu?.addItem(MenuItem("Copy", "copy:", "c", [.CommandKeyMask]))
-		editMenu.submenu?.addItem(MenuItem("Paste", "paste:", "p", [.CommandKeyMask]))
+		editMenu.submenu?.addItem(MenuItem("Paste", "paste:", "v", [.CommandKeyMask]))
 		editMenu.submenu?.addItem(MenuItem("Select All", "selectAll:", "a", [.CommandKeyMask]))
+		//WKWebView._findString(str, options: _WKFindOptions, maxCount: 1)
+		// https://github.com/WebKit/webkit/blob/d82b804eac88bb7e2c96fb87fb56845ae4dd8f7f/Source/WebKit2/UIProcess/API/Cocoa/WKWebView.mm#L2049
 		app!.mainMenu?.addItem(editMenu) 
 
 		let tabMenu = NSMenuItem() //WebViewController and WKWebView funcs
@@ -88,15 +99,17 @@ extension AppDelegate: NSApplicationDelegate {
 		tabMenu.submenu?.title = "Tab"
 		tabMenu.submenu?.addItem(MenuItem("Zoom In", "zoomIn", "+", [.CommandKeyMask]))
 		tabMenu.submenu?.addItem(MenuItem("Zoom Out", "zoomOut", "-", [.CommandKeyMask]))
-		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", "zoomOut", "", [.CommandKeyMask]))
+		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", "zoomOut", nil, [.CommandKeyMask]))
 		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", "toggleTransparency"))
 		//tabMenu.submenu?.addItem(MenuItem("Web Inspector", "showConsole:", "i", [.CommandKeyMask, .AlternateKeyMask]) //need impl of WKInspectorShow
+		//	^ https://bugs.webkit.org/show_bug.cgi?id=137612
 		tabMenu.submenu?.addItem(MenuItem("Reload", "reload:", "r", [.CommandKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Uncache & Reload", "reloadFromOrigin:", "R", [.CommandKeyMask, .ShiftKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Go Back", "goBack:", "[", [.CommandKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Go Forward", "goForward:", "]", [.CommandKeyMask]))	//webview
 		tabMenu.submenu?.addItem(MenuItem("Stop Loading", "stopLoading:", ".", [.CommandKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Print Page", "print:")) //NSView
+		tabMenu.submenu?.addItem(MenuItem("Print Tab", "printTab", target: browserController)) //NSView
 		app!.mainMenu?.addItem(tabMenu) 
 
 		let winMenu = NSMenuItem() //BrowserViewController and NSWindow funcs
@@ -104,8 +117,8 @@ extension AppDelegate: NSApplicationDelegate {
 		winMenu.submenu?.title = "Window"
 		//winMenu.submenu?.addItem(MenuItem("Enter URL", "focusOnURLBox", "l", [.CommandKeyMask]))
 		winMenu.submenu?.addItem(MenuItem("Enter URL", "gotoButtonClicked:", "l", [.CommandKeyMask]))
-		winMenu.submenu?.addItem(MenuItem("", "toggleFullScreen:"))
-		winMenu.submenu?.addItem(MenuItem("", "toggleToolbarShown:"))
+		winMenu.submenu?.addItem(MenuItem(nil, "toggleFullScreen:"))
+		winMenu.submenu?.addItem(MenuItem(nil, "toggleToolbarShown:"))
 		//winMenu.submenu?.addItem(MenuItem("Edit Toolbar", "runToolbarCustomizationPalette:"))
 		winMenu.submenu?.addItem(MenuItem("New Tab", "newTabPrompt", "t", [.CommandKeyMask]))
 		winMenu.submenu?.addItem(MenuItem("Close Tab", "closeCurrentTab", "w", [.CommandKeyMask]))
@@ -117,7 +130,11 @@ extension AppDelegate: NSApplicationDelegate {
 		tabListMenu.submenu = browserController.tabMenu
 		tabListMenu.submenu?.title = "Tabs"
 		app!.mainMenu?.addItem(tabListMenu)
-		////appMenu.submenu?.addItem(tabListMenu)
+
+		let bookmarksMenu = NSMenuItem(title: "Bookmarks", action: nil, keyEquivalent: "")
+		bookmarksMenu.submenu = browserController.bookmarksMenu
+		bookmarksMenu.submenu?.title = "Bookmarks"
+		app!.mainMenu?.addItem(bookmarksMenu)
 
 		let dbgMenu = NSMenuItem()
 		dbgMenu.submenu = NSMenu()
@@ -138,38 +155,86 @@ extension AppDelegate: NSApplicationDelegate {
 
 		windowController.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
 		windowController.window?.bind(NSTitleBinding, toObject: browserController, withKeyPath: "title", options: nil)
-		windowController.showWindow(self)
+		windowController.window?.makeKeyAndOrderFront(self)
 
 		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: "handleGetURLEvent:replyEvent:", forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url scehems
 	}
 
 	//public func application(theApplication: NSApplication, openFile filename: String) -> Bool {}
 
-    public func applicationDidFinishLaunching(notification: NSNotification?) { //dock icon stops bouncing
-		jsruntime.context.setObject(browserController, forKeyedSubscript: "$browser")
-		jsruntime.loadSiteApp() // load app.js, if present
+    public func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
+		JSRuntime.context.setObject(browserController, forKeyedSubscript: "$browser")
+		JSRuntime.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
+		//JSRuntime.context.objectForKeyedSubscript("$").setObject(browserController.childViewControllers, forKeyedSubscript: "tabs") // exposing here so .push() works
+		JSRuntime.loadSiteApp() // load app.js, if present
 
 		if let default_html = NSBundle.mainBundle().URLForResource("default", withExtension: "html") {
-			conlog("\(__FUNCTION__) loading initial page from app bundle: \(default_html)")
+			conlog("loading initial page from app bundle: \(default_html)")
 			browserController.newTab(default_html.description)
 		}
 
-		if countElements(Process.arguments) > 1 { // got argv
-			var urlstr = Process.arguments[1] ?? "about:blank"
-			conlog("\(__FUNCTION__) loading initial page from argv[1]: \(urlstr)")
-			browserController.newTab(urlstr)
-			browserController.unhideApp()
+		if browserController.tabs.count < 1 { browserController.newTabPrompt() } //don't allow a tabless state
+
+		if let userNotification = notification.userInfo?["NSApplicationLaunchUserNotificationKey"] as? NSUserNotification {
+			userNotificationCenter(NSUserNotificationCenter.defaultUserNotificationCenter(), didActivateNotification: userNotification)
 		}
 
-		if browserController.tabCount < 1 { browserController.newTabPrompt() } //don't allow a tabless state
+		//conlog("focus is on `\(windowController.window?.firstResponder)`")
 
-		if let notification = notification {
-			if let userNotification = notification.userInfo?["NSApplicationLaunchUserNotificationKey"] as? NSUserNotification {
-				userNotificationCenter(NSUserNotificationCenter.defaultUserNotificationCenter(), didActivateNotification: userNotification)
+		for arg in Process.arguments {
+			switch (arg) {
+				case "-i":
+					if isatty(1) == 1 { JSRuntime.termiosREPL() } //open a JS console on the terminal, if present
+					// would like to natively implement a simple remote console for webkit-using osx apps, Valence only targets IOS-usbmuxd based stuff.
+					// https://www.webkit.org/blog/1875/announcing-remote-debugging-protocol-v1-0/
+					// https://bugs.webkit.org/show_bug.cgi?id=124613
+					// `sudo launchctl print user/com.apple.webinspectord`
+					// https://github.com/google/ios-webkit-debug-proxy/blob/master/src/ios_webkit_debug_proxy.c just connect to local com.apple.webinspectord
+					// https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/inspector/protocol
+					// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/inspector/remote/RemoteInspector.mm
+					// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/inspector/remote/RemoteInspectorConstants.h
+					// https://github.com/siuying/IGJavaScriptConsole
+				case "-iT":
+					if isatty(1) == 1 { browserController.tabSelected?.termiosREPL() } //open a JS console for the first tab WebView on the terminal, if present
+					// ooh, pretty: https://github.com/Naituw/WBWebViewConsole
+					// https://github.com/Naituw/WBWebViewConsole/blob/master/WBWebViewConsole/Views/WBWebViewConsoleInputView.m
+				default:
+					if arg != Process.arguments[0] && !arg.hasPrefix("-psn_0_") { // Process Serial Number from LaunchServices open()
+						warn("unrecognized argv[]: `\(arg)`")
+					}
 			}
 		}
 
-		conlog("\(__FUNCTION__) focus is on `\(windowController.window?.firstResponder)`")
+/*	
+		let getopts = "iT:"
+		var buffer = Array(getopts.utf8).map { Int8($0) }
+		while true {
+		    let arg = Int(getopt(Process.unsafeArgc, Process.unsafeArgv, buffer))
+		    if arg == -1 { break }
+		    switch "\(UnicodeScalar(arg))" {
+			    case "i":
+					if isatty(1) == 1 { JSRuntime.termiosREPL() } //open a JS console on the terminal, if present
+			    case "T":
+			        var tabnum = String.fromCString(optarg)!.toInt() ?? 0
+					if isatty(1) == 1 { browserController.tabSelected?.termiosREPL() } //open a JS console for the first tab WebView on the terminal, if present
+			    case "?":
+			        let charOption = "\(UnicodeScalar(Int(optopt)))"
+			        if charOption == "T" {
+			            println("Option '\(charOption)' requires an argument.")
+		    	    } else {
+						warn("unrecognized argv: `\(charOption)`")
+			        }
+			        //NSApplication.sharedApplication().terminate(self)
+			    default:
+					true
+		    }
+		}
+
+		for index in optind..<Process.unsafeArgc {
+			println("Non-option argument '\(String.fromCString(Process.unsafeArgv[Int(index)])!)'")
+		}
+*/
+
     }
 
 	public func applicationDidBecomeActive(notification: NSNotification) {
@@ -177,7 +242,7 @@ extension AppDelegate: NSApplicationDelegate {
 	}
 
 	public func application(application: NSApplication, willPresentError error: NSError) -> NSError { 
-		conlog("\(__FUNCTION__) `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
+		warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 		if error.domain == NSURLErrorDomain {
 			if let userInfo = error.userInfo {
 				if let errstr = userInfo[NSLocalizedDescriptionKey] as? String {
@@ -197,6 +262,15 @@ extension AppDelegate: NSApplicationDelegate {
     
 	public func applicationShouldTerminateAfterLastWindowClosed(app: NSApplication) -> Bool { return true }
 
+	// handles drag-to-dock-badge, /usr/bin/open and argv[1] requests
+	public func application(theApplication: NSApplication, openFile filename: String) -> Bool {
+		if let url = validateURL(filename) {
+			warn("opening: \(url)")
+			browserController.newTab(url)
+			return true
+		}
+		return false
+	}
 }
 
 extension AppDelegate: NSUserNotificationCenterDelegate {
@@ -204,7 +278,7 @@ extension AppDelegate: NSUserNotificationCenterDelegate {
 	public func userNotificationCenter(center: NSUserNotificationCenter, didActivateNotification notification: NSUserNotification) {
 		conlog("user clicked notification")
 
-		if jsruntime.delegate.tryFunc("handleClickedNotification", notification.title ?? "", notification.subtitle ?? "", notification.informativeText ?? "") {
+		if JSRuntime.delegate.tryFunc("handleClickedNotification", notification.title ?? "", notification.subtitle ?? "", notification.informativeText ?? "") {
 			conlog("handleClickedNotification fired!")
 			center.removeDeliveredNotification(notification)
 		}
@@ -217,8 +291,9 @@ extension AppDelegate: NSUserNotificationCenterDelegate {
 extension AppDelegate: NSWindowRestoration {
 	// https://developer.apple.com/library/mac/documentation/General/Conceptual/MOSXAppProgrammingGuide/CoreAppDesign/CoreAppDesign.html#//apple_ref/doc/uid/TP40010543-CH3-SW35
 	public class func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow!,NSError!) -> Void)) {
-		if let window = (NSApplication.sharedApplication().delegate as AppDelegate).windowController.window {
+		if let app = NSApplication.sharedApplication().delegate as? AppDelegate, let window = app.windowController.window {
 			completionHandler(window, nil)
+			//WKWebView._restoreFromSessionStateData ...
 		} else {
 			completionHandler(nil, nil)
 		}

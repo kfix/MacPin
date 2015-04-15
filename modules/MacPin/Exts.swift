@@ -3,19 +3,44 @@ import WebKit
 import WebKitPrivates
 import JavaScriptCore
 
-func warn(msg:String) { NSFileHandle.fileHandleWithStandardError().writeData((msg + "\n").dataUsingEncoding(NSUTF8StringEncoding)!) }
+func warn(msg: String, function: StaticString = __FUNCTION__, file: StaticString = __FILE__, line: UWord = __LINE__, column: UWord = __COLUMN__) {
+	 NSFileHandle.fileHandleWithStandardError().writeData(("<\(__FILE__):\(line):\(column)> [\(function)] \(msg)\n").dataUsingEncoding(NSUTF8StringEncoding)!)
+}
+
+/*
+func assert(condition: @autoclosure () -> Bool, _ message: String = "",
+	file: String = __FILE__, line: Int = __LINE__) {
+		#if DEBUG
+			if !condition() {
+				println("assertion failed at \(file):\(line): \(message)")
+				abort()
+			}
+		#endif
+}
+*/
 
 func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true) -> Bool {
 	if let script_url = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") {
 		warn("loading userscript: \(script_url)")
 		var script = WKUserScript(
-			source: NSString(contentsOfURL: script_url, encoding: NSUTF8StringEncoding, error: nil)!,
+			source: NSString(contentsOfURL: script_url, encoding: NSUTF8StringEncoding, error: nil) as! String,
 		    injectionTime: inject,
 		    forMainFrameOnly: onlyForTop
 		)
 		webctl.addUserScript(script)
 	} else {
-		return false //NSError?
+		let respath = NSBundle.mainBundle().resourcePath
+		warn("couldn't find userscript: \(respath)/\(basename).js")
+		let error = NSError(domain: "MacPin", code: 3, userInfo: [
+			NSFilePathErrorKey: basename + ".js",
+			NSLocalizedDescriptionKey: "No userscript could be found named:\n\n\(respath)/\(basename).js"
+		])
+		if let window = NSApplication.sharedApplication().mainWindow {
+			window.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
+		} else {
+			NSApplication.sharedApplication().presentError(error)
+		}
+		return false
 	}
 	return true
 }
@@ -24,8 +49,8 @@ func validateURL(urlstr: String) -> NSURL? {
 	// https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 	if urlstr.isEmpty { return nil }
 	if let urlp = NSURLComponents(string: urlstr) {
+		if urlstr.hasPrefix("/") { urlp.scheme = "file" }
 		if !((urlp.path ?? "").isEmpty) && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
-			// FIXME check if starts with '/' or '~/': scheme = "file"
 			urlp.scheme = "http"
 			urlp.host = urlp.path
 			urlp.path = nil
@@ -33,14 +58,14 @@ func validateURL(urlstr: String) -> NSURL? {
 		if let url = urlp.URL { return url }
 	}
 
-	if jsruntime.delegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // the delegate function will open url directly
+	if JSRuntime.delegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // the delegate function will open url directly
 
 	// maybe its a search query? check if blank and reformat it
-	if !urlstr.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty {
-		if let query = urlstr.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding) {
-			if let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") { return search }
+	if !urlstr.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
+		let query = urlstr.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding), 
+		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") {
+			return search
 		}
-	}
 
 	return nil 
 }
@@ -50,31 +75,30 @@ public extension NSPasteboard {
 		if let items = self.pasteboardItems {
 			for item in items {
 				warn("\n")
-				if let types = item.types? {
+				if let types = item.types as? [NSString] {
 					warn(types.description)
 					for uti in types { // https://developer.apple.com/library/mac/documentation/MobileCoreServices/Reference/UTTypeRef/
 						// http://arstechnica.com/apple/2005/04/macosx-10-4/11/ http://www.cocoanetics.com/2012/09/fun-with-uti/
-						if !uti.description.isEmpty {
-							if let value = item.stringForType(uti.description) {
-								if var cftype = UTTypeCopyDescription(uti as CFString) {
-									var type = cftype.takeUnretainedValue() 
-									warn("DnD: uti(\(uti)) [\(type)] = '\(value)'")
-								} else if var cftag = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassNSPboardType) {
-									var tag = cftag.takeUnretainedValue()
-									warn("DnD: uti(\(uti)) <\(tag)> = '\(value)'")
-								} else if var cftag = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassMIMEType) {
-									var tag = cftag.takeUnretainedValue()
-									warn("DnD: uti(\(uti)) {\(tag)} = '\(value)'")
-								} else {
-									warn("DnD: uti(\(uti)) = '\(value)'")
-								} //O
-							} //M
-						} //G
-					} //W
-				} //T
-			} //F
-		} // PewPewDIE!@#$!$#!@
-	}
+						if !uti.description.isEmpty, let value = item.stringForType(uti.description) {
+							if var cftype = UTTypeCopyDescription(uti as CFString) {
+								var type = cftype.takeUnretainedValue() 
+								warn("DnD: uti(\(uti)) [\(type)] = '\(value)'")
+							} else if var cftag = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassNSPboardType) {
+								var tag = cftag.takeUnretainedValue()
+								warn("DnD: uti(\(uti)) <\(tag)> = '\(value)'")
+							} else if var cftag = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassMIMEType) {
+								var tag = cftag.takeUnretainedValue()
+								warn("DnD: uti(\(uti)) {\(tag)} = '\(value)'")
+							} else {
+								warn("DnD: uti(\(uti)) = '\(value)'")
+							} //O
+						} //M
+					} //G
+				} //W
+			} //T
+		} //F
+	} //PewPewDIE!@#$!$#!@
+
 }
 
 public extension WKView {
@@ -98,58 +122,60 @@ public extension WKView {
 
 	// http://stackoverflow.com/a/25114813/3878712
 	func shimmedPerformDragOperation(sender: NSDraggingInfo) -> Bool {
-		//if sender.dragginginSource() == nil //dragged from external application
-		var pboard = sender.draggingPasteboard()
-		pboard.dump()
+		if sender.draggingSource() == nil { //dragged from external application
+			var pboard = sender.draggingPasteboard()
+			pboard.dump()
 
-		if var urls = WebURLsWithTitles.URLsFromPasteboard(pboard) { //drops from Safari
-			warn("DnD: WK URL array: \(urls)")
-		} else if var file = pboard.dataForType("public.file-url") { //drops from Finder
-			warn("DnD: files from finder")
-		} else if var zip = pboard.dataForType("org.chromium.drag-dummy-type") { //Chromium
-		//} else if "public.url" != (pboard.availableTypeFromArray(["public.url"]) ?? "") { //Chromium missing public-url
+			if var urls = WebURLsWithTitles.URLsFromPasteboard(pboard) { //drops from Safari
+				warn("DnD: WebKit URL array: \(urls)")
+			} else if var file = pboard.dataForType("public.file-url") { //drops from Finder
+				warn("DnD: files from Finder")
+			} else if var zip = pboard.dataForType("org.chromium.drag-dummy-type") ?? pboard.dataForType("org.chromium.image-html") { //Chromium
+				// http://src.chromium.org/viewvc/chrome/trunk/src/content/browser/web_contents/web_drag_source_mac.mm
+				// http://src.chromium.org/viewvc/chrome/trunk/src/ui/base/dragdrop/cocoa_dnd_util.mm
+			//} else if "public.url" != (pboard.availableTypeFromArray(["public.url"]) ?? "") { //Chromium missing public-url
 
-			// Chromium pastes need some massage for WebView to seamlessly open them, so imitate a Safari drag
-			// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/Misc/WebNSPasteboardExtras.mm#L118 conform to _web_bestURL()
+				// Chromium pastes need some massage for WebView to seamlessly open them, so imitate a Safari drag
+				// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/Misc/WebNSPasteboardExtras.mm#L118 conform to _web_bestURL()
 
-			var apsfctype = pboard.dataForType("com.apple.pasteboard.promised-file-content-type")
-			var apsfurl = pboard.dataForType("com.apple.pasteboard.promised-file-url")
+				var apsfctype = pboard.dataForType("com.apple.pasteboard.promised-file-content-type")
+				var apsfurl = pboard.dataForType("com.apple.pasteboard.promised-file-url")
 
-			if let url = NSURL(fromPasteboard: pboard) { // NSURLPBoardType
-				// https://github.com/WebKit/webkit/blob/53e0a1506a7b2408e86caa9f510477b5ee283487/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3330 drag out
-				// https://github.com/WebKit/webkit/search?q=datatransfer
+				if let url = NSURL(fromPasteboard: pboard) { // NSURLPBoardType
+					// https://github.com/WebKit/webkit/blob/53e0a1506a7b2408e86caa9f510477b5ee283487/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3330 drag out
+					// https://github.com/WebKit/webkit/search?q=datatransfer
 
-				pboard.clearContents() // have to wipe it clean in order to modify
+					pboard.clearContents() // have to wipe it clean in order to modify
 
-				pboard.addTypes(["WebURLsWithTitlesPboardType"], owner: nil)
-				WebURLsWithTitles.writeURLs([url], andTitles: nil, toPasteboard: pboard)
-				// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/History/WebURLsWithTitles.h
+					pboard.addTypes(["WebURLsWithTitlesPboardType"], owner: nil)
+					WebURLsWithTitles.writeURLs([url], andTitles: nil, toPasteboard: pboard)
+					// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/History/WebURLsWithTitles.h
 
-				//pboard.addTypes([NSURLPboardType], owner: nil) // Apple URL pasteboard type -> text/url-list
-				//url.writeToPasteboard(pboard) //deprecated from 10.6+
-				// https://github.com/WebKit/webkit/blob/fb77811f2b8164ce4c34fc63b496519be15f55ca/Source/WebCore/platform/mac/PasteboardMac.mm#L543
+					//pboard.addTypes([NSURLPboardType], owner: nil) // Apple URL pasteboard type -> text/url-list
+					//url.writeToPasteboard(pboard) //deprecated from 10.6+
+					// https://github.com/WebKit/webkit/blob/fb77811f2b8164ce4c34fc63b496519be15f55ca/Source/WebCore/platform/mac/PasteboardMac.mm#L543
 
-				pboard.addTypes(["public.url"], owner: nil) // *WebURLPboardType http://uti.schwa.io/identifier/public.url
-				pboard.setString(url.description, forType:"public.url") // -> public.url
+					pboard.addTypes(["public.url"], owner: nil) // *WebURLPboardType http://uti.schwa.io/identifier/public.url
+					pboard.setString(url.description, forType:"public.url") // -> public.url
 
-				pboard.setString(url.description, forType:NSStringPboardType) // -> text/plain
-				// https://github.com/WebKit/webkit/blob/fb77811f2b8164ce4c34fc63b496519be15f55ca/Source/WebCore/platform/mac/PasteboardMac.mm#L539
+					pboard.setString(url.description, forType:NSStringPboardType) // -> text/plain
+					// https://github.com/WebKit/webkit/blob/fb77811f2b8164ce4c34fc63b496519be15f55ca/Source/WebCore/platform/mac/PasteboardMac.mm#L539
 
-				if let ctype = apsfctype {
-					pboard.addTypes(["com.apple.pasteboard.promised-file-content-type"], owner: nil)
-					pboard.setData(ctype, forType:"com.apple.pasteboard.promised-file-content-type")
+					if let ctype = apsfctype {
+						pboard.addTypes(["com.apple.pasteboard.promised-file-content-type"], owner: nil)
+						pboard.setData(ctype, forType:"com.apple.pasteboard.promised-file-content-type")
+					}
+					if let url = apsfurl {
+						pboard.addTypes(["com.apple.pasteboard.promised-file-url"], owner: nil)
+						pboard.setData(url, forType:"com.apple.pasteboard.promised-file-url")
+					}
+
+					//pboard.writeObjects([url])
+
+					pboard.dump()
 				}
-				if let url = apsfurl {
-					pboard.addTypes(["com.apple.pasteboard.promised-file-url"], owner: nil)
-					pboard.setData(url, forType:"com.apple.pasteboard.promised-file-url")
-				}
-
-				//pboard.writeObjects([url])
-
-				pboard.dump()
 			}
 		}
-
 		return self.shimmedPerformDragOperation(sender) //return pre-swizzled method		
 	}
 }

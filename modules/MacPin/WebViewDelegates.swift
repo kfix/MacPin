@@ -3,6 +3,10 @@
 // https://developer.apple.com/library/prerelease/ios/documentation/General/Conceptual/ExtensibilityPG/ExtensionScenarios.html#//apple_ref/doc/uid/TP40014214-CH21-SW2
 // https://developer.apple.com/library/mac/documentation/Foundation/Reference/NSURLSessionUploadTask_class/index.html
 
+//and how about downloads? right now they are passed to safari
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKDownloadDelegate.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
+
 import WebKit
 
 extension WebViewController: WKScriptMessageHandler {
@@ -15,12 +19,12 @@ extension WebViewController: WKScriptMessageHandler {
 				webview.evaluateJavaScript(
 					"window.dispatchEvent(new window.CustomEvent('MacPinTransparencyChanged',{'detail':{'isTransparent': \(browser?.isTransparent ?? false)}})); ",	
 					completionHandler: nil)
-				fallthrough // also let jsruntime get the request
+				fallthrough // also let JSRuntime get the request
 			default:
-				warn("\(__FUNCTION__) \(message.name)() -> \(message.body)")
-				if jsruntime.delegate.hasProperty(message.name) {
-					warn("sending webkit.messageHandlers.\(message.name) to JSCore: postMessage(\(message.body))")
-					jsruntime.delegate.invokeMethod(message.name, withArguments: [message.body])
+				warn("\(message.name)() -> \(message.body)")
+				if JSRuntime.delegate.hasProperty(message.name) {
+					warn("forwarding webkit.messageHandlers.\(message.name) to JSRuntime.delegate.\(message.name)(webview,msg)")
+					JSRuntime.delegate.invokeMethod(message.name, withArguments: [self, message.body])
 				}
 		}
 	}
@@ -29,7 +33,7 @@ extension WebViewController: WKScriptMessageHandler {
 // alert.icons should be the current tab icon, which may not be the app icon
 extension WebViewController: WKUIDelegate {
 
-	func webView(webView: WKWebView!, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
+	func webView(webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
 		var alert = NSAlert()
 		alert.messageText = webView.title
 		alert.addButtonWithTitle("Dismiss")
@@ -43,7 +47,7 @@ extension WebViewController: WKUIDelegate {
 		}
 	}
 
-	func webView(webView: WKWebView!, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
+	func webView(webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
 		var alert = NSAlert()
 		alert.messageText = webView.title
 		alert.addButtonWithTitle("OK")
@@ -57,7 +61,7 @@ extension WebViewController: WKUIDelegate {
 		}
 	}
 
-	func webView(webView: WKWebView!, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String!) -> Void) {
+	func webView(webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String!) -> Void) {
 		var alert = NSAlert()
 		alert.messageText = webView.title
 		alert.addButtonWithTitle("Submit")
@@ -74,15 +78,16 @@ extension WebViewController: WKUIDelegate {
 		}
 	}
 
+	// https://bugs.webkit.org/show_bug.cgi?id=131125
 	// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKUIDelegatePrivate.h
 	// https://github.com/WebKit/webkit/blob/9fc59b8f8a54be88ca1de601435087018c0cc181/Source/WebKit2/UIProcess/ios/WKGeolocationProviderIOS.mm#L187
 	// https://github.com/WebKit/webkit/search?q=GeolocationPosition.h http://support.apple.com/en-us/HT202080
 	// http://www.cocoawithlove.com/2009/09/whereismymac-snow-leopard-corelocation.html
-	func _webView(webView: WKWebView!, shouldRequestGeolocationAuthorizationForURL url: NSURL, isMainFrame: Bool, mainFrameURL: NSURL) -> Bool { return false } // always allow
+	func _webView(webView: WKWebView, shouldRequestGeolocationAuthorizationForURL url: NSURL, isMainFrame: Bool, mainFrameURL: NSURL) -> Bool { return false } // always allow
 	// navigator.geolocation.getCurrentPosition(function(pos) { console.log(pos) } )
 	// https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/Using_geolocation?redirectlocale=en-US&redirectslug=Using_geolocation
 
-	func _webView(webView: WKWebView!, printFrame: WKFrameInfo) { 
+	func _webView(webView: WKWebView, printFrame: WKFrameInfo) { 
 		conlog("\(__FUNCTION__) JS:window.print()")
 		var printer = NSPrintOperation(view: webView, printInfo: NSPrintInfo.sharedPrintInfo())
 		// seems to work very early on in the first loaded page, then just becomes blank pages
@@ -105,11 +110,11 @@ extension WebViewController: WKNavigationDelegate {
 		 if let url = webView.URL { conlog("\(__FUNCTION__) [\(url)]") }
 	}
 
-	func webView(webView: WKWebView!, decidePolicyForNavigationAction navigationAction: WKNavigationAction, decisionHandler: (WKNavigationActionPolicy) -> Void) {
+	func webView(webView: WKWebView, decidePolicyForNavigationAction navigationAction: WKNavigationAction, decisionHandler: (WKNavigationActionPolicy) -> Void) {
 		let url = navigationAction.request.URL
-
-		if let scheme = url.scheme? {
+		if let url = url, let scheme = url.scheme {
 			switch scheme {
+				case "data": fallthrough
 				case "file": fallthrough
 				case "about": fallthrough
 				case "javascript": fallthrough
@@ -119,29 +124,29 @@ extension WebViewController: WKNavigationDelegate {
 					askToOpenURL(url)
     	        	decisionHandler(.Cancel)
 			}
-		}
 
-		if jsruntime.delegate.tryFunc("decideNavigationForURL", url.description) { decisionHandler(.Cancel); return }
+			if JSRuntime.delegate.tryFunc("decideNavigationForURL", url.description) { decisionHandler(.Cancel); return }
 
-		//conlog("WebView decidePolicy() navType:\(navigationAction.navigationType.rawValue) sourceFrame:(\(navigationAction.sourceFrame?.request.URL)) -> \(url)")
-		switch navigationAction.navigationType {
-			case .LinkActivated:
-				let mousebtn = navigationAction.buttonNumber
-				let modkeys = navigationAction.modifierFlags
-				if (modkeys & NSEventModifierFlags.AlternateKeyMask).rawValue != 0 { NSWorkspace.sharedWorkspace().openURL(url) } //alt-click
-					else if (modkeys & NSEventModifierFlags.CommandKeyMask).rawValue != 0 { browser?.newTab(url) } //cmd-click
-					else if !jsruntime.delegate.tryFunc("decideNavigationForClickedURL", url.description) { // allow override from JS 
-						if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
-						browser?.newTab(url) // middle-clicked, or out of frame target link
-					}
-				conlog("\(__FUNCTION__) -> .Cancel -- user clicked <a href=\(url) target=_blank> or middle-clicked: opening externally")
-    	        decisionHandler(.Cancel)
-			case .FormSubmitted: fallthrough
-			case .BackForward: fallthrough
-			case .Reload: fallthrough
-			case .FormResubmitted: fallthrough
-			case .Other: fallthrough
-			default: decisionHandler(.Allow) 
+			//conlog("WebView decidePolicy() navType:\(navigationAction.navigationType.rawValue) sourceFrame:(\(navigationAction.sourceFrame?.request.URL)) -> \(url)")
+			switch navigationAction.navigationType {
+				case .LinkActivated:
+					let mousebtn = navigationAction.buttonNumber
+					let modkeys = navigationAction.modifierFlags
+					if (modkeys & NSEventModifierFlags.AlternateKeyMask).rawValue != 0 { NSWorkspace.sharedWorkspace().openURL(url) } //alt-click
+						else if (modkeys & NSEventModifierFlags.CommandKeyMask).rawValue != 0 { browser?.newTab(url) } //cmd-click
+						else if !JSRuntime.delegate.tryFunc("decideNavigationForClickedURL", url.description) { // allow override from JS 
+							if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
+							browser?.newTab(url) // middle-clicked, or out of frame target link
+						}
+					conlog("\(__FUNCTION__) -> .Cancel -- user clicked <a href=\(url) target=_blank> or middle-clicked: opening externally")
+    		        decisionHandler(.Cancel)
+				case .FormSubmitted: fallthrough
+				case .BackForward: fallthrough
+				case .Reload: fallthrough
+				case .FormResubmitted: fallthrough
+				case .Other: fallthrough
+				default: decisionHandler(.Allow) 
+			}
 		}
 	}
 
@@ -215,23 +220,23 @@ extension WebViewController: WKNavigationDelegate {
 		}
 	}
 
-	func webView(webView: WKWebView!, didCommitNavigation navigation: WKNavigation!) {
-		//content starts arriving...I assume <body> has landed?
+	func webView(webView: WKWebView, didCommitNavigation navigation: WKNavigation!) {
+		//content starts arriving...I assume <body> has materialized in the DOM?
 		scrapeIcon(webView)
 	}
 
-	func webView(webView: WKWebView!, decidePolicyForNavigationResponse navigationResponse: WKNavigationResponse, decisionHandler: (WKNavigationResponsePolicy) -> Void) {
+	func webView(webView: WKWebView, decidePolicyForNavigationResponse navigationResponse: WKNavigationResponse, decisionHandler: (WKNavigationResponsePolicy) -> Void) {
 		let mime = navigationResponse.response.MIMEType!
 		let url = navigationResponse.response.URL!
 		let fn = navigationResponse.response.suggestedFilename!
 
-		if jsruntime.delegate.tryFunc("decideNavigationForMIME", mime, url.description) { decisionHandler(.Cancel); return } //FIXME perf hit?
+		if JSRuntime.delegate.tryFunc("decideNavigationForMIME", mime, url.description) { decisionHandler(.Cancel); return } //FIXME perf hit?
 
 		if navigationResponse.canShowMIMEType { 
 			decisionHandler(.Allow)
 		} else {
 			conlog("\(__FUNCTION__) cannot render requested MIME-type:\(mime) @ \(url)")
-			if !jsruntime.delegate.tryFunc("handleUnrenderableMIME", mime, url.description, fn) { askToOpenURL(url) }
+			if !JSRuntime.delegate.tryFunc("handleUnrenderableMIME", mime, url.description, fn) { askToOpenURL(url) }
 			decisionHandler(.Cancel)
 		}
 	}
@@ -247,14 +252,14 @@ extension WebViewController: WKNavigationDelegate {
 		}
     }
 	
-	func webView(webView: WKWebView!, didFinishNavigation navigation: WKNavigation!) {
+	func webView(webView: WKWebView, didFinishNavigation navigation: WKNavigation!) {
 		let title = webView.title ?? String()
 		let url = webView.URL ?? NSURL(string:"")!
 		conlog("\(__FUNCTION__) \"\(title)\" [\(url)]")
 		//scrapeIcon(webView)
 	}
 	
-	func webView(webView: WKWebView!, createWebViewWithConfiguration configuration: WKWebViewConfiguration, forNavigationAction navigationAction: WKNavigationAction,
+	func webView(webView: WKWebView, createWebViewWithConfiguration configuration: WKWebViewConfiguration, forNavigationAction navigationAction: WKNavigationAction,
                 windowFeatures: WKWindowFeatures) -> WKWebView? {
 		// called via JS:window.open()
 		// https://developer.mozilla.org/en-US/docs/Web/API/window.open
@@ -269,7 +274,7 @@ extension WebViewController: WKNavigationDelegate {
 		// RDAR? would like the tgt string to be passed here
 
 		conlog("\(__FUNCTION__) <\(srcurl)>: window.open(\(openurl), \(tgt))")
-		if jsruntime.delegate.tryFunc("decideWindowOpenForURL", openurl.description) { return nil }
+		if JSRuntime.delegate.tryFunc("decideWindowOpenForURL", openurl.description) { return nil }
 		if let browser = browser {
 			let wvc = WebViewController(agent: webView._customUserAgent, configuration: configuration)
 			browser.addChildViewController(wvc)
@@ -288,8 +293,8 @@ extension WebViewController: WKNavigationDelegate {
 				}
 			}
 			//if !tgt.description.isEmpty { evalJS("window.name = '\(tgt)';") }
-			if !openurl.description.isEmpty { wvc.gotoURL(openurl) } // this should be deferred until all chained JS calls on the window object have been executed
-			return wvc.view as? WKWebView// window.open() -> Window()
+			if !openurl.description.isEmpty { wvc.gotoURL(openurl) } // this should be deferred with a timer so all chained JS calls on the window.open() instanciation can finish executing
+			return wvc.view as? WKWebView // window.open() -> Window()
 		}
 		return nil //window.open() -> undefined
 	}

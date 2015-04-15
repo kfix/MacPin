@@ -1,54 +1,68 @@
 #!/usr/bin/make -f
-appdir		 := apps
-apps		 := Hangouts Trello Digg Vine
-appexec		 := build/MacOS/MacPin
-debug		 ?=
-#debug		 += -D APP2JSLOG -D SAFARIDBG -D WK2LOG -D DBGMENU
-#^ need to make sure !release target
-#verbose		:= -driver-print-jobs
-# ^ just a dry-run
-#verbose		:= -v
-allapps		 := $(patsubst %,$(appdir)/%.app,$(apps))
-allapps:	 $(allapps)
-#allexts		 := $(patsubst %,$(appdir)/%.appex,$(apps))
+outdir				?= build
 
-VERSION		 := 1.2.1
+macpin				:= MacPin
+bin_macpin			:= $(outdir)/MacOS/$(macpin)
+lib_macpin			:= $(outdir)/Frameworks/lib$(macpin).dylib
+macpin_apps			:= Hangouts Trello Digg Vine Facebook CloudPebble
+macpin_sites		?= sites
+
+appdir				?= $(outdir)/apps
+//appdir				?= apps
+apptgts				:= $(patsubst %,$(appdir)/%.app,$(macpin_apps))
+allapps: $(apptgts)
+appexec				:= $(bin_macpin)
+#$(appdir)/%.app: appexec = $(macpin)
+#$(appdir)/%.app: applib = $(libmacpin)
+debug				?=
+#exttgts			:= $(patsubst %,$(appdir)/%.appex,$(apps))
+
+VERSION		 := 1.3.0
 LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin
 ZIP			 := $(REPO).zip
 GH_RELEASE_JSON = '{"tag_name": "v$(VERSION)","target_commitish": "master","name": "v$(VERSION)","body": "MacPin build of version $(VERSION)","draft": false,"prerelease": false}'
 
-swiftc		:= xcrun -sdk macosx swiftc $(verbose)
-sdkpath		:= $(shell xcrun --show-sdk-path --sdk macosx)
-frameworks	:= -F $(sdkpath)/System/Library/Frameworks -F build -F build/Frameworks
-modincdirs	:= -I build -L build -L build/Frameworks
-modincdirs  += $(addprefix -I ,$(patsubst %/,%,$(dir $(wildcard modules/*/module.modulemap))))
+#verbose			:= -v
+swiftc				:= xcrun -sdk macosx swiftc $(verbose)
+sdkpath				:= $(shell xcrun --show-sdk-path --sdk macosx)
+frameworks			:= -F $(sdkpath)/System/Library/Frameworks -F $(outdir)/Frameworks
 
-build/MacOS/%: execs/%.swift build/Frameworks/lib%.dylib 
-	install -d $(@D)
-	$(swiftc) $(debug) $(frameworks) $(modincdirs) \
+$(bin_macpin): $(outdir)/Frameworks/libMacPin.dylib
+$(lib_macpin): $(outdir)/obj/Prompt.o
+$(lib_macpin): linklibs += -lPrompt.o
+$(bin_macpin) $(lib_macpin): linklibs += -module-link-name MacPin
+$(bin_macpin) $(lib_macpin): incmods += -I modules/Prompt -I modules/WebKitPrivates
+
+$(appdir) $(outdir)/MacOS $(outdir)/Frameworks $(outdir)/obj: ; install -d $@
+
+$(outdir)/MacOS/%: incmods = -I $(outdir)
+$(outdir)/MacOS/%: linklibs = -L $(outdir)/Frameworks
+$(outdir)/MacOS/%: execs/%.swift | $(outdir)/MacOS
+	$(swiftc) $(debug) $(frameworks) $(incmods) $(linklibs) \
 		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
-		-module-link-name $* -module-name $*.MainExec \
+		-module-name $*.MainExec \
 		-emit-executable -o $@ $<
 
-build/Frameworks/lib%.dylib build/%.swiftmodule build/%.swiftdoc: modules/%/*.swift
-	install -d $(@D)
-	$(swiftc) $(debug) $(frameworks) $(modincdirs) \
+$(outdir)/Frameworks/lib%.dylib: linklibs = -L $(outdir)/Frameworks -L $(outdir)/obj
+$(outdir)/Frameworks/lib%.dylib $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift | $(outdir)/Frameworks
+	$(swiftc) $(debug) $(frameworks) $(incmods) $(linklibs) \
 		-emit-library -o $@ \
 		-Xlinker -install_name -Xlinker @rpath/lib$*.dylib \
- 		-emit-module -module-name $* -module-link-name $* -emit-module-path build/$*.swiftmodule \
-		$+
+ 		-emit-module -module-name $* -emit-module-path $(outdir)/$*.swiftmodule \
+		$(filter %.swift,$+)
 
-build/%.a: build/%.o
+$(outdir)/obj/%.a: $(outdir)/obj/%.o
 	ar rcs $@ $<
 
-build/%.o: objc/%.m
-build/Frameworks/lib%.dylib: modules/%/*.m
-	install -d $(@D)
-	xcrun -sdk macosx clang -c $(frameworks) -fmodules -o $@ $<
+$(outdir)/Frameworks/lib%.dylib: modules/%/*.m | $(outdir)/Frameworks
+	xcrun -sdk macosx clang -ObjC $(frameworks) -fmodules -o $@ $+
 
-#build/%.ShareExtension.bundle: build/%.ShareExtension/*.swift
+$(outdir)/obj/%.o: modules/%/*.m | $(outdir)/obj
+	xcrun -sdk macosx clang -ObjC -c $(frameworks) -fmodules -o $@ $+
+
+#$(outdir)/%.ShareExtension.bundle: $(outdir)/%.ShareExtension/*.swift
 #$(swiftc) -application-extension
 # https://developer.apple.com/library/mac/documentation/General/Reference/InfoPlistKeyReference/Articles/SystemExtensionKeys.html#//apple_ref/doc/uid/TP40014212-SW15
 
@@ -60,14 +74,14 @@ icons/%.icns: icons/WebKit.icns
 
 # https://developer.apple.com/library/mac/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
 # https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html
-$(appdir)/%.app: $(appexec) icons/%.icns sites/% entitlements.plist build/Frameworks/lib$(notdir $(appexec)).dylib
+$(appdir)/%.app: $(bin_macpin) sites/%/* icons/%.icns $(macpin_sites)/% entitlements.plist $(lib_macpin) | $(appdir)
 	python2.7 -m bundlebuilder \
 	--name=$* \
-	--bundle-id=com.github.kfix.$(notdir $(appexec)).$* \
+	--bundle-id=com.github.kfix.$(macpin).$* \
 	--builddir=$(appdir) \
-	--executable=$(appexec) \
+	--executable=$(bin_macpin) \
 	--iconfile=icons/$*.icns \
-	--file=sites/$*:Contents/Resources \
+	--file=$(macpin_sites)/$*:Contents/Resources \
 	$(addprefix --lib=,$(filter %.dylib,$+)) \
 	build
 	plutil -replace CFBundleShortVersionString -string "$(VERSION)" $@/Contents/Info.plist 
@@ -75,59 +89,78 @@ $(appdir)/%.app: $(appexec) icons/%.icns sites/% entitlements.plist build/Framew
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist
 	plutil -replace NSSupportsAutomaticTermination -bool true $@/Contents/Info.plist
 	plutil -replace NSSupportsSuddenTermination -bool true $@/Contents/Info.plist
-	-codesign -s - -f --entitlements entitlements.plist $@ && codesign -dv $@
+	plutil -replace SecTaskAccess -json [] $@/Contents/Info.plist
+	plutil -replace SecTaskAccess.0 -string allowed $@/Contents/Info.plist
+	plutil -replace CFBundleDocumentTypes -json [] $@/Contents/Info.plist
+	/usr/libexec/PlistBuddy -c 'merge ftypes.plist :CFBundleDocumentTypes' -c save $@/Contents/Info.plist
+	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
+	for i in "$@/Contents/Frameworks/*.dylib $@"; do codesign -s - -f --entitlements entitlements.plist $$i; done
+	#codesign -vvv -s - -f --deep --entitlements entitlements.plist $@
+	codesign --display -r- --verbose=4 --entitlements :- $@
+	-spctl --verbose=4 --assess --type execute $@
 	-asctl container acl list -file $@
 
-# echo '{"CFBundleName": "Hangouts"}' | plutil -convert xml1 -o - -
-$(appdir)/%.share.appex: $(icons)/%.icns sites/$*/appex.share.plist sites/$*./appex.share.js
+$(appdir)/%.share.appex: $(icons)/%.icns $(macpin_sites)/$*/appex.share.plist $(macpin_sites)/$*./appex.share.js icons/Resources
 	python2.7 -m bundlebuilder \
 	--name=$* \
-	--bundle-id=com.github.kfix.$(notdir $(appexec)).$* \
-	--builddir=$(appdir) \
+	--bundle-id=com.github.kfix.$(macpin).$* \
+	--outdir=$(appdir) \
 	--executable=$(appexec) \
 	--iconfile=icons/$*.icns \
-	--file=sites/$*:Contents/Resources \
+	--file=$(macpin_sites)/$*:Contents/Resources \
+	--file=icons/Resources:Contents/Resources \
 	$(addprefix --lib=,$(filter %.dylib,$+)) \
 	build
 	plutil -replace CFBundleShortVersionString -string "$(VERSION)" $@/Contents/Info.plist 
 	plutil -replace CFBundleVersion -string "1" $@/Contents/Info.plist
 	plutil -replace CFBundlePackageType -string "XPC!" $@/Contents/Info.plist
-	plutil -replace NSExtension xml "{}" \
-		$(shell plutil -extract NSExtension xml1 sites/$*/appex.share.plist -o -) \
-		$@/Contents/Info.plist
+	plutil -replace NSExtension -json "{}" $@/Contents/Info.plist
+	/usr/libexec/PlistBuddy -c 'merge $(macpin_sites)/$*/appex.share.plist :NSExtension' -c save $@/Contents/Info.plist
 	-codesign -s - -f --entitlements entitlements.plist $@ && codesign -dv $@
 	-asctl container acl list -file $@
 
-install: $(allapps)
+install: $(apptgts)
 	cp -R $+ ~/Applications
 
 clean:
-	-rm -rf build
 	-cd $(appdir) && rm -rf *.app 
+	-rm -rf $(outdir)
 
 uninstall:
 	-defaults delete $(appexec)
-	-rm -rf ~/Library/Caches/com.github.kfix.$(notdir $(appexec)).* ~/Library/WebKit/com.github.kfix.$(notdir $(appexec)).* ~/Library/WebKit/$(notdir $(appexec))
-	-rm -rf ~/Library/Saved\ Application\ State/com.github.kfix.$(notdir $(appexec)).*
-	-rm -rf ~/Library/Preferences/com.github.kfix.$(notdir $(appexec)).*
-	-cd ~/Applications; rm -rf $(apps)
-	-defaults read com.apple.spaces app-bindings | grep com.github.kfix.$(notdir $(appexec).
+	-rm -rf ~/Library/Caches/com.github.kfix.$(macpin).* ~/Library/WebKit/com.github.kfix.$(macpin).* ~/Library/WebKit/$(macpin)
+	-rm -rf ~/Library/Saved\ Application\ State/com.github.kfix.$(macpin).*
+	-rm -rf ~/Library/Preferences/com.github.kfix.$(macpin).*
+	-cd ~/Applications; rm -rf $(macpin_apps)
+	-defaults read com.apple.spaces app-bindings | grep com.github.kfix.$(macpin).
 	# open ~/Library/Preferences/com.apple.spaces.plist
 
+test repl test.app: debug = -D SAFARIDBG -D DBGMENU
 test: $(appexec)
-	#-defaults delete $(notdir $(appexec))
-	$< http://browsingtest.appspot.com
+	#-defaults delete $(macpin)
+	($< http://browsingtest.appspot.com)
+
+repl: $(appexec)
+	($< -i)
 
 test.app: $(appdir)/test.app
-	open -F -a $$PWD/$^ --args http://browsingtest.appspot.com
+	#open -F -a $$PWD/$^ http://browsingtest.appspot.com
+	#open -b com.github.kfix.$(macpin).test http://browsingtest.appspot.com
+	#banner ':-}' | open -a $$PWD/$^ -f
+	#-defaults delete com.github.kfix.$(macpin).test
+	#($^/Contents/MacOS/test http://browsingtest.appspot.com)
+	(open $^) &
+
+# https://github.com/WebKit/webkit/blob/master/Tools/Scripts/webkitdirs.pm
+# debug: $(appdir)/test.app
 
 # need to gen static html with https://github.com/realm/jazzy
 doc: $(appexec) 
-	echo ":print_module $(notdir $(appexec))" | xcrun swift $(modincdirs) -deprecated-integrated-repl
+	echo ":print_module $(macpin)" | xcrun swift $(modincdirs) -deprecated-integrated-repl
 
 nightly: $(appexec) DYLD_FRAMEWORK_PATH=/Volumes/WebKit/WebKit.app/Contents/Frameworks/10.10
-	-defaults delete $(notdir $(appexec))
-	-rm -rf ~/Library/WebKit/$(notdir $(appexec))
+	-defaults delete $(macpin)
+	-rm -rf ~/Library/WebKit/$(macpin)
 	$<
 
 #.safariextz: http://developer.streak.com/2013/01/how-to-build-safari-extension-using.html
@@ -137,7 +170,7 @@ tag:
 
 $(ZIP): tag
 	rm $(ZIP) || true
-	zip -no-wild -r $@ $(allapps) --exclude .DS_Store
+	zip -no-wild -r $@ $(apptgts) --exclude .DS_Store
 
 ifneq ($(GITHUB_ACCESS_TOKEN),)
 release: clean allapps $(ZIP)
@@ -151,5 +184,5 @@ release:
 	@exit 1
 endif
 
-.PRECIOUS: icons/%.icns $(appdir)/%.app build/Frameworks/lib%.dylib
-.PHONY: clean install uninstall test test.app allapps tag release nightly doc
+.PRECIOUS: icons/%.icns $(appdir)/%.app $(outdir)/Frameworks/lib%.dylib $(outdir)/obj/%.o $(outdir)/MacOS/%
+.PHONY: clean install uninstall test test.app repl allapps tag release nightly doc

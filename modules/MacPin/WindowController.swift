@@ -8,7 +8,7 @@ public class WindowController: NSWindowController, NSWindowDelegate {
 		// take care of awakeFromNib() & windowDidLoad() tasks, which are not called for NIBless windows
 		super.init(window: window)
 		if let window = window {
-			window.collectionBehavior = .FullScreenPrimary | .ParticipatesInCycle | .Managed | .CanJoinAllSpaces
+			window.collectionBehavior = .FullScreenPrimary | .ParticipatesInCycle | .Managed //| .CanJoinAllSpaces
 			window.styleMask |= NSUnifiedTitleAndToolbarWindowMask
 			window.movableByWindowBackground = true
 			window.backgroundColor = NSColor.whiteColor()
@@ -16,12 +16,15 @@ public class WindowController: NSWindowController, NSWindowDelegate {
 			window.hasShadow = true
 			window.titleVisibility = .Hidden
 			window.appearance = NSAppearance(named: NSAppearanceNameVibrantDark) // Aqua LightContent VibrantDark VibrantLight //FIXME add a setter?
+			// ^ 10.10.3 totes wrecked this!
 			window.identifier = "browser"
-			//window.registerForDraggedTypes([NSPasteboardTypeString,NSURLPboardType,NSFilenamesPboardType])
+			//window.registerForDraggedTypes([NSPasteboardTypeString, NSURLPboardType, NSFilenamesPboardType]) //wkwebviews do this themselves
 			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
 			window.delegate = self
 			window.restorable = true
 			window.restorationClass = AppDelegate.self
+			window.sharingType = .ReadWrite
+			//window.titlebarAppearsTransparent = true
 			NSApplication.sharedApplication().windowsMenu = NSMenu()
 			NSApplication.sharedApplication().addWindowsItem(window, title: window.title!, filename: false)
 		}

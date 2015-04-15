@@ -1,0 +1,5 @@
+module Prompt {
+	umbrella header "Prompt.h"
+    link "edit"
+	export *
+}
