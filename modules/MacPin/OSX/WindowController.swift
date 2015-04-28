@@ -1,14 +1,14 @@
 import CoreGraphics
-import Cocoa
+import AppKit
 
-public class WindowController: NSWindowController, NSWindowDelegate {
-	required public init?(coder: NSCoder) { super.init(coder: coder) }
+class WindowController: NSWindowController, NSWindowDelegate {
+	required init?(coder: NSCoder) { super.init(coder: coder) } // conform to NSCoding
 
-	public override init(window: NSWindow?) {
+	override init(window: NSWindow?) {
 		// take care of awakeFromNib() & windowDidLoad() tasks, which are not called for NIBless windows
 		super.init(window: window)
 		if let window = window {
-			window.collectionBehavior = .FullScreenPrimary | .ParticipatesInCycle | .Managed //| .CanJoinAllSpaces
+			window.collectionBehavior = .FullScreenPrimary | .ParticipatesInCycle | .Managed | .CanJoinAllSpaces
 			window.styleMask |= NSUnifiedTitleAndToolbarWindowMask
 			window.movableByWindowBackground = true
 			window.backgroundColor = NSColor.whiteColor()
@@ -16,7 +16,6 @@ public class WindowController: NSWindowController, NSWindowDelegate {
 			window.hasShadow = true
 			window.titleVisibility = .Hidden
 			window.appearance = NSAppearance(named: NSAppearanceNameVibrantDark) // Aqua LightContent VibrantDark VibrantLight //FIXME add a setter?
-			// ^ 10.10.3 totes wrecked this!
 			window.identifier = "browser"
 			//window.registerForDraggedTypes([NSPasteboardTypeString, NSURLPboardType, NSFilenamesPboardType]) //wkwebviews do this themselves
 			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
@@ -33,10 +32,10 @@ public class WindowController: NSWindowController, NSWindowDelegate {
 	}
 
 	// these just handle drags to a tabless-background, webviews define their own
-	public func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
-	public func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
+	func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
+	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
 
-	public func window(window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplicationPresentationOptions) -> NSApplicationPresentationOptions {
+	func window(window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplicationPresentationOptions) -> NSApplicationPresentationOptions {
 		return NSApplicationPresentationOptions.AutoHideToolbar | NSApplicationPresentationOptions.AutoHideMenuBar | NSApplicationPresentationOptions.FullScreen | proposedOptions
 	}
 }

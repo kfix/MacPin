@@ -1,11 +1,52 @@
-import Cocoa
-import WebKit
-import WebKitPrivates
-import JavaScriptCore
+/// MacPin Extensions
+///
+/// Global-scope utility functions 
 
-func warn(msg: String, function: StaticString = __FUNCTION__, file: StaticString = __FILE__, line: UWord = __LINE__, column: UWord = __COLUMN__) {
-	 NSFileHandle.fileHandleWithStandardError().writeData(("<\(__FILE__):\(line):\(column)> [\(function)] \(msg)\n").dataUsingEncoding(NSUTF8StringEncoding)!)
+import Foundation
+import JavaScriptCore
+import WebKit
+
+#if os(OSX)
+import AppKit
+#elseif os (iOS)
+import UIKit
+#endif
+
+#if arch(x86_64) || arch(i386)
+import Prompt // https://github.com/neilpa/swift-libedit
+#endif
+
+public func warn(msg: String, function: StaticString = __FUNCTION__, file: StaticString = __FILE__, line: UWord = __LINE__, column: UWord = __COLUMN__) {
+	NSFileHandle.fileHandleWithStandardError().writeData(("<\(file):\(line):\(column)> [\(function)] \(msg)\n").dataUsingEncoding(NSUTF8StringEncoding)!)
 }
+
+// show an NSError to the user, attaching it to any given view
+#if os(OSX)
+public func displayError(error: NSError, _ vc: NSViewController? = nil) {
+	warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
+	if let window = vc?.view.window { 
+		// display it as a NSPanel sheet
+		vc?.view.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
+	} else if let window = NSApplication.sharedApplication().mainWindow {
+		window.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
+	} else {
+		NSApplication.sharedApplication().presentError(error)
+	}
+}
+#elseif os(iOS)
+public func displayError(error: NSError, _ vc: UIViewController? = nil) {
+	warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
+	let alerter = UIAlertController(title: error.localizedFailureReason, message: error.localizedDescription, preferredStyle: .Alert) //.ActionSheet
+	let OK = UIAlertAction(title: "OK", style: .Default) { (action) in completionHandler() }
+	alerter.addAction(OK)
+
+	if let vc = vc { 
+		vc.presentViewController(alerter, animated: true, completion: nil)
+	} else {
+		UIApplication.sharedApplication().keyWindow?.rootViewController?.presentViewController(alerter, animated: true, completion: nil)
+	}
+}
+#endif
 
 /*
 func assert(condition: @autoclosure () -> Bool, _ message: String = "",
@@ -19,7 +60,7 @@ func assert(condition: @autoclosure () -> Bool, _ message: String = "",
 }
 */
 
-func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true) -> Bool {
+public func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
 	if let script_url = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") {
 		warn("loading userscript: \(script_url)")
 		var script = WKUserScript(
@@ -31,21 +72,25 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 	} else {
 		let respath = NSBundle.mainBundle().resourcePath
 		warn("couldn't find userscript: \(respath)/\(basename).js")
-		let error = NSError(domain: "MacPin", code: 3, userInfo: [
-			NSFilePathErrorKey: basename + ".js",
-			NSLocalizedDescriptionKey: "No userscript could be found named:\n\n\(respath)/\(basename).js"
-		])
-		if let window = NSApplication.sharedApplication().mainWindow {
+		if error != nil {
+			error?.memory = NSError(domain: "MacPin", code: 3, userInfo: [
+				NSFilePathErrorKey: basename + ".js",
+				NSLocalizedDescriptionKey: "No userscript could be found named:\n\n\(respath)/\(basename).js"
+			])
+		}
+		/*
+		if let window = NSApplication.sharedApplication().mainWindow { // FIXMEios UIKit.UIApplication.sharedApplication()
 			window.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
 		} else {
 			NSApplication.sharedApplication().presentError(error)
 		}
+		*/
 		return false
 	}
 	return true
 }
 
-func validateURL(urlstr: String) -> NSURL? {
+public func validateURL(urlstr: String) -> NSURL? {
 	// https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 	if urlstr.isEmpty { return nil }
 	if let urlp = NSURLComponents(string: urlstr) {
@@ -69,113 +114,36 @@ func validateURL(urlstr: String) -> NSURL? {
 
 	return nil 
 }
-	
-public extension NSPasteboard {
-	func dump() {
-		if let items = self.pasteboardItems {
-			for item in items {
-				warn("\n")
-				if let types = item.types as? [NSString] {
-					warn(types.description)
-					for uti in types { // https://developer.apple.com/library/mac/documentation/MobileCoreServices/Reference/UTTypeRef/
-						// http://arstechnica.com/apple/2005/04/macosx-10-4/11/ http://www.cocoanetics.com/2012/09/fun-with-uti/
-						if !uti.description.isEmpty, let value = item.stringForType(uti.description) {
-							if var cftype = UTTypeCopyDescription(uti as CFString) {
-								var type = cftype.takeUnretainedValue() 
-								warn("DnD: uti(\(uti)) [\(type)] = '\(value)'")
-							} else if var cftag = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassNSPboardType) {
-								var tag = cftag.takeUnretainedValue()
-								warn("DnD: uti(\(uti)) <\(tag)> = '\(value)'")
-							} else if var cftag = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassMIMEType) {
-								var tag = cftag.takeUnretainedValue()
-								warn("DnD: uti(\(uti)) {\(tag)} = '\(value)'")
-							} else {
-								warn("DnD: uti(\(uti)) = '\(value)'")
-							} //O
-						} //M
-					} //G
-				} //W
-			} //T
-		} //F
-	} //PewPewDIE!@#$!$#!@
 
-}
-
-public extension WKView {
-	//override public func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
-
-	/* overide func _registerForDraggedTypes() {
-		// https://github.com/WebKit/webkit/blob/f72e25e3ba9d3d25d1c3a4276e8dffffa4fec4ae/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3653
-		self.registerForDraggedTypes([ // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Shared/mac/PasteboardTypes.mm [types]
-			// < forEditing 
-			WebArchivePboardType, NSHTMLPboardType, NSFilenamesPboardType, NSTIFFPboardType, NSPDFPboardType,
-		    NSURLPboardType, NSRTFDPboardType, NSRTFPboardType, NSStringPboardType, NSColorPboardType, kUTTypePNG,
-			// < forURL
-			WebURLsWithTitlesPboardType, //webkit proprietary 
-			NSURLPboardType, // single url from older apps and Chromium -> text/uri-list
-			WebURLPboardType, //webkit proprietary: public.url
-			WebURLNamePboardType, //webkit proprietary: public.url-name
-			NSStringPboardType, // public.utf8-plain-text -> WKJS: text/plain
-			NSFilenamesPboardType, // Finder -> text/uri-list & Files
-		])
-	} */
-
-	// http://stackoverflow.com/a/25114813/3878712
-	func shimmedPerformDragOperation(sender: NSDraggingInfo) -> Bool {
-		if sender.draggingSource() == nil { //dragged from external application
-			var pboard = sender.draggingPasteboard()
-			pboard.dump()
-
-			if var urls = WebURLsWithTitles.URLsFromPasteboard(pboard) { //drops from Safari
-				warn("DnD: WebKit URL array: \(urls)")
-			} else if var file = pboard.dataForType("public.file-url") { //drops from Finder
-				warn("DnD: files from Finder")
-			} else if var zip = pboard.dataForType("org.chromium.drag-dummy-type") ?? pboard.dataForType("org.chromium.image-html") { //Chromium
-				// http://src.chromium.org/viewvc/chrome/trunk/src/content/browser/web_contents/web_drag_source_mac.mm
-				// http://src.chromium.org/viewvc/chrome/trunk/src/ui/base/dragdrop/cocoa_dnd_util.mm
-			//} else if "public.url" != (pboard.availableTypeFromArray(["public.url"]) ?? "") { //Chromium missing public-url
-
-				// Chromium pastes need some massage for WebView to seamlessly open them, so imitate a Safari drag
-				// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/Misc/WebNSPasteboardExtras.mm#L118 conform to _web_bestURL()
-
-				var apsfctype = pboard.dataForType("com.apple.pasteboard.promised-file-content-type")
-				var apsfurl = pboard.dataForType("com.apple.pasteboard.promised-file-url")
-
-				if let url = NSURL(fromPasteboard: pboard) { // NSURLPBoardType
-					// https://github.com/WebKit/webkit/blob/53e0a1506a7b2408e86caa9f510477b5ee283487/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3330 drag out
-					// https://github.com/WebKit/webkit/search?q=datatransfer
-
-					pboard.clearContents() // have to wipe it clean in order to modify
-
-					pboard.addTypes(["WebURLsWithTitlesPboardType"], owner: nil)
-					WebURLsWithTitles.writeURLs([url], andTitles: nil, toPasteboard: pboard)
-					// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/History/WebURLsWithTitles.h
-
-					//pboard.addTypes([NSURLPboardType], owner: nil) // Apple URL pasteboard type -> text/url-list
-					//url.writeToPasteboard(pboard) //deprecated from 10.6+
-					// https://github.com/WebKit/webkit/blob/fb77811f2b8164ce4c34fc63b496519be15f55ca/Source/WebCore/platform/mac/PasteboardMac.mm#L543
-
-					pboard.addTypes(["public.url"], owner: nil) // *WebURLPboardType http://uti.schwa.io/identifier/public.url
-					pboard.setString(url.description, forType:"public.url") // -> public.url
-
-					pboard.setString(url.description, forType:NSStringPboardType) // -> text/plain
-					// https://github.com/WebKit/webkit/blob/fb77811f2b8164ce4c34fc63b496519be15f55ca/Source/WebCore/platform/mac/PasteboardMac.mm#L539
-
-					if let ctype = apsfctype {
-						pboard.addTypes(["com.apple.pasteboard.promised-file-content-type"], owner: nil)
-						pboard.setData(ctype, forType:"com.apple.pasteboard.promised-file-content-type")
-					}
-					if let url = apsfurl {
-						pboard.addTypes(["com.apple.pasteboard.promised-file-url"], owner: nil)
-						pboard.setData(url, forType:"com.apple.pasteboard.promised-file-url")
-					}
-
-					//pboard.writeObjects([url])
-
-					pboard.dump()
-				}
+public func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2: StaticString = __FUNCTION__, abort:(()->Void)? = nil) {
+#if arch(x86_64) || arch(i386)
+	let backgroundQueue = dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0)
+	dispatch_async(backgroundQueue, { // console ops in background thread
+		let prompt = Prompt(argv0: Process.unsafeArgv[0]) // should make this a singleton, so the AppDel termination can kill it
+		while (true) {
+			print("\(ps1): ") // prompt prefix
+		    if let line = prompt.gets() { // R: blocks here until Enter pressed
+				print("\(ps2): ") // result prefix
+				dispatch_async(dispatch_get_main_queue(), { () -> Void in //return to main thread to evaluate code
+					eval?(line) // E:, P:
+				})
+		    } else { // stdin closed
+				dispatch_async(dispatch_get_main_queue(), { () -> Void in
+					if let abort = abort { abort() }
+						else { println("Got EOF from stdin, closing REPL!") }
+				})
+				break
 			}
+			// L: command completed, restart loop
+			println() //newline
 		}
-		return self.shimmedPerformDragOperation(sender) //return pre-swizzled method		
-	}
+#if os(OSX)
+		NSApplication.sharedApplication().terminate(nil)
+#elseif os(iOS)
+		//UIApplication.sharedApplication().terminateWithSuccess() // http://blog.ib-soft.net/2013/01/programmatically-terminate-ios.html
+#endif
+	})
+#else
+	println("Prompt() not available on this device.")
+#endif
 }

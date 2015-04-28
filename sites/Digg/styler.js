@@ -32,7 +32,7 @@ var customizeBG = function() {
 
 window.addEventListener("load", function(event) { window.customizeBG(); }, false);
 
-window.addEventListener("macpinTransparencyChanged", function(event) {
-	window.macpinIsTransparent = event.detail["isTransparent"];
+window.addEventListener("MacPinWebViewChanged", function(event) {
+	window.macpinIsTransparent = event.detail["transparent"];
 	window.customizeBG();
 }, false);

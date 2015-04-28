@@ -1,0 +1,6 @@
+*.zip
+*/.DS_Store
+icons/*/
+build/
+sites.dis/
+modules.dis/

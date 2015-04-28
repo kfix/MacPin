@@ -4,8 +4,9 @@
 "use strict";
 
 var delegate = {}; // our delegate to receive events from the osx app
-var readerTab = $.browser.newTab({postinject: ["styler","add_feed"]});
-//var readerTab = $.browser.newTab({postinject: ["styler"]});
+
+var digg = {postinject: ["styler","add_feed"], url: "http://digg.com/reader"};
+var diggTab = new $.WebView(digg);
 
 delegate.launchURL = function(url) {
 	if (!~url.indexOf("rss:") && !~url.indexOf("feed:")) {
@@ -17,14 +18,14 @@ delegate.launchURL = function(url) {
 		//$.browser.tabSelected = $.browser.newTab({'url':addFeedToDigg, 'postinject':["styler"]});
 
 		//readerTab.evalJS('alert("app.js redirecting:'+addFeedToDigg+'");');
-		$.browser.tabSelected = readerTab;
-		readerTab.loadURL(addFeedToDigg);
+		diggTab.loadURL(addFeedToDigg);
+		$.browser.tabSelected = diggTab;
 		$.browser.unhideApp();
 
 		//readerTab.evalJS("inputFeed("+feed+", '\n');");
 	} else {
 		// just a plain url open
-		$.browser.newTab({url: url});
+		$.browser.tabSelected = new $.WebView({url: url});
 	}
 
 
@@ -52,7 +53,7 @@ delegate.AppFinishedLaunching = function() {
 		this.launchURL($.launchedWithURL);
 		$.launchedWithURL = '';
 	} else {
-		readerTab.loadURL("http://digg.com/reader");
+		$.browser.tabSelected = diggTab
 	}
 };
 delegate; //return delegate to app

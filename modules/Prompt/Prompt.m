@@ -12,7 +12,7 @@
 // `man editline`
 
 char* prompt(EditLine *e) {
-    return "> ";
+    return "> "; // FIXME needs a setter
 }
 
 @implementation Prompt
@@ -54,7 +54,7 @@ HistEvent _ev;
     
     // line includes the trailing newline
     int count;
-    const char* line = el_gets(_el, &count);
+    const char* line = el_gets(_el, &count); // FIXME kill this when app is terminated so dealloc cleanups get done
     
     if (count > 0) {
         history(_hist, &_ev, H_ENTER, line);

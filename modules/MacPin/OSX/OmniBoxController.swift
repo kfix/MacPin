@@ -1,25 +1,30 @@
+/// MacPin OmniBoxController
+///
+/// Controls a textfield that displays a WebViewController's current URL and accepts editing to change loaded URL in WebView
+
+import AppKit
 import WebKit
-public extension WKWebView {
-	override func setValue(value: AnyObject?, forUndefinedKey key: String) {
+extension WKWebView {
+	override public func setValue(value: AnyObject?, forUndefinedKey key: String) {
 		if key != "URL" { super.setValue(value, forUndefinedKey: key) } //prevents URLbox from trying to directly rewrite webView.URL
 	}
 }
 
-import Cocoa
+import AppKit
 
-class URLAddressField: NSTextField {
+class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	var isLoading: Bool = false { didSet { needsDisplay = true } }
 	var progress: Double = Double(0.0) { didSet { needsDisplay = true } }
 
 	override func drawRect(dirtyRect: NSRect) {
 		if isLoading {
-			// draw a Safari style progress-line
-			//var progressRect = NSOffsetRect(bounds, 0, 4) //along top
-			var progressRect = NSOffsetRect(bounds, 0, NSMaxY(bounds) - 4) //along bottom
-			progressRect.size.height = 4
-			progressRect.size.width *= CGFloat(progress)
+			// draw a Safari style progress-line along edge of the text box's focus ring
+			//var progressRect = NSOffsetRect(bounds, 0, 4) // top edge
+			var progressRect = NSOffsetRect(bounds, 0, NSMaxY(bounds) - 4) // bottom edge
+			progressRect.size.height = 6 // line thickness
+			progressRect.size.width *= progress == 1.0 ? 0 : CGFloat(progress) // only draw line when downloading
 
-			NSColor(calibratedRed:0.0, green: 0.0, blue: 1.0, alpha: 0.4).set()
+			NSColor(calibratedRed:0.0, green: 0.0, blue: 1.0, alpha: 0.4).set() // transparent blue line
 			NSRectFillUsingOperation(progressRect, .CompositeSourceOver)
 		} else {
 			//NSRectFillUsingOperation(bounds, .CompositeClear)
@@ -29,7 +34,7 @@ class URLAddressField: NSTextField {
 	}
 }
 
-class URLBoxController: NSViewController {	
+class OmniBoxController: NSViewController {	
 	let urlbox = URLAddressField()
 
 	override var representedObject: AnyObject? {
@@ -75,11 +80,12 @@ class URLBoxController: NSViewController {
 		urlbox.wantsLayer = true
 		urlbox.bezelStyle = .RoundedBezel
 		urlbox.drawsBackground = false
-		urlbox.textColor = NSColor.controlTextColor() 
+		urlbox.textColor = NSColor.labelColor() 
 		urlbox.toolTip = ""
-		//urlbox.wantsLayer = true
-		//urlbox.editable = false
 		//urlbox.menu = NSMenu //ctrl-click context menu
+		// search with DuckDuckGo
+		// go to URL
+		// js: addOmniBoxActionHandler('send to app',handleCustomOmniAction)
 
 		urlbox.delegate = self
 
@@ -121,13 +127,18 @@ class URLBoxController: NSViewController {
 		}
 	}
 	
-	override func cancelOperation(sender: AnyObject?) { presentingViewController?.dismissViewController(self) } //if a thoust art a popover, close thyself
+	override func cancelOperation(sender: AnyObject?) { 
+		view.resignFirstResponder() // relinquish key focus to webview
+		presentingViewController?.dismissViewController(self) //if a thoust art a popover, close thyself
+	}
 
 	deinit { representedObject = nil }
 }
 
-extension URLBoxController: NSTextFieldDelegate {
+extension OmniBoxController: NSTextFieldDelegate {
 	//func textShouldBeginEditing(textObject: NSText) -> Bool { return true } //allow editing
+		//replace textvalue with URL value, should normally be bound to title
+
 	//func textDidChange(aNotification: NSNotification)
 	func textShouldEndEditing(textObject: NSText) -> Bool { //user attempting to focus out of field
 		if let url = validateURL(textObject.string ?? "") { return true } //allow focusout
@@ -137,7 +148,7 @@ extension URLBoxController: NSTextFieldDelegate {
 	//func textDidEndEditing(aNotification: NSNotification) {	}
 }
 
-extension URLBoxController: NSPopoverDelegate {	
+extension OmniBoxController: NSPopoverDelegate {	
 	func popoverWillShow(notification: NSNotification) {
 		//urlbox.sizeToFit() //fixme: makes the box undersized sometimes
 	}

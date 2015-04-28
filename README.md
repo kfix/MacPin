@@ -17,8 +17,9 @@ A suite of apps are prebuilt for download in the GitHub release.
 ## Included Apps
 
 #### [Hangouts.app](http://plus.google.com/hangouts): SMS/IM/Video chat client for the desktop 
-![screenie](/sites/Hangouts/screenshot.jpg?raw=true)  
-Load up does take up to 30 seconds, so be patient.   
+![screenie](/sites/Hangouts/screenshot.jpg?raw=true)
+Google Voice and Project Fi users can [make & take phone calls and SMS/MMS messages](http://fi.google.com/about/faq/#talk-and-text-4).  
+Load up can take up to 30 seconds, so be patient.   
 
 New incoming messages are shown in OSX's Notification Center,  
 which you can click on to reply back in the app.
@@ -30,8 +31,7 @@ Under [extras/](/sites/Hangouts/extras) you'll find:
 
 Several browser extensions can also make phone numbers found in webpages clickable.
 
-If you have a Google Voice number linked to your Hangouts account, incoming calls will popup in the App's contacts roster.   
-Hangouts.app will automatically steal focus so you can quickly answer or reject the call using the keyboard:  
+When receiving a call, Hangouts.app will automatically steal focus so you can quickly answer or reject the call using the keyboard:  
 
 * press Enter or Space to accept the call
 * press Escape or Backspace to decline it

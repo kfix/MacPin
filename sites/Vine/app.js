@@ -1,12 +1,11 @@
 /*eslint-env applescript*/
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
-/*globals $browser:false, $launchedWithURL:true, $osx:false*/
 "use strict";
 
 var delegate = {}; // our delegate to receive events from the webview app
 
 delegate.AppFinishedLaunching = function() {
-	$browser.newTab({
+	$.browser.tabSelected = new $.WebView({
 		url: "http://vine.co",
 		preinject: ['unpreloader'], // this prevents buffering every video in a feed. If you have a fast Mac and Internet, comment out this line
 		postinject: ['styler'],

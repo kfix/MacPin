@@ -10,7 +10,9 @@ typedef NS_ENUM(NSInteger, _WKPaginationMode) {
 }; 
 
 @interface WKWebView (Privates)
-@property (readonly) NSColor *_pageExtendedBackgroundColor;
+
+//@property (readonly) NSColor *_pageExtendedBackgroundColor;
+
 @property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground;
 @property (nonatomic, setter=_setTopContentInset:) CGFloat _topContentInset;
 @property (nonatomic, setter=_setAutomaticallyAdjustsContentInsets:) BOOL _automaticallyAdjustsContentInsets;

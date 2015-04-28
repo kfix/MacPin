@@ -1,5 +1,4 @@
-import Cocoa
-import MacPin
+import AppKit
 
 // gotta set these before MacPin()->NSWindow()
 NSUserDefaults.standardUserDefaults().setBool(true, forKey: "NSQuitAlwaysKeepsWindows") // insist on Window-to-Space/fullscreen persistence between launches
@@ -12,6 +11,6 @@ NSUserDefaults.standardUserDefaults().setInteger(0, forKey: "__WebInspectorPageG
 
 let app = NSApplication.sharedApplication() //connect to CG WindowServer, always accessible as var:NSApp
 app.setActivationPolicy(.Regular) //lets bundle-less binaries (`make test`) get app menu and fullscreen button
-let applicationDelegate = MacPin.AppDelegate()
+let applicationDelegate = AppDelegate()
 app.delegate = applicationDelegate
 app.run()

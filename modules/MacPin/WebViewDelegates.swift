@@ -1,3 +1,7 @@
+/// MacPin WebViewDelegates
+///
+/// Handle modal & interactive webview prompts and errors
+
 // need a <input type="file"> picker & uploader delegate
 // https://github.com/WebKit/webkit/commit/a12c1fc70fa906a39a0593aa4124f24427e232e7
 // https://developer.apple.com/library/prerelease/ios/documentation/General/Conceptual/ExtensibilityPG/ExtensionScenarios.html#//apple_ref/doc/uid/TP40014214-CH21-SW2
@@ -7,6 +11,11 @@
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKDownloadDelegate.h
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
 
+// lookup table for NSError codes gotten while browsing
+// http://nshipster.com/nserror/#nsurlerrordomain-&-cfnetworkerrors
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/Misc/WebKitErrors.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Shared/API/c/WKErrorRef.h
+
 import WebKit
 
 extension WebViewController: WKScriptMessageHandler {
@@ -14,10 +23,9 @@ extension WebViewController: WKScriptMessageHandler {
 		//called from JS: webkit.messageHandlers.<messsage.name>.postMessage(<message.body>);
 		switch message.name {
 			case "MacPinPollStates": // direct poll. app.js needs to authorize this handler per tab
-				//FIXME: should iterate message.body's [varnames] to send events for. just shotgun them right now
-				//or send an omnibus event with all varnames values?
-				webview.evaluateJavaScript(
-					"window.dispatchEvent(new window.CustomEvent('MacPinTransparencyChanged',{'detail':{'isTransparent': \(browser?.isTransparent ?? false)}})); ",	
+				//FIXME: should iterate message.body's [varnames] to send events for
+				webview.evaluateJavaScript( //for now, send an omnibus event with all varnames values
+					"window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(container?.transparent ?? false)}})); ",	
 					completionHandler: nil)
 				fallthrough // also let JSRuntime get the request
 			default:
@@ -30,89 +38,14 @@ extension WebViewController: WKScriptMessageHandler {
 	}
 }
 
-// alert.icons should be the current tab icon, which may not be the app icon
-extension WebViewController: WKUIDelegate {
-
-	func webView(webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
-		var alert = NSAlert()
-		alert.messageText = webView.title
-		alert.addButtonWithTitle("Dismiss")
-		alert.informativeText = message
-		alert.icon = NSApplication.sharedApplication().applicationIconImage
-		alert.alertStyle = .InformationalAlertStyle // .Warning .Critical
-		if let window = grabWindow() {
-			alert.beginSheetModalForWindow(window, completionHandler:{(response:NSModalResponse) -> Void in
-				completionHandler()
-	 		})
-		}
-	}
-
-	func webView(webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
-		var alert = NSAlert()
-		alert.messageText = webView.title
-		alert.addButtonWithTitle("OK")
-		alert.addButtonWithTitle("Cancel")
-		alert.informativeText = message
-		alert.icon = NSApplication.sharedApplication().applicationIconImage
-		if let window = grabWindow() {
-			alert.beginSheetModalForWindow(window, completionHandler:{(response:NSModalResponse) -> Void in
-				completionHandler(response == NSAlertFirstButtonReturn ? true : false)
- 			})
-		}
-	}
-
-	func webView(webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String!) -> Void) {
-		var alert = NSAlert()
-		alert.messageText = webView.title
-		alert.addButtonWithTitle("Submit")
-		alert.informativeText = prompt
-		alert.icon = NSApplication.sharedApplication().applicationIconImage
-		var input = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
-		input.stringValue = ""
-		input.editable = true
- 		alert.accessoryView = input
-		if let window = grabWindow() {
-			alert.beginSheetModalForWindow(window, completionHandler:{(response:NSModalResponse) -> Void in
-				completionHandler(input.stringValue)
-	 		})
-		}
-	}
-
-	// https://bugs.webkit.org/show_bug.cgi?id=131125
-	// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKUIDelegatePrivate.h
-	// https://github.com/WebKit/webkit/blob/9fc59b8f8a54be88ca1de601435087018c0cc181/Source/WebKit2/UIProcess/ios/WKGeolocationProviderIOS.mm#L187
-	// https://github.com/WebKit/webkit/search?q=GeolocationPosition.h http://support.apple.com/en-us/HT202080
-	// http://www.cocoawithlove.com/2009/09/whereismymac-snow-leopard-corelocation.html
-	func _webView(webView: WKWebView, shouldRequestGeolocationAuthorizationForURL url: NSURL, isMainFrame: Bool, mainFrameURL: NSURL) -> Bool { return false } // always allow
-	// navigator.geolocation.getCurrentPosition(function(pos) { console.log(pos) } )
-	// https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/Using_geolocation?redirectlocale=en-US&redirectslug=Using_geolocation
-
-	func _webView(webView: WKWebView, printFrame: WKFrameInfo) { 
-		conlog("\(__FUNCTION__) JS:window.print()")
-		var printer = NSPrintOperation(view: webView, printInfo: NSPrintInfo.sharedPrintInfo())
-		// seems to work very early on in the first loaded page, then just becomes blank pages
-		// PDF = This view requires setWantsLayer:YES when blendingMode == NSVisualEffectBlendingModeWithinWindow
-
-		//var wkview = (webView.subviews.first as WKView)
-		// https://github.com/WebKit/webkit/blob/d3e9af22a535887f7d4d82e37817ba5cfc03e957/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3848
-		//var view = WKPrintingView(printFrame, view: wkview)
-		// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/mac/WKPrintingView.mm
-		//var printer = wkview.printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo(), forFrame: printFrame) //crash on retain
-
-		printer.showsPrintPanel = true
-		printer.runOperation()
-	}
-
-}
+extension WebViewController: WKUIDelegate { }
 
 extension WebViewController: WKNavigationDelegate {
-	func webView(webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-		 if let url = webView.URL { conlog("\(__FUNCTION__) [\(url)]") }
-	}
+	func webView(webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { if let url = webView.URL { warn("'\(url)'") } }
 
 	func webView(webView: WKWebView, decidePolicyForNavigationAction navigationAction: WKNavigationAction, decisionHandler: (WKNavigationActionPolicy) -> Void) {
 		let url = navigationAction.request.URL
-		if let url = url, let scheme = url.scheme {
+		if let url = url, scheme = url.scheme {
 			switch scheme {
 				case "data": fallthrough
 				case "file": fallthrough
@@ -122,23 +55,22 @@ extension WebViewController: WKNavigationDelegate {
 				case "https": break
 				default: //weird protocols, or app launches like itmss:
 					askToOpenURL(url)
-    	        	decisionHandler(.Cancel)
+					decisionHandler(.Cancel)
 			}
 
 			if JSRuntime.delegate.tryFunc("decideNavigationForURL", url.description) { decisionHandler(.Cancel); return }
 
-			//conlog("WebView decidePolicy() navType:\(navigationAction.navigationType.rawValue) sourceFrame:(\(navigationAction.sourceFrame?.request.URL)) -> \(url)")
 			switch navigationAction.navigationType {
 				case .LinkActivated:
 					let mousebtn = navigationAction.buttonNumber
 					let modkeys = navigationAction.modifierFlags
 					if (modkeys & NSEventModifierFlags.AlternateKeyMask).rawValue != 0 { NSWorkspace.sharedWorkspace().openURL(url) } //alt-click
-						else if (modkeys & NSEventModifierFlags.CommandKeyMask).rawValue != 0 { browser?.newTab(url) } //cmd-click
+						else if (modkeys & NSEventModifierFlags.CommandKeyMask).rawValue != 0 { container?.addChildViewController(self.dynamicType(url: url, agent: webView._customUserAgent)) } //cmd-click
 						else if !JSRuntime.delegate.tryFunc("decideNavigationForClickedURL", url.description) { // allow override from JS 
 							if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
-							browser?.newTab(url) // middle-clicked, or out of frame target link
+							container?.addChildViewController(self.dynamicType(url: url, agent: webView._customUserAgent)) // middle-clicked, or out of frame target link
 						}
-					conlog("\(__FUNCTION__) -> .Cancel -- user clicked <a href=\(url) target=_blank> or middle-clicked: opening externally")
+					warn("-> .Cancel -- user clicked <a href=\(url) target=_blank> or middle-clicked: opening externally")
     		        decisionHandler(.Cancel)
 				case .FormSubmitted: fallthrough
 				case .BackForward: fallthrough
@@ -147,75 +79,22 @@ extension WebViewController: WKNavigationDelegate {
 				case .Other: fallthrough
 				default: decisionHandler(.Allow) 
 			}
+		} else {
+			// invalid url? should raise error
+			warn("navType:\(navigationAction.navigationType.rawValue) sourceFrame:(\(navigationAction.sourceFrame?.request.URL)) -> \(url)")
+			decisionHandler(.Cancel)
 		}
 	}
 
 	func webView(webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) { 
-		if let url = webView.URL { conlog("\(__FUNCTION__) ~> [\(url)]") }
-	}
-
-	func webView(webView: WKWebView, didReceiveAuthenticationChallenge challenge: NSURLAuthenticationChallenge,
-		completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
-
-		if let authMethod = challenge.protectionSpace.authenticationMethod {
-			switch authMethod {
-				case NSURLAuthenticationMethodClientCertificate: fallthrough;
-				case NSURLAuthenticationMethodServerTrust:
-					completionHandler(.PerformDefaultHandling, nil)
-					return
-				case NSURLAuthenticationMethodDefault: fallthrough;
-				default:
-					conlog("\(__FUNCTION__) (\(authMethod)) [\(webView.URL ?? String())]")	
-			}
-		}
-
-		let alert = NSAlert()
-		alert.messageText = webView.title
-		alert.addButtonWithTitle("Submit")
-		alert.addButtonWithTitle("Cancel")
-		alert.informativeText = "auth challenge"
-		alert.icon = NSApplication.sharedApplication().applicationIconImage
-
-		let prompts = NSView(frame: NSMakeRect(0, 0, 200, 64))
-
-		let userbox = NSTextField(frame: NSMakeRect(0, 40, 200, 24))
-		userbox.stringValue = "Enter user"
- 		if let cred = challenge.proposedCredential {
-			if let user = cred.user { userbox.stringValue = user }
-		}
-		userbox.editable = true
-
-		let passbox = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
-		passbox.stringValue = "Enter password"
- 		if let cred = challenge.proposedCredential {
-			if cred.hasPassword { passbox.stringValue = cred.password! }
-		}
-		passbox.editable = true
-
-		prompts.subviews = [userbox, passbox]
-
- 		alert.accessoryView = prompts
-
-		alert.beginSheetModalForWindow(webView.window!, completionHandler:{(response:NSModalResponse) -> Void in
-			if response == NSAlertFirstButtonReturn {
-				completionHandler(.UseCredential, NSURLCredential(
-					user: userbox.stringValue,
-					password: passbox.stringValue,
-					persistence: .Permanent
-				))
-			} else {
-				// need to cancel request, else user can get locked into a modal prompt loop
-				completionHandler(.PerformDefaultHandling, nil)
-				webView.stopLoading()
-			}
- 		})
+		if let url = webView.URL { warn("~> [\(url)]") }
 	}
 
 	func webView(webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: NSError) { //error returned by webkit when loading content
 		if let url = webView.URL {
-			conlog("\(__FUNCTION__) [\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
-			if error.domain == NSURLErrorDomain && error.code != -999 && !webView.loading { // 999 is thrown for HTTP redirects
-				if let window = grabWindow() { presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil) }
+			warn("'\(url)' -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
+			if error.domain == NSURLErrorDomain && error.code != NSURLErrorCancelled && !webView.loading { // dont catch on stopLoading() and HTTP redirects
+				displayError(error, self)
 			}
 		}
 	}
@@ -235,7 +114,7 @@ extension WebViewController: WKNavigationDelegate {
 		if navigationResponse.canShowMIMEType { 
 			decisionHandler(.Allow)
 		} else {
-			conlog("\(__FUNCTION__) cannot render requested MIME-type:\(mime) @ \(url)")
+			warn("cannot render requested MIME-type:\(mime) @ \(url)")
 			if !JSRuntime.delegate.tryFunc("handleUnrenderableMIME", mime, url.description, fn) { askToOpenURL(url) }
 			decisionHandler(.Cancel)
 		}
@@ -244,10 +123,10 @@ extension WebViewController: WKNavigationDelegate {
 	func webView(webView: WKWebView, didFailNavigation navigation: WKNavigation!, withError error: NSError) { //error during commited main frame navigation
 		// like server-issued error Statuses with no page content
 		if let url = webView.URL { 
-			conlog("\(__FUNCTION__) [\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
-			if error.domain == WebKitErrorDomain && error.code == 204 { askToOpenURL(url) } // `Plug-in handled load!` video/mp4
-			if error.domain == NSURLErrorDomain && error.code != -999 { // 999 is thrown on stopLoading() and HTTP redirects
-				if let window = grabWindow() { presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil) }
+			warn("[\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
+			if error.domain == WebKitErrorDomain && error.code == 204 { askToOpenURL(url) } // `Plug-in handled load!` video/mp4 kWKErrorCodePlugInWillHandleLoad
+			if error.domain == NSURLErrorDomain && error.code != NSURLErrorCancelled { // dont catch on stopLoading() and HTTP redirects
+				displayError(error, self)
 			}
 		}
     }
@@ -255,7 +134,7 @@ extension WebViewController: WKNavigationDelegate {
 	func webView(webView: WKWebView, didFinishNavigation navigation: WKNavigation!) {
 		let title = webView.title ?? String()
 		let url = webView.URL ?? NSURL(string:"")!
-		conlog("\(__FUNCTION__) \"\(title)\" [\(url)]")
+		warn("\"\(title)\" [\(url)]")
 		//scrapeIcon(webView)
 	}
 	
@@ -273,13 +152,14 @@ extension WebViewController: WKNavigationDelegate {
 		// otherwise == nil
 		// RDAR? would like the tgt string to be passed here
 
-		conlog("\(__FUNCTION__) <\(srcurl)>: window.open(\(openurl), \(tgt))")
+		warn("<\(srcurl)>: window.open(\(openurl), \(tgt))")
 		if JSRuntime.delegate.tryFunc("decideWindowOpenForURL", openurl.description) { return nil }
-		if let browser = browser {
-			let wvc = WebViewController(agent: webView._customUserAgent, configuration: configuration)
-			browser.addChildViewController(wvc)
+		if let container = container {
+			let wvc = WebViewController(config: configuration, agent: webView._customUserAgent)
+			container.addChildViewController(wvc)
+#if os(OSX)
 			if (windowFeatures.allowsResizing ?? 0) == 1 { 
-				if let window = grabWindow() {
+				if let window = view.window {
 					var newframe = CGRect(
 						x: CGFloat(windowFeatures.x ?? window.frame.origin.x as NSNumber),
 						y: CGFloat(windowFeatures.y ?? window.frame.origin.y as NSNumber),
@@ -287,11 +167,12 @@ extension WebViewController: WKNavigationDelegate {
 						height: CGFloat(windowFeatures.height ?? window.frame.size.height as NSNumber)
 					)
 					if !webView.inFullScreenMode {
-						conlog("resizing window to match window.open() size parameters passed: origin,size[\(newframe)]")
+						warn("resizing window to match window.open() size parameters passed: origin,size[\(newframe)]")
 						window.setFrame(newframe, display: true)
 					}
 				}
 			}
+#endif
 			//if !tgt.description.isEmpty { evalJS("window.name = '\(tgt)';") }
 			if !openurl.description.isEmpty { wvc.gotoURL(openurl) } // this should be deferred with a timer so all chained JS calls on the window.open() instanciation can finish executing
 			return wvc.view as? WKWebView // window.open() -> Window()
@@ -300,7 +181,7 @@ extension WebViewController: WKNavigationDelegate {
 	}
 
 	func _webViewWebProcessDidCrash(webView: WKWebView) {
-	    conlog("\(__FUNCTION__) reloading page")
+	    warn("reloading page")
 		webView.reload()
 	}
 }

@@ -1,32 +1,37 @@
+/// MacPin BrowserViewController
+///
+/// A tabbed contentView for OSX
+
 import WebKit // https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/ChangeLog
 import Foundation
 import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
 
 @objc protocol BrowserScriptExports : JSExport { // '$browser' in app.js
-	var globalUserScripts: [String] { get set } // list of postinjects that any new webview will get
 	var defaultUserAgent: String? { get set } // full UA used for any new tab without explicit UA specified
 	var isFullscreen: Bool { get set }
 	var isToolbarShown: Bool { get set }
-	var tabs: [AnyObject] { get set } // alias to childViewControllers
-	var childViewControllers: [AnyObject] { get set }
+	var tabs: [AnyObject] { get } // alias to childViewControllers
+	var childViewControllers: [AnyObject] { get set } // .push() doesn't work nor trigger property observer
 	var tabSelected: AnyObject? { get set }
-	func addTab(vc: NSViewController)
+	func addTab(vc: WebViewController)
 	func switchToNextTab()
 	func switchToPreviousTab()
-	func conlog(msg: String, _ function: String, _ file: String, _ line: Int, _ column: Int) // must kill
 	func newTabPrompt()
 	func newTab(params: AnyObject?) -> WebViewController?
-	func stealAppFocus()
+	func focusOnBrowser()
 	func unhideApp()
 	func bounceDock()
-	func addBookmark(title: String, _ obj: AnyObject?)
+	func addShortcut(title: String, _ obj: AnyObject?)
 }
 
-public class TabViewController: NSTabViewController {
-	let urlbox = URLBoxController(webViewController: nil)
+class TabViewController: NSTabViewController {
+	required init?(coder: NSCoder) { super.init(coder: coder) } // required by NSCoder
+	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView() 
+
+	let omnibox = OmniBoxController(webViewController: nil) // we could & should only present one of these at a time
 	lazy var tabPopBtn = NSPopUpButton(frame: NSRect(x:0, y:0, width:400, height:24), pullsDown: false)
 	let tabMenu = NSMenu() // list of all active web tabs
-	let bookmarksMenu = NSMenu()
+	let shortcutsMenu = NSMenu()
 	//lazy var tabGrid = TabGridController()
 	/*
 	lazy var tabGrid: NSCollectionView = {
@@ -42,7 +47,7 @@ public class TabViewController: NSTabViewController {
 		return grid
 	}() */
 
-	let URLBox	= "Current URL"
+	let OmniBox	= "Search or Go To URL"
 	let ShareButton = "Share URL"
 	let NewTabButton = "Open New Tab"
 	let CloseTabButton = "Close Tab"
@@ -54,7 +59,7 @@ public class TabViewController: NSTabViewController {
 	let TabListButton = "Tabs"
 	var cornerRadius = CGFloat(0.0) // increment above 0.0 to put nice corners on the window FIXME userDefaults
 
-	override public func insertTabViewItem(tab: NSTabViewItem, atIndex: Int) {
+	override func insertTabViewItem(tab: NSTabViewItem, atIndex: Int) {
 		if let view = tab.view {
 			tab.initialFirstResponder = view
 			tab.bind(NSLabelBinding, toObject: view, withKeyPath: "title", options: nil)
@@ -66,7 +71,7 @@ public class TabViewController: NSTabViewController {
 		super.insertTabViewItem(tab, atIndex: atIndex)
 	}
 
-	override public func removeTabViewItem(tab: NSTabViewItem) {
+	override func removeTabViewItem(tab: NSTabViewItem) {
 		if let view = tab.view {
 			tab.initialFirstResponder = nil
 			tab.unbind(NSLabelBinding)
@@ -78,7 +83,7 @@ public class TabViewController: NSTabViewController {
 		super.removeTabViewItem(tab)
 	}
 
-	override public func tabView(tabView: NSTabView, didSelectTabViewItem tabViewItem: NSTabViewItem) { 
+	override func tabView(tabView: NSTabView, didSelectTabViewItem tabViewItem: NSTabViewItem) { 
 		super.tabView(tabView, didSelectTabViewItem: tabViewItem)
 		if let window = view.window {
 			if let view = tabViewItem.view {
@@ -87,9 +92,9 @@ public class TabViewController: NSTabViewController {
 		}
 	}
 
-	override public func tabViewDidChangeNumberOfTabViewItems(tabView: NSTabView) { warn("@\(tabView.tabViewItems.count)") }
+	override func tabViewDidChangeNumberOfTabViewItems(tabView: NSTabView) { warn("@\(tabView.tabViewItems.count)") }
 
-	override public func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] { 
+	override func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] { 
 		let tabs = super.toolbarAllowedItemIdentifiers(toolbar) ?? []
 		return tabs + [
 			NSToolbarSeparatorItemIdentifier,
@@ -99,22 +104,23 @@ public class TabViewController: NSTabViewController {
 			NSToolbarShowFontsItemIdentifier,
 			NSToolbarCustomizeToolbarItemIdentifier,
 			NSToolbarPrintItemIdentifier,
-			URLBox, ShareButton, NewTabButton, CloseTabButton,
+			OmniBox, ShareButton, NewTabButton, CloseTabButton,
 			ForwardButton, BackButton, RefreshButton, SelectedTabButton
 		]
 	}
 
-	override public func toolbarDefaultItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] { 
+	override func toolbarDefaultItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] { 
 		let tabs = super.toolbarDefaultItemIdentifiers(toolbar) ?? []
-		return [ShareButton, NewTabButton] + tabs + [NSToolbarFlexibleSpaceItemIdentifier]
+		//return [ShareButton, NewTabButton] + tabs + [NSToolbarFlexibleSpaceItemIdentifier]
+		return [ShareButton, NewTabButton] + tabs + [OmniBox]
 		//return [ShareButton, NewTabButton, NSToolbarFlexibleSpaceItemIdentifier] + tabs
 		//return [NSToolbarFlexibleSpaceItemIdentifier, ShareButton] + tabs! + [NewTabButton, NSToolbarFlexibleSpaceItemIdentifier]
 		//return [NSToolbarFlexibleSpaceItemIdentifier, ShareButton, NSToolbarFlexibleSpaceItemIdentifier] + tabs + [NSToolbarFlexibleSpaceItemIdentifier, NewTabButton, NSToolbarFlexibleSpaceItemIdentifier]
-		//return [ShareButton, NewTabButton, CloseTabButton, BackButton, ForwardButton, RefreshButton,SelectedTabButton, URLBox] + tabs + [NSToolbarFlexibleSpaceItemIdentifier]
+		//return [ShareButton, NewTabButton, CloseTabButton, BackButton, ForwardButton, RefreshButton,SelectedTabButton, OmniBox] + tabs + [NSToolbarFlexibleSpaceItemIdentifier]
 		//tabviewcontroller somehow remembers where tabs! was and keeps putting new tabs in that position
 	}
 
-	override public func toolbar(toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: String, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+	override func toolbar(toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: String, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
 		let ti = NSToolbarItem(itemIdentifier: itemIdentifier)
 		ti.minSize = CGSize(width: 24, height: 24)
 		ti.maxSize = CGSize(width: 36, height: 36)
@@ -199,10 +205,10 @@ public class TabViewController: NSTabViewController {
 				return ti
 
 
-			case URLBox:
+			case OmniBox:
 				ti.minSize = CGSize(width: 70, height: 24)
 				ti.maxSize = CGSize(width: 600, height: 24)
-				ti.view = flag ? urlbox.view : NSTextField()
+				ti.view = flag ? omnibox.view : NSTextField()
 				return ti
 
 			default:
@@ -216,7 +222,7 @@ public class TabViewController: NSTabViewController {
 	// optional func toolbarWillAddItem(_ notification: NSNotification)
 	// optional func toolbarDidRemoveItem(_ notification: NSNotification)
 
-	override public func loadView() {
+	override func loadView() {
 		tabView = NSTabView()
 		tabView.identifier = "NSTabView"
 		tabView.tabViewType = .NoTabsNoBorder
@@ -228,7 +234,7 @@ public class TabViewController: NSTabViewController {
 		// note, .view != tabView, view wraps tabView + whatever tabStyle is selected
 	}
 
-	override public func viewDidLoad() {
+	override func viewDidLoad() {
 		identifier = "TabViewController"
 		tabStyle = .Toolbar // this will reinit window.toolbar to mirror the tabview itembar
 		//tabStyle = .Unspecified
@@ -237,7 +243,6 @@ public class TabViewController: NSTabViewController {
 
 		// http://www.raywenderlich.com/2502/calayers-tutorial-for-ios-introduction-to-calayers-tutorial
 		view.wantsLayer = true //use CALayer
-		//view.layer?.frame = view.frame
 		view.layer?.cornerRadius = cornerRadius
 		view.layer?.masksToBounds = true // include layer contents in clipping effects
 		view.canDrawSubviewsIntoLayer = true // coalesce all subviews' layers into this one
@@ -246,31 +251,15 @@ public class TabViewController: NSTabViewController {
 		view.autoresizesSubviews = true // resize tabbed subviews based on their autoresizingMasks
 		transitionOptions = .None //.Crossfade .SlideUp/Down/Left/Right/Forward/Backward
 
-		//view.frame = NSMakeRect(0, 0, 600, 800) // default size
-
-		//view.frame = CGRectZero
-		//preferredContentSize = CGSize(width: 600, height: 800)
-		//view.appearance = NSAppearance(named: NSAppearanceNameAqua) 
-
 		super.viewDidLoad()
-
-		// lay down a blurry view underneath, only seen when transparency is toggled * document.body.bgColor == transparent, or no tabs loaded
-		//var blurView = NSVisualEffectView(frame: view.frame)
-		//blurView.blendingMode = .BehindWindow
-		////blurView.material = .AppearanceBased //.Dark .Light .Titlebar
-		//blurView.material = .Dark //.Dark .Light .Titlebar
-		//blurView.state = NSVisualEffectState.Active // set it to always be blurry regardless of window state
-		//blurView.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable
-		//view.addSubview(blurView, positioned: .Below, relativeTo: view) // FIXME add replace toggle
-
 		view.registerForDraggedTypes([NSPasteboardTypeString,NSURLPboardType,NSFilenamesPboardType]) //webviews already do this, this just enables openURL when tabless
 	}
 	
-	override public func viewWillAppear() {
+	override func viewWillAppear() {
 		super.viewWillAppear()
 	}
 
-	override public func viewDidAppear() {
+	override func viewDidAppear() {
 		super.viewDidAppear()
 		let toolbar = view.window?.toolbar ?? NSToolbar(identifier: "toolbar")
 		toolbar.delegate = self
@@ -281,30 +270,36 @@ public class TabViewController: NSTabViewController {
 		view.window?.excludedFromWindowsMenu = true
 	}
 
-	public func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
-	public func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
+	func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
+	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
 
 	deinit { warn("") }
 }
 
-public class BrowserViewController: TabViewController, BrowserScriptExports {
-	var globalUserScripts: [String] = []
-		//willSet {} auto-replace loaded scripts in each tab's contentController?
+class BrowserViewController: TabViewController, BrowserScriptExports, WebViewContainer {
 
-	var defaultUserAgent: String? = nil //{
+	convenience init() {
+		self.init(nibName: nil, bundle: nil)
+		representedObject = self // FIXME this needs to be the ModelObject of M.V.C., not self/C
+		//tabs = childViewControllers // better be a copy by reference
+	}
+	deinit { representedObject = nil }
+
+	var defaultUserAgent: String? = nil // {
 	//	get { }
 	//	set(ua) { NSUserDefaults.standardUserDefaults().setString(ua, forKey: "UserAgent") } //only works on IOS
 	//} // https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/NavigatorBase.cpp
 	// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/mac/UserAgentMac.mm
 
-	var isTransparent: Bool = false {
+	var transparent: Bool = false {
 		didSet {
 			if let window = view.window {
-				//window.backgroundColor = isTransparent ? NSColor.clearColor() : NSColor.whiteColor()
-				window.backgroundColor = window.backgroundColor.colorWithAlphaComponent(isTransparent ? 0 : 1) //clearColor | fooColor
-				window.opaque = !isTransparent
-				window.hasShadow = !isTransparent
-				window.toolbar!.showsBaselineSeparator = !isTransparent
+				//window.backgroundColor = transparent ? NSColor.clearColor() : NSColor.whiteColor()
+				window.backgroundColor = window.backgroundColor.colorWithAlphaComponent(transparent ? 0 : 1) //clearColor | fooColor
+				window.opaque = !transparent
+				window.hasShadow = !transparent
+				window.invalidateShadow()
+				window.toolbar!.showsBaselineSeparator = !transparent
 			}
 		}
 	}
@@ -319,43 +314,29 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 		set(bool) { if bool != isToolbarShown { view.window!.toggleToolbarShown(nil) } }
 	}
 
-	/*
-	var tabs: [WebViewController] { 
-		get { return childViewControllers.filter({ $0 is WebViewController }).map({ $0 as WebViewController }) }
-		set(newTabs) { 
-			for tab in newTabs {
-				addChildViewController(tab)
-				//warn(tab.webview.URL?.description ?? "no url!")
-			}
-		}
-	}
-	var tabCount: Int { get { return childViewControllers.count } }
-	var firstTab: WebViewController? { get { return (childViewControllers.first as? WebViewController) ?? nil }}
-	var tabSelected: WebViewController? {
-		get {
-			if selectedTabViewItemIndex == -1 { return nil }
-			return childViewControllers[selectedTabViewItemIndex] as? WebViewController
-		}
-		//set(wvc) { if let wvc = wvc { tabView.selectTabViewItem(tabViewItemForViewController(wvc)) } }
-		set(wvc) { tabView.selectTabViewItem(tabViewItemForViewController(wvc)) }
-	}
-	*/
-
-	var tabs: [AnyObject] { 
-		get { return childViewControllers }
-		set(newTabs) { childViewControllers = newTabs }
-	}
+	var tabs: [AnyObject] { return childViewControllers } // alias
+	override var childViewControllers: [AnyObject] { didSet { warn(childViewControllers.count.description); warn(childViewControllers.description) } } //no workie
 
 	var tabSelected: AnyObject? {
 		get {
 			if selectedTabViewItemIndex == -1 { return nil } // no tabs? bupkiss!
 			return childViewControllers[selectedTabViewItemIndex]
 		}
-		set(obj) { if let vc = obj as? NSViewController { tabView.selectTabViewItem(tabViewItemForViewController(vc)) } }
+		set(obj) { 
+			if let obj: AnyObject = obj, vc = obj as? NSViewController { 
+				if tabViewItemForViewController(vc) == nil { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
+				//if (find(childViewControllers, obj) ?? -1) < 0 { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
+				//if !contains(childViewControllers, vc) { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
+				//if childViewControllers.containsObject(obj) { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
+				tabView.selectTabViewItem(tabViewItemForViewController(vc))
+			}
+		}
 	}
 
-	override public func insertChildViewController(childViewController: NSViewController, atIndex index: Int) {
-		conlog("#\(index)")
+	override var description: String { return "<\(reflect(self).summary)> `\(title ?? String())`" }
+
+	override func insertChildViewController(childViewController: NSViewController, atIndex index: Int) {
+		warn("#\(index)")
 		super.insertChildViewController(childViewController, atIndex: index)
 
 		if let wvc = childViewController as? WebViewController {
@@ -366,6 +347,7 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 			mi.representedObject = wvc // FIXME: anti-retain needed? 
 			mi.target = self
 			tabMenu.addItem(mi)
+			if omnibox.representedObject == nil { omnibox.representedObject = wvc } //very first tab added
 
 			//let gridItem = tabGrid.newItemForRepresentedObject(wvc)
 			//gridItem.imageView = wvc.favicon
@@ -374,23 +356,17 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 	}
 
 	func menuSelectedTab(sender: AnyObject?) {
-		if let mi = sender as? NSMenuItem, let wvc = mi.representedObject as? WebViewController {
-			//if tabSelected == wvc {
-			//	wvc.gotoButtonClicked(tabPopBtn) //prompt user to edit URL of currently-selected tab
-			//} else {
-				tabSelected = wvc
-			//}
-		}
+		if let mi = sender as? NSMenuItem, let wvc = mi.representedObject as? WebViewController { tabSelected = wvc }
 	}
 
 /*
 	func selectedTabButtonClicked(sender: AnyObject?) {
-		let urlbox = URLBoxController(webViewController: self)
+		let omnibox = OmniBoxController(webViewController: self)
 
 		if let btn = sender? as? NSView { 
-			presentViewController(urlbox, asPopoverRelativeToRect: btn.bounds, ofView: btn, preferredEdge:NSMinYEdge, behavior: .Semitransient)
+			presentViewController(omnibox, asPopoverRelativeToRect: btn.bounds, ofView: btn, preferredEdge:NSMinYEdge, behavior: .Semitransient)
 		} else {
-			presentViewControllerAsSheet(urlbox) //Keyboard shortcut
+			presentViewControllerAsSheet(omnibox) //Keyboard shortcut
 		}
 	}
 */
@@ -406,12 +382,12 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 		}
 	}
 */
-	override public func removeChildViewControllerAtIndex(index: Int) {
-		conlog("#\(index)")
+	override func removeChildViewControllerAtIndex(index: Int) {
+		warn("#\(index)")
 		if let wvc = childViewControllers[index] as? WebViewController {
 
 			// unassign strong property references that will cause a retain cycle
-			if urlbox.representedObject === wvc { urlbox.representedObject = nil }
+			if omnibox.representedObject === wvc { omnibox.representedObject = nil }
 			if let mitem = tabMenu.itemAtIndex(tabMenu.indexOfItemWithRepresentedObject(wvc)) {
 				mitem.target = nil
 				mitem.representedObject = nil
@@ -422,12 +398,12 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 		super.removeChildViewControllerAtIndex(index)
 	}
 
-	override public func presentViewController(viewController: NSViewController, animator: NSViewControllerPresentationAnimator) {
-		conlog("")
+	override func presentViewController(viewController: NSViewController, animator: NSViewControllerPresentationAnimator) {
+		warn("")
 		super.presentViewController(viewController, animator: animator)
 	}
 
-	override public func transitionFromViewController(fromViewController: NSViewController, toViewController: NSViewController,
+	override func transitionFromViewController(fromViewController: NSViewController, toViewController: NSViewController,
 		options: NSViewControllerTransitionOptions, completionHandler completion: (() -> Void)?) {
 
 		var midex = tabMenu.indexOfItemWithRepresentedObject(fromViewController)
@@ -439,7 +415,7 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 		let tabnum = tabPopBtn.indexOfItemWithRepresentedObject(toViewController)
 		if tabnum != -1 { tabPopBtn.selectItemAtIndex(tabnum) }
 
-		urlbox.representedObject = toViewController
+		omnibox.representedObject = toViewController
 
 		super.transitionFromViewController(fromViewController, toViewController: toViewController,
 			options: options, completionHandler: completion)
@@ -448,10 +424,13 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 
 		if let window = view.window {
 			window.makeFirstResponder(toViewController.view) // steal app focus to whatever the tab represents
+			//warn("focus is on `\(view.window?.firstResponder)`")
 		}
-		conlog("browser title is now `\(title ?? String())`")
-		conlog("focus is on `\(view.window?.firstResponder)`")
+
+		//warn("browser title is now `\(title ?? String())`")
 	}
+
+	// menu & shortcut selectors //////////////////////////////
 
 	func closeCurrentTab() {
 		if let tab = tabSelected as? NSViewController { tab.removeFromParentViewController() } // calls func above
@@ -463,31 +442,42 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 	func switchToPreviousTab() { tabView.selectPreviousTabViewItem(self) }
 	func switchToNextTab() { tabView.selectNextTabViewItem(self) }
 
-	func toggleTransparency() { isTransparent = !isTransparent }
+	func toggleTransparency() { transparent = !transparent }
 
 	func loadSiteApp() { JSRuntime.loadSiteApp() }
 	func editSiteApp() { NSWorkspace.sharedWorkspace().openFile(NSBundle.mainBundle().resourcePath!) }
 
 	func newTabPrompt() {
-		let wvc = newTab(NSURL(string: "about:blank")!)!
-		tabSelected = wvc
-		wvc.gotoButtonClicked(nil)
+		tabSelected = WebViewControllerOSX(url: NSURL(string: "about:blank")!)
+		revealOmniBox()
 	}
 
+	func revealOmniBox() {
+		if omnibox.view.window != nil {
+			// if omnibox is already visible somewhere in the window, move key focus there
+			view.window?.makeFirstResponder(omnibox.view)
+		} else {
+			// otherwise, present it as a sheet or popover aligned under the window-top/toolbar
+			//presentViewControllerAsSheet(omnibox) // modal, yuck
+			var poprect = view.bounds
+			poprect.size.height -= omnibox.preferredContentSize.height + 12 // make room at the top to stuff the popover
+			presentViewController(omnibox, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSMaxYEdge, behavior: NSPopoverBehavior.Semitransient)
+		}
+	}
 	func newTab(params: AnyObject?) -> WebViewController? {
-		switch(params) {
+		switch (params) {
 			case let urlstr as String:
 				if let url = NSURL(string: urlstr) { return newTab(url) }
 				return nil
 			case let url as NSURL:
-				let wvc = WebViewController(agent: defaultUserAgent)
+				let wvc = WebViewControllerOSX(agent: defaultUserAgent)
 				wvc.gotoURL(url)
 				addChildViewController(wvc)
-				return wvc
+				return wvc as WebViewController
 			case let obj as [String:AnyObject]:
-				if let wvc = WebViewController.createWithObj(obj) {
+				if let wvc = WebViewControllerOSX(object: obj) {
 					addChildViewController(wvc)
-					return wvc
+					return wvc as WebViewController
 				}
 				fallthrough
 			case nil: fallthrough
@@ -495,25 +485,46 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 				return nil
 		}
 	}
+/*
+	func newTab(params: AnyObject?) -> WebViewController? {
+		let wvc: WebViewControllerOSX
+		switch (params) {
+			case let url as NSURL: wvc = WebViewControllerOSX(url: url, agent: defaultUserAgent)
+			case let urlstr as String: wvc = WebViewControllerOSX(url: NSURL(url: urlstr)!, agent: defaultUserAgent)
+			case let obj as [String:AnyObject]: wvc = WebViewControllerOSX(object: obj)
+			default: return nil
+		}
 
-	func addTab(vc: NSViewController) { addChildViewController(vc) }
+		if wvc != nil { 
+			addChildViewController(wvc)
+			return wvc as WebViewController
+		}
+		return nil
+	}
+*/
+	func addTab(wvc: WebViewController) { addChildViewController(wvc) }
 
-	func conlog(msg: String, _ function: String = __FUNCTION__, _ file: String = __FILE__, _ line: Int = __LINE__, _ column: Int = __COLUMN__) {
-		let logmsg = "<\(__FILE__):\(line):\(column)> [\(function)] \(msg)\n"
-		NSFileHandle.fileHandleWithStandardError().writeData((logmsg).dataUsingEncoding(NSUTF8StringEncoding)!)
-#if APP2JSLOG
-		tabSelected?.evalJS("console.log(\'\(logmsg)\')")
-#endif
+	func focusOnBrowser() {  // un-minimizes app, switches to its screen/space, and steals key focus to the window
+		//NSApplication.sharedApplication().activateIgnoringOtherApps(true)
+		let app = NSRunningApplication.currentApplication()
+		app.unhide() // un-minimize app
+		app.activateWithOptions(.ActivateIgnoringOtherApps) // brings up key window
+		view.window?.makeKeyAndOrderFront(nil) // steals key focus
 	}
 
-	func stealAppFocus() { NSApplication.sharedApplication().activateIgnoringOtherApps(true) }
-	func unhideApp() {
+	func unhideApp() { // un-minimizes app, but doesn't steal key focus or screen or menubar
+		let app = NSRunningApplication.currentApplication()
+		app.unhide() // un-minimize app
+		app.activateWithOptions(.ActivateIgnoringOtherApps) // brings up key window
+		view.window?.makeKeyAndOrderFront(nil) // steals key focus
+/*
 		//windowController.showWindow(self)
-		stealAppFocus()
 		NSApplication.sharedApplication().unhide(self)
 		NSApplication.sharedApplication().arrangeInFront(self)
 		view.window?.makeKeyAndOrderFront(nil)
+*/
 	}
+
 	func bounceDock() { NSApplication.sharedApplication().requestUserAttention(.InformationalRequest) } //Critical keeps bouncing
 
 	func printTab() {
@@ -523,26 +534,26 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 		printer.runOperation()
 	}
 	
-	func addBookmark(title: String, _ obj: AnyObject?) {
+	func addShortcut(title: String, _ obj: AnyObject?) {
 		if title.isEmpty {
-			conlog("title not provided")
+			warn("title not provided")
 			return
 		}
 		switch (obj) {
-			case let urlstr as String: bookmarksMenu.addItem(MenuItem(title, "gotoBookmark:", target: self, represents: ["url": urlstr]))
-			case is [String:AnyObject]: bookmarksMenu.addItem(MenuItem(title, "gotoBookmark:", target: self, represents: obj))
+			case let urlstr as String: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: ["url": urlstr]))
+			case is [String:AnyObject]: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: obj))
 			case nil: fallthrough
 			default:
-				conlog("invalid object type to represent bookmark")
+				warn("invalid object type to represent bookmark")
 				return
 		}
 	}
 
-	func gotoBookmark(sender: AnyObject?) {
-		if let bookmark = sender as? NSMenuItem {
-			switch (bookmark.representedObject) {
+	func gotoShortcut(sender: AnyObject?) {
+		if let shortcut = sender as? NSMenuItem {
+			switch (shortcut.representedObject) {
 				case let urlstr as String: JSRuntime.delegate.tryFunc("launchURL", urlstr)
-				case let obj as [String:AnyObject]: tabSelected = newTab(obj)
+				case let obj as [String:AnyObject]: tabSelected = WebViewControllerOSX(object: obj)
 				default: return
 			}
 		}
@@ -551,7 +562,7 @@ public class BrowserViewController: TabViewController, BrowserScriptExports {
 }
 
 extension BrowserViewController: NSMenuDelegate {
-	public func menuNeedsUpdate(menu: NSMenu) {
+	func menuNeedsUpdate(menu: NSMenu) {
 		//switch menu.tag {
 		//case 1: //historyMenu
 	}
