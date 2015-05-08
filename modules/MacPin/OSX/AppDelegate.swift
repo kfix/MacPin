@@ -4,13 +4,13 @@ import WebKitPrivates
 import Darwin
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
-public class AppDelegate: NSObject { // keep it public so main.swift can launch it
+class AppDelegate: NSObject {
 
 	var effectController = EffectViewController()
 	var browserController = BrowserViewController()
 	var windowController: WindowController
 
-	override public init() {
+	override init() {
 		browserController.title = nil
 		browserController.canPropagateSelectedChildViewControllerTitle = true
 		windowController = WindowController(window: NSWindow(contentViewController: effectController))
@@ -19,11 +19,12 @@ public class AppDelegate: NSObject { // keep it public so main.swift can launch 
 		super.init()
 	}
 
+	// handle URLs passed by open
 	func handleGetURLEvent(event: NSAppleEventDescriptor!, replyEvent: NSAppleEventDescriptor?) {
 		if let urlstr = event.paramDescriptorForKeyword(AEKeyword(keyDirectObject))!.stringValue {
-			warn("`\(urlstr)` -> JSRuntime.delegate.launchURL()")
+			warn("`\(urlstr)` -> JSRuntime.jsdelegate.launchURL()")
 			JSRuntime.context.objectForKeyedSubscript("$").setObject(urlstr, forKeyedSubscript: "launchedWithURL")
-			JSRuntime.delegate.tryFunc("launchURL", urlstr)
+			JSRuntime.jsdelegate.tryFunc("launchURL", urlstr)
 			//replyEvent == ??
 		}
 		//replyEvent == ??
@@ -33,16 +34,16 @@ public class AppDelegate: NSObject { // keep it public so main.swift can launch 
 
 extension AppDelegate: NSApplicationDelegate {
 
-	public func applicationDockMenu(sender: NSApplication) -> NSMenu? { return browserController.tabMenu }
+	func applicationDockMenu(sender: NSApplication) -> NSMenu? { return browserController.tabMenu }
 
-	public func applicationShouldOpenUntitledFile(app: NSApplication) -> Bool { return false }
+	func applicationShouldOpenUntitledFile(app: NSApplication) -> Bool { return false }
 
-	//public func application(sender: AnyObject, openFileWithoutUI filename: String) -> Bool {} // app terminates on return!
-	//public func application(theApplication: NSApplication, printFile filename: String) -> Bool () //app terminates on return
+	//func application(sender: AnyObject, openFileWithoutUI filename: String) -> Bool {} // app terminates on return!
+	//func application(theApplication: NSApplication, printFile filename: String) -> Bool () //app terminates on return
 
 	//public finishLaunching() { super.finishLaunching() } // app activates, NSOpen files opened
 
-	public func applicationWillFinishLaunching(notification: NSNotification) { // dock icon bounces, also before self.openFile(foo.bar) is called
+	func applicationWillFinishLaunching(notification: NSNotification) { // dock icon bounces, also before self.openFile(foo.bar) is called
 		NSUserNotificationCenter.defaultUserNotificationCenter().delegate = self
 		let app = notification.object as? NSApplication
 
@@ -77,10 +78,10 @@ extension AppDelegate: NSApplicationDelegate {
 		let tabMenu = NSMenuItem() //WebViewController and WKWebView funcs
 		tabMenu.submenu = NSMenu()
 		tabMenu.submenu?.title = "Tab"
-		tabMenu.submenu?.addItem(MenuItem("Zoom In", "zoomIn", "+", [.CommandKeyMask]))
-		tabMenu.submenu?.addItem(MenuItem("Zoom Out", "zoomOut", "-", [.CommandKeyMask]))
+		tabMenu.submenu?.addItem(MenuItem("Zoom In", "zoomIn", "+", [.CommandKeyMask])) //wvc
+		tabMenu.submenu?.addItem(MenuItem("Zoom Out", "zoomOut", "-", [.CommandKeyMask])) //wvc
 		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", "zoomOut", nil, [.CommandKeyMask]))
-		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", "toggleTransparency"))
+		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", "toggleTransparency")) //wvc
 		//tabMenu.submenu?.addItem(MenuItem("Web Inspector", "showConsole:", "i", [.CommandKeyMask, .AlternateKeyMask]) //need impl of WKInspectorShow
 		//	^ https://bugs.webkit.org/show_bug.cgi?id=137612
 		tabMenu.submenu?.addItem(MenuItem("Reload", "reload:", "r", [.CommandKeyMask])) //webview
@@ -89,21 +90,22 @@ extension AppDelegate: NSApplicationDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Go Forward", "goForward:", "]", [.CommandKeyMask]))	//webview
 		tabMenu.submenu?.addItem(MenuItem("Stop Loading", "stopLoading:", ".", [.CommandKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Print Page", "print:")) //NSView
-		tabMenu.submenu?.addItem(MenuItem("Print Tab", "printTab", target: browserController)) //NSView
-		tabMenu.submenu?.addItem(MenuItem("Open with default App", "askToOpenCurrentURL"))
+		tabMenu.submenu?.addItem(MenuItem("Print Tab", "printTab", target: browserController)) //bc
+		tabMenu.submenu?.addItem(MenuItem("Open with default App", "askToOpenCurrentURL")) //wvc
 		app!.mainMenu?.addItem(tabMenu) 
 
 		let winMenu = NSMenuItem() //BrowserViewController and NSWindow funcs
 		winMenu.submenu = NSMenu()
 		winMenu.submenu?.title = "Window"
-		winMenu.submenu?.addItem(MenuItem("Enter URL", "revealOmniBox", "l", [.CommandKeyMask]))
-		winMenu.submenu?.addItem(MenuItem(nil, "toggleFullScreen:"))
-		winMenu.submenu?.addItem(MenuItem(nil, "toggleToolbarShown:"))
+		winMenu.submenu?.addItem(MenuItem("Enter URL", "revealOmniBox", "l", [.CommandKeyMask])) //bc
+		winMenu.submenu?.addItem(MenuItem(nil, "toggleFullScreen:")) //bc
+		winMenu.submenu?.addItem(MenuItem(nil, "toggleToolbarShown:")) //bc
 		//winMenu.submenu?.addItem(MenuItem("Edit Toolbar", "runToolbarCustomizationPalette:"))
-		winMenu.submenu?.addItem(MenuItem("New Tab", "newTabPrompt", "t", [.CommandKeyMask]))
-		winMenu.submenu?.addItem(MenuItem("Close Tab", "closeCurrentTab", "w", [.CommandKeyMask]))
-		winMenu.submenu?.addItem(MenuItem("Show Next Tab", "selectNextTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask]))
-		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", "selectPreviousTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask, .ShiftKeyMask]))
+		winMenu.submenu?.addItem(MenuItem("New Tab", "newTabPrompt", "t", [.CommandKeyMask])) //bc
+		//winMenu.submenu?.addItem(MenuItem("Close Tab", "closeCurrentTab", "w", [.CommandKeyMask])) //bc
+		winMenu.submenu?.addItem(MenuItem("Close Tab", "closeTab", "w", [.CommandKeyMask])) //wvc, bc
+		winMenu.submenu?.addItem(MenuItem("Show Next Tab", "selectNextTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask])) //bc
+		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", "selectPreviousTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask, .ShiftKeyMask])) //bc
 		app!.mainMenu?.addItem(winMenu) 
 
 		let tabListMenu = NSMenuItem(title: "Tabs", action: nil, keyEquivalent: "")
@@ -119,10 +121,10 @@ extension AppDelegate: NSApplicationDelegate {
 		let dbgMenu = NSMenuItem()
 		dbgMenu.submenu = NSMenu()
 		dbgMenu.submenu?.title = "Debug"
-		dbgMenu.submenu?.addItem(MenuItem("Highlight TabView Constraints", "highlightConstraints"))
-		dbgMenu.submenu?.addItem(MenuItem("Randomize TabView Layout", "exerciseAmbiguityInLayout"))
-		dbgMenu.submenu?.addItem(MenuItem("Replace contentView With Tab", "replaceContentView"))
-		dbgMenu.submenu?.addItem(MenuItem("Dismiss VC", "dismissController:"))
+		dbgMenu.submenu?.addItem(MenuItem("Highlight TabView Constraints", "highlightConstraints")) //bc
+		dbgMenu.submenu?.addItem(MenuItem("Randomize TabView Layout", "exerciseAmbiguityInLayout")) //bc
+		dbgMenu.submenu?.addItem(MenuItem("Replace contentView With Tab", "replaceContentView")) //bc
+		dbgMenu.submenu?.addItem(MenuItem("Dismiss VC", "dismissController:")) //bc
 #if DBGMENU
 #else
 		dbgMenu.hidden = true
@@ -140,15 +142,16 @@ extension AppDelegate: NSApplicationDelegate {
 		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: "handleGetURLEvent:replyEvent:", forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url scehems
 	}
 
-	//public func application(theApplication: NSApplication, openFile filename: String) -> Bool {}
+	//func application(theApplication: NSApplication, openFile filename: String) -> Bool {}
 
-    public func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
+    func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
 		JSRuntime.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
 		JSRuntime.loadSiteApp() // load app.js, if present
+		JSRuntime.jsdelegate.tryFunc("AppFinishedLaunching")
 
 		if let default_html = NSBundle.mainBundle().URLForResource("default", withExtension: "html") {
 			warn("loading initial page from app bundle: \(default_html)")
-			browserController.addChildViewController(WebViewControllerOSX(url: default_html)) 
+			browserController.tabSelected = MPWebView(url: default_html)
 		}
 
 		if browserController.tabs.count < 1 { browserController.newTabPrompt() } //don't allow a tabless state
@@ -195,11 +198,11 @@ extension AppDelegate: NSApplicationDelegate {
 		}
     }
 
-	public func applicationDidBecomeActive(notification: NSNotification) {
+	func applicationDidBecomeActive(notification: NSNotification) {
 		//if application?.orderedDocuments?.count < 1 { showApplication(self) }
 	}
 
-	public func application(application: NSApplication, willPresentError error: NSError) -> NSError {
+	func application(application: NSApplication, willPresentError error: NSError) -> NSError {
 		// not in iOS: http://stackoverflow.com/a/13083203/3878712 
 		// NOPE, this can cause loops warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 		if error.domain == NSURLErrorDomain {
@@ -217,15 +220,29 @@ extension AppDelegate: NSApplicationDelegate {
 		return error 
 	}
 
-	public func applicationWillTerminate(notification: NSNotification) { NSUserDefaults.standardUserDefaults().synchronize() }
+	func applicationWillTerminate(notification: NSNotification) { NSUserDefaults.standardUserDefaults().synchronize() }
     
-	public func applicationShouldTerminateAfterLastWindowClosed(app: NSApplication) -> Bool { return true }
+	func applicationShouldTerminateAfterLastWindowClosed(app: NSApplication) -> Bool { return true }
 
-	// handles drag-to-dock-badge, /usr/bin/open and argv[1] requests
-	public func application(theApplication: NSApplication, openFile filename: String) -> Bool {
+	// handles drag-to-dock-badge, /usr/bin/open and argv[1] requests specifiying urls & local pathnames
+	func application(theApplication: NSApplication, openFile filename: String) -> Bool {
+		if let ftype = NSWorkspace.sharedWorkspace().typeOfFile(filename, error: nil) {
+			switch ftype {
+				//case "public.data":
+				//case "public.html":
+				//case "public.folder":
+				case "com.netscape.javascript-source":
+					warn(filename)
+					JSRuntime.loadAppScript("file://\(filename)")
+					JSRuntime.jsdelegate.tryFunc("AppFinishedLaunching")
+					return true
+				default: break;
+			}
+		}
+
 		if let url = validateURL(filename) {
 			warn("opening: \(url)")
-			browserController.addChildViewController(WebViewControllerOSX(url: url)) 
+			browserController.tabSelected = MPWebView(url: url)
 			return true
 		}
 		return false
@@ -234,22 +251,22 @@ extension AppDelegate: NSApplicationDelegate {
 
 extension AppDelegate: NSUserNotificationCenterDelegate {
 	//didDeliverNotification
-	public func userNotificationCenter(center: NSUserNotificationCenter, didActivateNotification notification: NSUserNotification) {
+	func userNotificationCenter(center: NSUserNotificationCenter, didActivateNotification notification: NSUserNotification) {
 		warn("user clicked notification")
 
-		if JSRuntime.delegate.tryFunc("handleClickedNotification", notification.title ?? "", notification.subtitle ?? "", notification.informativeText ?? "") {
+		if JSRuntime.jsdelegate.tryFunc("handleClickedNotification", notification.title ?? "", notification.subtitle ?? "", notification.informativeText ?? "", notification.identifier ?? "") {
 			warn("handleClickedNotification fired!")
 			center.removeDeliveredNotification(notification)
 		}
 	}
 
 	// always display notifcations, even if app is active in foreground (for alert sounds)
-	public func userNotificationCenter(center: NSUserNotificationCenter, shouldPresentNotification notification: NSUserNotification) -> Bool { return true }
+	func userNotificationCenter(center: NSUserNotificationCenter, shouldPresentNotification notification: NSUserNotification) -> Bool { return true }
 }
 
 extension AppDelegate: NSWindowRestoration {
 	// https://developer.apple.com/library/mac/documentation/General/Conceptual/MOSXAppProgrammingGuide/CoreAppDesign/CoreAppDesign.html#//apple_ref/doc/uid/TP40010543-CH3-SW35
-	public class func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow!,NSError!) -> Void)) {
+	class func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow!,NSError!) -> Void)) {
 		if let app = NSApplication.sharedApplication().delegate as? AppDelegate, let window = app.windowController.window {
 			completionHandler(window, nil)
 			//WKWebView._restoreFromSessionStateData ...

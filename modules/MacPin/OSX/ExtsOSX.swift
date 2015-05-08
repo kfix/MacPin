@@ -1,3 +1,7 @@
+/// MacPin ExtsOSX
+///
+/// Global-scope utility functions for OSX
+ 
 import AppKit
 import WebKit
 import WebKitPrivates
@@ -22,7 +26,7 @@ class MenuItem: NSMenuItem {
 	}
 }
 
-public extension NSPasteboard {
+extension NSPasteboard {
 	func dump() {
 		if let items = self.pasteboardItems {
 			for item in items {
@@ -30,6 +34,7 @@ public extension NSPasteboard {
 				if let types = item.types as? [NSString] {
 					warn(types.description)
 					for uti in types { // https://developer.apple.com/library/mac/documentation/MobileCoreServices/Reference/UTTypeRef/
+						// https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/UTIRef/Articles/System-DeclaredUniformTypeIdentifiers.html
 						// http://arstechnica.com/apple/2005/04/macosx-10-4/11/ http://www.cocoanetics.com/2012/09/fun-with-uti/
 						if !uti.description.isEmpty, let value = item.stringForType(uti.description) {
 							if var cftype = UTTypeCopyDescription(uti as CFString) {
@@ -53,8 +58,8 @@ public extension NSPasteboard {
 
 }
 
-public extension WKView {
-	//override public func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
+extension WKView {
+	//override func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
 
 	/* overide func _registerForDraggedTypes() {
 		// https://github.com/WebKit/webkit/blob/f72e25e3ba9d3d25d1c3a4276e8dffffa4fec4ae/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3653
@@ -73,6 +78,9 @@ public extension WKView {
 	} */
 
 	// http://stackoverflow.com/a/25114813/3878712
+
+	// try to accept DnD'd links from other browsers more gracefully than default WebKit behavior
+	// this mess ain't funny: https://hsivonen.fi/kesakoodi/clipboard/
 	func shimmedPerformDragOperation(sender: NSDraggingInfo) -> Bool {
 		if sender.draggingSource() == nil { //dragged from external application
 			var pboard = sender.draggingPasteboard()
@@ -127,7 +135,58 @@ public extension WKView {
 					pboard.dump()
 				}
 			}
+			// text/x-moz-url seems to be used for inter-tab link drags in Chrome and FF
+			// https://hg.mozilla.org/mozilla-central/file/tip/dom/base/nsContentAreaDragDrop.cpp
+			// https://hg.mozilla.org/mozilla-central/file/tip/widget/cocoa/nsDragService.mm
+			// https://hg.mozilla.org/mozilla-central/file/tip/widget/cocoa/nsClipboard.mm
 		}
 		return self.shimmedPerformDragOperation(sender) //return pre-swizzled method		
 	}
+}
+
+// show an NSError to the user, attaching it to any given view
+func displayError(error: NSError, _ vc: NSViewController? = nil) {
+	warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
+	if let window = vc?.view.window { 
+		// display it as a NSPanel sheet
+		vc?.view.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
+	} else if let window = NSApplication.sharedApplication().mainWindow {
+		window.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
+	} else {
+		NSApplication.sharedApplication().presentError(error)
+	}
+}
+
+func askToOpenURL(url: NSURL?) {
+	let app = NSApplication.sharedApplication()
+	let window = app.mainWindow
+	app.unhide(nil)
+	if let url = url, window = window, opener = NSWorkspace.sharedWorkspace().URLForApplicationToOpenURL(url) {
+		if opener == NSBundle.mainBundle().bundleURL {
+			// macpin is already the registered handler for this (probably custom) url scheme, so just open it
+			NSWorkspace.sharedWorkspace().openURL(url)
+			return
+		}
+		warn("[\(url)]")
+		let alert = NSAlert()
+		alert.messageText = "Open using App:\n\(opener)"
+		alert.addButtonWithTitle("OK")
+		alert.addButtonWithTitle("Cancel")
+		alert.informativeText = url.description
+		alert.icon = NSWorkspace.sharedWorkspace().iconForFile(opener.path!)
+		alert.beginSheetModalForWindow(window, completionHandler:{(response:NSModalResponse) -> Void in
+			if response == NSAlertFirstButtonReturn { NSWorkspace.sharedWorkspace().openURL(url) }
+ 		})
+		return
+	}
+
+	// if no opener, present app picker like Finder's "Open With" -> "Choose Application"?  http://stackoverflow.com/a/2876805/3878712
+	// http://www.cocoabuilder.com/archive/cocoa/288002-how-to-filter-the-nsopenpanel-with-recommended-applications.html
+
+	// all else has failed, complain to user
+	let error = NSError(domain: "MacPin", code: 2, userInfo: [
+		//NSURLErrorKey: url?,
+		NSLocalizedDescriptionKey: "No program present on this system is registered to open this non-browser URL.\n\n\(url?.description)"
+	])
+	displayError(error, nil)
 }

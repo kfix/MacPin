@@ -3,6 +3,7 @@
 #========================
 #Copyright 2013 to Lane128 on github
 #Version v1.0
+# https://github.com/lane128/AppleIcnsMaker
 # https://raw.githubusercontent.com/lane128/AppleIcnsMaker/master/AppleIcnsMaker.py
 #========================
 import argparse,shutil

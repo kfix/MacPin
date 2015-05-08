@@ -37,6 +37,8 @@ if (window == top) {
 	function myGAIA(){ return document.querySelector('a[aria-label^=Profile]').getAttribute('href').slice(1); }
 	// this is your UID for G+: https://developers.google.com/apis-explorer/#p/plus/v1/plus.people.get?userId=me&_h=6&
 
+	function rosterClickOn(sel) { xssRoster(['clickOn', sel]); }
+
 	//addEventListener("message", xss_eval, false); // intercept new chat window dispositions in the main content pane
 
 } else {
@@ -49,6 +51,7 @@ if (window == top) {
 
 if (window.name == 'gtn-roster-iframe-id-b') {
 //IIFE?
+	function clickOn(sel) { document.querySelector(sel).click() }
 	function getTopConversation() { return document.querySelector('button[cpar]'); } //gets 1st convers in roster
 	// cpar=<SenderGAIA>_<ReceiverGAIA>
 	// SMS forwarded messages have ephermeral GAIA's (persist for length of conversation history?)
@@ -56,7 +59,8 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 
 	function notifyMessages(msgs) { 
 		for (el of msgs) { // el should be a <button>
-			msg = el.innerText.split('\n').filter( function(v) { return (v.length > 0) }) //filter blank lines
+			var cpar = el.getAttribute('cpar');
+			var msg = el.innerText.split('\n').filter( function(v) { return (v.length > 0) }) //filter blank lines
 			var from = msg.shift();
 			var rcvd = msg.shift();
 			// naked sms: '(NNN) NNN-NNNN'
@@ -78,7 +82,7 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 			if (body == "is video calling you" || body == "is calling you" || body == "You're in a call" || body == "You're in a video call") {
 				webkit.messageHandlers.unhideApp.postMessage([]); //get in the user's face right now!!
 			} else {
-				webkit.messageHandlers.receivedHangoutsMessage.postMessage([from, replyTo, body]);
+				webkit.messageHandlers.receivedHangoutsMessage.postMessage([from, replyTo, body, cpar]);
 			}
 		}
 	}
@@ -132,7 +136,7 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 	}
 
 	function getCallBox() { return document.querySelector('input[spellcheck]'); }
-	function getRosterDiv() { return document.querySelector('div > div > div > div'); } //this captures all of the keyevents
+	function getRosterDiv() { return document.querySelector('div > div > div > div'); } //this element captures all of the keyevents
 
 	function inputAddress(addr, endkeys) {
 		if (addr == null || addr == '') return;
@@ -182,7 +186,7 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 		if (typeof el.value == 'string') el.value += key;
 	};
 
-	function openSMS() { setTimeout(function(){
+	function sendSMS() { setTimeout(function(){
  		document.querySelector('a[title="Click to send SMS"]').click(); // a='Send SMS' -> @main window.frames['gtn_96gm6a']
 	}, 1000); } //wait for contact to get found
 	function openHangout() { document.querySelector('button[title="Message"]').click(); } // ||'Video call' -> @main window.frames['gtn_96gm6a']

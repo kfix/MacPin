@@ -16,37 +16,11 @@ import UIKit
 import Prompt // https://github.com/neilpa/swift-libedit
 #endif
 
-public func warn(msg: String, function: StaticString = __FUNCTION__, file: StaticString = __FILE__, line: UWord = __LINE__, column: UWord = __COLUMN__) {
+func warn(_ msg: String = String(), function: StaticString = __FUNCTION__, file: StaticString = __FILE__, line: UWord = __LINE__, column: UWord = __COLUMN__) {
 	NSFileHandle.fileHandleWithStandardError().writeData(("<\(file):\(line):\(column)> [\(function)] \(msg)\n").dataUsingEncoding(NSUTF8StringEncoding)!)
 }
 
-// show an NSError to the user, attaching it to any given view
-#if os(OSX)
-public func displayError(error: NSError, _ vc: NSViewController? = nil) {
-	warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
-	if let window = vc?.view.window { 
-		// display it as a NSPanel sheet
-		vc?.view.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
-	} else if let window = NSApplication.sharedApplication().mainWindow {
-		window.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
-	} else {
-		NSApplication.sharedApplication().presentError(error)
-	}
-}
-#elseif os(iOS)
-public func displayError(error: NSError, _ vc: UIViewController? = nil) {
-	warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
-	let alerter = UIAlertController(title: error.localizedFailureReason, message: error.localizedDescription, preferredStyle: .Alert) //.ActionSheet
-	let OK = UIAlertAction(title: "OK", style: .Default) { (action) in completionHandler() }
-	alerter.addAction(OK)
 
-	if let vc = vc { 
-		vc.presentViewController(alerter, animated: true, completion: nil)
-	} else {
-		UIApplication.sharedApplication().keyWindow?.rootViewController?.presentViewController(alerter, animated: true, completion: nil)
-	}
-}
-#endif
 
 /*
 func assert(condition: @autoclosure () -> Bool, _ message: String = "",
@@ -60,7 +34,7 @@ func assert(condition: @autoclosure () -> Bool, _ message: String = "",
 }
 */
 
-public func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
+func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
 	if let script_url = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") {
 		warn("loading userscript: \(script_url)")
 		var script = WKUserScript(
@@ -90,11 +64,11 @@ public func loadUserScriptFromBundle(basename: String, webctl: WKUserContentCont
 	return true
 }
 
-public func validateURL(urlstr: String) -> NSURL? {
+func validateURL(urlstr: String) -> NSURL? {
 	// https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 	if urlstr.isEmpty { return nil }
 	if let urlp = NSURLComponents(string: urlstr) {
-		if urlstr.hasPrefix("/") { urlp.scheme = "file" }
+		if urlstr.hasPrefix("/") || urlstr.hasPrefix("~/") { urlp.scheme = "file" } // FIXME: check if bare filepath points to actual file/dir
 		if !((urlp.path ?? "").isEmpty) && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
 			urlp.scheme = "http"
 			urlp.host = urlp.path
@@ -103,7 +77,7 @@ public func validateURL(urlstr: String) -> NSURL? {
 		if let url = urlp.URL { return url }
 	}
 
-	if JSRuntime.delegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // the delegate function will open url directly
+	if JSRuntime.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // the delegate function will open url directly
 
 	// maybe its a search query? check if blank and reformat it
 	if !urlstr.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
@@ -115,7 +89,7 @@ public func validateURL(urlstr: String) -> NSURL? {
 	return nil 
 }
 
-public func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2: StaticString = __FUNCTION__, abort:(()->Void)? = nil) {
+func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2: StaticString = __FUNCTION__, abort:(()->Void)? = nil) {
 #if arch(x86_64) || arch(i386)
 	let backgroundQueue = dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0)
 	dispatch_async(backgroundQueue, { // console ops in background thread
@@ -147,3 +121,10 @@ public func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = __FI
 	println("Prompt() not available on this device.")
 #endif
 }
+
+
+//@objc protocol JS2NSArray: JSExport { func push2(obj: AnyObject) -> NSArray }
+//extension NSArray: JS2NSArray { func push2(obj: AnyObject) -> NSArray { warn(obj.description); return arrayByAddingObject(obj) } }
+
+//@objc protocol JSArray: JSExport { func push(newElement: AnyObject) }
+//extension ContiguousArray: JSArray { mutating func push(newElement: T) { append(newElement) } }

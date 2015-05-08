@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Configurations/WebContent-iOS.entitlements
+	 	https://github.com/WebKit/webkit/blob/master/Tools/MiniBrowser/MiniBrowser.entitlements
+	-->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.github.kfix.MacPin</string>
+	</array>
+	<key>com.apple.private.allow-explicit-graphics-priority</key>
+	<true/>
+	<key>com.apple.private.webinspector.allow-remote-inspection</key>
+	<true/>
+	<key>com.apple.private.webinspector.proxy-application</key>
+	<true/>
+	<key>com.apple.locationd.authorizeapplications</key>
+	<true/>
+	<key>get-task-allow</key>
+	<true/>
+	<!--
+		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Resources/SandboxProfiles/ios/com.apple.WebKit.WebContent.sb
+		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/com.apple.WebProcess.sb.in
+	-->
+	<!--
+	<key>seatbelt-profiles</key>
+	<array>
+	</array>
+	-->
+</dict>
+</plist>

@@ -32,6 +32,8 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.defaultUserAgent = "Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4";
 	//$.browser.unhideApp();
 
+	//$.browser.addShortcut('XCode docs', 'file:///Applications/Xcode.app/Contents/Developer/Documentation//DocSets/com.apple.adc.documentation.Xcode.docset/Contents/Resources/Documents/index.html');
+	$.browser.addShortcut('Swift docs', 'file:///Applications/Xcode.app/Contents/Developer/Documentation//DocSets/com.apple.adc.documentation.Xcode.docset/Contents/Resources/Documents/documentation/Swift/Conceptual/Swift_Programming_Language/index.html');
 	$.browser.addShortcut('MacPin @ GitHub', 'http://github.com/kfix/MacPin');
 	$.browser.addShortcut('Browsing Test', 'http://browsingtest.appspot.com');
 	//$.app.openURL('data://text/plain;base64,SGVsbG8gV29ybGQh', "com.google.Chrome"); // works `Hello world!`
@@ -49,11 +51,12 @@ delegate.AppFinishedLaunching = function() {
 
 	var repl = {
 		transparent: true,
-		url: 'file://'+ $.osx.resourcePath + '/repl.html',
+		url: 'file://'+ $.app.resourcePath + '/repl.html',
 		handlers: ['evalREPL', 'closeREPL']
 	};
 	$.browser.addShortcut('REPL', repl);
 
+	$.browser.addShortcut('Ractive test', 'file://'+ $.app.resourcePath + '/ractive.html')
 	//var testTab = $browser.tabs[0];
 	//testTab.evalJS('"string!";');
 	//testTab.evalJS('null;', null);

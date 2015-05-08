@@ -11,8 +11,7 @@ extension WebViewControllerOSX: WKUIDelegate {
 		alert.messageText = webView.title
 		alert.addButtonWithTitle("Dismiss")
 		alert.informativeText = message
-		//alert.icon = NSApplication.sharedApplication().applicationIconImage
-		alert.icon = favicon
+		alert.icon = webview.favicon.icon
 		alert.alertStyle = .InformationalAlertStyle // .Warning .Critical
 		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler() }
 	}

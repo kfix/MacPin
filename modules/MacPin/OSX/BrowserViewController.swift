@@ -10,25 +10,26 @@ import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/Ja
 	var defaultUserAgent: String? { get set } // full UA used for any new tab without explicit UA specified
 	var isFullscreen: Bool { get set }
 	var isToolbarShown: Bool { get set }
-	var tabs: [AnyObject] { get } // alias to childViewControllers
+	//var tabs: [AnyObject] { get } // alias to childViewControllers
+	var tabs: [MPWebView] { get }
 	var childViewControllers: [AnyObject] { get set } // .push() doesn't work nor trigger property observer
 	var tabSelected: AnyObject? { get set }
-	func addTab(vc: WebViewController)
+	func addTab(webview: MPWebView)
+	func close()
 	func switchToNextTab()
 	func switchToPreviousTab()
 	func newTabPrompt()
-	func newTab(params: AnyObject?) -> WebViewController?
 	func focusOnBrowser()
 	func unhideApp()
 	func bounceDock()
 	func addShortcut(title: String, _ obj: AnyObject?)
 }
 
-class TabViewController: NSTabViewController {
+@objc class TabViewController: NSTabViewController {
 	required init?(coder: NSCoder) { super.init(coder: coder) } // required by NSCoder
 	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView() 
 
-	let omnibox = OmniBoxController(webViewController: nil) // we could & should only present one of these at a time
+	let omnibox = OmniBoxController() // we could & should only present one of these at a time
 	lazy var tabPopBtn = NSPopUpButton(frame: NSRect(x:0, y:0, width:400, height:24), pullsDown: false)
 	let tabMenu = NSMenu() // list of all active web tabs
 	let shortcutsMenu = NSMenu()
@@ -64,9 +65,13 @@ class TabViewController: NSTabViewController {
 			tab.initialFirstResponder = view
 			tab.bind(NSLabelBinding, toObject: view, withKeyPath: "title", options: nil)
 			tab.bind(NSToolTipBinding, toObject: view, withKeyPath: "title", options: nil)
-			if let wvc = tab.viewController as? WebViewController {
-				tab.bind(NSImageBinding, toObject: wvc, withKeyPath: "favicon", options: nil)
+			//if let wvc = tab.viewController as? WebViewController {
+			//	tab.bind(NSImageBinding, toObject: wvc.favicon, withKeyPath: "icon", options: nil)
+			//}
+			if let wv = tab.viewController?.representedObject as? MPWebView {
+				tab.bind(NSImageBinding, toObject: wv.favicon, withKeyPath: "icon", options: nil)
 			}
+
 		}
 		super.insertTabViewItem(tab, atIndex: atIndex)
 	}
@@ -76,23 +81,37 @@ class TabViewController: NSTabViewController {
 			tab.initialFirstResponder = nil
 			tab.unbind(NSLabelBinding)
 			tab.unbind(NSToolTipBinding)
-			if let wvc = tab.viewController as? WebViewController {
+			if let wvc = tab.viewController?.representedObject as? MPWebView {
 				tab.unbind(NSImageBinding)
 			}
+			tab.label = ""
+			tab.toolTip = nil
+			tab.image = nil
 		}
 		super.removeTabViewItem(tab)
+		tabView.selectNextTabViewItem(self) //safari behavior
+	}
+
+	override func tabView(tabView: NSTabView, willSelectTabViewItem tabViewItem: NSTabViewItem) { 
+		super.tabView(tabView, willSelectTabViewItem: tabViewItem)
+		//if omnibox.webview != nil { omnibox.unbind("webview") }
+		if let wv = tabViewItem.view as? MPWebView {
+			//omnibox.bind("webview", toObject: tabViewItem, withKeyPath: "view", options: nil)
+			omnibox.webview = wv
+		}
 	}
 
 	override func tabView(tabView: NSTabView, didSelectTabViewItem tabViewItem: NSTabViewItem) { 
 		super.tabView(tabView, didSelectTabViewItem: tabViewItem)
-		if let window = view.window {
-			if let view = tabViewItem.view {
-				window.makeFirstResponder(view) // steal app focus to whatever the tab represents
-			}
+		if let window = view.window, view = tabViewItem.view {
+			window.makeFirstResponder(view) // steal app focus to whatever the tab represents
 		}
 	}
 
-	override func tabViewDidChangeNumberOfTabViewItems(tabView: NSTabView) { warn("@\(tabView.tabViewItems.count)") }
+	override func tabViewDidChangeNumberOfTabViewItems(tabView: NSTabView) {
+		warn("@\(tabView.tabViewItems.count)") 
+		if tabView.tabViewItems.count == 0 { view.window?.performClose(nil) }
+	}
 
 	override func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] { 
 		let tabs = super.toolbarAllowedItemIdentifiers(toolbar) ?? []
@@ -151,7 +170,7 @@ class TabViewController: NSTabViewController {
 
 			case CloseTabButton:
 				btn.image = NSImage(named: NSImageNameRemoveTemplate)
-				btn.action = Selector("closeCurrentTab")
+				btn.action = Selector("closeTab")
 				return ti
 
 			case ForwardButton:
@@ -272,37 +291,22 @@ class TabViewController: NSTabViewController {
 
 	func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
 	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
-
-	deinit { warn("") }
 }
 
-class BrowserViewController: TabViewController, BrowserScriptExports, WebViewContainer {
+class BrowserViewController: TabViewController, BrowserScriptExports {
 
 	convenience init() {
 		self.init(nibName: nil, bundle: nil)
-		representedObject = self // FIXME this needs to be the ModelObject of M.V.C., not self/C
-		//tabs = childViewControllers // better be a copy by reference
 	}
-	deinit { representedObject = nil }
+
+	deinit { warn(description) }
+	override var description: String { return "<\(reflect(self).summary)> `\(title ?? String())`" }
 
 	var defaultUserAgent: String? = nil // {
 	//	get { }
 	//	set(ua) { NSUserDefaults.standardUserDefaults().setString(ua, forKey: "UserAgent") } //only works on IOS
 	//} // https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/NavigatorBase.cpp
 	// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/mac/UserAgentMac.mm
-
-	var transparent: Bool = false {
-		didSet {
-			if let window = view.window {
-				//window.backgroundColor = transparent ? NSColor.clearColor() : NSColor.whiteColor()
-				window.backgroundColor = window.backgroundColor.colorWithAlphaComponent(transparent ? 0 : 1) //clearColor | fooColor
-				window.opaque = !transparent
-				window.hasShadow = !transparent
-				window.invalidateShadow()
-				window.toolbar!.showsBaselineSeparator = !transparent
-			}
-		}
-	}
 
 	var isFullscreen: Bool { 
 		get { return (view.window?.contentView as? NSView)?.inFullScreenMode ?? false }
@@ -314,26 +318,41 @@ class BrowserViewController: TabViewController, BrowserScriptExports, WebViewCon
 		set(bool) { if bool != isToolbarShown { view.window!.toggleToolbarShown(nil) } }
 	}
 
-	var tabs: [AnyObject] { return childViewControllers } // alias
-	override var childViewControllers: [AnyObject] { didSet { warn(childViewControllers.count.description); warn(childViewControllers.description) } } //no workie
+	//var tabs: [AnyObject] { return childViewControllers } // alias
+					
+	var tabs: [MPWebView] { return childViewControllers.filter({ $0 is WebViewControllerOSX }).map({ $0.webview }) }
+	// set { } ? trying to get `$.browser.tabs.push(new $.WebView({}))` to work
+
+ 	//override var childViewControllers: [AnyObject] { didSet { warn(childViewControllers.count.description); warn(childViewControllers.description) } } //no workie
 
 	var tabSelected: AnyObject? {
 		get {
 			if selectedTabViewItemIndex == -1 { return nil } // no tabs? bupkiss!
-			return childViewControllers[selectedTabViewItemIndex]
+			if let vc = childViewControllers[selectedTabViewItemIndex] as? NSViewController {
+				if let obj: AnyObject = vc.representedObject { return obj } // try returning an actual model first
+				return vc
+			}
+			return nil
 		}
-		set(obj) { 
-			if let obj: AnyObject = obj, vc = obj as? NSViewController { 
-				if tabViewItemForViewController(vc) == nil { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
-				//if (find(childViewControllers, obj) ?? -1) < 0 { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
-				//if !contains(childViewControllers, vc) { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
-				//if childViewControllers.containsObject(obj) { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
-				tabView.selectTabViewItem(tabViewItemForViewController(vc))
+		set(obj) {
+			switch (obj) { 
+				case let vc as NSViewController:
+					//if (find(childViewControllers, obj) ?? -1) < 0 { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
+					//if !contains(childViewControllers, vc) { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
+					//if childViewControllers.containsObject(obj) { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
+					if tabViewItemForViewController(vc) == nil { childViewControllers.append(vc) } // add the given vc as a child if it isn't already
+					tabView.selectTabViewItem(tabViewItemForViewController(vc))
+				case let wv as MPWebView:
+					// find the view's existing controller or else make one
+					let wvc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
+					if tabViewItemForViewController(wvc) == nil { childViewControllers.append(wvc) } // add the given vc as a child if it isn't already
+					tabView.selectTabViewItem(tabViewItemForViewController(wvc))
+				default:
+					warn("invalid object")		
 			}
 		}
 	}
 
-	override var description: String { return "<\(reflect(self).summary)> `\(title ?? String())`" }
 
 	override func insertChildViewController(childViewController: NSViewController, atIndex index: Int) {
 		warn("#\(index)")
@@ -341,22 +360,23 @@ class BrowserViewController: TabViewController, BrowserScriptExports, WebViewCon
 
 		if let wvc = childViewController as? WebViewController {
 			let mi = NSMenuItem(title:"", action:Selector("menuSelectedTab:"), keyEquivalent:"")
-			mi.bind(NSTitleBinding, toObject: wvc, withKeyPath:"view.title", options:nil)
-			mi.bind(NSImageBinding, toObject: wvc, withKeyPath:"favicon", options:nil)
+			mi.bind(NSTitleBinding, toObject: wvc.webview, withKeyPath: "title", options:nil)
+			mi.bind(NSImageBinding, toObject: wvc.webview, withKeyPath: "favicon.icon", options: nil)
 			mi.image?.size = NSSize(width: 16, height: 16)
 			mi.representedObject = wvc // FIXME: anti-retain needed? 
 			mi.target = self
 			tabMenu.addItem(mi)
-			if omnibox.representedObject == nil { omnibox.representedObject = wvc } //very first tab added
+			//if omnibox.webview == nil { omnibox.webview = wv } //very first tab added
 
 			//let gridItem = tabGrid.newItemForRepresentedObject(wvc)
-			//gridItem.imageView = wvc.favicon
-			//gridItem.textField = wvc.webview.title
+			//gridItem.imageView = wv.favicon.icon
+			//gridItem.textField = wv.title
 		}
 	}
 
 	func menuSelectedTab(sender: AnyObject?) {
-		if let mi = sender as? NSMenuItem, let wvc = mi.representedObject as? WebViewController { tabSelected = wvc }
+		//if let mi = sender as? NSMenuItem, let wvc = mi.representedObject as? WebViewController { tabSelected = wvc }
+		if let mi = sender as? NSMenuItem, wv = mi.representedObject as? MPWebView { tabSelected = wv }
 	}
 
 /*
@@ -387,8 +407,11 @@ class BrowserViewController: TabViewController, BrowserScriptExports, WebViewCon
 		if let wvc = childViewControllers[index] as? WebViewController {
 
 			// unassign strong property references that will cause a retain cycle
-			if omnibox.representedObject === wvc { omnibox.representedObject = nil }
+			//if omnibox.representedObject === wvc { omnibox.representedObject = nil }
+			//if omnibox.webview === wvc.webview { omnibox.webview = nil }
 			if let mitem = tabMenu.itemAtIndex(tabMenu.indexOfItemWithRepresentedObject(wvc)) {
+				mitem.unbind(NSTitleBinding)
+				mitem.unbind(NSImageBinding)
 				mitem.target = nil
 				mitem.representedObject = nil
 				tabMenu.removeItem(mitem)
@@ -399,7 +422,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports, WebViewCon
 	}
 
 	override func presentViewController(viewController: NSViewController, animator: NSViewControllerPresentationAnimator) {
-		warn("")
+		warn()
 		super.presentViewController(viewController, animator: animator)
 	}
 
@@ -414,8 +437,6 @@ class BrowserViewController: TabViewController, BrowserScriptExports, WebViewCon
 
 		let tabnum = tabPopBtn.indexOfItemWithRepresentedObject(toViewController)
 		if tabnum != -1 { tabPopBtn.selectItemAtIndex(tabnum) }
-
-		omnibox.representedObject = toViewController
 
 		super.transitionFromViewController(fromViewController, toViewController: toViewController,
 			options: options, completionHandler: completion)
@@ -432,23 +453,16 @@ class BrowserViewController: TabViewController, BrowserScriptExports, WebViewCon
 
 	// menu & shortcut selectors //////////////////////////////
 
-	func closeCurrentTab() {
-		if let tab = tabSelected as? NSViewController { tab.removeFromParentViewController() } // calls func above
-		//tabSelected.removeFromParentViewController() // calls func above
-		if tabs.count == 0 { view.window?.performClose(nil) }
-			else { switchToNextTab() } //safari behavior
-	}
-
+	func close() { view.window?.performClose(nil) }
 	func switchToPreviousTab() { tabView.selectPreviousTabViewItem(self) }
 	func switchToNextTab() { tabView.selectNextTabViewItem(self) }
-
-	func toggleTransparency() { transparent = !transparent }
 
 	func loadSiteApp() { JSRuntime.loadSiteApp() }
 	func editSiteApp() { NSWorkspace.sharedWorkspace().openFile(NSBundle.mainBundle().resourcePath!) }
 
 	func newTabPrompt() {
-		tabSelected = WebViewControllerOSX(url: NSURL(string: "about:blank")!)
+		//tabSelected = WebViewControllerOSX(url: NSURL(string: "about:blank")!)
+		tabSelected = MPWebView(url: NSURL(string: "about:blank")!)
 		revealOmniBox()
 	}
 
@@ -464,45 +478,8 @@ class BrowserViewController: TabViewController, BrowserScriptExports, WebViewCon
 			presentViewController(omnibox, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSMaxYEdge, behavior: NSPopoverBehavior.Semitransient)
 		}
 	}
-	func newTab(params: AnyObject?) -> WebViewController? {
-		switch (params) {
-			case let urlstr as String:
-				if let url = NSURL(string: urlstr) { return newTab(url) }
-				return nil
-			case let url as NSURL:
-				let wvc = WebViewControllerOSX(agent: defaultUserAgent)
-				wvc.gotoURL(url)
-				addChildViewController(wvc)
-				return wvc as WebViewController
-			case let obj as [String:AnyObject]:
-				if let wvc = WebViewControllerOSX(object: obj) {
-					addChildViewController(wvc)
-					return wvc as WebViewController
-				}
-				fallthrough
-			case nil: fallthrough
-			default:
-				return nil
-		}
-	}
-/*
-	func newTab(params: AnyObject?) -> WebViewController? {
-		let wvc: WebViewControllerOSX
-		switch (params) {
-			case let url as NSURL: wvc = WebViewControllerOSX(url: url, agent: defaultUserAgent)
-			case let urlstr as String: wvc = WebViewControllerOSX(url: NSURL(url: urlstr)!, agent: defaultUserAgent)
-			case let obj as [String:AnyObject]: wvc = WebViewControllerOSX(object: obj)
-			default: return nil
-		}
 
-		if wvc != nil { 
-			addChildViewController(wvc)
-			return wvc as WebViewController
-		}
-		return nil
-	}
-*/
-	func addTab(wvc: WebViewController) { addChildViewController(wvc) }
+	func addTab(wv: MPWebView) { addChildViewController(WebViewControllerOSX(webview: wv)) }
 
 	func focusOnBrowser() {  // un-minimizes app, switches to its screen/space, and steals key focus to the window
 		//NSApplication.sharedApplication().activateIgnoringOtherApps(true)
@@ -552,13 +529,13 @@ class BrowserViewController: TabViewController, BrowserScriptExports, WebViewCon
 	func gotoShortcut(sender: AnyObject?) {
 		if let shortcut = sender as? NSMenuItem {
 			switch (shortcut.representedObject) {
-				case let urlstr as String: JSRuntime.delegate.tryFunc("launchURL", urlstr)
-				case let obj as [String:AnyObject]: tabSelected = WebViewControllerOSX(object: obj)
+				case let urlstr as String: JSRuntime.jsdelegate.tryFunc("launchURL", urlstr)
+				// or fire event in jsdelegate if string, NSURLs do launchURL
+				case let obj as [String:AnyObject]: tabSelected = MPWebView(object: obj)
 				default: return
 			}
 		}
 	}
-
 }
 
 extension BrowserViewController: NSMenuDelegate {

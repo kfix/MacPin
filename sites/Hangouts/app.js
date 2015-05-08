@@ -9,6 +9,7 @@ var hangouts = {
 	handlers: ['receivedHangoutsMessage', 'unhideApp', 'HangoutsRosterReady'],
 	url: "https://plus.google.com/hangouts"
 };
+$.browser.addShortcut("Google Hangouts", hangouts);
 var hangoutsTab = new $.WebView(hangouts);
 var useChromeAV = $.app.doesAppExist("com.google.Chrome"); // use Chrome's NaCL+WebRTC Hangouts client for A/V chats ( https://webrtchacks.com/hangout-analysis-philipp-hancke/ )
 // var useChromeAV = false // use NPAPI GoogleVoice & Video (Vidyo) plugin in WebKit ( https://encrypted.google.com/tools/dlpage/hangoutplugin )
@@ -43,7 +44,7 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 			//xssRoster(['inputAddress', "+addr+", ['.','\b','\r']]);");
 		case 'sms':
 			$.browser.unhideApp(); //user might have switched apps while waiting for roster to load
-			hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['openSMS']);"); //calls into AppTab[1]:notifier.js
+			hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['sendSMS']);"); //calls into AppTab[1]:notifier.js
 			break;
 		case 'tel':
 			if (useChromeAV) {
@@ -60,16 +61,15 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 //addEventListener('receivedHangoutsMessage', function(e){...}, false); ??
 delegate.receivedHangoutsMessage = function(tab, msg) {
 	// receives events from JS in 1st AppTab
-	// -> webkit.messageHandlers.receivedHangoutMessage.postMessage([from, replyTo, msg]);
-	$.app.postNotification(msg[0], msg[1], msg[2]);
+	// -> webkit.messageHandlers.receivedHangoutMessage.postMessage([from, replyTo, msg, cpar]);
+	$.app.postNotification(msg[0], msg[1], msg[2], msg[3]); // ...msg spread-op
 	//console.log(Date() + ' [posted user notification] ' + msg);
 };
 
-delegate.handleClickedNotification = function(from, url, msg) {
-	console.log("JS: opening notification for: "+ [from, url, msg]);
+delegate.handleClickedNotification = function(title, subtitle, msg, id) {
+	console.log("JS: opening notification for: "+ [title, subtitle, msg, id]);
 	$.browser.tabSelected = hangoutsTab;
-	$.launchedWithURL = url; // in case app isn't ready to handle url immediately, will get pulled from var after Ready event
-	this.launchURL(url);
+	hangoutsTab.evalJS('rosterClickOn("button[cpar='+"'"+id+"'"+']");');
 	return true;
 };
 

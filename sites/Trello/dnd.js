@@ -21,6 +21,8 @@ if (window.jQuery) {
 }
 //maybe intercept the raw event (not wrapped by jQuery) at body, interupt its flow w/ .stopPropagation() and synthesize a new event that's been fixed up?
 // but if dt.types is null, how are you to make a new meaningful event?
+// breakpointing functions by name would be useful: https://bugs.webkit.org/show_bug.cgi?id=142914
+
 document.body.addEventListener("dragenter", function(e) {
 	e.preventDefault(); // allow ondrop
 	var dt = e.dataTransfer;

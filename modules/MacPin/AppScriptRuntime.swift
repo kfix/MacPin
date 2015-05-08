@@ -7,6 +7,8 @@
 
 let JSRuntime = AppScriptRuntime() //singleton
 
+var GlobalUserScripts: [String] = [] // $.globalUserScripts singleton
+
 #if os(OSX)
 import AppKit
 #elseif os(iOS)
@@ -20,10 +22,10 @@ import JavaScriptCore // https://github.com/WebKit/webkit/tree/master/Source/Jav
 import Prompt // https://github.com/neilpa/swift-libedit
 #endif
 
-public extension JSValue {
+extension JSValue {
 	func tryFunc (method: String, _ args: AnyObject...) -> Bool {
 		if self.hasProperty(method) {
-			warn("jsruntime.delegate.\(method)(\(args))")
+			warn("JSRuntime.jsdelegate.\(method)(\(args))")
 			var ret = self.invokeMethod(method, withArguments: args)
 			if let bool = ret.toObject() as? Bool { return bool }
 			// exec passed closure here?
@@ -47,7 +49,7 @@ public extension JSValue {
 	var platformVersion: String { get }
 	func registerURLScheme(scheme: String)
 	func changeAppIcon(iconpath: String)
-	func postNotification(title: String, _ subtitle: String?, _ msg: String)
+	func postNotification(title: String, _ subtitle: String?, _ msg: String, _ id: String?)
 	func openURL(urlstr: String, _ app: String?)
 	func sleep(secs: Double)
 	func doesAppExist(appstr: String) -> Bool
@@ -57,26 +59,27 @@ public extension JSValue {
 
 class AppScriptRuntime: NSObject, AppScriptExports  {
 	var context = JSContext(virtualMachine: JSVirtualMachine())
-	var delegate: JSValue
+	var jsdelegate: JSValue
 	
-	var arguments: [AnyObject] { get { return NSProcessInfo.processInfo().arguments } }
-	var environment: [NSObject:AnyObject] { get { return NSProcessInfo.processInfo().environment } }
-	var appPath: String { get { return ( NSBundle.mainBundle().bundlePath ?? String() ) } }
-	var resourcePath: String { get { return ( NSBundle.mainBundle().resourcePath ?? String() ) } }
-	var hostname: String { get { return NSProcessInfo.processInfo().hostName } }
-	var bundleID: String { get { return ( NSBundle.mainBundle().bundleIdentifier ?? String() ) } }
+	var arguments: [AnyObject] { return NSProcessInfo.processInfo().arguments }
+	var environment: [NSObject:AnyObject] { return NSProcessInfo.processInfo().environment }
+	var appPath: String { return NSBundle.mainBundle().bundlePath ?? String() }
+	var resourcePath: String { return NSBundle.mainBundle().resourcePath ?? String() }
+	var hostname: String { return NSProcessInfo.processInfo().hostName }
+	var bundleID: String { return NSBundle.mainBundle().bundleIdentifier ?? String() }
 
 #if os(OSX)
-	var name: String { get { return ( NSRunningApplication.currentApplication().localizedName ?? String() ) } }
+	var name: String { return NSRunningApplication.currentApplication().localizedName ?? String() }
 	let platform = "OSX"
 #elseif os(iOS)
+	var name: String { return NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleDisplayName") as? String ?? String() } 
 	let platform = "iOS"
 #endif
 	
 	// http://nshipster.com/swift-system-version-checking/
-	var platformVersion: String { get { return NSProcessInfo.processInfo().operatingSystemVersionString } }
+	var platformVersion: String { return NSProcessInfo.processInfo().operatingSystemVersionString }
 
-	var arches: [AnyObject]? { get { return NSBundle.mainBundle().executableArchitectures } } 
+	var arches: [AnyObject]? { return NSBundle.mainBundle().executableArchitectures } 
 #if arch(i386)
 	let architecture = "i386"
 #elseif arch(x86_64)
@@ -90,10 +93,15 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
     override init() {
 		context.name = "MacPin App JS"
 		context.evaluateScript("$ = {};") //default global for our exports
-		delegate = context.evaluateScript("{};")! //default property-less delegate obj
+		jsdelegate = context.evaluateScript("{};")! //default property-less delegate obj
 		context.objectForKeyedSubscript("$").setObject("", forKeyedSubscript: "launchedWithURL")
-		context.objectForKeyedSubscript("$").setObject(WebViewController.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebViewControllerContructor]
 		context.objectForKeyedSubscript("$").setObject(GlobalUserScripts, forKeyedSubscript: "globalUserScripts")
+		context.objectForKeyedSubscript("$").setObject(MPWebView.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebView]
+#if os(OSX)
+		//context.objectForKeyedSubscript("$").setObject(WebViewControllerOSX.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebViewControllerOSX]
+#elseif os(iOS)
+		//context.objectForKeyedSubscript("$").setObject(WebViewControllerIOS.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebViewControllerIOS]
+#endif
 
 		// set console.log to NSBlock that will call warn()
 		let logger: @objc_block String -> Void = { msg in warn(msg) }
@@ -127,7 +135,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	func loadSiteApp() {
 		let app = (NSBundle.mainBundle().objectForInfoDictionaryKey("MacPin-AppScriptName") as? String) ?? "app"
 
-		context.objectForKeyedSubscript("$").setObject(self, forKeyedSubscript: "osx") //FIXME: deprecate
+		//context.objectForKeyedSubscript("$").setObject(self, forKeyedSubscript: "osx") //FIXME: deprecate
 		context.objectForKeyedSubscript("$").setObject(self, forKeyedSubscript: "app") //better nomenclature
 
 		if let app_js = NSBundle.mainBundle().URLForResource(app, withExtension: "js") {
@@ -147,17 +155,16 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 			if let jsval = loadAppScript(app_js.description) {
 				if jsval.isObject() {
-					warn("\(app_js) loaded as JSRuntime.delegate")
-					delegate = jsval
-					delegate.tryFunc("AppFinishedLaunching")
+					warn("\(app_js) loaded as JSRuntime.jsdelegate")
+					jsdelegate = jsval
 				}
 			}
 		}
 	}
 	
 	func loadAppScript(urlstr: String) -> JSValue? {
-		if let script_url = NSURL(string: urlstr) { // FIXME: script code could be loaded from anywhere, exploitable?
-			let script = NSString(contentsOfURL: script_url, encoding: NSUTF8StringEncoding, error: nil)!
+		if let script_url = NSURL(string: urlstr), script = NSString(contentsOfURL: script_url, encoding: NSUTF8StringEncoding, error: nil) {
+			// FIXME: script code could be loaded from anywhere, exploitable?
 			warn("\(script_url) parsed")
 			// if JSCheckScriptSyntax(ctx: context as JSContext!,
 			// 	 script: JSStringCreateWithCFString(string: script as CFString).takeUnretainedValue() as JSString!,
@@ -241,7 +248,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
-	func postNotification(title: String, _ subtitle: String?, _ msg: String) {
+	func postNotification(title: String, _ subtitle: String? = nil, _ msg: String, _ id: String? = nil) {
 		// there is an API for this in WebKit: http://playground.html5rocks.com/#simple_notifications
 		//  https://developer.apple.com/library/iad/documentation/AppleApplications/Conceptual/SafariJSProgTopics/Articles/SendingNotifications.html
 		//  but all my my WKWebView's report 2 (access denied) and won't display auth prompts
@@ -253,7 +260,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		note.subtitle = subtitle ?? "" //empty strings wont be displayed
 		note.informativeText = msg
 		//note.contentImage = ?bubble pic?
-
+		if let id = id { note.identifier = id }
 		//note.hasReplyButton = true
 		//note.hasActionButton = true
 		//note.responsePlaceholder = "say something stupid"
@@ -267,6 +274,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		note.alertAction = "Open"
 		note.alertBody = "\(subtitle ?? String()) \(msg)"
 		note.fireDate = NSDate()
+		if let id = id { note.userInfo = [ "identifier" : id ] }
 		UIApplication.sharedApplication().scheduleLocalNotification(note)
 #endif
 		//map passed-in blocks to notification responses?
@@ -275,8 +283,10 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	func REPL() {
 		termiosREPL({ [unowned self] (line: String) -> Void in
-			// delegate.tryFunc("termiosREPL", [line])
+			// jsdelegate.tryFunc("termiosREPL", [line])
 			println(self.context.evaluateScript(line))
 		})
 	}
 }
+
+

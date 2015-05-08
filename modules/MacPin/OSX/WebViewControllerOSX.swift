@@ -4,39 +4,14 @@
 
 import WebKit
 import WebKitPrivates
-import JavaScriptCore
 	
-class WebViewControllerOSX: WebViewController {
-	//required convenience init(config: WKWebViewConfiguration? = nil) { warn(""); self.init(config: config) }
-
-	//convenience required init(config: WKWebViewConfiguration? = WKWebViewConfiguration()) {
-	//	self.init(nibName: nil, bundle: nil)
-	//	if let config = config { webview = WebViewController.make_webview(config) }
-	//}
-	// required init?(object: [String:AnyObject]) { super.init(object: object) }
-
-	override var transparent: Bool {
-		didSet { // add observer to frobble window's transparency in concert with webview
-			//webview.window?.disableFlushWindow()
-			container?.transparent = transparent
-			webview._drawsTransparentBackground = transparent
-			//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
-			webview.setFrameSize(NSSize(width: webview.frame.size.width, height: webview.frame.size.height - 1)) //needed to fully redraw w/ dom-reflow or reload! 
-			evalJS("window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(transparent)}}));" +
-				"document.head.appendChild(document.createElement('style')).remove();") //force redraw in case event didn't
-				//"window.scrollTo();")
-			webview.setFrameSize(NSSize(width: webview.frame.size.width, height: webview.frame.size.height + 1))
-			//webview.window?.enableFlushWindow()
-			webview.needsDisplay = true
-			//webview.window?.flushWindowIfNeeded()
-		}
-	}
-
+@objc class WebViewControllerOSX: WebViewController {
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		//view.wantsLayer = true //use CALayer to coalesce views
 		//^ default=true:  https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3641
 		view.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable
+
 		if let wkview = view.subviews.first as? WKView {
 			//wkview.setValue(false, forKey: "shouldExpandToViewHeightForAutoLayout") //KVO
 			//wkview.shouldExpandToViewHeightForAutoLayout = false
@@ -47,9 +22,7 @@ class WebViewControllerOSX: WebViewController {
 		//view.setContentHuggingPriority(NSLayoutPriorityDefaultLow, forOrientation:  NSLayoutConstraintOrientation.Vertical) // prevent autolayout-flapping when web inspector is docked to tab
 		view.setContentHuggingPriority(250.0, forOrientation:  NSLayoutConstraintOrientation.Vertical) // prevent autolayout-flapping when web inspector is docked to tab
 
-		webview._applicationNameForUserAgent = "Version/8.0.5 Safari/600.5.17"
 		bind(NSTitleBinding, toObject: webview, withKeyPath: "title", options: nil)
-		webview.UIDelegate = self //alert(), window.open()	
 		//backMenu.delegate = self
 		//forwardMenu.delegate = self
 	}
@@ -58,10 +31,19 @@ class WebViewControllerOSX: WebViewController {
 		super.viewWillAppear() // or tab switching into view as current selection
 	}
 
-	override func viewDidAppear() {
+	override func viewDidAppear() { // window now loaded and showing view
 		super.viewDidAppear()
 		//view.autoresizesSubviews = false
 		//view.translatesAutoresizingMaskIntoConstraints = false
+		if let window = view.window {
+			//window.backgroundColor = webview.transparent ? NSColor.clearColor() : NSColor.whiteColor()
+			window.backgroundColor = window.backgroundColor.colorWithAlphaComponent(webview.transparent ? 0 : 1) //clearColor | fooColor
+			window.opaque = !webview.transparent
+			window.hasShadow = !webview.transparent
+			window.invalidateShadow()
+			window.toolbar!.showsBaselineSeparator = !webview.transparent
+		}
+
 	}
 
 	override func viewDidDisappear() {
@@ -105,51 +87,8 @@ class WebViewControllerOSX: WebViewController {
 		//view.removeConstraints(view.constraints)
 	}
 
-	deinit {
-		warn("\(reflect(self).summary)")
-		unbind(NSTitleBinding)
-	}
+	deinit { unbind(NSTitleBinding) }
 
-	override func askToOpenURL(url: NSURL?) {
-		container?.tabSelected = self
-		if let url = url, window = view.window, opener = NSWorkspace.sharedWorkspace().URLForApplicationToOpenURL(url) {
-			if opener == NSBundle.mainBundle().bundleURL {
-				// macpin is already the registered handler for this (probably custom) url scheme, so just open it
-				NSWorkspace.sharedWorkspace().openURL(url)
-				return
-			}
-			warn("[\(url)]")
-			let alert = NSAlert()
-			alert.messageText = "Open using App:\n\(opener)"
-			alert.addButtonWithTitle("OK")
-			alert.addButtonWithTitle("Cancel")
-			alert.informativeText = url.description
-			alert.icon = NSWorkspace.sharedWorkspace().iconForFile(opener.path!)
-			alert.beginSheetModalForWindow(window, completionHandler:{(response:NSModalResponse) -> Void in
-				if response == NSAlertFirstButtonReturn { NSWorkspace.sharedWorkspace().openURL(url) }
-	 		})
-			return
-		}
-
-		// if no opener, present app picker like Finder's "Open With" -> "Choose Application"?  http://stackoverflow.com/a/2876805/3878712
-		// http://www.cocoabuilder.com/archive/cocoa/288002-how-to-filter-the-nsopenpanel-with-recommended-applications.html
-	
-		// all else has failed, complain to user
-		let error = NSError(domain: "MacPin", code: 2, userInfo: [
-			//NSURLErrorKey: url?,
-			NSLocalizedDescriptionKey: "No program present on this system is registered to open this non-browser URL.\n\n\(url?.description)"
-		])
-		displayError(error, self)
-	}
-
-	/*
-	func print(sender: AnyObject?) { warn(""); webview.print(sender) }
-
-	//FIXME: support new scaling https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
-	func zoomIn() { webview.magnification += 0.2 }
-	func zoomOut() { webview.magnification -= 0.2 }
-	*/
-	
 	override func cancelOperation(sender: AnyObject?) { webview.stopLoading(sender) } // NSResponder: make Esc key stop page load
 }
 
@@ -167,10 +106,23 @@ extension WebViewControllerOSX: NSMenuDelegate {
 }
 
 extension WebViewControllerOSX { // AppGUI funcs
+
+	/*
+	func print(sender: AnyObject?) { warn(""); webview.print(sender) }
+	*/
+
+	func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }
+
+	//FIXME: support new scaling https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
+	func zoomIn() { webview.magnification += 0.2 }
+	func zoomOut() { webview.magnification -= 0.2 }
+	
+	func print(sender: AnyObject?) { warn(""); webview.print(sender) }
+
 	func highlightConstraints() { view.window?.visualizeConstraints(view.constraints) }
 
 	func replaceContentView() { view.window?.contentView = view }
-
+	
 	func shareButtonClicked(sender: AnyObject?) {
 		if let btn = sender as? NSView {
 			if let url = webview.URL {
@@ -183,13 +135,35 @@ extension WebViewControllerOSX { // AppGUI funcs
 	}
 
 	func displayAlert(alert: NSAlert, _ completionHandler: (NSModalResponse) -> Void) {
-		container?.tabSelected = self
+		//container?.tabSelected = self
+		//parentViewController?.presentViewController(self, animated: false, completion: nil) // FIXME
 		if let window = view.window {
 			alert.beginSheetModalForWindow(window, completionHandler: completionHandler)
 		} else {
 			//modal app alert
 		}
 	}
+
+	func popupMenu(items: [String: String]) { // trigger a menu @ OSX right-click & iOS longPress point
+		var menu = NSMenu(title:"popup")
+		// items: [itemTitle:String eventName:String], when clicked, fire event in jsdelegate?
+		//menu.popUpMenu(menu.itemArray.first, atLocation: NSPointFromCGPoint(CGPointMake(0,0)), inView: self.view)
+	}
 }
 
-extension WebViewController: NSSharingServicePickerDelegate { }
+extension WebViewControllerOSX: NSSharingServicePickerDelegate { }
+
+/*
+extension WebViewControllerOSX: NSMenuDelegate {
+	func menuNeedsUpdate(menu: NSMenu) {
+		//if menu.tag == 1 //backlist
+		for histItem in webview.backForwardList.backList {
+			if let histItem = histItem as? WKBackForwardListItem {
+				let mi = NSMenuItem(title:(histItem.title ?? histItem.URL.absoluteString!), action:Selector("gotoHistoryMenuURL:"), keyEquivalent:"" )
+				mi.representedObject = histItem.URL
+				mi.target = self
+			}
+		}
+	}
+}
+*/

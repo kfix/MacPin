@@ -33,26 +33,32 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 		super.drawRect(dirtyRect)
 	}
 }
+/* iOS progbar: http://stackoverflow.com/questions/29410849/unable-to-display-subview-added-to-wkwebview?rq=1
+        webview?.addObserver(self, forKeyPath: "estimatedProgress", options: .New, context: nil)
+        let progressView = UIProgressView(progressViewStyle: .Bar)
+        progressView.center = view.center
+        progressView.progress = 20.0/30.0
+        progressView.trackTintColor = UIColor.lightGrayColor()
+        progressView.tintColor = UIColor.blueColor()
+        webview?.addSubview(progressView)
+*/
 
-class OmniBoxController: NSViewController {	
+@objc class OmniBoxController: NSViewController {	
 	let urlbox = URLAddressField()
-
-	override var representedObject: AnyObject? {
+	var webview: MPWebView? = nil {
 		didSet { //KVC to copy updates to webviews url & title (user navigations, history.pushState(), window.title=)
-			if let representedObject: AnyObject = representedObject {
-				view.bind(NSToolTipBinding, toObject: representedObject, withKeyPath: "view.title", options: nil)
-				view.bind(NSValueBinding, toObject: representedObject, withKeyPath: "view.URL", options: nil)
-				view.bind(NSFontBoldBinding, toObject: representedObject, withKeyPath: "view.hasOnlySecureContent", options: nil)
-				view.bind("isLoading", toObject: representedObject, withKeyPath: "view.isLoading", options: nil)
-				view.bind("progress", toObject: representedObject, withKeyPath: "view.estimatedProgress", options: nil)
-				if let focusObj = representedObject as? NSViewController {
-					nextResponder = focusObj
-					view.nextKeyView = focusObj.view
-				}
+			if let wv = webview {
+				view.bind(NSToolTipBinding, toObject: wv, withKeyPath: "title", options: nil)
+				view.bind(NSValueBinding, toObject: wv, withKeyPath: "URL", options: nil)
+				view.bind(NSFontBoldBinding, toObject: wv, withKeyPath: "hasOnlySecureContent", options: nil)
+				view.bind("isLoading", toObject: wv, withKeyPath: "isLoading", options: nil)
+				view.bind("progress", toObject: wv, withKeyPath: "estimatedProgress", options: nil)
+				nextResponder = wv
+				view.nextKeyView = wv
 			}
 		}
-		willSet(newro) { 
-			if let representedObject: AnyObject = representedObject {
+		willSet(newwv) { 
+			if let wv = webview {
 				nextResponder = nil
 				view.nextKeyView = nil
 				view.unbind(NSToolTipBinding)
@@ -68,10 +74,17 @@ class OmniBoxController: NSViewController {
 	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView() 
 	override func loadView() { view = urlbox } // NIBless
  
+	/*
 	convenience init(webViewController: WebViewController?) {
 		self.init()
 		preferredContentSize = CGSize(width: 600, height: 24) //app hangs on view presentation without this!
 		if let wvc = webViewController { representedObject = wvc }
+	}
+	*/
+
+	convenience init() {
+		self.init(nibName:nil, bundle:nil)
+		preferredContentSize = CGSize(width: 600, height: 24) //app hangs on view presentation without this!
 	}
 
 	override func viewDidLoad() {
@@ -86,6 +99,7 @@ class OmniBoxController: NSViewController {
 		// search with DuckDuckGo
 		// go to URL
 		// js: addOmniBoxActionHandler('send to app',handleCustomOmniAction)
+		// tab menu?
 
 		urlbox.delegate = self
 
@@ -116,13 +130,16 @@ class OmniBoxController: NSViewController {
 	func userEnteredURL() {
 		var urlstr = (view as! NSTextField).stringValue
 		if let url = validateURL(urlstr) {
-			if let wvc = representedObject as? WebViewController { //would be cool if I could just kick up gotoURL to nextResponder as NSResponder
-				view.window?.makeFirstResponder(wvc.view) // no effect if this vc was brought up as a modal sheet
-				wvc.gotoURL(url as NSURL)
+			if let wv = webview { //would be cool if I could just kick up gotoURL to nextResponder as NSResponder
+				view.window?.makeFirstResponder(wv) // no effect if this vc was brought up as a modal sheet
+				wv.gotoURL(url as NSURL)
 				cancelOperation(self)
+			} else { // tab-less browser window ...
+				parentViewController?.addChildViewController(WebViewControllerOSX(webview: MPWebView(url: url))) // is parentVC the toolbar or contentView VC??
 			}
 		} else {
 			warn("invalid url `\(urlstr)` was requested!")
+			//displayAlert
 			//NSBeep()
 		}
 	}
@@ -132,7 +149,7 @@ class OmniBoxController: NSViewController {
 		presentingViewController?.dismissViewController(self) //if a thoust art a popover, close thyself
 	}
 
-	deinit { representedObject = nil }
+	deinit { webview = nil; representedObject = nil }
 }
 
 extension OmniBoxController: NSTextFieldDelegate {

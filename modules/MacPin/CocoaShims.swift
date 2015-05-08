@@ -31,16 +31,8 @@ typealias Application = NSApplication
 import UIKit
 
 typealias ViewController = UIViewController
-//class ViewController: UIViewController { }
 
-let NSImageNameApplicationIcon = "app.png" // UIImage cannot use .icns images
-// http://stackoverflow.com/a/28642417/3878712
-
-class Image: UIImage {
-	// NSImage stubs	
-	var name: String? { get { return nil } set { } }
-	func setName(aString: String?) -> Bool { return true }
-}
+typealias Image = UIImage
 
 class Window: UIWindow {	
 	func setFrame() { } // UIWindows are always size of UIScreen. They only handle focus and z-depth (level)
