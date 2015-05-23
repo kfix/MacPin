@@ -31,9 +31,8 @@ delegate.launchURL = function(url) {
 
 delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('facebook');
-	//$.app.registerURLScheme('fb');
-	//fb: is taken http://apple.stackexchange.com/a/105047
-	//`open fb://profile/afirstname.alastname` will pop that profile in safari ...
+	//$.app.registerURLScheme('fb'); // claimed by AddressBookUrlForwarder.app http://apple.stackexchange.com/a/105047
+	//`open -a AddressBookUrlForwarder.app fb://profile/4` to see the Zuckster in safari ...
 
 	if ($.launchedWithURL != '') { // app was launched with a feed url
 		this.launchURL($.launchedWithURL);

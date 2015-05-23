@@ -91,7 +91,12 @@ extension AppDelegate: NSApplicationDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Stop Loading", "stopLoading:", ".", [.CommandKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Print Page", "print:")) //NSView
 		tabMenu.submenu?.addItem(MenuItem("Print Tab", "printTab", target: browserController)) //bc
-		tabMenu.submenu?.addItem(MenuItem("Open with default App", "askToOpenCurrentURL")) //wvc
+		tabMenu.submenu?.addItem(MenuItem("Open in default Browser", "askToOpenCurrentURL")) //webview
+		tabMenu.submenu?.addItem(MenuItem("Open see.js Debugger", "seeDebugger")) //webview
+		if JSRuntime.doesAppExist("com.google.Chrome") {
+			tabMenu.submenu?.addItem(MenuItem("Open in Chrome", "openInChrome")) //wvc
+		}
+		//if JSRuntime.doesAppExist("com.operasoftware.Opera")
 		app!.mainMenu?.addItem(tabMenu) 
 
 		let winMenu = NSMenuItem() //BrowserViewController and NSWindow funcs
@@ -100,6 +105,7 @@ extension AppDelegate: NSApplicationDelegate {
 		winMenu.submenu?.addItem(MenuItem("Enter URL", "revealOmniBox", "l", [.CommandKeyMask])) //bc
 		winMenu.submenu?.addItem(MenuItem(nil, "toggleFullScreen:")) //bc
 		winMenu.submenu?.addItem(MenuItem(nil, "toggleToolbarShown:")) //bc
+		winMenu.submenu?.addItem(MenuItem("Toggle Titlebar", "toggleTitlebar")) //wc
 		//winMenu.submenu?.addItem(MenuItem("Edit Toolbar", "runToolbarCustomizationPalette:"))
 		winMenu.submenu?.addItem(MenuItem("New Tab", "newTabPrompt", "t", [.CommandKeyMask])) //bc
 		//winMenu.submenu?.addItem(MenuItem("Close Tab", "closeCurrentTab", "w", [.CommandKeyMask])) //bc
@@ -236,6 +242,9 @@ extension AppDelegate: NSApplicationDelegate {
 					JSRuntime.loadAppScript("file://\(filename)")
 					JSRuntime.jsdelegate.tryFunc("AppFinishedLaunching")
 					return true
+				// FIXME: make a custom .macpinjs ftype
+				// when opened, offer to edit, test, or package as MacPin app
+				// package will use JXA scripts to do the heavy lifting, port Makefile to use them
 				default: break;
 			}
 		}

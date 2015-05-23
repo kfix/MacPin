@@ -4,7 +4,7 @@
 
 import WebKit
 import WebKitPrivates
-	
+
 @objc class WebViewControllerOSX: WebViewController {
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -41,7 +41,7 @@ import WebKitPrivates
 			window.opaque = !webview.transparent
 			window.hasShadow = !webview.transparent
 			window.invalidateShadow()
-			window.toolbar!.showsBaselineSeparator = !webview.transparent
+			window.toolbar?.showsBaselineSeparator = window.titlebarAppearsTransparent ? false : !webview.transparent
 		}
 
 	}
@@ -149,6 +149,15 @@ extension WebViewControllerOSX { // AppGUI funcs
 		// items: [itemTitle:String eventName:String], when clicked, fire event in jsdelegate?
 		//menu.popUpMenu(menu.itemArray.first, atLocation: NSPointFromCGPoint(CGPointMake(0,0)), inView: self.view)
 	}
+
+	func openInChrome() { NSWorkspace.sharedWorkspace().openURLs([webview.URL!], withAppBundleIdentifier: "com.google.Chrome", options: .Default, additionalEventParamDescriptor: nil, launchIdentifiers: nil) }
+
+	func saveWebArchive() {
+		webview._getWebArchiveDataWithCompletionHandler() { (data: NSData!, err: NSError!) -> Void in
+			//pop open a save Panel to dump data into file
+		}
+	}
+
 }
 
 extension WebViewControllerOSX: NSSharingServicePickerDelegate { }

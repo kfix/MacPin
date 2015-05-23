@@ -7,7 +7,7 @@
 //https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Shared/API/c/WKBase.h
 typedef const struct OpaqueWKFrame* WKFrameRef; //no Cocoa bridge for this at all, expecting `WKFrame`
 
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
 @interface WKView : UIView {
 #else
 @interface WKView : NSView <NSTextInputClient> {
@@ -32,7 +32,7 @@ typedef const struct OpaqueWKFrame* WKFrameRef; //no Cocoa bridge for this at al
 - (void)updateLayer;
 
 // https://github.com/WebKit/webkit/blob/72b18a0525ffb78247aa1951efc17129f8390f37/Source/WebKit2/UIProcess/API/mac/WKView.mm#L2312
-#if TARGET_OS_OSX
+#if !TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR
 - (NSPrintOperation *)printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(WKFrameRef)frameRef;
 - (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)draggingInfo;
 - (NSDragOperation)draggingUpdated:(id <NSDraggingInfo>)draggingInfo;

@@ -19,6 +19,7 @@ RefPtr<WebKit::WebPreferences> _preferences;
 @property (nonatomic, setter=_setDeveloperExtrasEnabled:) BOOL _developerExtrasEnabled;
 @property (nonatomic, setter=_setFullScreenEnabled:) BOOL _fullScreenIsEnabled;
 @property (nonatomic, setter=_setDiagnosticLoggingEnabled:) BOOL _diagnosticLoggingEnabled;
+@property (nonatomic, setter=_setStandalone:, getter=_isStandalone) BOOL _standalone;
 
 // need to be able to compile an ObjC++ to C-API bridge
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/C/WKPreferencesRefPrivate.h

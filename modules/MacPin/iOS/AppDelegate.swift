@@ -3,15 +3,11 @@ import ObjectiveC
 import WebKitPrivates
 import Darwin
 
-@UIApplicationMain // doesn't work without NIBs, using main.swift instead
+@UIApplicationMain
 class AppDelegate: NSObject {
-	var window: UIWindow? // { return UIWindow(frame: UIScreen.mainScreen().bounds) } 
-
-	var browserController = MobileBrowserViewController()
-
-	override init() {
-		super.init()
-	}
+	var window: UIWindow? = nil // don't assign up here, first value is persistently used for rotation size calculations!
+	var browserController = MobileBrowserViewController() //frame: UIScreen.mainScreen().applicationFrame)
+	override init() { super.init() }
 }
 
 extension AppDelegate: UIApplicationDelegate { //UIResponder
@@ -25,25 +21,21 @@ extension AppDelegate: UIApplicationDelegate { //UIResponder
 	func application(application: UIApplication, willFinishLaunchingWithOptions launchOptions: [NSObject : AnyObject]?) -> Bool { // state not restored, UI not presented
 		application.registerUserNotificationSettings(UIUserNotificationSettings(forTypes: UIUserNotificationType.Sound | UIUserNotificationType.Alert | UIUserNotificationType.Badge, categories: nil))
 
-		window?.rootViewController = browserController
-		window?.makeKeyAndVisible() // presentation is deferred until after didFinishLaunching
-
-		// airplay to an external screen on a mac or appletv
-		//	https://developer.apple.com/library/ios/documentation/WindowsViews/Conceptual/WindowAndScreenGuide/UsingExternalDisplay/UsingExternalDisplay.html#//apple_ref/doc/uid/TP40012555-CH3-SW1
 		return true //FIXME
 	}
 
 	func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject : AnyObject]?) -> Bool { //state restored, but UI not presented yet
 		// launchOptions: http://nshipster.com/launch-options/
-		JSRuntime.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
-		JSRuntime.loadSiteApp() // load app.js, if present
 
-		if let default_html = NSBundle.mainBundle().URLForResource("default", withExtension: "html") {
-			warn("loading initial page from app bundle: \(default_html)")
-			browserController.addChildViewController(WebViewControllerIOS(webview: MPWebView(url: default_html))) 
-		}
+		window = UIWindow(frame: UIScreen.mainScreen().bounds) // total pixels w/ rotation  
+		UIApplication.sharedApplication().statusBarStyle = .LightContent
+		window?.backgroundColor = UIColor.whiteColor() // visible behind status bar area when unobscured by page content
+		window?.rootViewController = browserController //adds the browserView to window.subviews
+		window?.makeKeyAndVisible() // presentation is deferred until after didFinishLaunching
 
-		if browserController.tabs.count < 1 { browserController.newTabPrompt() } //don't allow a tabless state
+		// airplay to an external screen on a mac or appletv
+		//	https://developer.apple.com/library/ios/documentation/WindowsViews/Conceptual/WindowAndScreenGuide/UsingExternalDisplay/UsingExternalDisplay.html#//apple_ref/doc/uid/TP40012555-CH3-SW1
+
 
 		for arg in Process.arguments {
 			switch (arg) {
@@ -61,14 +53,24 @@ extension AppDelegate: UIApplicationDelegate { //UIResponder
 			}
 		}
 
-		UIApplication.sharedApplication().statusBarStyle = .LightContent
-		UINavigationBar.appearance().barTintColor = UIColor(red: 45/255, green: 182/255, blue: 227/255, alpha: 1.0)
-
 		return true //FIXME
     }
 
-	func applicationDidBecomeActive(application: UIApplication) {
+	func applicationDidBecomeActive(application: UIApplication) { // UI presented
 		//if application?.orderedDocuments?.count < 1 { showApplication(self) }
+
+		browserController.view.frame = UIScreen.mainScreen().bounds
+				
+		if !JSRuntime.context.objectForKeyedSubscript("$").objectForKeyedSubscript("browser").isObject() { //first run, not an app restore
+			JSRuntime.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
+			JSRuntime.loadSiteApp() // load app.js, if present
+			JSRuntime.jsdelegate.tryFunc("AppFinishedLaunching")
+		} else {
+			JSRuntime.jsdelegate.tryFunc("AppRestored")
+		}
+
+		if browserController.tabs.count < 1 { browserController.newTabPrompt() } //don't allow a tabless state
+
 	}
 
 	// need https://github.com/kemenaran/ios-presentError

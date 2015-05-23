@@ -6,15 +6,14 @@ import UIKit
 import WebKit
 	
 @objc class WebViewControllerIOS: WebViewController {
-	convenience required init(webview: MPWebView) {
-		self.init(webview: webview)
-	}
+	//var modalPresentationStyle = .OverFullScreen
+	//var modalTransitionStyle = .CrossDissolve // .CoverVertical | .CrossDissolve | .FlipHorizontal
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		//view.wantsLayer = true //use CALayer to coalesce views
 		//^ default=true:  https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3641
-		//view.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable //FIXMEios
+		view.autoresizingMask = .FlexibleHeight | .FlexibleWidth
 	}
 	
 	override func viewWillAppear(animated: Bool) { // window popping up with this tab already selected & showing
@@ -26,10 +25,21 @@ import WebKit
 	deinit { warn("\(reflect(self).summary)") }
 	
 	//override func closeTab() { dismissViewControllerAnimated(true, completion: nil); super() }
+
+/*
+	override func viewWillTransitionToSize(size: CGSize, withTransitionCoordinator coordinator: UIViewControllerTransitionCoordinator) {
+		warn()
+		super.viewWillTransitionToSize(size, withTransitionCoordinator: coordinator)
+		view.frame.size = size
+		view.layoutIfNeeded()
+	}
+*/
+
 }
 
 extension WebViewControllerIOS { // AppGUI funcs
 	func shareButtonClicked(sender: AnyObject?) {
+		warn()
 		// http://nshipster.com/uiactivityviewcontroller/
 		if let url = webview.URL, title = webview.title {
 			let activityViewController = UIActivityViewController(activityItems: [title, url], applicationActivities: nil)
@@ -51,7 +61,27 @@ extension WebViewControllerIOS { // AppGUI funcs
 	}
 
 	/*
-	func print(sender: AnyObject?) { warn(""); webview.print(sender) }
+	func print(sender: AnyObject?) { 
+if ([UIPrintInteractionController isPrintingAvailable])
+{
+    UIPrintInfo *pi = [UIPrintInfo printInfo];
+    pi.outputType = UIPrintInfoOutputGeneral;
+    pi.jobName = @"Print";
+    pi.orientation = UIPrintInfoOrientationPortrait;
+    pi.duplex = UIPrintInfoDuplexLongEdge;
+
+    UIPrintInteractionController *pic = [UIPrintInteractionController sharedPrintController];
+    pic.printInfo = pi;
+    pic.showsPageRange = YES;
+    pic.printFormatter = self.webView.viewPrintFormatter;
+    [pic presentFromBarButtonItem:barButton animated:YES completionHandler:^(UIPrintInteractionController *printInteractionController, BOOL completed, NSError *error) {
+        if(error)
+            NSLog(@"handle error here");
+        else
+            NSLog(@"success");
+    }];
+}
+	}
 
 	//FIXME: support new scaling https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
 	func zoomIn() { webview.magnification += 0.2 }

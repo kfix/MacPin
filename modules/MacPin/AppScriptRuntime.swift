@@ -2,12 +2,12 @@
 ///
 /// Creates a singleton-instance of JavaScriptCore for intepreting bundled javascripts to control a MacPin app
 
-// somehow get a JXA bridge working?
-//  https://developer.apple.com/library/mac/releasenotes/InterapplicationCommunication/RN-JavaScriptForAutomation/index.html
+let JSRuntime = AppScriptRuntime() //FIXME: singletons considered harmful. make it ivar of AppDelegate?
 
-let JSRuntime = AppScriptRuntime() //singleton
-
-var GlobalUserScripts: [String] = [] // $.globalUserScripts singleton
+//var GlobalUserScripts: [String] = [] // $.globalUserScripts singleton
+//var GlobalUserScripts: [String] = ["seeDebugger"] // $.globalUserScripts singleton
+// doesn't see to be writeable
+var GlobalUserScripts = NSMutableArray() // $.globalUserScripts singleton
 
 #if os(OSX)
 import AppKit
@@ -165,18 +165,37 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	func loadAppScript(urlstr: String) -> JSValue? {
 		if let script_url = NSURL(string: urlstr), script = NSString(contentsOfURL: script_url, encoding: NSUTF8StringEncoding, error: nil) {
 			// FIXME: script code could be loaded from anywhere, exploitable?
-			warn("\(script_url) parsed")
-			// if JSCheckScriptSyntax(ctx: context as JSContext!,
-			// 	 script: JSStringCreateWithCFString(string: script as CFString).takeUnretainedValue() as JSString!,
-			// 	 sourceURL: JSStringCreateWithCFString(string: script_url.absoluteString as CFString).takeUnretainedValue() as JSString!,
-			// 	 startingLineNumber: Int32(0),
-			// 	 exception: UnsafeMutablePointer<Unmanaged<JSValue>?>(nil)
-			// ) { 
+			warn("\(script_url) read")
+
+			// JSBase.h
+			//func JSCheckScriptSyntax(ctx: JSContextRef, script: JSStringRef, sourceURL: JSStringRef, startingLineNumber: Int32, exception: UnsafeMutablePointer<JSValueRef>) -> Bool
+			//func JSEvaluateScript(ctx: JSContextRef, script: JSStringRef, thisObject: JSObjectRef, sourceURL: JSStringRef, startingLineNumber: Int32, exception: UnsafeMutablePointer<JSValueRef>) -> JSValueRef
+			//typealias JSStringRef = COpaquePointer
+			//typealias JSValueRef = COpaquePointer
+			// https://github.com/facebook/react-native/blob/master/React/Executors/RCTContextExecutor.m#L304
+			// https://github.com/facebook/react-native/blob/0fbe0913042e314345f6a033a3681372c741466b/React/Executors/RCTContextExecutor.m#L175
+			// http://nshipster.com/unmanaged/ http://www.russbishop.net/swift-manual-retain-release
+
+/*
+			var ctx = Unmanaged.passUnretained(context)
+			//var exception = JSValueMakeNull(ctx.toOpaque()) 
+			var exception = Unmanaged.passUnretained(JSValue()) 
+
+			if JSCheckScriptSyntax(
+				/*ctx:*/ ctx.toOpaque(),
+				/*script:*/ JSStringCreateWithCFString(script as CFString),
+				/*sourceURL:*/ JSStringCreateWithCFString(script_url.absoluteString! as CFString),
+				/*startingLineNumber:*/ Int32(1),
+				/*exception:*/ UnsafeMutablePointer(exception.toOpaque())
+			) {
+				warn("syntax good")
+				//exception.release() 
+*/
 				context.name = "\(context.name) <\(urlstr)>"
 				// FIXME: assumes last script loaded is the source file, not always true
 
 			 	return context.evaluateScript(script as String, withSourceURL: script_url) // returns JSValue!
-			// } else { /* alert panel */ } // or pop open the script source-code in a new tab and highlight the offender
+//			} else { warn("bad syntax: \(script_url)") } // or pop open the script source-code in a new tab and highlight the offender
 		}
 		return nil
 	}
@@ -288,5 +307,3 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		})
 	}
 }
-
-

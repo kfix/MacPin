@@ -23,7 +23,6 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			window.restorable = true
 			window.restorationClass = AppDelegate.self
 			window.sharingType = .ReadWrite
-			//window.titlebarAppearsTransparent = true
 			NSApplication.sharedApplication().windowsMenu = NSMenu()
 			NSApplication.sharedApplication().addWindowsItem(window, title: window.title!, filename: false)
 		}
@@ -37,5 +36,25 @@ class WindowController: NSWindowController, NSWindowDelegate {
 
 	func window(window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplicationPresentationOptions) -> NSApplicationPresentationOptions {
 		return NSApplicationPresentationOptions.AutoHideToolbar | NSApplicationPresentationOptions.AutoHideMenuBar | NSApplicationPresentationOptions.FullScreen | proposedOptions
+	}
+
+	func toggleTitlebar() {
+		if let window = window,
+			close = window.standardWindowButton(.CloseButton),
+			min = window.standardWindowButton(.MiniaturizeButton),
+			zoom = window.standardWindowButton(.ZoomButton),
+			toolbar = window.toolbar
+		{
+			//window.toggleToolbarShown(nil)
+ 			toolbar.visible = window.titlebarAppearsTransparent
+			close.hidden = !close.hidden
+			min.hidden = !min.hidden
+			zoom.hidden = !zoom.hidden
+			window.titlebarAppearsTransparent = !window.titlebarAppearsTransparent
+			window.styleMask ^= NSUnifiedTitleAndToolbarWindowMask
+			window.styleMask ^= NSFullSizeContentViewWindowMask // makes contentView (browserController) extend underneath the now invisible titlebar
+			//window.styleMask ^= NSTitledWindowMask // this blows away the actual .toolbar object, making browserController crash
+			if window.titlebarAppearsTransparent { window.toolbar?.showsBaselineSeparator = false }
+		}
 	}
 }

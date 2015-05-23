@@ -11,27 +11,34 @@ import WebKit
 import WebKitPrivates
 import JavaScriptCore
 
-@objc protocol WebViewScriptExports : JSExport { // $.WebView & $.browser.tabs[WebView]
+@objc protocol WebViewScriptExports: JSExport { // $.WebView & $.browser.tabs[WebView]
 	init?(object: [String:AnyObject]) //> new WebView({url: 'http://example.com'});
 	// can only JSExport one init*() func!
 	// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/tests/testapi.mm
 	// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSWrapperMap.mm#L412
 
+	var title: String? { get }
+	var url: String { get set }
 	var transparent: Bool { get set }
 	var userAgent: String { get set }
 	func close()
 	func evalJS(js: String, _ withCallback: JSValue?) 
 	func loadURL(urlstr: String) -> Bool
 	func loadIcon(icon: String) -> Bool
-	func preinject(script: String)
-	func postinject(script: String)
-	func addHandler(handler: String)
+	func preinject(script: String) -> Bool
+	func postinject(script: String) -> Bool
+	func addHandler(handler: String) // FIXME kill
 	func subscribeTo(handler: String)
 }
 
-@objc class MPWebView : WKWebView, WebViewScriptExports {
+@objc class MPWebView: WKWebView, WebViewScriptExports {
 
 	var jsdelegate: JSValue = JSRuntime.jsdelegate // point to the singleton, for now
+
+	var url: String { // accessor for JSC, which doesn't support `new URL()`
+		get { return URL?.absoluteString ?? "" }
+		set { loadURL(newValue) }
+	}
 
 	var userAgent: String { 
 		get { return _customUserAgent ?? _userAgent ?? "" }
@@ -39,25 +46,25 @@ import JavaScriptCore
 		set(agent) { if !agent.isEmpty { _customUserAgent = agent } }
 	}
 
+#if os(OSX)
 	var transparent: Bool {
 		get { return _drawsTransparentBackground }
-		set(transparent) { // add observer to frobble frame size so content will reflow & re-colorize
-			warn()
+		set(transparent) {
 			_drawsTransparentBackground = transparent
-#if os(OSX)
 			//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
+ 			// so frobble frame size to make content reflow & re-colorize
 			setFrameSize(NSSize(width: frame.size.width, height: frame.size.height - 1)) //needed to fully redraw w/ dom-reflow or reload! 
 			evalJS("window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(transparent)}}));" +
 				"document.head.appendChild(document.createElement('style')).remove();") //force redraw in case event didn't
 				//"window.scrollTo();")
 			setFrameSize(NSSize(width: frame.size.width, height: frame.size.height + 1))
 			needsDisplay = true
-#elseif os(iOS)
-			evalJS("window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(transparent)}}));" +
-				"document.head.appendChild(document.createElement('style')).remove();") //force redraw in case event didn't
-#endif
 		}
 	}
+#elseif os(iOS)
+	// no overlaying MacPin apps upon other apps in iOS, so make it a no-op
+	var transparent = false
+#endif
 
 	let favicon: FavIcon = FavIcon() 
 
@@ -69,6 +76,7 @@ import JavaScriptCore
 		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu 
 #endif
+		//prefs._isStandalone = true // window.navigator.standalone = true to mimic MobileSafari's springboard-link shell mode
 		//prefs.minimumFontSize = 14 //for blindies
 		prefs.javaScriptCanOpenWindowsAutomatically = true;
 #if WK2LOG
@@ -90,7 +98,7 @@ import JavaScriptCore
 		allowsMagnification = true
 		_applicationNameForUserAgent = "Version/8.0.5 Safari/600.5.17"
 #elseif os(iOS)
-		_applicationNameForUserAgent = "Version/8.0.5 MobileSafari/600.5.17"
+		_applicationNameForUserAgent = "Version/8.0 Mobile/12F70 Safari/600.1.4"
 #endif
 		if let agent = agent { if !agent.isEmpty { _customUserAgent = agent } }
 	}
@@ -103,15 +111,19 @@ import JavaScriptCore
 				case let urlstr as String where key == "url": url = NSURL(string: urlstr)
 				case let agent as String where key == "agent": _customUserAgent = agent
 				case let icon as String where key == "icon": loadIcon(icon)
-				case let transparent as Bool where key == "transparent": _drawsTransparentBackground = transparent
+				case let transparent as Bool where key == "transparent":
+#if os(OSX)
+					_drawsTransparentBackground = transparent
+#endif
 				case let value as [String] where key == "preinject": for script in value { preinject(script) }
 				case let value as [String] where key == "postinject": for script in value { postinject(script) }
-				case let value as [String] where key == "handlers": for handler in value { addHandler(handler) }
+				case let value as [String] where key == "handlers": for handler in value { addHandler(handler) } //FIXME kill
+				case let value as [String] where key == "subscribeTo": for handler in value { subscribeTo(handler) }
 				default: warn("unhandled param: `\(key): \(value)`")
 			}
 		}
 
-		for script in GlobalUserScripts { postinject(script) }
+		for script in GlobalUserScripts { if let script = script as? String { warn(script); postinject(script) } }
 		if let url = url { gotoURL(url) } else { return nil }
 	}
 
@@ -124,18 +136,16 @@ import JavaScriptCore
 	deinit { warn(description) }
 
 	func evalJS(js: String, _ withCallback: JSValue? = nil) {
-		if let withCallback = withCallback {
-			if withCallback.isObject() { //is a function or a {}
-				warn("withCallback: \(withCallback)")
-				evaluateJavaScript(js, completionHandler:{ (result: AnyObject!, exception: NSError!) -> Void in
-					// (result: WebKit::WebSerializedScriptValue*, exception: WebKit::CallbackBase::Error)
-					//withCallback.callWithArguments([result, exception]) // crashes, need to translate exception into something javascripty
-					//warn("()~> \(result),\(exception)")
-					withCallback.callWithArguments([result, true]) // unowning withCallback causes a crash and weaking it muffs the call
-					return
-				})
+		if let withCallback = withCallback where withCallback.isObject() { //is a function or a {}
+			warn("withCallback: \(withCallback)")
+			evaluateJavaScript(js, completionHandler:{ (result: AnyObject!, exception: NSError!) -> Void in
+				// (result: WebKit::WebSerializedScriptValue*, exception: WebKit::CallbackBase::Error)
+				//withCallback.callWithArguments([result, exception]) // crashes, need to translate exception into something javascripty
+				//warn("()~> \(result),\(exception)")
+				withCallback.callWithArguments([result, true]) // unowning withCallback causes a crash and weaking it muffs the call
 				return
-			}
+			})
+			return
 		}
 		evaluateJavaScript(js, completionHandler: nil)
 	}
@@ -160,20 +170,13 @@ import JavaScriptCore
 		return false // tell JS we were given a malformed URL
 	}
 
-	//func askToOpenURL(url: NSURL?) {} // should override this in your platform-subclasses
-	func askToOpenCurrentURL() { askToOpenURL(URL) }
-
-	func scrapeIcon() { // extracts icon location from loaded HTML markup and updates favicon image with its contents
+	func scrapeIcon() { // extract icon location from current webpage and initiate retrieval
 		evaluateJavaScript("if (icon = document.querySelector('link[rel$=icon]')) { icon.href };", completionHandler:{ [unowned self] (result: AnyObject!, exception: NSError!) -> Void in
-			if let href = result as? String {
+			if let href = result as? String { // got link for icon or apple-touch-icon from DOM
 				self.loadIcon(href)
-			} else {
-				// look for a root-domain-level icon file
-				if let url = self.URL {
-					let iconurlp = NSURLComponents(URL: url, resolvingAgainstBaseURL: false)!
-					iconurlp.path = "/favicon.ico"
-					self.loadIcon(iconurlp.string!)
-				}
+			} else if let url = self.URL, iconurlp = NSURLComponents(URL: url, resolvingAgainstBaseURL: false) where !((iconurlp.host ?? "").isEmpty) {
+				iconurlp.path = "/favicon.ico" // request a root-of-domain favicon
+				self.loadIcon(iconurlp.string!)
 			}
 		})
 	}
@@ -186,10 +189,27 @@ import JavaScriptCore
 		return false
 	}
 
-	func preinject(script: String) { loadUserScriptFromBundle(script, configuration.userContentController, .AtDocumentStart, onlyForTop: false) }
-	func postinject(script: String) { loadUserScriptFromBundle(script, configuration.userContentController, .AtDocumentEnd, onlyForTop: false) }
+	func preinject(script: String) -> Bool { return loadUserScriptFromBundle(script, configuration.userContentController, .AtDocumentStart, onlyForTop: false) }
+	func postinject(script: String) -> Bool { return loadUserScriptFromBundle(script, configuration.userContentController, .AtDocumentEnd, onlyForTop: false) }
 	func addHandler(handler: String) { configuration.userContentController.addScriptMessageHandler(JSRuntime, name: handler) }
 	func subscribeTo(handler: String) { configuration.userContentController.addScriptMessageHandler(JSRuntime, name: handler) }
+
+	func seeDebugger() {
+		// http://davidbau.com/archives/2013/04/19/debugging_locals_with_seejs.html
+		if postinject("seeDebugger") { reload(); evalJS("see.init();") } // https://raw.github.com/davidbau/see/master/see.js
+
+		// https://github.com/davidbau/see/blob/master/see-bookmarklet.js
+		/*
+		if let seeJSpath = NSBundle.mainBundle().URLForResource("seeDebugger", withExtension: "js") {
+			// gotta run it from the bundle because CORS
+			var seeJS = "(function() { loadscript( '\(seeJSpath)', function() { see.init(); }); function loadscript(src, callback) { function setonload(script, fn) { script.onload = script.onreadystatechange = fn; } var script = document.createElement('script'), head = document.getElementsByTagName('head')[0], pending = 1; setonload(script, function() { pending && (!script.readyState || {loaded:1,complete:1}[script.readyState]) && (pending = 0, callback(), setonload(script, null), head.removeChild(script)); }); script.src = src; head.appendChild(script); } })();"
+			evalJS(seeJS) // still doesn't allow loading local resources
+		}
+		// download to temp?
+		// else complain?
+		*/
+	}
+
 
 	func REPL() {
 		termiosREPL({ (line: String) -> Void in

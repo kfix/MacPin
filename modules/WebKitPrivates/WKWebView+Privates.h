@@ -11,11 +11,21 @@ typedef NS_ENUM(NSInteger, _WKPaginationMode) {
 
 @interface WKWebView (Privates)
 
-//@property (readonly) NSColor *_pageExtendedBackgroundColor;
-
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+//@property (nonatomic, readonly) _WKWebViewPrintFormatter *_webViewPrintFormatter;
+//@property (nonatomic, getter=_allowsLinkPreview, setter=_setAllowsLinkPreview:) BOOL _allowsLinkPreview
+@property (nonatomic, setter=_setBackgroundExtendsBeyondPage:) BOOL _backgroundExtendsBeyondPage;
+- (UIView *)_viewForFindUI;
+@property (nonatomic, readonly) CGFloat _viewportMetaTagWidth; // negative if tag undefined
+#else
+@property (readonly) NSColor *_pageExtendedBackgroundColor;
 @property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground;
 @property (nonatomic, setter=_setTopContentInset:) CGFloat _topContentInset;
 @property (nonatomic, setter=_setAutomaticallyAdjustsContentInsets:) BOOL _automaticallyAdjustsContentInsets;
+#endif
+
+//@property (nonatomic, getter=_isEditable, setter=_setEditable:) BOOL _editable;
+@property (nonatomic, setter=_setAddsVisitedLinks:) BOOL _addsVisitedLinks;
 @property (nonatomic, setter=_setAllowsRemoteInspection:) BOOL _allowsRemoteInspection;
 @property (copy, setter=_setCustomUserAgent:) NSString *_customUserAgent;
 @property (copy, setter=_setApplicationNameForUserAgent:) NSString *_applicationNameForUserAgent;
@@ -35,4 +45,11 @@ typedef NS_ENUM(NSInteger, _WKPaginationMode) {
 @property (nonatomic, readonly) NSURL *_unreachableURL;
 @property (nonatomic, readonly) NSURL *_committedURL;
 @property (nonatomic, readonly) NSString *_MIMEType;
+//@property (nonatomic, weak, setter=_setDiagnosticLoggingDelegate:) id <_WKDiagnosticLoggingDelegate> _diagnosticLoggingDelegate WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+//@property (nonatomic, weak, setter=_setFindDelegate:) id <_WKFindDelegate> _findDelegate;
+//- (void)_findString:(NSString *)string options:(_WKFindOptions)options maxCount:(NSUInteger)maxCount;
+//- (void)_countStringMatches:(NSString *)string options:(_WKFindOptions)options maxCount:(NSUInteger)maxCount;
+//- (void)_hideFindUI;
+//https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKFormDelegate.h
+//@property (nonatomic, weak, setter=_setFormDelegate:) id <_WKFormDelegate> _formDelegate;
 @end

@@ -4,14 +4,14 @@ export
 builddir			?= build
 
 # scan modules/ and define cross: target and vars: outdir, platform, arch, sdk, target, objs, execs, statics, incdirs, libdirs, linklibs, frameworks
-include Makefile.eXcode
+include eXcode.mk
 
 # now layout the MacPin .apps to generate
 macpin				:= MacPin
 macpin_sites		?= sites
 
 template_bundle_id	:= com.github.kfix.MacPin
-icondir				:= icons
+icondir				?= $(builddir)/icons
 
 installdir			:= ~/Applications
 
@@ -40,7 +40,7 @@ ifeq ($(platform),OSX)
 endif
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly $(gen_apps): $(execs)
-test apirepl tabrepl test.app test.ios: debug := -g -D SAFARIDBG -D DBGMENU -D APP2JSLOG
+test apirepl tabrepl test.app test.ios: debug := -g -D SAFARIDBG -D DBGMENU -D APP2JSLOG -D WARN2NSLOG
 wknightly: DYLD_FRAMEWORK_PATH=/Volumes/WebKit/WebKit.app/Contents/Frameworks/10.10
 reinstall: allapps uninstall install
 noop: ;
@@ -61,79 +61,15 @@ ZIP			 := $(REPO).zip
 GH_RELEASE_JSON = '{"tag_name": "v$(VERSION)","target_commitish": "master","name": "v$(VERSION)","body": "MacPin build of version $(VERSION)","draft": false, "prerelease": true}'
 #####
 
-$(icondir)/%.icns $(icondir)/%.iconset: $(icondir)/%.png
-	python icons/AppleIcnsMaker.py -p $<
+$(icondir)/%.xcassets: $(macpin_sites)/%/icon.png
+	install -d $@
+	osascript -l JavaScript iconify.jxa $(realpath $<) $(realpath $@)
 
-$(icondir)/%.icns: $(icondir)/WebKit.icns
-	cp $< $@
-
-# https://developer.apple.com/library/ios/recipes/xcode_help-image_catalog-1.0/Recipe.htmli
-# http://martiancraft.com/blog/2014/09/vector-images-xcode6/
-$(icondir)/%.xcassets: $(icondir)/%.iconset
-	mkdir $@
-	cp -a $< $@/AppIcon.appiconset
-	#LaunchImage.launchimage
-	# OSX ???
-# https://github.com/mapbox/diversify
-# https://github.com/SzymonFortuna/xcassettool/blob/master/xcassettool
-# https://github.com/albert-zhang/gen_xcassets/blob/master/gen_xcassets.py
-# https://github.com/Nikita2k/iMigrate/blob/master/iMigrate.sh
-# https://gist.github.com/sag333ar/7482853#file-generate1xandassets-sh
-#$(icondir)/%.xcassets/%.appiconset/Contents.json: $(icondir)/%.iconset
-
-$(icondir)/%.car: $(icondir)/%.xcassets
-	xcrun actool --output-format human-readable-text --notices --warnings --print-contents \
-		--output-partial-info-plist $@.plist \
-		--platform $(sdk) --minimum-deployment-target 7.0 \
-		--target-device iphone \
-		--app-icon % \
-		--compress-pngs --compile $@ $(realpath $<)
-# osx ver 10.9
-# https://github.com/CocoaPods/CocoaPods/pull/1427
-# https://github.com/bartoszj/acextract
-
-# https://github.com/vokal/Cat2Cat https://github.com/aporat/UIImage-AssetCatalog
+$(icondir)/%.xcassets: WebKit.png
+	install -d $@
+	osascript -l JavaScript iconify.jxa $(realpath $<) $(realpath $@)
 
 $(appdir): ; install -d $@
-
-# https://developer.apple.com/library/mac/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html#//apple_ref/doc/uid/10000123i-CH101-SW1
-ifeq ($(platform),OSX)
-# OSX apps
-# https://developer.apple.com/library/mac/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
-# https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html
-$(appdir)/%.app/Contents/MacOS $(appdir)/%.app/Contents/Resources $(appdir)/%.app/Contents/Frameworks: ; install -d $@
-$(appdir)/%.app: $(macpin_sites)/%/* $(icondir)/%.icns $(macpin_sites)/% entitlements.plist ftypes.plist | $(appdir)
-	python2.7 -m bundlebuilder \
-	--name=$* \
-	--bundle-id=$(template_bundle_id).$* \
-	--builddir=$(appdir) \
-	$(addprefix --executable=,$(filter $(outdir)/exec/%,$^)) \
-	--iconfile=$(icondir)/$*.icns \
-	--file=$(macpin_sites)/$*:Contents/Resources \
-	$(addprefix --lib=,$(filter %.dylib,$^)) \
-	$(addprefix --lib=,$(wildcard $(outdir)/Frameworks/*.dylib)) \
-	build
-	plutil -replace CFBundleShortVersionString -string "$(VERSION)" $@/Contents/Info.plist 
-	plutil -replace CFBundleVersion -string "0.0.0" $@/Contents/Info.plist
-	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist
-	plutil -replace NSSupportsAutomaticTermination -bool true $@/Contents/Info.plist
-	plutil -replace NSSupportsSuddenTermination -bool true $@/Contents/Info.plist
-	#plutil -replace SecTaskAccess -json [] $@/Contents/Info.plist
-	#plutil -replace SecTaskAccess.0 -string allowed $@/Contents/Info.plist
-	plutil -replace CFBundleDocumentTypes -json [] $@/Contents/Info.plist
-	/usr/libexec/PlistBuddy -c 'merge ftypes.plist :CFBundleDocumentTypes' -c save $@/Contents/Info.plist
-	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
-	# http://pythonhosted.org//macholib/scripts.html
-	python -m macholib standalone $@
-	python -m macholib find $@
-	#for i in "$@/Contents/Frameworks/*.dylib $@"; do codesign -s - -f --ignore-resources --entitlements entitlements.plist $$i; done
-	codesign --verbose=4 -s $(appsig) -f --deep --ignore-resources --entitlements entitlements.plist $@
-	codesign --display -r- --verbose=4 --entitlements :- $@
-	-spctl --verbose=4 --assess --type execute $@
-	-asctl container acl list -file $@
-	#xattr -w com.apple.application-instance FOOUUID $@
-else ifeq ($(platform),iOS)
-# iOS apps
 
 #Render plist template w/shell vars
 define gen_plist_template
@@ -144,29 +80,57 @@ endef
 # https://github.com/n8armstrong/lister/blob/master/Swift/Lister/Info.plist
 # https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
 # https://developer.apple.com/library/ios/qa/qa1686/_index.html
-$(appdir)/%.app/Info.plist: templates/$(platform)/Info.plist
+$(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/Info.plist: templates/$(platform)/Info.plist
 	$(gen_plist_template)
-$(appdir)/%.app/entitlements.plist: templates/$(platform)/entitlements.plist
+$(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/entitlements.plist: templates/$(platform)/entitlements.plist
 	$(gen_plist_template)
 
-$(appdir)/%.app/Info.plist: modules/%/$(platform)/Info.plist.sh
-	EXECUTABLE_NAME=$* source $< > $@
+ifeq ($(platform),OSX)
 
-$(appdir)/%.app/Frameworks: ; install -d $@
-$(appdir)/%.app: $(macpin_sites)/% $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Info.plist | $(appdir)/%.app/Frameworks
-	install -d $@
-	$(patsubst %,cp -v % $@/$*;,$(filter $(outdir)/exec/%,$^))
-	install_name_tool -rpath @loader_path/../Frameworks @loader_path/Frameworks $@/$*
-	cp -Rv $(macpin_sites)/$*/* $@/
-	cp -v $(outdir)/Frameworks/*.dylib $@/Frameworks/
-	#python -m macholib standalone $@
-	#python -m macholib find $@
-	#codesign --verbose=4 -s $(appsig) -f --deep --ignore-resources --entitlements $@/entitlements.plist $@
-	#codesign --display -r- --verbose=4 --entitlements :- $@
-	#-spctl --verbose=4 --assess --type execute $@
-	#-asctl container acl list -file $@
+$(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/Assets.car: $(icondir)/%.xcassets
+	install -d $(dir $@)
+	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
+		--platform $(sdk) --minimum-deployment-target 10.10 --target-device mac \
+		--compress-pngs --compile $(dir $@) $(realpath $<)
+	test -f $@
+
+# OSX apps
+# https://developer.apple.com/library/mac/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html#//apple_ref/doc/uid/10000123i-CH101-SW1
+# https://developer.apple.com/library/mac/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
+# https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html
+$(appdir)/%.app: $(macpin_sites)/%/* $(macpin_sites)/% $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns 
+	install -d $@/Contents/MacOS $@/Contents/Frameworks $@/Contents/Resources
+	$(patsubst %,cp -v % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
+	cp -RLv $(macpin_sites)/$*/* $@/Contents/Resources/
+	cp -v $(outdir)/Frameworks/*.dylib $@/Contents/Frameworks/
+	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist
+	#plutil -replace SecTaskAccess -json [] $@/Contents/Info.plist
+	#plutil -replace SecTaskAccess.0 -string allowed $@/Contents/Info.plist
+	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
+	# http://pythonhosted.org//macholib/scripts.html
+	python -m macholib standalone $@
+	python -m macholib find $@
+	codesign --verbose=4 -s $(appsig) -f --deep --ignore-resources --entitlements $@/Contents/entitlements.plist $@
+	codesign --display -r- --verbose=4 --entitlements :- $@
+	-spctl --verbose=4 --assess --type execute $@
+	-asctl container acl list -file $@
 	#xattr -w com.apple.application-instance FOOUUID $@
 
+else ifeq ($(platform),iOS)
+
+$(appdir)/%.app/Assets.car: $(icondir)/%.xcassets
+	install -d $(dir $@)
+	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
+		--platform $(sdk) --minimum-deployment-target 7.0  --target-device iphone  --target-device ipad --app-icon AppIcon \
+		--compress-pngs --compile $(dir $@) $(realpath $<)
+
+$(appdir)/%.app: $(macpin_sites)/% $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Info.plist templates/$(platform)/LaunchScreen.xib $(icondir)/%.xcassets
+	install -d $@/Frameworks
+	$(patsubst %,cp -v % $@/$*;,$(filter $(outdir)/exec/%,$^))
+	install_name_tool -rpath @loader_path/../Frameworks @loader_path/Frameworks $@/$*
+	cp -v $(outdir)/Frameworks/*.dylib $@/Frameworks/
+	cp -RLv $(macpin_sites)/$*/* $(icondir)/$*.xcassets $@/
+	ibtool --compile $@/LaunchScreen.nib templates/$(platform)/LaunchScreen.xib
 endif
 
 $(appdir)/%.share.appex: $(icons)/%.icns $(macpin_sites)/$*/appex.share.plist $(macpin_sites)/$*./appex.share.js icons/Resources
@@ -194,7 +158,7 @@ install:
 
 clean:
 	-cd $(appdir) && for i in $(filter %.app,$^); do rm -rf $$i; done
-	-rm -rf $(outdir)
+	-rm -rf $(outdir) $(icondir)
 
 reset:
 	-defaults delete $(macpin)
@@ -224,23 +188,20 @@ test.app: $(appdir)/$(macpin).app
 # debug: $(appdir)/test.app
 # http://stackoverflow.com/questions/24715891/access-a-swift-repl-in-cocoa-programs
 
-# make SIM_ONLY=1 test.ios 
 # make cross test.ios
 ifeq ($(sdk)-$(arch),iphonesimulator-x86_64)
 test.ios: $(appdir)/$(macpin).app
-	# npm install ios-sim -g
-	#ios-sim launch $< --devicetypeid "com.apple.CoreSimulator.SimDeviceType.iPhone-6-Plus, 8.3" --args -i || pkill 'iOS Simulator'
-	ios-sim start --devicetypeid "com.apple.CoreSimulator.SimDeviceType.iPhone-6-Plus, 8.3"
-	sleep 4
-	#open -a Console.app ~/Library/Logs/CoreSimulator/$(shell xcrun simctl list | awk '/Booted/ { gsub(/[()]/,""); print $$--NF; }')/system.log
-	ios-sim launch $< --devicetypeid "com.apple.CoreSimulator.SimDeviceType.iPhone-6-Plus, 8.3" || pkill 'iOS Simulator'
-	#--setenv DYLD_PRINT_ENV=1 --setenv DYLD_PRINT_RPATHS=1 \
-	tail -n 50 ~/Library/Logs/CoreSimulator/$(shell xcrun simctl list | awk '/Booted/ { gsub(/[()]/,""); print $$--NF; }')/system.log
-	# less ~/Library/Logs/DiagnosticReports/MacPin_2015-05-07-154544_fanboy-2.crash
+	@xcrun simctl list | grep $(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)
+	# pre-A7 devices (ipad mini 2, ipad air, iphone 5s) cannot run x86_64 builds
+	# if app closes without showing launch screen, try changing the simulated device to A7 or later
+	open -a "iOS Simulator.app"
+	xcrun simctl getenv booted foobar || sleep 5
+	xcrun simctl install booted $<
+	xcrun simctl launch booted $(template_bundle_id).$(macpin) 
 else
 test.ios: ;
+# make SIM_ONLY=1 test.ios 
 endif
-# https://developer.apple.com/library/ios/technotes/tn2239/_index.html
 
 # need to gen static html with https://github.com/realm/jazzy
 doc: $(objs)
@@ -284,7 +245,7 @@ release:
 	@exit 1
 endif
 
-.PRECIOUS: icons/%.icns $(appdir)/%.app/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/Frameworks
+.PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(icondir)/%.xcassets
 .PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release wknightly doc swiftrepl
 .SUFFIXES:
 

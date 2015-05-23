@@ -1,0 +1,163 @@
+#!/usr/bin/osascript -l JavaScript
+/* eslint-env: applescript */
+/* generate an .icns, .iconset, .xcasset, and .car from a single big bitmap icon. */
+
+var contentsTpl = {
+	"info": {
+		"version": 1,
+		"author": "iconify"
+	}
+};
+
+// https://developer.apple.com/library/mac/documentation/GraphicsAnimation/Conceptual/HighResolutionOSX/Optimizing/Optimizing.html#//apple_ref/doc/uid/TP40012302-CH7-SW4i
+var iconsetOpts = {
+	idiom: 'mac',
+	scaleUp: true,
+	basename: 'icon_',
+	sizes: { // in pts!
+		16: '16x16',
+		32: '32x32',
+		128: '128x128',
+		256: '256x256',
+		512: '512x512'
+	},
+	scales: [1, 2]
+}
+
+// https://developer.apple.com/library/ios/recipes/xcode_help-image_catalog-1.0/Recipe.html
+// https://developer.apple.com/library/ios/documentation/UserExperience/Conceptual/MobileHIG/IconMatrix.html
+var appIconsetOpts = {
+	idiom: 'universal',
+	scaleUp: true,
+	basename: 'Icon-',
+	sizes: { // https://developer.apple.com/library/ios/qa/qa1686/_index.html
+		// the TN says filenames don't matter but Xcode and actool disagree
+		25: 'Small-50',
+		29: 'Small',
+		40: 'Small-40',
+		60: '60',
+		76: '76'
+		//512: 'iTunesArtwork' // needs to be this with no basename or extension
+	}, 
+	scales: [1, 2, 3]
+}
+
+var imagesetOpts = {
+	idiom: 'universal',
+	scaleUp: false,
+	basename: 'image', //doesn't matter
+	sizes: {},
+	scales: []
+}
+
+ObjC.import("stdlib");
+var imEv = Application("Image Events");
+imEv.activate();
+var app = Application.currentApplication()
+app.includeStandardAdditions = true
+
+function setScalesFromImageSize(src, opts) {
+	// find the scales that can be evenly-derived from the source image's nativeSize
+
+	var nativeSize = src.dimensions()[0];
+	for (var scale of [3, 2, 1]) {
+		if ((nativeSize % scale) == 0) {
+			var pts = nativeSize / scale; 
+			opts.sizes[pts] = pts; 
+			for (var i=scale; i > 0; i--) { opts.scales.push(i) };
+			break;
+		}
+	}
+}
+
+function imageExplode(src, outdir, opts) {
+	console.log('Generating '+ outdir);
+	$.system('mkdir -p '+ outdir)
+	var images = [];
+	var sizes = Object.keys(opts.sizes);
+	var nativeSize = src.dimensions()[0];
+	sizes = sizes.length ? sizes : [ nativeSize ] // if no fixed sizes given, just rescale from native size
+	for (var size of sizes) {
+		for (var scale of opts.scales) {
+			var pxs = size * scale;
+			if ( opts.scaleUp || (src.dimensions()[0] >= pxs)) {
+				// should check that resolution() === [72, 72] ?
+				//var imageName = opts.basename + size + 'x' + size;
+				var imageName = opts.basename;
+				imageName += opts.sizes[size] ? opts.sizes[size] : (size + "x" + size);
+
+				if (scale > 1) imageName += '@' + scale + 'x';
+				var imagePath = outdir + '/' + imageName + '.png'; // + src.imageFile.nameExtension();
+
+				src.save({in: imagePath, as: "PNG"});
+				var image = imEv.open(imagePath);
+				if (pxs != src.dimensions()[0]) { // rescale
+					image.scale({toSize: pxs});
+					image.save();
+				}
+
+				images.push({
+					filename: image.name(),
+					idiom: opts.idiom,
+					size: size + 'x' + size,
+					scale: scale + 'x'
+				});
+
+				image.close();
+			}
+		}
+	}
+	contentsTpl['images'] = images;
+	return contentsTpl;
+}
+
+
+function run(args) {
+	var sourcePath = args[0]; // `someapp.png`
+	var sourceIcon = imEv.open(Path(sourcePath).toString()); // get absolute path as string
+
+	var iconName = sourceIcon.name().split('.')[0]; // chop off the extension to get the basename
+	var iconType = sourceIcon.name().split('.')[1];
+
+	var xcassetPath = args[1] ? Path(args[1]).toString() : (sourceIcon.location().posixPath() + '/' + iconName + '.xcassets');
+
+	var outputTypes = args.slice(2); // appiconset iconset imageset
+	outputTypes.length ? true : outputTypes.push("imageset");
+
+	for (var type of outputTypes) {
+
+		var outputPath, opts, contents;
+		switch (type) {
+			case "appiconset":
+				outputPath = xcassetPath + '/' + 'AppIcon.appiconset';
+				opts = appIconsetOpts;
+				break;
+			case "iconset":
+				outputPath = xcassetPath + '/' + 'Icon.iconset';
+				opts = iconsetOpts;
+				break;
+			case "imageset":
+				outputPath = xcassetPath + '/' + iconName + '.imageset';
+				opts = imagesetOpts;
+				setScalesFromImageSize(sourceIcon, opts);
+				break;
+			default:
+		}
+		contents = imageExplode(sourceIcon, outputPath, opts);
+
+		if (type === "iconset") { 
+			// OSX Icon
+			//var icnsPath = sourceIcon.location().posixPath() + '/' + iconName + '.icns';
+			// iconutil does a lot: http://stackoverflow.com/questions/25469220/creating-icons-icns-programatically-from-1024-1024-size-nsimage
+			// `iconutil -c icns -o icnsPath iconsetPath`
+		} else if ((type === "appiconset") || (type === "imageset")) { 
+			// IOS Icon && general images
+			var manifest = Path(outputPath + '/Contents.json')
+			var fh = app.openForAccess(manifest, {writePermission: true});
+			app.write(JSON.stringify(contents), {to: fh});
+			app.closeAccess(fh);
+		}
+	}
+
+	sourceIcon.close();
+}

@@ -15,6 +15,8 @@ var delegate = {}; // our delegate to receive events from the webview app
   };
 }(testTab));
 */
+//$.globalUserScripts = ["seeDebugger"];
+$.globalUserScripts.push("seeDebugger");
 
 delegate.launchURL = function(url) {
 	console.log("app.js: launching " + url);
@@ -28,14 +30,16 @@ delegate.launchURL = function(url) {
 };
 
 delegate.AppFinishedLaunching = function() {
-	$.globalUserScripts.push("dnd");
-	$.browser.defaultUserAgent = "Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4";
+	//$.globalUserScripts.push("dnd");
+	//$.browser.defaultUserAgent = "Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4";
 	//$.browser.unhideApp();
 
 	//$.browser.addShortcut('XCode docs', 'file:///Applications/Xcode.app/Contents/Developer/Documentation//DocSets/com.apple.adc.documentation.Xcode.docset/Contents/Resources/Documents/index.html');
 	$.browser.addShortcut('Swift docs', 'file:///Applications/Xcode.app/Contents/Developer/Documentation//DocSets/com.apple.adc.documentation.Xcode.docset/Contents/Resources/Documents/documentation/Swift/Conceptual/Swift_Programming_Language/index.html');
 	$.browser.addShortcut('MacPin @ GitHub', 'http://github.com/kfix/MacPin');
 	$.browser.addShortcut('Browsing Test', 'http://browsingtest.appspot.com');
+	$.browser.addShortcut('iPhone UA', {agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"});
+	$.browser.addShortcut('iPad UA', {agent: "Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"});
 	//$.app.openURL('data://text/plain;base64,SGVsbG8gV29ybGQh', "com.google.Chrome"); // works `Hello world!`
 
 	var editor = {
@@ -45,9 +49,14 @@ delegate.AppFinishedLaunching = function() {
 		// should use ace http://ace.c9.io/#nav=about
 	};
 	$.browser.addShortcut('HTML5 editor', editor);
+
 	$.browser.tabSelected = new $.WebView(editor);
+	//$.browser.pushTab(new $.WebView(editor));
 	//.evalJS("document.body.textContent = 'Go ahead, type in here!';");
 	//.evalJS("window.location.href = 'data:text/html, <html contenteditable>';"); //another way without escaping
+
+	//if ($.app.platform === 'iOS') $.browser.pushTab(new $.WebView({url: 'http://github.com/kfix/MacPin'}));
+	if ($.app.platform === 'iOS') $.browser.tabSelected = new $.WebView({url: 'http://github.com/kfix/MacPin'});
 
 	var repl = {
 		transparent: true,
@@ -55,6 +64,7 @@ delegate.AppFinishedLaunching = function() {
 		handlers: ['evalREPL', 'closeREPL']
 	};
 	$.browser.addShortcut('REPL', repl);
+	$.browser.tabSelected = new $.WebView(repl);
 
 	$.browser.addShortcut('Ractive test', 'file://'+ $.app.resourcePath + '/ractive.html')
 	//var testTab = $browser.tabs[0];

@@ -13,13 +13,19 @@ typealias IconImage = NSImage
 
 import UIKit
 typealias IconImage = UIImage
-let NSImageNameApplicationIcon = "app.png" // UIImage cannot use .icns images
-// http://stackoverflow.com/a/28642417/3878712
+let NSImageNameApplicationIcon = "icon"
 
 #endif
 
 @objc class FavIcon: NSObject {
 	dynamic unowned var icon = IconImage(named: NSImageNameApplicationIcon)!
+#if os(OSX)
+	dynamic unowned var icon16 = IconImage(named: NSImageNameStatusNone)! {
+		willSet {
+			newValue.size = NSSize(width: 16, height: 16)
+		}
+	}
+#endif
 
 	var data: NSData? = nil
 		//need 24 & 36px**2 representations for the NSImage for bigger grid views
@@ -36,6 +42,9 @@ let NSImageNameApplicationIcon = "app.png" // UIImage cannot use .icns images
 					self.data = data
 					if let img = IconImage(data: data) {
 						self.icon = img
+#if os(OSX)
+						self.icon16 = img
+#endif
 					}
 				}
 			}

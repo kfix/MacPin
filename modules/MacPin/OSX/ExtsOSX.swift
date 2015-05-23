@@ -24,6 +24,7 @@ class MenuItem: NSMenuItem {
 		// https://developer.apple.com/library/mac/releasenotes/AppKit/RN-AppKit/#10_10ViewController
 		// ChildView -> ChildView ViewController -> ParentView -> ParentView's ViewController -> ParentView's ParentView -> Window -> Window's WindowController -> Window's Delegate -> NSApp -> App Delegate
 	}
+	//func validateMenuItem(menuItem: NSMenuItem) -> Bool { return true }
 }
 
 extension NSPasteboard {

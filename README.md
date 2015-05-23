@@ -1,6 +1,6 @@
 [![Join the chat at https://gitter.im/kfix/MacPin](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kfix/MacPin?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 # MacPin
-MacPin creates a Mac OSX App shell for websites & webapps from a short JavaScript you provide.  
+MacPin creates a Mac OSX (& iOS!) App shell for websites & webapps from a short JavaScript you provide.  
 Some call these Apps [Site-specific Browsers](https://en.wikipedia.org/wiki/Site-specific_browser) or Hybrid apps.  
 
 The Browser UI is very minimal, just a tab-bar which disappears in Full-Screen mode, leaving only the site content.   
@@ -10,7 +10,7 @@ Userscripts can be injected to facilitate posting to the Notification Center & r
 
 Custom URL schemes can also be registered to launch your App from any other app on your Mac.  
 
-OSX 10.10 "Yosemite" is required.  
+OSX 10.10 "Yosemite" or iOS 8.3 is required.  
 
 A suite of apps are prebuilt for download in the GitHub release.
 
@@ -21,13 +21,12 @@ A suite of apps are prebuilt for download in the GitHub release.
 Google Voice and Project Fi users can [make & take phone calls and SMS/MMS messages](http://fi.google.com/about/faq/#talk-and-text-4).  
 Load up can take up to 30 seconds, so be patient.   
 
-New incoming messages are shown in OSX's Notification Center,  
+New incoming messages are shown in the system's Notification Center,  
 which you can click on to reply back in the app.
 
-Under [extras/](/sites/Hangouts/extras) you'll find:  
-
-* `Call via Hangouts.service`: enables selecting and right-clicking a phone number in any App's text to make a Hangout Call
-* `HangoutsAddressBookPlugin`: allows click-to-call from Contacts.app phone number fields and Maps results in Spotlight searches
+Some optional goodies you can install:  
+* [`Call Phone with Hangouts`](extras/Call Phone with Hangouts.workflow): enables right-clicking a phone number in any selected text to call it using Hangouts  
+* [`AddressBookHangoutsPlugin`](extras/AddressBookHangoutsPlugin): allows click-to-call from Contacts.app phone number fields and Maps results in Spotlight searches
 
 Several browser extensions can also make phone numbers found in webpages clickable.
 
@@ -38,6 +37,8 @@ When receiving a call, Hangouts.app will automatically steal focus so you can qu
 
 Custom URLs: [SMS](sms:5558675309) [Call](tel:18001234567) [IM](hangouts:coolguy@example.com)
 
+#### [Messenger.app](https://www.messenger.com/hangouts): RIP *WhatsApp in your Facebook while you Facebook*
+
 #### [Digg.app](http://digg.com/reader): A replacement for Google Reader
 If you are surfing a blog in Safari and want to subscribe to it in your Digg Reader account:  
 
@@ -46,6 +47,7 @@ If you are surfing a blog in Safari and want to subscribe to it in your Digg Rea
 * Answer "No" when prompted to add it your Safari Shared links.
 * If Safari found a feed or rss metatag/mime-type, it will be passed to Digg.app which will prompt you to add it to your subscriptions.  
 * PROTIP: [Add the old RSS button back to Safari 8](http://www.red-sweater.com/blog/2624/subscribe-to-feed-safari-extension)
+* [`Open Feed with Digg`](extras/Open Feed with Digg.workflow): enables selecting and right-clicking an Feed url to subscribe to it with Digg Reader
 
 Custom URLs: [feed](feed:http://example.com/sampleblog.xml) [rss](rss://example.com/sampleblog.xml)
 
@@ -100,6 +102,7 @@ Otherwise `$EDITOR` and `make` are your fork and knife.
 vim execs/MacPin.swift
 vim modules/MacPin/*.swift
 make test.app
+make SIM_ONLY=1 test.ios
 ```
 
 Web Inspector can be accessed for any tab by right clicking in the page and selecting "Inspect Element" from the context menu.  

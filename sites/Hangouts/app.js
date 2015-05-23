@@ -6,7 +6,7 @@ var hangouts = {
 	transparent: true,
 	postinject: ["notifier"],
 	preinject: ["styler"],
-	handlers: ['receivedHangoutsMessage', 'unhideApp', 'HangoutsRosterReady'],
+	subscribeTo: ['receivedHangoutsMessage', 'unhideApp', 'HangoutsRosterReady'],
 	url: "https://plus.google.com/hangouts"
 };
 $.browser.addShortcut("Google Hangouts", hangouts);

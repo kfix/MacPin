@@ -389,13 +389,15 @@
 	<key>CFBundleExecutable</key>
 	<string>${EXECUTABLE_NAME}</string>
 	<key>CFBundleIconFile</key>
-	<string>MacPin.icns</string>
+	<string>Icon.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>${BUNDLE_ID}</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>${EXECUTABLE_NAME}</string>
+	<string>${EXECUTABLE_NAME//_/ }</string>
+	<key>CFBundleDisplayName</key>
+	<string>${EXECUTABLE_NAME//_/ }</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -404,6 +406,8 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>0.0.0</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Websites you visit may request your location.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Joey Korkames (2015)</string>
 	<key>NSSupportsAutomaticTermination</key>

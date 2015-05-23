@@ -43,7 +43,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
         webview?.addSubview(progressView)
 */
 
-@objc class OmniBoxController: NSViewController {	
+@objc class OmniBoxController: NSViewController {
 	let urlbox = URLAddressField()
 	var webview: MPWebView? = nil {
 		didSet { //KVC to copy updates to webviews url & title (user navigations, history.pushState(), window.title=)
@@ -128,8 +128,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	}
 
 	func userEnteredURL() {
-		var urlstr = (view as! NSTextField).stringValue
-		if let url = validateURL(urlstr) {
+		if let tf = view as? NSTextField, url = validateURL(tf.stringValue) {
 			if let wv = webview { //would be cool if I could just kick up gotoURL to nextResponder as NSResponder
 				view.window?.makeFirstResponder(wv) // no effect if this vc was brought up as a modal sheet
 				wv.gotoURL(url as NSURL)
@@ -138,7 +137,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 				parentViewController?.addChildViewController(WebViewControllerOSX(webview: MPWebView(url: url))) // is parentVC the toolbar or contentView VC??
 			}
 		} else {
-			warn("invalid url `\(urlstr)` was requested!")
+			warn("invalid url was requested!")
 			//displayAlert
 			//NSBeep()
 		}

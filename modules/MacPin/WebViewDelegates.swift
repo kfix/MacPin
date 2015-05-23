@@ -50,7 +50,12 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 extension WebViewController: WKUIDelegate { } // javascript prompts, implemented per-platform
 
 extension WebViewController: WKNavigationDelegate {
-	func webView(webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { if let url = webView.URL { warn("'\(url)'") } }
+	func webView(webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+		if let url = webView.URL { warn("'\(url)'") }
+#if os(iOS)
+		UIApplication.sharedApplication().networkActivityIndicatorVisible = true
+#endif
+	}
 
 	func webView(webView: WKWebView, decidePolicyForNavigationAction navigationAction: WKNavigationAction, decisionHandler: (WKNavigationActionPolicy) -> Void) {
 		let url = navigationAction.request.URL
@@ -145,6 +150,9 @@ extension WebViewController: WKNavigationDelegate {
 				displayError(error, self)
 			}
 		}
+#if os(iOS)
+		UIApplication.sharedApplication().networkActivityIndicatorVisible = false
+#endif
     }
 	
 	func webView(webView: WKWebView, didFinishNavigation navigation: WKNavigation!) {
@@ -153,6 +161,9 @@ extension WebViewController: WKNavigationDelegate {
 		//let url = webView.URL ?? NSURL(string:"")!
 		//warn("\"\(title)\" [\(url)]")
 		//scrapeIcon(webView)
+#if os(iOS)
+		UIApplication.sharedApplication().networkActivityIndicatorVisible = false
+#endif
 	}
 	
 	func webView(webView: WKWebView, createWebViewWithConfiguration configuration: WKWebViewConfiguration, forNavigationAction navigationAction: WKNavigationAction,

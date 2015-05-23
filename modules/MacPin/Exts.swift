@@ -5,6 +5,7 @@
 import Foundation
 import JavaScriptCore
 import WebKit
+import Darwin
 
 #if os(OSX)
 import AppKit
@@ -17,10 +18,13 @@ import Prompt // https://github.com/neilpa/swift-libedit
 #endif
 
 func warn(_ msg: String = String(), function: StaticString = __FUNCTION__, file: StaticString = __FILE__, line: UWord = __LINE__, column: UWord = __COLUMN__) {
-	NSFileHandle.fileHandleWithStandardError().writeData(("<\(file):\(line):\(column)> [\(function)] \(msg)\n").dataUsingEncoding(NSUTF8StringEncoding)!)
+	// https://github.com/swisspol/XLFacility ?
+	NSFileHandle.fileHandleWithStandardError().writeData(("[\(NSDate())] <\(file):\(line):\(column)> [\(function)] \(msg)\n").dataUsingEncoding(NSUTF8StringEncoding)!)
+#if WARN2NSLOG
+	NSLog("<\(file):\(line):\(column)> [\(function)] \(msg)")
+	//FIXME timestamp?
+#endif
 }
-
-
 
 /*
 func assert(condition: @autoclosure () -> Bool, _ message: String = "",
@@ -67,14 +71,20 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 func validateURL(urlstr: String) -> NSURL? {
 	// https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 	if urlstr.isEmpty { return nil }
-	if let urlp = NSURLComponents(string: urlstr) {
+	if let urlp = NSURLComponents(string: urlstr) where find(urlstr, " ") == nil && !urlstr.hasPrefix("?") {
 		if urlstr.hasPrefix("/") || urlstr.hasPrefix("~/") { urlp.scheme = "file" } // FIXME: check if bare filepath points to actual file/dir
 		if !((urlp.path ?? "").isEmpty) && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
 			urlp.scheme = "http"
 			urlp.host = urlp.path
 			urlp.path = nil
 		}
-		if let url = urlp.URL { return url }
+		if let url = urlp.URL, host = urlp.host { 
+			//do preemptive nslookup on urlp.host
+			var chost = host.cStringUsingEncoding(NSUTF8StringEncoding)!
+			if gethostbyname2(&chost, AF_INET).hashValue > 0 || gethostbyname2(&chost, AF_INET6).hashValue > 0 { // failed lookups return null pointer
+				return url // hostname resolved, so use this url
+			}
+		}
 	}
 
 	if JSRuntime.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // the delegate function will open url directly

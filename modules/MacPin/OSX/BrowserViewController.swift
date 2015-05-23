@@ -6,15 +6,23 @@ import WebKit // https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/
 import Foundation
 import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
 
-@objc protocol BrowserScriptExports : JSExport { // '$browser' in app.js
+// http://stackoverflow.com/a/24128149/3878712
+struct WeakThing<T: AnyObject> {
+  weak var value: T?
+  init (value: T) {
+    self.value = value
+  }
+}
+
+@objc protocol BrowserScriptExports : JSExport { // '$.browser' in app.js
 	var defaultUserAgent: String? { get set } // full UA used for any new tab without explicit UA specified
 	var isFullscreen: Bool { get set }
 	var isToolbarShown: Bool { get set }
 	//var tabs: [AnyObject] { get } // alias to childViewControllers
-	var tabs: [MPWebView] { get }
+	var tabs: [MPWebView] { get set }
 	var childViewControllers: [AnyObject] { get set } // .push() doesn't work nor trigger property observer
 	var tabSelected: AnyObject? { get set }
-	func addTab(webview: MPWebView)
+	func pushTab(webview: AnyObject) // JSExport does not seem to like signatures with custom types
 	func close()
 	func switchToNextTab()
 	func switchToPreviousTab()
@@ -48,16 +56,19 @@ import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/Ja
 		return grid
 	}() */
 
-	let OmniBox	= "Search or Go To URL"
-	let ShareButton = "Share URL"
-	let NewTabButton = "Open New Tab"
-	let CloseTabButton = "Close Tab"
-	let SelectedTabButton = "Selected Tab"
-	let BackButton = "Back"
-	let ForwardButton = "Forward"
-	let ForwardBackButton = "Forward & Back"
-	let RefreshButton = "Refresh"
-	let TabListButton = "Tabs"
+	enum BrowserButtons: String {
+		case OmniBox		= "Search or Go To URL"
+		case Share			= "Share URL"
+		case NewTab			= "Open New Tab"
+		case CloseTab		= "Close Tab"
+		case SelectedTab	= "Selected Tab"
+		case Back			= "Back"
+		case Forward		= "Forward"
+		case ForwardBack	= "Forward & Back"
+		case Refresh		= "Refresh"
+		case TabList		= "Tabs"
+	}
+
 	var cornerRadius = CGFloat(0.0) // increment above 0.0 to put nice corners on the window FIXME userDefaults
 
 	override func insertTabViewItem(tab: NSTabViewItem, atIndex: Int) {
@@ -123,20 +134,23 @@ import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/Ja
 			NSToolbarShowFontsItemIdentifier,
 			NSToolbarCustomizeToolbarItemIdentifier,
 			NSToolbarPrintItemIdentifier,
-			OmniBox, ShareButton, NewTabButton, CloseTabButton,
-			ForwardButton, BackButton, RefreshButton, SelectedTabButton
+			BrowserButtons.OmniBox.rawValue,
+			BrowserButtons.Share.rawValue,
+			BrowserButtons.NewTab.rawValue,
+			BrowserButtons.CloseTab.rawValue,
+			BrowserButtons.SelectedTab.rawValue,
+			BrowserButtons.Back.rawValue,
+			BrowserButtons.Forward.rawValue,
+			BrowserButtons.ForwardBack.rawValue,
+			BrowserButtons.Refresh.rawValue,
+			BrowserButtons.TabList.rawValue
 		]
 	}
 
 	override func toolbarDefaultItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] { 
 		let tabs = super.toolbarDefaultItemIdentifiers(toolbar) ?? []
-		//return [ShareButton, NewTabButton] + tabs + [NSToolbarFlexibleSpaceItemIdentifier]
-		return [ShareButton, NewTabButton] + tabs + [OmniBox]
-		//return [ShareButton, NewTabButton, NSToolbarFlexibleSpaceItemIdentifier] + tabs
-		//return [NSToolbarFlexibleSpaceItemIdentifier, ShareButton] + tabs! + [NewTabButton, NSToolbarFlexibleSpaceItemIdentifier]
-		//return [NSToolbarFlexibleSpaceItemIdentifier, ShareButton, NSToolbarFlexibleSpaceItemIdentifier] + tabs + [NSToolbarFlexibleSpaceItemIdentifier, NewTabButton, NSToolbarFlexibleSpaceItemIdentifier]
-		//return [ShareButton, NewTabButton, CloseTabButton, BackButton, ForwardButton, RefreshButton,SelectedTabButton, OmniBox] + tabs + [NSToolbarFlexibleSpaceItemIdentifier]
-		//tabviewcontroller somehow remembers where tabs! was and keeps putting new tabs in that position
+		return [BrowserButtons.Share.rawValue, BrowserButtons.NewTab.rawValue] + tabs + [BrowserButtons.OmniBox.rawValue] // [NSToolbarFlexibleSpaceItemIdentifier]
+		//tabviewcontroller remembers where tabs was and keeps pushing new tabs to that position
 	}
 
 	override func toolbar(toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: String, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
@@ -157,84 +171,87 @@ import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/Ja
 		btn.sendActionOn(Int(NSEventMask.LeftMouseDownMask.rawValue))
 		ti.view = btn
 	
-		switch (itemIdentifier) {
-			case ShareButton:
-				btn.image = NSImage(named: NSImageNameShareTemplate)
-				btn.action = Selector("shareButtonClicked:")
-				return ti
+		if let btnType = BrowserButtons(rawValue: itemIdentifier) {
+			switch (btnType) {
+				case .Share:
+					btn.image = NSImage(named: NSImageNameShareTemplate)
+					btn.action = Selector("shareButtonClicked:")
+					return ti
 
-			case NewTabButton:
-				btn.image = NSImage(named: NSImageNameAddTemplate)
-				btn.action = Selector("newTabPrompt")
-				return ti
+				case .NewTab:
+					btn.image = NSImage(named: NSImageNameAddTemplate)
+					btn.action = Selector("newTabPrompt")
+					return ti
 
-			case CloseTabButton:
-				btn.image = NSImage(named: NSImageNameRemoveTemplate)
-				btn.action = Selector("closeTab")
-				return ti
+				case .CloseTab:
+					btn.image = NSImage(named: NSImageNameRemoveTemplate)
+					btn.action = Selector("closeTab")
+					return ti
 
-			case ForwardButton:
-				btn.image = NSImage(named: NSImageNameGoRightTemplate)
-				btn.action = Selector("goForward:")
-				return ti
+				case .Forward:
+					btn.image = NSImage(named: NSImageNameGoRightTemplate)
+					btn.action = Selector("goForward:")
+					return ti
 
-			case BackButton:
-				btn.image = NSImage(named: NSImageNameGoLeftTemplate)
-				btn.action = Selector("goBack:")
-				return ti
+				case .Back:
+					btn.image = NSImage(named: NSImageNameGoLeftTemplate)
+					btn.action = Selector("goBack:")
+					return ti
 
-			case ForwardBackButton:
-				let seg = NSSegmentedControl()
-				seg.segmentCount = 2
-				seg.segmentStyle = .Separated
-				let segCell = seg.cell() as! NSSegmentedCell
-				segCell.trackingMode = .Momentary
-				seg.action = Selector("goBack:")
+				case .ForwardBack:
+					let seg = NSSegmentedControl()
+					seg.segmentCount = 2
+					seg.segmentStyle = .Separated
+					let segCell = seg.cell() as! NSSegmentedCell
+					segCell.trackingMode = .Momentary
+					seg.action = Selector("goBack:")
 
-				seg.setImage(NSImage(named: NSImageNameGoLeftTemplate), forSegment: 0)
-				//seg.setLabel(BackButton, forSegment: 0)
-				//seg.setMenu(backMenu, forSegment: 0) // wvc.webview.backForwardList.backList (WKBackForwardList)
-				segCell.setTag(0, forSegment: 0)
+					seg.setImage(NSImage(named: NSImageNameGoLeftTemplate), forSegment: 0)
+					//seg.setLabel(BackButton, forSegment: 0)
+					//seg.setMenu(backMenu, forSegment: 0) // wvc.webview.backForwardList.backList (WKBackForwardList)
+					segCell.setTag(0, forSegment: 0)
 	
-				seg.setImage(NSImage(named: NSImageNameGoRightTemplate), forSegment: 1)
-				//seg.setLabel(ForwardButton, forSegment: 1)
-				segCell.setTag(1, forSegment: 1)
+					seg.setImage(NSImage(named: NSImageNameGoRightTemplate), forSegment: 1)
+					//seg.setLabel(ForwardButton, forSegment: 1)
+					segCell.setTag(1, forSegment: 1)
 
-				ti.maxSize = CGSize(width: 54, height: 36)
-				ti.view = seg
-				return ti
+					ti.maxSize = CGSize(width: 54, height: 36)
+					ti.view = seg
+					return ti
 
-			case RefreshButton:
-				btn.image = NSImage(named: NSImageNameRefreshTemplate)
-				btn.action = Selector("reload:")
-				return ti
+				case .Refresh:
+					btn.image = NSImage(named: NSImageNameRefreshTemplate)
+					btn.action = Selector("reload:")
+					return ti
 
-			case SelectedTabButton:
-				ti.minSize = CGSize(width: 70, height: 24)
-				ti.maxSize = CGSize(width: 600, height: 36)
-				tabPopBtn.menu = tabMenu
-				//tabPopBtn.menu?.itemAtIndex(0).setView(tabGrid.view) // GridMenu display
-				// https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSMenu_Class/index.html#//apple_ref/occ/instm/NSMenu/popUpMenuPositioningItem:atLocation:inView:
-				ti.view = flag ? tabPopBtn : NSPopUpButton()
-				return ti
+				case .SelectedTab:
+					ti.minSize = CGSize(width: 70, height: 24)
+					ti.maxSize = CGSize(width: 600, height: 36)
+					tabPopBtn.menu = tabMenu
+					//tabPopBtn.menu?.itemAtIndex(0).setView(tabGrid.view) // GridMenu display
+					// https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSMenu_Class/index.html#//apple_ref/occ/instm/NSMenu/popUpMenuPositioningItem:atLocation:inView:
+					ti.view = flag ? tabPopBtn : NSPopUpButton()
+					return ti
 
-			case TabListButton:
-				btn.image = NSImage(named: "ToolbarButtonTabOverviewTemplate.pdf")
-				btn.action = Selector("tabListButtonClicked:")
-				return ti
+				case .TabList:
+					btn.image = NSImage(named: "ToolbarButtonTabOverviewTemplate.pdf")
+					btn.action = Selector("tabListButtonClicked:")
+					return ti
 
+				case .OmniBox:
+					ti.minSize = CGSize(width: 70, height: 24)
+					ti.maxSize = CGSize(width: 600, height: 24)
+					ti.view = flag ? omnibox.view : NSTextField()
+					return ti
 
-			case OmniBox:
-				ti.minSize = CGSize(width: 70, height: 24)
-				ti.maxSize = CGSize(width: 600, height: 24)
-				ti.view = flag ? omnibox.view : NSTextField()
-				return ti
-
-			default:
-				// let NSTabViewController map a TabViewItem to this ToolbarItem
-				let tvi = super.toolbar(toolbar, itemForItemIdentifier: itemIdentifier, willBeInsertedIntoToolbar: flag)
-				//warn("\(itemIdentifier) \(tvi?.image) \(tvi?.action)")
-				return tvi
+				default:
+					warn("unimplemented toolbar button requested: \(itemIdentifier)")
+					return nil
+			}
+		} else {
+			// let NSTabViewController map a TabViewItem to this ToolbarItem
+			let tvi = super.toolbar(toolbar, itemForItemIdentifier: itemIdentifier, willBeInsertedIntoToolbar: flag)
+			return tvi
 		}
 	}
 
@@ -280,12 +297,12 @@ import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/Ja
 
 	override func viewDidAppear() {
 		super.viewDidAppear()
-		let toolbar = view.window?.toolbar ?? NSToolbar(identifier: "toolbar")
-		toolbar.delegate = self
-		toolbar.allowsUserCustomization = true
-		toolbar.displayMode = .IconOnly
-		toolbar.sizeMode = .Small //favicons are usually 16*2
-		view.window?.toolbar = toolbar
+		if let window = view.window, toolbar = window.toolbar { 
+			toolbar.delegate = self
+			toolbar.allowsUserCustomization = true
+			toolbar.displayMode = .IconOnly
+			toolbar.sizeMode = .Small //favicons are usually 16*2
+		}
 		view.window?.excludedFromWindowsMenu = true
 	}
 
@@ -318,10 +335,58 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 		set(bool) { if bool != isToolbarShown { view.window!.toggleToolbarShown(nil) } }
 	}
 
-	//var tabs: [AnyObject] { return childViewControllers } // alias
-					
-	var tabs: [MPWebView] { return childViewControllers.filter({ $0 is WebViewControllerOSX }).map({ $0.webview }) }
-	// set { } ? trying to get `$.browser.tabs.push(new $.WebView({}))` to work
+/*
+	// really needs to be a NSHashTable or weaked swift Set
+	// http://stackoverflow.com/questions/24127587/how-do-i-declare-an-array-of-weak-references-in-swift
+	//var tabs: [MPWebView] = [] {
+	var tabs: WeakThing<MPWebView>[] = [] {
+		willSet { // allow `$.browser.tabs = $.browser.tabs.slice(0)` to work by diffing newValue against childViewControllers
+			warn()
+			// crashes if you pass in a non [MPWebView] array from JS
+			for webview in tabs { //removals
+				//if !contains(newValue, webview) { // crashes
+				if (find(newValue, webview) ?? -1) < 0 {
+					if let wvc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === webview }).first as? WebViewControllerOSX {
+						wvc.removeFromParentViewController()
+					}
+				}
+			}
+		}
+		didSet {
+			warn()
+			for webview in tabs { //additions
+				//if !contains(tabs, webview) { // crashes
+				if (find(oldValue, webview) ?? -1) < 0 {
+					addChildViewController(WebViewControllerOSX(webview: webview))
+				}
+			}
+		}
+	}
+*/
+
+	var tabs: [MPWebView] {
+		get { return childViewControllers.filter({ $0 is WebViewControllerOSX }).map({ $0.webview }) } // returns mutable *copy*, which is why .push() can't work
+			// ^ put an observer on childViewController to update a weak stored array of WebViews, or do that as part of add/removeChildVC()
+			// then you have a stable reference that you can have JS do .push()s on
+
+		set { // allow `$.browser.tabs = $.browser.tabs.slice(0)` to work by diffing newValue against childViewControllers
+			// crashes if you pass in a non [MPWebView] array from JS
+			for webview in tabs { //removals
+				//if !contains(newValue, webview) { // crashes
+				if (find(newValue, webview) ?? -1) < 0 {
+					if let wvc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === webview }).first as? WebViewControllerOSX {
+						wvc.removeFromParentViewController()
+					}
+				}
+			}
+			for webview in newValue { //additions
+				//if !contains(tabs, webview) { // crashes
+				if (find(tabs, webview) ?? -1) < 0 {
+					addChildViewController(WebViewControllerOSX(webview: webview))
+				}
+			}
+		}
+	}
 
  	//override var childViewControllers: [AnyObject] { didSet { warn(childViewControllers.count.description); warn(childViewControllers.description) } } //no workie
 
@@ -342,11 +407,8 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 					//if childViewControllers.containsObject(obj) { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
 					if tabViewItemForViewController(vc) == nil { childViewControllers.append(vc) } // add the given vc as a child if it isn't already
 					tabView.selectTabViewItem(tabViewItemForViewController(vc))
-				case let wv as MPWebView:
-					// find the view's existing controller or else make one
-					let wvc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
-					if tabViewItemForViewController(wvc) == nil { childViewControllers.append(wvc) } // add the given vc as a child if it isn't already
-					tabView.selectTabViewItem(tabViewItemForViewController(wvc))
+				case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
+					self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
 				default:
 					warn("invalid object")		
 			}
@@ -359,10 +421,12 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 		super.insertChildViewController(childViewController, atIndex: index)
 
 		if let wvc = childViewController as? WebViewController {
+			//tabs.append(wvc.webview) // atIndex? //double-adds a controller, no way to bypass tabs' prop-observer from here
+
 			let mi = NSMenuItem(title:"", action:Selector("menuSelectedTab:"), keyEquivalent:"")
 			mi.bind(NSTitleBinding, toObject: wvc.webview, withKeyPath: "title", options:nil)
-			mi.bind(NSImageBinding, toObject: wvc.webview, withKeyPath: "favicon.icon", options: nil)
-			mi.image?.size = NSSize(width: 16, height: 16)
+			mi.bind(NSImageBinding, toObject: wvc.webview, withKeyPath: "favicon.icon16", options: nil)
+			//mi.image?.size = NSSize(width: 16, height: 16) //FIXME: not limiting the size
 			mi.representedObject = wvc // FIXME: anti-retain needed? 
 			mi.target = self
 			tabMenu.addItem(mi)
@@ -375,8 +439,8 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 	}
 
 	func menuSelectedTab(sender: AnyObject?) {
-		//if let mi = sender as? NSMenuItem, let wvc = mi.representedObject as? WebViewController { tabSelected = wvc }
-		if let mi = sender as? NSMenuItem, wv = mi.representedObject as? MPWebView { tabSelected = wv }
+		if let mi = sender as? NSMenuItem, let wvc = mi.representedObject as? WebViewController { tabSelected = wvc }
+		//if let mi = sender as? NSMenuItem, wv = mi.representedObject as? MPWebView { tabSelected = wv }
 	}
 
 /*
@@ -405,6 +469,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 	override func removeChildViewControllerAtIndex(index: Int) {
 		warn("#\(index)")
 		if let wvc = childViewControllers[index] as? WebViewController {
+			//if let tabIdx = find(tabs, wvc.webview) { tabs.removeAtIndex(tabIdx) }
 
 			// unassign strong property references that will cause a retain cycle
 			//if omnibox.representedObject === wvc { omnibox.representedObject = nil }
@@ -445,7 +510,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 
 		if let window = view.window {
 			window.makeFirstResponder(toViewController.view) // steal app focus to whatever the tab represents
-			//warn("focus is on `\(view.window?.firstResponder)`")
+			warn("focus is on `\(view.window?.firstResponder)`")
 		}
 
 		//warn("browser title is now `\(title ?? String())`")
@@ -479,7 +544,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 		}
 	}
 
-	func addTab(wv: MPWebView) { addChildViewController(WebViewControllerOSX(webview: wv)) }
+	func pushTab(webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerOSX(webview: webview)) } }
 
 	func focusOnBrowser() {  // un-minimizes app, switches to its screen/space, and steals key focus to the window
 		//NSApplication.sharedApplication().activateIgnoringOtherApps(true)
@@ -517,12 +582,10 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 			return
 		}
 		switch (obj) {
-			case let urlstr as String: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: ["url": urlstr]))
-			case is [String:AnyObject]: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: obj))
+			case let urlstr as String: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: urlstr))
+			case let obj as [String:AnyObject]: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: obj))
 			case nil: fallthrough
-			default:
-				warn("invalid object type to represent bookmark")
-				return
+			default: warn("invalid shortcut object type!")
 		}
 	}
 
@@ -532,7 +595,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 				case let urlstr as String: JSRuntime.jsdelegate.tryFunc("launchURL", urlstr)
 				// or fire event in jsdelegate if string, NSURLs do launchURL
 				case let obj as [String:AnyObject]: tabSelected = MPWebView(object: obj)
-				default: return
+				default: warn("invalid shortcut object type!")
 			}
 		}
 	}

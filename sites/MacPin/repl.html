@@ -3,27 +3,27 @@
 	<title>MacPin REPL: app.js</title>
 </head>
 <body>
-	<form onsubmit="return false;">
-		<textarea id="output" readonly cols=80 rows=25></textarea>
+	<form id="repl" onsubmit="return false;">
+		<textarea id="output" placeholder="//output will appear here" readonly cols=80 rows=25 style="font-family:Monaco"></textarea>
 		<br />
-		<!-- <input id="command" placeholder="Enter command" autofocus> -->
-		<p id="command2" contenteditable>//Enter Command</p>
+		<input id="command" type="search" placeholder="Enter command" size=80 autofocus autosave="macpin.repl" required style="font-family:Monaco">
 		<input type="submit" value="Execute">
 	</form>
 	<script>
+		var outbox = document.getElementById('output');
+		var cmdbox = document.getElementById('command');
 		function evalREPL(e) {
-			//var command = document.getElementById('command').value;
-			var command = document.getElementById('command2').innerText; // newlines? ASI?
+			var command = cmdbox.value;
 			command = command.replace(/[\u2018\u2019\u201A]/g, "\'"); // fix smart single quotes and apostrophe
 			command = command.replace(/[\u201C\u201D\u201E]/g, "\""); // fix smart double quotes
-			document.getElementById('output').value += '>> ' + command + '\n';
+			outbox.value += '>> ' + command + '\n';
 			webkit.messageHandlers.evalREPL.postMessage(command);
-			//document.getElementById('command').value = null;
 		}
 		function returnREPL(result) {
-			//document.getElementbyId('output').value += e.detail.result;
+			//outbox.value += e.detail.result;
 			//result = JSON.parse(result);
-			document.getElementById('output').value += unescape(result) + '\n';
+			outbox.value += unescape(result) + '\n';
+			outbox.scrollTop = outbox.scrollHeight; //autoscroll to bottom
 		}
 		document.addEventListener('submit', evalREPL, true);
 	</script>
