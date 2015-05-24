@@ -34,7 +34,7 @@ extension JSValue {
 	}
 }
 
-@objc protocol AppScriptExports : JSExport { // '$.app' 
+@objc protocol AppScriptExports : JSExport { // '$.app'
 	//func warn(msg: String)
 	var appPath: String { get }
 	var resourcePath: String { get }
@@ -54,13 +54,13 @@ extension JSValue {
 	func sleep(secs: Double)
 	func doesAppExist(appstr: String) -> Bool
 	//func evalAppleScript(code: String) //expose NSAppleScript?
-	func loadAppScript(urlstr: String) -> JSValue? 
+	func loadAppScript(urlstr: String) -> JSValue?
 }
 
 class AppScriptRuntime: NSObject, AppScriptExports  {
 	var context = JSContext(virtualMachine: JSVirtualMachine())
 	var jsdelegate: JSValue
-	
+
 	var arguments: [AnyObject] { return NSProcessInfo.processInfo().arguments }
 	var environment: [NSObject:AnyObject] { return NSProcessInfo.processInfo().environment }
 	var appPath: String { return NSBundle.mainBundle().bundlePath ?? String() }
@@ -72,14 +72,14 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	var name: String { return NSRunningApplication.currentApplication().localizedName ?? String() }
 	let platform = "OSX"
 #elseif os(iOS)
-	var name: String { return NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleDisplayName") as? String ?? String() } 
+	var name: String { return NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleDisplayName") as? String ?? String() }
 	let platform = "iOS"
 #endif
-	
+
 	// http://nshipster.com/swift-system-version-checking/
 	var platformVersion: String { return NSProcessInfo.processInfo().operatingSystemVersionString }
 
-	var arches: [AnyObject]? { return NSBundle.mainBundle().executableArchitectures } 
+	var arches: [AnyObject]? { return NSBundle.mainBundle().executableArchitectures }
 #if arch(i386)
 	let architecture = "i386"
 #elseif arch(x86_64)
@@ -112,9 +112,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 		super.init()
 	}
-	
+
 	override var description: String { return "<\(reflect(self).summary)> [\(appPath)] `\(context.name)`" }
-	
+
 	func sleep(secs: Double) {
 		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * secs))
 		dispatch_after(delayTime, dispatch_get_main_queue()){}
@@ -146,7 +146,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			context.exceptionHandler = { context, exception in
 				let error = NSError(domain: "MacPin", code: 4, userInfo: [
 					NSURLErrorKey: context.name,
-					NSLocalizedDescriptionKey: "\(context.name) `\(exception)`" 
+					NSLocalizedDescriptionKey: "\(context.name) `\(exception)`"
 				])
 				displayError(error) // would be nicer to pop up an inspector pane or tab to interactively debug this
 				context.exception = exception //default in JSContext.mm
@@ -161,7 +161,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			}
 		}
 	}
-	
+
 	func loadAppScript(urlstr: String) -> JSValue? {
 		if let script_url = NSURL(string: urlstr), script = NSString(contentsOfURL: script_url, encoding: NSUTF8StringEncoding, error: nil) {
 			// FIXME: script code could be loaded from anywhere, exploitable?
@@ -178,8 +178,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 /*
 			var ctx = Unmanaged.passUnretained(context)
-			//var exception = JSValueMakeNull(ctx.toOpaque()) 
-			var exception = Unmanaged.passUnretained(JSValue()) 
+			//var exception = JSValueMakeNull(ctx.toOpaque())
+			var exception = Unmanaged.passUnretained(JSValue())
 
 			if JSCheckScriptSyntax(
 				/*ctx:*/ ctx.toOpaque(),
@@ -189,7 +189,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				/*exception:*/ UnsafeMutablePointer(exception.toOpaque())
 			) {
 				warn("syntax good")
-				//exception.release() 
+				//exception.release()
 */
 				context.name = "\(context.name) <\(urlstr)>"
 				// FIXME: assumes last script loaded is the source file, not always true
@@ -238,7 +238,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		switch (iconpath) {
 			case let icon_url = NSBundle.mainBundle().URLForResource(iconpath, withExtension: "png"): fallthrough // path was to a local resource
 			case let icon_url = NSURL(string: iconpath): // path was a url, local or remote
-				NSApplication.sharedApplication().applicationIconImage = NSImage(contentsOfUrl: icon_url) 
+				NSApplication.sharedApplication().applicationIconImage = NSImage(contentsOfUrl: icon_url)
 			default:
 				warn("invalid icon: \(iconpath)")
 		}
@@ -246,7 +246,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 		if let icon_url = NSBundle.mainBundle().URLForResource(iconpath, withExtension: "png") ?? NSURL(string: iconpath) {
 			// path was a url, local or remote
-			NSApplication.sharedApplication().applicationIconImage = NSImage(contentsOfURL: icon_url) 
+			NSApplication.sharedApplication().applicationIconImage = NSImage(contentsOfURL: icon_url)
 		} else {
 			warn("invalid icon: \(iconpath)")
 		}

@@ -1,0 +1,4 @@
+module ViewPrivates {
+	umbrella header "ViewPrivates.h"
+	export *
+}

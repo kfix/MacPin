@@ -92,7 +92,6 @@ extension AppDelegate: NSApplicationDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Print Page", "print:")) //NSView
 		tabMenu.submenu?.addItem(MenuItem("Print Tab", "printTab", target: browserController)) //bc
 		tabMenu.submenu?.addItem(MenuItem("Open in default Browser", "askToOpenCurrentURL")) //webview
-		tabMenu.submenu?.addItem(MenuItem("Open see.js Debugger", "seeDebugger")) //webview
 		if JSRuntime.doesAppExist("com.google.Chrome") {
 			tabMenu.submenu?.addItem(MenuItem("Open in Chrome", "openInChrome")) //wvc
 		}
@@ -127,6 +126,9 @@ extension AppDelegate: NSApplicationDelegate {
 		let dbgMenu = NSMenuItem()
 		dbgMenu.submenu = NSMenu()
 		dbgMenu.submenu?.title = "Debug"
+		dbgMenu.submenu?.autoenablesItems = false
+		dbgMenu.submenu?.addItem(MenuItem("Load see.js Debugger", "loadSeeDebugger")) //webview
+		dbgMenu.submenu?.addItem(MenuItem("Start see.js Debugger", "runSeeDebugger")) //webview
 		dbgMenu.submenu?.addItem(MenuItem("Highlight TabView Constraints", "highlightConstraints")) //bc
 		dbgMenu.submenu?.addItem(MenuItem("Randomize TabView Layout", "exerciseAmbiguityInLayout")) //bc
 		dbgMenu.submenu?.addItem(MenuItem("Replace contentView With Tab", "replaceContentView")) //bc

@@ -22,7 +22,8 @@ import JavaScriptCore
 	var transparent: Bool { get set }
 	var userAgent: String { get set }
 	func close()
-	func evalJS(js: String, _ withCallback: JSValue?) 
+	func evalJS(js: String, _ withCallback: JSValue?)
+	func asyncEvalJS(js: String, _ withDelay: Double, _ withCallback: JSValue?)
 	func loadURL(urlstr: String) -> Bool
 	func loadIcon(icon: String) -> Bool
 	func preinject(script: String) -> Bool
@@ -40,7 +41,7 @@ import JavaScriptCore
 		set { loadURL(newValue) }
 	}
 
-	var userAgent: String { 
+	var userAgent: String {
 		get { return _customUserAgent ?? _userAgent ?? "" }
 		// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/mac/UserAgentMac.mm#L48
 		set(agent) { if !agent.isEmpty { _customUserAgent = agent } }
@@ -53,7 +54,7 @@ import JavaScriptCore
 			_drawsTransparentBackground = transparent
 			//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
  			// so frobble frame size to make content reflow & re-colorize
-			setFrameSize(NSSize(width: frame.size.width, height: frame.size.height - 1)) //needed to fully redraw w/ dom-reflow or reload! 
+			setFrameSize(NSSize(width: frame.size.width, height: frame.size.height - 1)) //needed to fully redraw w/ dom-reflow or reload!
 			evalJS("window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(transparent)}}));" +
 				"document.head.appendChild(document.createElement('style')).remove();") //force redraw in case event didn't
 				//"window.scrollTo();")
@@ -66,7 +67,7 @@ import JavaScriptCore
 	var transparent = false
 #endif
 
-	let favicon: FavIcon = FavIcon() 
+	let favicon: FavIcon = FavIcon()
 
 	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil) {
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
@@ -74,7 +75,7 @@ import JavaScriptCore
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
 #if os(OSX)
 		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
-		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu 
+		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
 #endif
 		//prefs._isStandalone = true // window.navigator.standalone = true to mimic MobileSafari's springboard-link shell mode
 		//prefs.minimumFontSize = 14 //for blindies
@@ -141,15 +142,44 @@ import JavaScriptCore
 			evaluateJavaScript(js, completionHandler:{ (result: AnyObject!, exception: NSError!) -> Void in
 				// (result: WebKit::WebSerializedScriptValue*, exception: WebKit::CallbackBase::Error)
 				//withCallback.callWithArguments([result, exception]) // crashes, need to translate exception into something javascripty
-				//warn("()~> \(result),\(exception)")
-				withCallback.callWithArguments([result, true]) // unowning withCallback causes a crash and weaking it muffs the call
+				warn("withCallback() ~> \(result),\(exception)")
+				if result != nil {
+					withCallback.callWithArguments([result, true]) // unowning withCallback causes a crash and weaking it muffs the call
+				} else {
+					// passing nil crashes
+					withCallback.callWithArguments([JSValue(nullInContext: JSRuntime.context), true])
+				}
 				return
 			})
 			return
 		}
 		evaluateJavaScript(js, completionHandler: nil)
 	}
-	
+
+	func asyncEvalJS(js: String, _ withDelay: Double, _ withCallback: JSValue? = nil) {
+		let backgroundQueue = dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0)
+		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * withDelay))
+		dispatch_after(delayTime, backgroundQueue) {
+			if let withCallback = withCallback where withCallback.isObject() { //is a function or a {}
+				warn("withCallback: \(withCallback)")
+				self.evaluateJavaScript(js, completionHandler:{ (result: AnyObject!, exception: NSError!) -> Void in
+					// (result: WebKit::WebSerializedScriptValue*, exception: WebKit::CallbackBase::Error)
+					//withCallback.callWithArguments([result, exception]) // crashes, need to translate exception into something javascripty
+					warn("withCallback() ~> \(result),\(exception)")
+					if result != nil {
+						withCallback.callWithArguments([result, true]) // unowning withCallback causes a crash and weaking it muffs the call
+					} else {
+						// passing nil crashes
+						withCallback.callWithArguments([JSValue(nullInContext: JSRuntime.context), true])
+					}
+				})
+			} else {
+				self.evaluateJavaScript(js, completionHandler: nil)
+			}
+		}
+	}
+
+
 	func close() { removeFromSuperview() } // signal VC too?
 
 	func gotoURL(url: NSURL) {
@@ -163,7 +193,7 @@ import JavaScriptCore
 	}
 
 	func loadURL(urlstr: String) -> Bool { // overloading gotoURL is crashing Cocoa selectors
-		if let url = NSURL(string: urlstr) { 
+		if let url = NSURL(string: urlstr) {
 			gotoURL(url as NSURL)
 			return true
 		}
@@ -171,7 +201,7 @@ import JavaScriptCore
 	}
 
 	func scrapeIcon() { // extract icon location from current webpage and initiate retrieval
-		evaluateJavaScript("if (icon = document.querySelector('link[rel$=icon]')) { icon.href };", completionHandler:{ [unowned self] (result: AnyObject!, exception: NSError!) -> Void in
+		evaluateJavaScript("if (icon = document.head.querySelector('link[rel$=icon]')) { icon.href };", completionHandler:{ [unowned self] (result: AnyObject!, exception: NSError!) -> Void in
 			if let href = result as? String { // got link for icon or apple-touch-icon from DOM
 				self.loadIcon(href)
 			} else if let url = self.URL, iconurlp = NSURLComponents(URL: url, resolvingAgainstBaseURL: false) where !((iconurlp.host ?? "").isEmpty) {
@@ -182,7 +212,7 @@ import JavaScriptCore
 	}
 
 	func loadIcon(icon: String) -> Bool {
-		if let url = NSURL(string: icon) where !icon.isEmpty { 
+		if let url = NSURL(string: icon) where !icon.isEmpty {
 			favicon.url = url
 			return true
 		}
@@ -194,9 +224,10 @@ import JavaScriptCore
 	func addHandler(handler: String) { configuration.userContentController.addScriptMessageHandler(JSRuntime, name: handler) }
 	func subscribeTo(handler: String) { configuration.userContentController.addScriptMessageHandler(JSRuntime, name: handler) }
 
-	func seeDebugger() {
+	func loadSeeDebugger() { if postinject("seeDebugger") { reload() } }
+	func runSeeDebugger() {
 		// http://davidbau.com/archives/2013/04/19/debugging_locals_with_seejs.html
-		if postinject("seeDebugger") { reload(); evalJS("see.init();") } // https://raw.github.com/davidbau/see/master/see.js
+		evalJS("see.init();")
 
 		// https://github.com/davidbau/see/blob/master/see-bookmarklet.js
 		/*

@@ -1,12 +1,12 @@
 [![Join the chat at https://gitter.im/kfix/MacPin](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kfix/MacPin?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 # MacPin
-MacPin creates a Mac OSX (& iOS!) App shell for websites & webapps from a short JavaScript you provide.  
+MacPin creates a Mac OSX (& [iOS](#iOS)!) App shell for websites & webapps from a short JavaScript you provide.  
 Some call these Apps [Site-specific Browsers](https://en.wikipedia.org/wiki/Site-specific_browser) or Hybrid apps.  
 
-The Browser UI is very minimal, just a tab-bar which disappears in Full-Screen mode, leaving only the site content.   
+The Browser UI is very minimal, just a tab-bar which disappears in Full-Screen mode, leaving only the site content.
 
 MacPin apps sit in your Dock, App Switcher, and Launchpad.  
-Userscripts can be injected to facilitate posting to the Notification Center & recalling webapp locations/state from those posts.   
+Userscripts can be injected to facilitate posting to the Notification Center & recalling webapp locations/state from those posts.
 
 Custom URL schemes can also be registered to launch your App from any other app on your Mac.  
 
@@ -16,80 +16,92 @@ A suite of apps are prebuilt for download in the GitHub release.
 
 ## Included Apps
 
-#### [Hangouts.app](http://plus.google.com/hangouts): SMS/IM/Video chat client for the desktop 
+#### [Hangouts.app](http://plus.google.com/hangouts): SMS/IM/Video chat client for the desktop
 ![screenie](/sites/Hangouts/screenshot.jpg?raw=true)
 Google Voice and Project Fi users can [make & take phone calls and SMS/MMS messages](http://fi.google.com/about/faq/#talk-and-text-4).  
-Load up can take up to 30 seconds, so be patient.   
+Load up can take up to 30 seconds, so be patient.
 
 New incoming messages are shown in the system's Notification Center,  
 which you can click on to reply back in the app.
 
 Some optional goodies you can install:  
-* [`Call Phone with Hangouts`](extras/Call Phone with Hangouts.workflow): enables right-clicking a phone number in any selected text to call it using Hangouts  
-* [`AddressBookHangoutsPlugin`](extras/AddressBookHangoutsPlugin): allows click-to-call from Contacts.app phone number fields and Maps results in Spotlight searches
+* [`Call Phone with Hangouts`](extras/Call Phone with Hangouts.workflow): (_OSX_) Call text-selected phone numbers from the context menu (right-click)
+* [`AddressBookHangoutsPlugin`](extras/AddressBookHangoutsPlugin): (_OSX_) click-to-call phone number fields in Contacts and Spotlight
 
 Several browser extensions can also make phone numbers found in webpages clickable.
 
 When receiving a call, Hangouts.app will automatically steal focus so you can quickly answer or reject the call using the keyboard:  
 
-* press Enter or Space to accept the call
+* press Enter or Spacebar to accept the call
 * press Escape or Backspace to decline it
 
-Custom URLs: [SMS](sms:5558675309) [Call](tel:18001234567) [IM](hangouts:coolguy@example.com)
+Hooked URLs:
+* [`sms:`](sms:5558675309)
+* [`tel:`](tel:18001234567)
+* [`hangouts:`](hangouts:coolguy@example.com)
 
 #### [Messenger.app](https://www.messenger.com/hangouts): RIP *WhatsApp in your Facebook while you Facebook*
 
 #### [Digg.app](http://digg.com/reader): A replacement for Google Reader
 If you are surfing a blog in Safari and want to subscribe to it in your Digg Reader account:  
 
-* click Safari's Sharing button
-* click "Add to Shared Links"
-* Answer "No" when prompted to add it your Safari Shared links.
-* If Safari found a feed or rss metatag/mime-type, it will be passed to Digg.app which will prompt you to add it to your subscriptions.  
-* PROTIP: [Add the old RSS button back to Safari 8](http://www.red-sweater.com/blog/2624/subscribe-to-feed-safari-extension)
-* [`Open Feed with Digg`](extras/Open Feed with Digg.workflow): enables selecting and right-clicking an Feed url to subscribe to it with Digg Reader
+* click Safari's Sharing button ![halp](templates/xcassets/iOS/icons8/toolbar_upload.png?raw=true)
+* click **Add to Shared Links**
+* click **Cancel** when asked to add to Shared Links.
+* `Digg.app` will popup and prompt you to subscribe if Safari found a feed or RSS metatag/mime-type.
 
-Custom URLs: [feed](feed:http://example.com/sampleblog.xml) [rss](rss://example.com/sampleblog.xml)
+You can further streamline this process with any of these extras:
+
+* [Add the old RSS button back to Safari 8](http://www.red-sweater.com/blog/2624/subscribe-to-feed-safari-extension)
+* [`Open Feed with Digg`](extras/Open Feed with Digg.workflow): (_OSX_) Subscribe to Feed URLs with Digg Reader from the context-menu (right-click)
+
+Hooked URLs:
+* [`feed:`](feed:http://example.com/sampleblog.xml)
+* [`rss:`](rss://example.com/sampleblog.xml)
 
 #### [Trello.app](http://trello.com): Mind-mapper and project planner
 ![screenie](/sites/Trello/screenshot.jpg?raw=true)  
-Custom URLs: [search your trello for something](trello:search for something)
+Hooked URLs:
+* [`trello:`](trello:search for something)
 
 #### [Vine.app](http://vine.co): Mobile-layout edition for the desktop
-Vine has a webpage now, but it is a grid layout and PRECACHES 100% of ALL OF THE VIDEOS on Safari.   
-Vine.app shows the mobile stream layout and does not preload any videos.  
-Also, it makes the controls mouse-friendly.  
+
+* shows a single-column stream
+* does not preload any videos
+* makes the controls mouse-friendly
 
 #### [Facebook.app](https://m.facebook.com/home.php): It knows who your friends are.
-The mobile version, which differs from the Desktop webpage:
 
+* mobile edition
 * ~~Facebook-in-your-facebook sidebars~~
 
 
-Custom URLs: [search your Facebook for something](facebook:search for something)
+Hooked URLs:
+* [`facebook:`](facebook:search for something)
 
-#### [CloudPebble.app](https://cloudpebble.net/ide): Use the Internet to program your Dick Tracy watch.
+#### [CloudPebble.app](https://cloudpebble.net/ide): Use the Interweb to program your Dick Tracy watch.
 [ERMAHGERD](http://knowyourmeme.com/memes/ermahgerd) ClerdPehble mah favrit smurtwerch & IDE evar!
 
 
 ## Creating an App
 
+I gots ta' make a UI to generate MacPin apps from MacPin. But 'fer now:
+
 ```
+cd ~/src/MacPin
 mkdir sites/MySite
 vim sites/MySite/app.js
 # peruse sites/*/app.js for available commands
 
 make
-open apps/MySite.app
+open builds/macosx-x86*/apps/MySite.app
 # test, tweak, lather, repeat
 
-# find a suitable .png or .icns for the app
-cp ~/Pictures/MySite.png icons/
-# else WebKit.icns will be used
+# find a large & square .png for the app, like an App Store image.
+cp ~/Pictures/MySite.png sites/MySite/icon.png
 
 make install
 open -a MySite.app
-
 ```
 
 ## Hacking MacPin
@@ -106,11 +118,11 @@ make SIM_ONLY=1 test.ios
 ```
 
 Web Inspector can be accessed for any tab by right clicking in the page and selecting "Inspect Element" from the context menu.  
-Debug builds (`make test|test.app|repl`) can be remotely inspected from Safari->Develop-><ComputerName> 
+Debug builds (`make test|test.app|repl`) can be remotely inspected from Safari->Develop-><ComputerName>
 
 The JavaScript API for app construction is undocumented and non-final.  
 If you want to play with it, run any MacPin app with the `-i` argument in Terminal to get a JS console (or `make repl`).  
-Safari can also remotely inspect the `JSContext` of debug builds. 
+Safari can also remotely inspect the `JSContext` of debug builds.
 
 Some browser functionality is inoperative & unimplementable due to WKWebKit's immaturity:
 
@@ -118,12 +130,25 @@ Some browser functionality is inoperative & unimplementable due to WKWebKit's im
 * Geolocation
 * Printing
 
-And some things I just haven't had need to write:   
+And some things I just haven't had need to write:
 
 * Global history
 * Undo/redo tabs
 
-Independent repos for MacPin-based apps can also be made (examples pending). 
+#### use MacPin to make hybrid apps from existing projects
+```
+cd ~/src/SomeWebApp
+test -d browser/SomeWebApp.com &&
+  make -C ~/src/MacPin macpin_sites=$PWD/browser appdir=$PWD/hybrid xcassetdir=$PWD/hybrid $PWD/hybrid/SomeWebApp.com.app
+open hybrid/SomeWebApp.com.app
+```
+
+#### iOS
+
+Basic support has landed for generating iOS apps.  
+Its kinda pointless for most of `sites/*` since native apps exist for all of them.  
+But maybe you want to quickly package a React.js application for offline mobile use...
+
 
 ## Other WebKit browsers:
 

@@ -58,7 +58,7 @@ delegate.launchURL = function(url) {
 	}
 };
 
-// handles in-webview link clicks and non-HTML5 link DND's
+// handles in-webview link clicks and uncaught non-HTML5 link DND's
 /*
 delegate.decideNavigationForURL = function(url) {
 	var addURL = getAddFeedLink(url);
@@ -72,6 +72,28 @@ delegate.decideNavigationForURL = function(url) {
 	}
 };
 */
+
+// handles all URLs drag-and-dropped into MacPin.
+delegate.handleDragAndDroppedURLs = function(urls) {
+	console.log(urls);
+	for (var url of urls) {
+		var tab = new $.WebView({url: url});
+		$.browser.pushTab(tab); // needs to be made visible in order to evalJS on it.
+		// search for RSS tags and send to DiggTab if found
+		tab.asyncEvalJS("if ( (feed = document.head.querySelector('link[type*=rss]')) ||" +
+			" (feed = document.head.querySelector('link[type*=atom]')) ) { feed.href } else { false };",
+			2, // delay (in seconds) to wait for tab to load
+			function(result) {
+				if (result) {
+					var addURL = getAddFeedLink(result);
+					if (addURL) diggTab.loadURL(addURL);
+				};
+				tab.close(); //FIXME doesn't do diddly
+			}
+		);
+	}
+	return true; // bypass WKWebView's default handler
+};
 
 delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('feed');

@@ -18,6 +18,7 @@ var delegate = {}; // our delegate to receive events from the webview app
 //$.globalUserScripts = ["seeDebugger"];
 $.globalUserScripts.push("seeDebugger");
 
+// handles cmd-line and LaunchServices openURL()s
 delegate.launchURL = function(url) {
 	console.log("app.js: launching " + url);
 	var comps = url.split(':'),
@@ -28,6 +29,22 @@ delegate.launchURL = function(url) {
 			$.browser.tabSelected = new $.WebView({url: url});
 	}
 };
+
+// handles all URLs drag-and-dropped into MacPin.
+delegate.handleDragAndDroppedURLs = function(urls) {
+	console.log(urls);
+	for (var url of urls) {
+		$.browser.tabSelected.evalJS("confirm('Open a new tab for: "+url+"');", function(response) {
+			if (response) {
+				var tab = new $.WebView({url: url});
+				//$.browser.tabSelected = tab;
+				$.browser.pushTab(tab);
+			}
+		})
+	}
+	return true;
+};
+
 
 delegate.AppFinishedLaunching = function() {
 	//$.globalUserScripts.push("dnd");
