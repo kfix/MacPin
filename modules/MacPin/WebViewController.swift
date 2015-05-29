@@ -2,8 +2,6 @@
 ///
 /// Interlocute WebViews to general app UI
 
-/// http://doing-it-wrong.mikeweller.com/2013/06/ios-app-architecture-and-tdd-1.html
-
 import WebKit
 import JavaScriptCore
 
@@ -15,10 +13,9 @@ import JavaScriptCore
 #endif
 	var webview: MPWebView! { get }
 }
-		
-@objc class WebViewController: ViewController, WebViewControllerScriptExports {
-	var jsdelegate: JSValue = JSRuntime.jsdelegate // point to the singleton, for now
 
+@objc class WebViewController: ViewController, WebViewControllerScriptExports {
+	var jsdelegate = AppScriptRuntime.shared.jsdelegate // FIXME: use webview.jsdelegate instead ??
 	dynamic var webview: MPWebView! = nil
 
 #if os(OSX)
@@ -55,12 +52,12 @@ import JavaScriptCore
 	}
 
 	override func viewDidLoad() {
-		super.viewDidLoad() 
+		super.viewDidLoad()
 	}
-	
+
 	func closeTab() { removeFromParentViewController() }
 	func askToOpenCurrentURL() { askToOpenURL(webview.URL!) }
-	
+
 	// sugar for opening a new tab in parent browser VC
 	func popup(webview: MPWebView) { parentViewController?.addChildViewController(self.dynamicType(webview: webview)) }
 }

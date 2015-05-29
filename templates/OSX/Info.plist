@@ -11,8 +11,6 @@
 			<array>
 				<string>css</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>css.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>text/css</string>
@@ -29,8 +27,6 @@
 			<array>
 				<string>pdf</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>pdf.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/pdf</string>
@@ -47,8 +43,6 @@
 			<array>
 				<string>webarchive</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>webarchive.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/x-webarchive</string>
@@ -67,8 +61,6 @@
 			<array>
 				<string>webbookmark</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>webbookmark.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>Safari bookmark</string>
 			<key>CFBundleTypeRole</key>
@@ -81,8 +73,6 @@
 			<array>
 				<string>webloc</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>webloc.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>Web internet location</string>
 			<key>CFBundleTypeOSTypes</key>
@@ -99,8 +89,6 @@
 			<array>
 				<string>gif</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>gif.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>image/gif</string>
@@ -124,8 +112,6 @@
 				<string>shtml</string>
 				<string>jhtml</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>html.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>text/html</string>
@@ -148,8 +134,6 @@
 			<array>
 				<string>js</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>js.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/x-javascript</string>
@@ -167,8 +151,6 @@
 				<string>jpg</string>
 				<string>jpeg</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>jpeg.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>image/jpeg</string>
@@ -191,8 +173,6 @@
 			<array>
 				<string>jp2</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>jp2.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>image/jp2</string>
@@ -214,8 +194,6 @@
 				<string>txt</string>
 				<string>text</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>txt.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>text/plain</string>
@@ -238,8 +216,6 @@
 			<array>
 				<string>png</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>png.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>image/png</string>
@@ -261,8 +237,6 @@
 				<string>tiff</string>
 				<string>tif</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>tiff.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>image/tiff</string>
@@ -285,8 +259,6 @@
 			<array>
 				<string>url</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>url.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>Web site location</string>
 			<key>CFBundleTypeOSTypes</key>
@@ -303,8 +275,6 @@
 			<array>
 				<string>ico</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>ico.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>image/x-icon</string>
@@ -328,8 +298,6 @@
 				<string>xhtm</string>
 				<string>xht</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>xhtml.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/xhtml+xml</string>
@@ -351,8 +319,6 @@
 				<string>xsl</string>
 				<string>xslt</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>xml.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/xml</string>
@@ -372,8 +338,6 @@
 			<array>
 				<string>svg</string>
 			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>svg.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>image/svg+xml</string>
@@ -408,6 +372,10 @@
 	<string>0.0.0</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Websites you visit may request your location.</string>
+	<key>NSHighResolutionCapable</key>
+	<false/>
+	<key>NSHighResolutionMagnifyAllowed</key>
+	<false/>
 	<key>NSHumanReadableCopyright</key>
 	<string>Joey Korkames (2015)</string>
 	<key>NSSupportsAutomaticTermination</key>

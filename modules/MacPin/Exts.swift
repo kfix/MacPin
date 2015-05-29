@@ -1,6 +1,6 @@
 /// MacPin Extensions
 ///
-/// Global-scope utility functions 
+/// Global-scope utility functions
 
 import Foundation
 import JavaScriptCore
@@ -39,14 +39,18 @@ func assert(condition: @autoclosure () -> Bool, _ message: String = "",
 */
 
 func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
-	if let script_url = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") {
-		warn("loading userscript: \(script_url)")
+	if let scriptUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") {
+		warn("loading userscript: \(scriptUrl)")
 		var script = WKUserScript(
-			source: NSString(contentsOfURL: script_url, encoding: NSUTF8StringEncoding, error: nil) as! String,
+			source: NSString(contentsOfURL: scriptUrl, encoding: NSUTF8StringEncoding, error: nil) as! String,
 		    injectionTime: inject,
 		    forMainFrameOnly: onlyForTop
 		)
-		webctl.addUserScript(script)
+		if webctl.userScripts.filter({$0 as! WKUserScript == script}).count < 1 { // don't re-add identical userscripts
+		//if (find(webctl.userScripts, script) ?? -1) < 0 { // don't re-add identical userscripts
+			webctl.addUserScript(script)
+		} else { warn("\(scriptUrl) already loaded!"); return false }
+
 	} else {
 		let respath = NSBundle.mainBundle().resourcePath
 		warn("couldn't find userscript: \(respath)/\(basename).js")
@@ -78,7 +82,7 @@ func validateURL(urlstr: String) -> NSURL? {
 			urlp.host = urlp.path
 			urlp.path = nil
 		}
-		if let url = urlp.URL, host = urlp.host { 
+		if let url = urlp.URL, host = urlp.host {
 			//do preemptive nslookup on urlp.host
 			var chost = host.cStringUsingEncoding(NSUTF8StringEncoding)!
 			if gethostbyname2(&chost, AF_INET).hashValue > 0 || gethostbyname2(&chost, AF_INET6).hashValue > 0 { // failed lookups return null pointer
@@ -87,16 +91,16 @@ func validateURL(urlstr: String) -> NSURL? {
 		}
 	}
 
-	if JSRuntime.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // the delegate function will open url directly
+	if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // the delegate function will open url directly
 
 	// maybe its a search query? check if blank and reformat it
 	if !urlstr.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
-		let query = urlstr.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding), 
+		let query = urlstr.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding),
 		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") {
 			return search
 		}
 
-	return nil 
+	return nil
 }
 
 func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2: StaticString = __FUNCTION__, abort:(()->Void)? = nil) {

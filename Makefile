@@ -22,15 +22,16 @@ endif
 
 installdir			:= ~/Applications
 
-#appsig				:= kfix@github.com
+#appsig				?= kfix@github.com
 # http://www.objc.io/issue-17/inside-code-signing.html
 #`security find-identity`
 # https://developer.apple.com/library/mac/documentation/Security/Conceptual/CodeSigningGuide/Procedures/Procedures.html#//apple_ref/doc/uid/TP40005929-CH4-SW13
-appsig				:= -
+appsig				?= -
 # ^ ad-hoc, not so great
 # https://developer.apple.com/library/mac/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919-CH1-TNTAG20
 #open -a 'iOS Simulator.app' foobar.crt #add cert to simulator keychain
 
+bundle_untracked	?= yes
 appdir				?= $(outdir)/apps
 appnames			= $(patsubst $(macpin_sites)/%,%.app,$(wildcard $(macpin_sites)/*))
 gen_apps			= $(patsubst $(macpin_sites)/%,$(appdir)/%.app,$(wildcard $(macpin_sites)/*))
@@ -57,6 +58,7 @@ test test.app release: codesign := yes
 endif
 wknightly: DYLD_FRAMEWORK_PATH=/Volumes/WebKit/WebKit.app/Contents/Frameworks/10.10
 reinstall: allapps uninstall install
+release: bundle_untracked :=
 noop: ;
 
 ifeq ($(IS_A_REMAKE),)
@@ -71,8 +73,8 @@ VERSION		 := 1.3.0a2
 LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin
-ZIP			 := $(REPO).zip
-GH_RELEASE_JSON = '{"tag_name": "v$(VERSION)","target_commitish": "master","name": "v$(VERSION)","body": "MacPin build of version $(VERSION)","draft": false, "prerelease": true}'
+ZIP			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch).zip
+GH_RELEASE_JSON = '{"tag_name": "v$(VERSION)","target_commitish": "master","name": "v$(VERSION)","body": "MacPin $(plaform) $(arch) build of version $(VERSION)","draft": false, "prerelease": true}'
 #####
 
 $(xcassets)/%.xcassets: $(macpin_sites)/%/icon.png
@@ -115,10 +117,13 @@ $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/
 # https://developer.apple.com/library/mac/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html#//apple_ref/doc/uid/10000123i-CH101-SW1
 # https://developer.apple.com/library/mac/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
 # https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html
-$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources templates/Resources/*
+$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/
 	@install -d $@ $@/Contents/MacOS $@/Contents/Frameworks $@/Contents/Resources
 	$(patsubst %,cp % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
-	cp -RL templates/Resources/* $(macpin_sites)/$*/* $@/Contents/Resources/
+	cp -RL templates/Resources $@/Contents
+	#git ls-files -zc $(bundle_untracked) $(macpin_sites)/$* | xargs -0 -J % install -DT % $@/Contents/Resources/
+	[ ! -z "$(bundle_untracked)" ] || git archive v$(VERSION) $(macpin_sites)/$*/ | tar -xv --strip-components 2 -C $@/Contents/Resources
+	[ ! -n "$(bundle_untracked)" ] || cp -RL $(macpin_sites)/$*/* $@/Contents/Resources/
 	install $(outdir)/Frameworks/*.dylib $@/Contents/Frameworks/
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist
 	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
@@ -259,15 +264,18 @@ wknightly:
 tag:
 	git tag -f -a v$(VERSION) -m 'release $(VERSION)'
 
-$(ZIP): tag
-	rm $(ZIP) || true
-	zip -no-wild -r $@ $(apptgts) $(wildcard extras/*.workflow) --exclude .DS_Store
+zip: $(ZIP)
+$(ZIP):
+	[ ! -f $(ZIP) ] || rm $(ZIP)
+	zip -r $@ extras/*.workflow --exclude .DS_Store
+	cd $(appdir) && zip -g -r $@ *.app --exclude .DS_Store
 
 ifneq ($(GITHUB_ACCESS_TOKEN),)
-release: clean allapps $(ZIP)
+release: clean tag allapps $(ZIP) upload
+upload:
 	git push -f --tags
 	posturl=$$(curl --data $(GH_RELEASE_JSON) "https://api.github.com/repos/$(USER)/$(REPO)/releases?access_token=$(GITHUB_ACCESS_TOKEN)" | jq -r .upload_url | sed 's/[\{\}]//g') && \
-	dload=$$(curl --fail -X POST -H "Content-Type: application/gzip" --data-binary "@$(ZIP)" "$$posturl=$(ZIP)&access_token=$(GITHUB_ACCESS_TOKEN)" | jq -r .browser_download_url | sed 's/[\{\}]//g') && \
+	dload=$$(curl --fail -X POST -H "Content-Type: application/gzip" --data-binary "@$(ZIP)" "$$posturl=$(notdir $(ZIP))&access_token=$(GITHUB_ACCESS_TOKEN)" | jq -r .browser_download_url | sed 's/[\{\}]//g') && \
 	echo "$(REPO) now available for download at $$dload"
 else
 release:
@@ -276,5 +284,5 @@ release:
 endif
 
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib
-.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release wknightly doc swiftrepl %.app
+.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release wknightly doc swiftrepl %.app zip $(ZIP) upload
 .SUFFIXES:

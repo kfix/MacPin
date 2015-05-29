@@ -12,6 +12,12 @@ var fb = {
 var fbTab = new $.WebView(fb);
 $.browser.addShortcut("Facebook Home", fb);
 
+function search(query) {
+	//fbTab.loadURL("https://m.facebook.com/home.php?soft=search");
+	fbTab.loadURL("https://m.facebook.com/graphsearch/str/" + query + "/keywords_top?ref=content_filter&source=typeahead")
+	$.browser.tabSelected = fbTab; // reuse main tab so as not to load fb-js some many times
+}
+
 delegate.launchURL = function(url) {
 	console.log("app.js: launching " + url);
 	var comps = url.split(':'),
@@ -21,12 +27,16 @@ delegate.launchURL = function(url) {
 		//case 'facebook:?':
 		case 'fb:':
 		case 'facebook:':
-			//fbTab.loadURL("https://m.facebook.com/home.php?soft=search");
-			fbTab.loadURL("https://m.facebook.com/graphsearch/str/" + addr + "/keywords_top?ref=content_filter&source=typeahead")
-			$.browser.tabSelected = fbTab;
+			search(addr);
 			break;
 		default:
 	}
+};
+
+delegate.handleUserInputtedInvalidURL = function(query) {
+	// assuming the invalid url is a search request
+	search(encodeURI(query));
+	return true; // tell MacPin to stop validating the URL
 };
 
 delegate.AppFinishedLaunching = function() {

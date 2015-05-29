@@ -1,7 +1,9 @@
 [![Join the chat at https://gitter.im/kfix/MacPin](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kfix/MacPin?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 # MacPin
+<center>
 MacPin creates a Mac OSX (& [iOS](#iOS)!) App shell for websites & webapps from a short JavaScript you provide.  
-Some call these Apps [Site-specific Browsers](https://en.wikipedia.org/wiki/Site-specific_browser) or Hybrid apps.  
+![screenie](/dock_screenshot.png?raw=true)  
+</center>
 
 The Browser UI is very minimal, just a tab-bar which disappears in Full-Screen mode, leaving only the site content.
 
@@ -17,7 +19,7 @@ A suite of apps are prebuilt for download in the GitHub release.
 ## Included Apps
 
 #### [Hangouts.app](http://plus.google.com/hangouts): SMS/IM/Video chat client for the desktop
-![screenie](/sites/Hangouts/screenshot.jpg?raw=true)
+
 Google Voice and Project Fi users can [make & take phone calls and SMS/MMS messages](http://fi.google.com/about/faq/#talk-and-text-4).  
 Load up can take up to 30 seconds, so be patient.
 
@@ -82,10 +84,16 @@ Hooked URLs:
 #### [CloudPebble.app](https://cloudpebble.net/ide): Use the Interweb to program your Dick Tracy watch.
 [ERMAHGERD](http://knowyourmeme.com/memes/ermahgerd) ClerdPehble mah favrit smurtwerch & IDE evar!
 
+#### [DevDocs.app](http://devdocs.io): Code documentaion browser for most front-end frameworks
+Hooked URLs:
+* [`devdocs:`](devdocs:someFuncName)
 
 ## Creating an App
 
-I gots ta' make a UI to generate MacPin apps from MacPin. But 'fer now:
+Some call these Apps [Site-specific Browsers](https://en.wikipedia.org/wiki/Site-specific_browser) or Hybrid apps.  
+They are configured with an imperative JavaScript which you need to copy-paste and customize.  
+
+Eventually, I plan to make a UI wizard to generate MacPin apps from MacPin. But for now:  
 
 ```
 cd ~/src/MacPin
@@ -105,6 +113,7 @@ open -a MySite.app
 ```
 
 ## Hacking MacPin
+
 
 Its written in Swift using WKWebView and NSTabViewController with a fully programmatic NIB-less UI layout.  
 You need Xcode installed on OSX Yosemite to get the Swift compiler and Cocoa headers.  

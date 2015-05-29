@@ -2,12 +2,14 @@
 ///
 /// An iOS rootViewController for containing multiple WKWebViews, akin to MobileSafari
 
-// This is already a ball of wax...
-//  -reconcile childViewControllers. selectedViewController, tabSelected, and tabs 
+/// This is already a ball of wax...
+//  -reconcile childViewControllers. selectedViewController, tabSelected, and tabs
 //		https://github.com/codepath/ios_guides/wiki/Container-View-Controllers
 //  -break the controlviews into subclasses & controllers
+/// http://doing-it-wrong.mikeweller.com/2013/06/ios-app-architecture-and-tdd-1.html
 
-// want a nice expose/coverflow/rolodex tab-picker:
+
+/// want a nice expose/coverflow/rolodex tab-picker:
 // https://github.com/adow/WKPagesCollectionView
 // https://github.com/MikeReining/CoverFlowSwift
 // https://github.com/schwa/Coverflow
@@ -141,7 +143,7 @@ extension UIView {
 		//navBar.searchBarStyle = .Minimal
 		//navBar.showsCancelButton = false
 		//navBar.delegate = self
-		//navBar.setImage(, forSearchBarIcon: .Search, state: .Normal) 
+		//navBar.setImage(, forSearchBarIcon: .Search, state: .Normal)
 
 		blurBar.autoresizingMask = .FlexibleWidth
 		blurBar.frame = CGRect(x:0, y:0, width: view.bounds.size.width, height: 30)
@@ -197,7 +199,7 @@ extension UIView {
 		tabList.registerClass(UITableViewCell.self, forCellReuseIdentifier: "TableViewCell")
 
 		view.layoutIfNeeded()
-		
+
 		NSNotificationCenter.defaultCenter().addObserver(self, selector: Selector("appWillChangeStatusBarFrameNotification:"), name: UIApplicationWillChangeStatusBarFrameNotification, object: nil)
 	}
 
@@ -243,7 +245,7 @@ extension UIView {
 		if indexOfChildViewController(childController) >= 0 { return } // don't re-add existing children, that moves them to back of list
 		warn()
 		super.addChildViewController(childController)
-			
+
 		if let wvc = childController as? WebViewController {
 			wvc.webview.scrollView.delegate = self
 			wvc.webview.scrollView.contentInset = contentInset
@@ -336,7 +338,7 @@ extension MobileBrowserViewController: MobileBrowserScriptExports {
 	var tabSelected: AnyObject? {
 		get { return selectedViewController?.view }
 		set(obj) {
-			switch (obj) { 
+			switch (obj) {
 				case let vc as UIViewController:
 					if selectedViewController != vc {
 						addChildViewController(vc)
@@ -346,7 +348,7 @@ extension MobileBrowserViewController: MobileBrowserScriptExports {
 				case let wv as MPWebView: // convert to VC ref and reassign
 					self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerIOS)?.webview === wv }).first as? WebViewControllerIOS ?? WebViewControllerIOS(webview: wv)
 				default:
-					warn("invalid object")		
+					warn("invalid object")
 			}
 			//warn(view.recursiveDescription() as! String) // hangs on really complex webview sites
 		}
@@ -437,7 +439,7 @@ extension MobileBrowserViewController: UITableViewDataSource, UITableViewDelegat
 		return tabs.count
 		//return childViewControllers.count
 
-		// section: 1 could be for addShortcuts ... 
+		// section: 1 could be for addShortcuts ...
 	}
 
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {

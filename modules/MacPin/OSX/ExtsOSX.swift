@@ -151,7 +151,7 @@ extension WKView {
 			// https://hg.mozilla.org/mozilla-central/file/tip/widget/cocoa/nsClipboard.mm
 
 			if let urls = pboard.readObjectsForClasses([NSURL.self], options: nil) {
-				if JSRuntime.jsdelegate.tryFunc("handleDragAndDroppedURLs", urls.map({$0.description})) { return true } // app.js indicated it will handle drag itself
+				if AppScriptRuntime.shared.jsdelegate.tryFunc("handleDragAndDroppedURLs", urls.map({$0.description})) { return true } // app.js indicated it will handle drag itself
 			}
 
 		} // -from external app

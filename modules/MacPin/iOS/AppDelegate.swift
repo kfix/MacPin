@@ -12,9 +12,9 @@ class AppDelegate: NSObject {
 
 extension AppDelegate: UIApplicationDelegate { //UIResponder
 	func application(application: UIApplication, openURL url: NSURL, sourceApplication: String?, annotation: AnyObject?) -> Bool {
-		warn("`\(url)` -> JSRuntime.jsdelegate.launchURL()")
-		JSRuntime.context.objectForKeyedSubscript("$").setObject(url.description, forKeyedSubscript: "launchedWithURL")
-		JSRuntime.jsdelegate.tryFunc("launchURL", url.description)
+		warn("`\(url)` -> AppScriptRuntime.shared.jsdelegate.launchURL()")
+		AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(url.description, forKeyedSubscript: "launchedWithURL")
+		AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", url.description)
 		return true //FIXME
 	}
 
@@ -27,7 +27,7 @@ extension AppDelegate: UIApplicationDelegate { //UIResponder
 	func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject : AnyObject]?) -> Bool { //state restored, but UI not presented yet
 		// launchOptions: http://nshipster.com/launch-options/
 
-		window = UIWindow(frame: UIScreen.mainScreen().bounds) // total pixels w/ rotation  
+		window = UIWindow(frame: UIScreen.mainScreen().bounds) // total pixels w/ rotation
 		UIApplication.sharedApplication().statusBarStyle = .LightContent
 		window?.backgroundColor = UIColor.whiteColor() // visible behind status bar area when unobscured by page content
 		window?.rootViewController = browserController //adds the browserView to window.subviews
@@ -40,7 +40,7 @@ extension AppDelegate: UIApplicationDelegate { //UIResponder
 		for arg in Process.arguments {
 			switch (arg) {
 				case "-i":
-					if isatty(1) == 1 { JSRuntime.REPL() } //open a JS console on the terminal, if present
+					if isatty(1) == 1 { AppScriptRuntime.shared.REPL() } //open a JS console on the terminal, if present
 				case "-iT":
 					warn()
 					if isatty(1) == 1 { browserController.tabSelected?.REPL() } //open a JS console for the first tab WebView on the terminal, if present
@@ -60,13 +60,13 @@ extension AppDelegate: UIApplicationDelegate { //UIResponder
 		//if application?.orderedDocuments?.count < 1 { showApplication(self) }
 
 		browserController.view.frame = UIScreen.mainScreen().bounds
-				
-		if !JSRuntime.context.objectForKeyedSubscript("$").objectForKeyedSubscript("browser").isObject() { //first run, not an app restore
-			JSRuntime.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
-			JSRuntime.loadSiteApp() // load app.js, if present
-			JSRuntime.jsdelegate.tryFunc("AppFinishedLaunching")
+
+		if !AppScriptRuntime.shared.context.objectForKeyedSubscript("$").objectForKeyedSubscript("browser").isObject() { //first run, not an app restore
+			AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
+			AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
+			AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
 		} else {
-			JSRuntime.jsdelegate.tryFunc("AppRestored")
+			AppScriptRuntime.shared.jsdelegate.tryFunc("AppRestored")
 		}
 
 		if browserController.tabs.count < 1 { browserController.newTabPrompt() } //don't allow a tabless state
@@ -76,7 +76,7 @@ extension AppDelegate: UIApplicationDelegate { //UIResponder
 	// need https://github.com/kemenaran/ios-presentError
 	// w/ http://nshipster.com/uialertcontroller/
 	/*
-	func application(application: NSApplication, willPresentError error: NSError) -> NSError { 
+	func application(application: NSApplication, willPresentError error: NSError) -> NSError {
 		//warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 		if error.domain == NSURLErrorDomain {
 			if let userInfo = error.userInfo {
@@ -90,12 +90,12 @@ extension AppDelegate: UIApplicationDelegate { //UIResponder
 				}
 			}
 		}
-		return error 
+		return error
 	}
 	*/
 
 	func applicationWillTerminate(application: UIApplication) { NSUserDefaults.standardUserDefaults().synchronize() }
-    
+
 	func application(application: UIApplication, shouldSaveApplicationState coder: NSCoder) -> Bool { return false }
 	func application(application: UIApplication, shouldRestoreApplicationState coder: NSCoder) -> Bool { return false }
 
@@ -104,7 +104,7 @@ extension AppDelegate: UIApplicationDelegate { //UIResponder
 	func application(application: UIApplication, didReceiveLocalNotification notification: UILocalNotification) {
 		warn("user clicked notification")
 
-		if JSRuntime.jsdelegate.tryFunc("handleClickedNotification", notification.alertTitle ?? "", notification.alertAction ?? "", notification.alertBody ?? "") {
+		if AppScriptRuntime.shared.jsdelegate.tryFunc("handleClickedNotification", notification.alertTitle ?? "", notification.alertAction ?? "", notification.alertBody ?? "") {
 			warn("handleClickedNotification fired!")
 		}
 	}

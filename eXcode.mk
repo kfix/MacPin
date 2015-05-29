@@ -108,7 +108,7 @@ $(info [$(eXcode)] $$(statics) (Static Libraries available to build): $(statics)
 # llvm scaffolding
 ###################
 debug				?=
-verbose				?= 
+verbose				?=
 
 sdkpath				:= $(shell xcrun --show-sdk-path --sdk $(sdk))
 swiftc				:= xcrun -sdk $(sdk) swiftc -target $(arch)-$(target_$(platform)) $(verbose)
@@ -141,6 +141,7 @@ define bundle_libswift
 	done
 endef
 #^ my guess is that Swift will eventually become a system framework when Apple starts using it to build iOS/OSX system apps ...
+# yup, Swift 2.0 2015Q4 ~ 2016Q1
 
 #$(outdir)/exec/%: libdirs += -L $(swiftlibdir)
 $(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks

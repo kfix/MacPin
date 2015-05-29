@@ -33,13 +33,13 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 				case "MacPinPollStates": // direct poll. app.js needs to authorize this handler per tab
 					//FIXME: should iterate message.body's [varnames] to send events for
 					webView.evaluateJavaScript( //for now, send an omnibus event with all varnames values
-						"window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(webView.transparent)}})); ",	
+						"window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(webView.transparent)}})); ",
 						completionHandler: nil)
 					fallthrough // also let JSRuntime get the request
 				default:
 					warn("\(message.name)() -> \(message.body)")
 					if jsdelegate.hasProperty(message.name) {
-						warn("forwarding webkit.messageHandlers.\(message.name) to JSRuntime.jsdelegate.\(message.name)(webview,msg)")
+						warn("forwarding webkit.messageHandlers.\(message.name) to jsdelegate.\(message.name)(webview,msg)")
 						jsdelegate.invokeMethod(message.name, withArguments: [webView, message.body])
 					}
 			}
@@ -51,7 +51,11 @@ extension WebViewController: WKUIDelegate { } // javascript prompts, implemented
 
 extension WebViewController: WKNavigationDelegate {
 	func webView(webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-		if let url = webView.URL { warn("'\(url)'") }
+		if let url = webView.URL {
+			warn("'\(url)'")
+			// check url against regex'd keys of MatchedAddressOptions
+			// or just call a JS delegate to do that?
+		}
 #if os(iOS)
 		UIApplication.sharedApplication().networkActivityIndicatorVisible = true
 #endif
@@ -98,7 +102,7 @@ extension WebViewController: WKNavigationDelegate {
 				case .Reload: fallthrough
 				case .FormResubmitted: fallthrough
 				case .Other: fallthrough
-				default: decisionHandler(.Allow) 
+				default: decisionHandler(.Allow)
 			}
 		} else {
 			// invalid url? should raise error
@@ -107,7 +111,7 @@ extension WebViewController: WKNavigationDelegate {
 		}
 	}
 
-	func webView(webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) { 
+	func webView(webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
 		if let url = webView.URL { warn("~> [\(url)]") }
 	}
 
@@ -132,7 +136,7 @@ extension WebViewController: WKNavigationDelegate {
 
 		if jsdelegate.tryFunc("decideNavigationForMIME", mime, url.description) { decisionHandler(.Cancel); return } //FIXME perf hit?
 
-		if navigationResponse.canShowMIMEType { 
+		if navigationResponse.canShowMIMEType {
 			decisionHandler(.Allow)
 		} else {
 			warn("cannot render requested MIME-type:\(mime) @ \(url)")
@@ -143,7 +147,7 @@ extension WebViewController: WKNavigationDelegate {
 
 	func webView(webView: WKWebView, didFailNavigation navigation: WKNavigation!, withError error: NSError) { //error during commited main frame navigation
 		// like server-issued error Statuses with no page content
-		if let url = webView.URL { 
+		if let url = webView.URL {
 			warn("[\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 			if error.domain == WebKitErrorDomain && error.code == 204 { askToOpenURL(url) } // `Plug-in handled load!` video/mp4 kWKErrorCodePlugInWillHandleLoad
 			if error.domain == NSURLErrorDomain && error.code != NSURLErrorCancelled { // dont catch on stopLoading() and HTTP redirects
@@ -154,7 +158,7 @@ extension WebViewController: WKNavigationDelegate {
 		UIApplication.sharedApplication().networkActivityIndicatorVisible = false
 #endif
     }
-	
+
 	func webView(webView: WKWebView, didFinishNavigation navigation: WKNavigation!) {
 		warn(webView.description)
 		//let title = webView.title ?? String()
@@ -165,7 +169,7 @@ extension WebViewController: WKNavigationDelegate {
 		UIApplication.sharedApplication().networkActivityIndicatorVisible = false
 #endif
 	}
-	
+
 	func webView(webView: WKWebView, createWebViewWithConfiguration configuration: WKWebViewConfiguration, forNavigationAction navigationAction: WKNavigationAction,
                 windowFeatures: WKWindowFeatures) -> WKWebView? {
 		// called via JS:window.open()
@@ -185,7 +189,7 @@ extension WebViewController: WKNavigationDelegate {
 		let wv = MPWebView(config: configuration, agent: webView._customUserAgent)
 		popup(wv)
 #if os(OSX)
-		if (windowFeatures.allowsResizing ?? 0) == 1 { 
+		if (windowFeatures.allowsResizing ?? 0) == 1 {
 			if let window = view.window {
 				var newframe = CGRect(
 					x: CGFloat(windowFeatures.x ?? window.frame.origin.x as NSNumber),

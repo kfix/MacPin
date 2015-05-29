@@ -26,7 +26,7 @@ import WebKitPrivates
 		//backMenu.delegate = self
 		//forwardMenu.delegate = self
 	}
-	
+
 	override func viewWillAppear() { // window popping up with this tab already selected & showing
 		super.viewWillAppear() // or tab switching into view as current selection
 	}
@@ -116,13 +116,13 @@ extension WebViewControllerOSX { // AppGUI funcs
 	//FIXME: support new scaling https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
 	func zoomIn() { webview.magnification += 0.2 }
 	func zoomOut() { webview.magnification -= 0.2 }
-	
+
 	func print(sender: AnyObject?) { warn(""); webview.print(sender) }
 
 	func highlightConstraints() { view.window?.visualizeConstraints(view.constraints) }
 
 	func replaceContentView() { view.window?.contentView = view }
-	
+
 	func shareButtonClicked(sender: AnyObject?) {
 		if let btn = sender as? NSView {
 			if let url = webview.URL {
@@ -148,14 +148,6 @@ extension WebViewControllerOSX { // AppGUI funcs
 		var menu = NSMenu(title:"popup")
 		// items: [itemTitle:String eventName:String], when clicked, fire event in jsdelegate?
 		//menu.popUpMenu(menu.itemArray.first, atLocation: NSPointFromCGPoint(CGPointMake(0,0)), inView: self.view)
-	}
-
-	func openInChrome() { NSWorkspace.sharedWorkspace().openURLs([webview.URL!], withAppBundleIdentifier: "com.google.Chrome", options: .Default, additionalEventParamDescriptor: nil, launchIdentifiers: nil) }
-
-	func saveWebArchive() {
-		webview._getWebArchiveDataWithCompletionHandler() { (data: NSData!, err: NSError!) -> Void in
-			//pop open a save Panel to dump data into file
-		}
 	}
 
 }

@@ -1,11 +1,7 @@
-//class MPWebView: WKWebView {
-//http://stackoverflow.com/questions/27487821/cannot-subclass-wkwebview
-	// allow controlling drags out of a MacPin window
-	//  API pending https://bugs.webkit.org/show_bug.cgi?id=143618
-	// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/DragandDrop/Concepts/dragsource.html#//apple_ref/doc/uid/20000976-CJBFBADF
-	// https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSView_Class/index.html#//apple_ref/occ/instm/NSView/beginDraggingSessionWithItems:event:source:
-	// override func beginDraggingSessionWithItems(items: [AnyObject], event: NSEvent, source: NSDraggingSource) -> NSDraggingSession
-//}
+/// MacPin WKWebView subclass
+///
+/// Add some porcelain to WKWebViews
+
 
 import WebKit
 import WebKitPrivates
@@ -21,6 +17,10 @@ import JavaScriptCore
 	var url: String { get set }
 	var transparent: Bool { get set }
 	var userAgent: String { get set }
+	//var canGoBack: Bool { get }
+	//var canGoForward: Bool { get }
+	//var hasOnlySecureContent: Bool { get }
+	static var MatchedAddressOptions: [String:String] { get set }
 	func close()
 	func evalJS(js: String, _ withCallback: JSValue?)
 	func asyncEvalJS(js: String, _ withDelay: Double, _ withCallback: JSValue?)
@@ -30,11 +30,17 @@ import JavaScriptCore
 	func postinject(script: String) -> Bool
 	func addHandler(handler: String) // FIXME kill
 	func subscribeTo(handler: String)
+	//func goBack()
+	//func goForward()
+	//func reload()
+	//func reloadFromOrigin()
+	//func stopLoading() -> WKNavigation?
 }
 
 @objc class MPWebView: WKWebView, WebViewScriptExports {
+	static var MatchedAddressOptions: [String:String] = [:] // cvar singleton
 
-	var jsdelegate: JSValue = JSRuntime.jsdelegate // point to the singleton, for now
+	var jsdelegate = AppScriptRuntime.shared.jsdelegate
 
 	var url: String { // accessor for JSC, which doesn't support `new URL()`
 		get { return URL?.absoluteString ?? "" }
@@ -124,7 +130,6 @@ import JavaScriptCore
 			}
 		}
 
-		for script in GlobalUserScripts { if let script = script as? String { warn(script); postinject(script) } }
 		if let url = url { gotoURL(url) } else { return nil }
 	}
 
@@ -137,17 +142,17 @@ import JavaScriptCore
 	deinit { warn(description) }
 
 	func evalJS(js: String, _ withCallback: JSValue? = nil) {
-		if let withCallback = withCallback where withCallback.isObject() { //is a function or a {}
-			warn("withCallback: \(withCallback)")
+		if let callback = withCallback where callback.isObject() { //is a function or a {}
+			warn("callback: \(withCallback)")
 			evaluateJavaScript(js, completionHandler:{ (result: AnyObject!, exception: NSError!) -> Void in
 				// (result: WebKit::WebSerializedScriptValue*, exception: WebKit::CallbackBase::Error)
 				//withCallback.callWithArguments([result, exception]) // crashes, need to translate exception into something javascripty
-				warn("withCallback() ~> \(result),\(exception)")
+				warn("callback() ~> \(result),\(exception)")
 				if result != nil {
-					withCallback.callWithArguments([result, true]) // unowning withCallback causes a crash and weaking it muffs the call
+					callback.callWithArguments([result, true]) // unowning withCallback causes a crash and weaking it muffs the call
 				} else {
 					// passing nil crashes
-					withCallback.callWithArguments([JSValue(nullInContext: JSRuntime.context), true])
+					callback.callWithArguments([JSValue(nullInContext: callback.context), true])
 				}
 				return
 			})
@@ -160,17 +165,17 @@ import JavaScriptCore
 		let backgroundQueue = dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0)
 		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * withDelay))
 		dispatch_after(delayTime, backgroundQueue) {
-			if let withCallback = withCallback where withCallback.isObject() { //is a function or a {}
-				warn("withCallback: \(withCallback)")
+			if let callback = withCallback where callback.isObject() { //is a function or a {}
+				warn("callback: \(withCallback)")
 				self.evaluateJavaScript(js, completionHandler:{ (result: AnyObject!, exception: NSError!) -> Void in
 					// (result: WebKit::WebSerializedScriptValue*, exception: WebKit::CallbackBase::Error)
 					//withCallback.callWithArguments([result, exception]) // crashes, need to translate exception into something javascripty
-					warn("withCallback() ~> \(result),\(exception)")
+					warn("callback() ~> \(result),\(exception)")
 					if result != nil {
-						withCallback.callWithArguments([result, true]) // unowning withCallback causes a crash and weaking it muffs the call
+						callback.callWithArguments([result, true]) // unowning withCallback causes a crash and weaking it muffs the call
 					} else {
 						// passing nil crashes
-						withCallback.callWithArguments([JSValue(nullInContext: JSRuntime.context), true])
+						callback.callWithArguments([JSValue(nullInContext: callback.context), true])
 					}
 				})
 			} else {
@@ -178,7 +183,6 @@ import JavaScriptCore
 			}
 		}
 	}
-
 
 	func close() { removeFromSuperview() } // signal VC too?
 
@@ -192,7 +196,7 @@ import JavaScriptCore
 		loadRequest(NSURLRequest(URL: url))
 	}
 
-	func loadURL(urlstr: String) -> Bool { // overloading gotoURL is crashing Cocoa selectors
+	func loadURL(urlstr: String) -> Bool {
 		if let url = NSURL(string: urlstr) {
 			gotoURL(url as NSURL)
 			return true
@@ -221,26 +225,8 @@ import JavaScriptCore
 
 	func preinject(script: String) -> Bool { return loadUserScriptFromBundle(script, configuration.userContentController, .AtDocumentStart, onlyForTop: false) }
 	func postinject(script: String) -> Bool { return loadUserScriptFromBundle(script, configuration.userContentController, .AtDocumentEnd, onlyForTop: false) }
-	func addHandler(handler: String) { configuration.userContentController.addScriptMessageHandler(JSRuntime, name: handler) }
-	func subscribeTo(handler: String) { configuration.userContentController.addScriptMessageHandler(JSRuntime, name: handler) }
-
-	func loadSeeDebugger() { if postinject("seeDebugger") { reload() } }
-	func runSeeDebugger() {
-		// http://davidbau.com/archives/2013/04/19/debugging_locals_with_seejs.html
-		evalJS("see.init();")
-
-		// https://github.com/davidbau/see/blob/master/see-bookmarklet.js
-		/*
-		if let seeJSpath = NSBundle.mainBundle().URLForResource("seeDebugger", withExtension: "js") {
-			// gotta run it from the bundle because CORS
-			var seeJS = "(function() { loadscript( '\(seeJSpath)', function() { see.init(); }); function loadscript(src, callback) { function setonload(script, fn) { script.onload = script.onreadystatechange = fn; } var script = document.createElement('script'), head = document.getElementsByTagName('head')[0], pending = 1; setonload(script, function() { pending && (!script.readyState || {loaded:1,complete:1}[script.readyState]) && (pending = 0, callback(), setonload(script, null), head.removeChild(script)); }); script.src = src; head.appendChild(script); } })();"
-			evalJS(seeJS) // still doesn't allow loading local resources
-		}
-		// download to temp?
-		// else complain?
-		*/
-	}
-
+	func addHandler(handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) }
+	func subscribeTo(handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) }
 
 	func REPL() {
 		termiosREPL({ (line: String) -> Void in
@@ -250,4 +236,47 @@ import JavaScriptCore
 			})
 		})
 	}
+
+#if os(OSX)
+
+	func saveWebArchive() {
+		_getWebArchiveDataWithCompletionHandler() { (data: NSData!, err: NSError!) -> Void in
+			//pop open a save Panel to dump data into file
+			let saveDialog = NSSavePanel();
+			saveDialog.canCreateDirectories = true
+			saveDialog.allowedFileTypes = [kUTTypeWebArchive]
+			saveDialog.beginWithCompletionHandler() { (result: Int) -> Void in
+				if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
+					NSFileManager.defaultManager().createFileAtPath(path, contents: data, attributes: nil)
+				}
+			}
+		}
+	}
+
+	override func validateUserInterfaceItem(anItem: NSValidatedUserInterfaceItem) -> Bool {
+		switch (anItem.action().description) {
+			//case "askToOpenCurrentURL": return true
+			case "saveWebArchive": return true
+			default:
+				return super.validateUserInterfaceItem(anItem)
+		}
+
+	}
+
+	override func beginDraggingSessionWithItems(items: [AnyObject], event: NSEvent, source: NSDraggingSource) -> NSDraggingSession {
+		warn()
+		return super.beginDraggingSessionWithItems(items, event: event, source: source)
+		// allow controlling drags out of a MacPin window
+		//  API didn't land in 10.10.3? https://bugs.webkit.org/show_bug.cgi?id=143618
+		//  (-[WKWebView _setDragImage:at:linkDrag:]):
+		//  (-[WKWebView draggingEntered:]):
+		//  (-[WKWebView draggingUpdated:]):
+		//  (-[WKWebView draggingExited:]):
+		//  (-[WKWebView prepareForDragOperation:]):
+		//  (-[WKWebView performDragOperation:]):
+		// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/DragandDrop/Concepts/dragsource.html#//apple_ref/doc/uid/20000976-CJBFBADF
+		// https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSView_Class/index.html#//apple_ref/occ/instm/NSView/beginDraggingSessionWithItems:event:source:
+	}
+
+#endif
 }

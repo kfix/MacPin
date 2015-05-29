@@ -4,3 +4,4 @@ icons/*/
 build/
 sites.dis/
 modules.dis/
+.babel/

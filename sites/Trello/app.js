@@ -4,14 +4,19 @@
 
 var delegate = {}; // our delegate to receive events from the webview app
 var trello = {
-			transparent: true,
-			//url: "https://trello.com",
-			url: "file://"+ $.app.resourcePath + "/trello.webarchive",
-			postinject: ['styler'], //dnd
-			preinject: ['notifier'], //navigator
-			//agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.104 Smafari/537.36",
-			handlers: ['TrelloNotification', "MacPinPollStates"] //styler.js does polls
+	transparent: true,
+	//url: "https://trello.com",
+	url: "file://"+ $.app.resourcePath + "/trello.webarchive",
+	postinject: ['styler'], //dnd
+	preinject: ['notifier'], //navigator
+	//agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.104 Smafari/537.36",
+	handlers: ['TrelloNotification', "MacPinPollStates"] //styler.js does polls
 };
+
+function search(query) {
+	$.browser.tabSelected = new $.WebView({url: "https://trello.com/search?q="+query, postinject: ['styler']});
+	// will prompt user to search boards/cards for phrase
+}
 
 delegate.launchURL = function(url) {
 	var comps = url.split(':'),
@@ -19,8 +24,7 @@ delegate.launchURL = function(url) {
 		addr = comps.shift();
 	switch (scheme + ':') {
 		case 'trello:':
-			$.browser.tabSelected = new $.WebView({url: "https://trello.com/search?q="+addr, postinject: ['styler']});
-			// will prompt user to search boards/cards for phrase
+			search(addr);
 			break;
 		default:
 	}
@@ -46,6 +50,12 @@ delegate.decideNavigationForURL = function(url) {
 		default:
 			return false;
 	}
+};
+
+delegate.handleUserInputtedInvalidURL = function(query) {
+	// assuming the invalid url is a search request
+	search(encodeURI(query));
+	return true; // tell MacPin to stop validating the URL
 };
 
 // Fluid API hook should trigger this
