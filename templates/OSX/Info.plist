@@ -360,8 +360,8 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>${EXECUTABLE_NAME//_/ }</string>
-	<key>CFBundleDisplayName</key>
-	<string>${EXECUTABLE_NAME//_/ }</string>
+	<key>LSHasLocalizedDisplayName</key>
+	<false/>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

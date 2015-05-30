@@ -4,8 +4,7 @@
 
 var delegate = {}; // our delegate to receive events from the osx app
 
-var digg = { postinject: ["styler", "add_feed"], url: "http://digg.com/reader"};
-var diggHacked = { postinject: ["styler"], url: "file://" + $.app.resourcePath + "/digg.com.webarchive"};
+var digg = { postinject: ["styler", "add_feed"], url: ($.app.pathExists($.app.resourcePath + '/digg.com.webarchive')) ? "file://"+ $.app.resourcePath + "/digg.com.webarchive" : "http://digg.com/reader"};
 var diggTab = new $.WebView(digg);
 
 function getAddFeedLink(url) {
@@ -100,7 +99,6 @@ delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('rss');
 
 	$.browser.addShortcut("Digg Reader", digg);
-	$.browser.addShortcut("Digg Reader + `var digg`", diggHacked);
 
 	if ($.launchedWithURL != '') { // app was launched with a feed url
 		this.launchURL($.launchedWithURL);

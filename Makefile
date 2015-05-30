@@ -4,6 +4,8 @@ export
 builddir			?= build
 
 # scan modules/ and define cross: target and vars: outdir, platform, arch, sdk, target, objs, execs, statics, incdirs, libdirs, linklibs, frameworks
+archs_macosx		?= x86_64
+# ^ supporting Yosemite only, so don't bother with 32-bit builds
 include eXcode.mk
 
 # now layout the MacPin .apps to generate
@@ -69,7 +71,7 @@ endif
 
 # github settings for release: target
 #####
-VERSION		 := 1.3.0a2
+VERSION		 := 1.3.0a3
 LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin
@@ -208,6 +210,7 @@ test:
 	#-defaults delete $(macpin)
 	($< http://browsingtest.appspot.com)
 
+#`rlwrap macpin -i` could work instead of modules/Prompt
 apirepl: ; ($< -i)
 tabrepl: ; ($< -t)
 

@@ -13,21 +13,21 @@ eXcode := $(lastword $(MAKEFILE_LIST))
 # Cross-Compilation via Recursive Make Madness
 ########################
 #installed_sdks		!= xcodebuild -showsdks | awk '$NF > 1 && $(NF-1)=="-sdk" {printf $NF " "}'
-platforms			:= OSX iOS
+platforms			?= OSX iOS
 platform			?= OSX
 
-sdks				:= macosx iphoneos iphonesimulator
-sdks_OSX			:= macosx
-sdks_iOS			:= iphoneos iphonesimulator
+sdks				?= macosx iphoneos iphonesimulator
+sdks_OSX			?= macosx
+sdks_iOS			?= iphoneos iphonesimulator
 sdk					?= macosx
 
-archs_macosx		:= i386 x86_64
-archs_iphonesimulator	:= $(archs_macosx)
-archs_iphoneos		:= arm arm64
-arch				:= $(shell uname -m)
+archs_macosx		?= i386 x86_64
+archs_iphonesimulator	?= $(archs_macosx)
+archs_iphoneos		?= arm arm64
+arch				?= $(shell uname -m)
 
-target_OSX			:= apple-macosx10.10
-target_iOS			:= apple-ios8.3
+target_OSX			?= apple-macosx10.10
+target_iOS			?= apple-ios8.3
 target				?= $(target_OSX)
 
 ifneq ($(SIM_ONLY),)

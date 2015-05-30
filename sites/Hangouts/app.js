@@ -16,7 +16,7 @@ var useChromeAV = $.app.doesAppExist("com.google.Chrome"); // use Chrome's NaCL+
 var gaia; // your Google ID
 var delegate = {}; // our delegate to receive events from the webview app
 
-delegate.decideNavigationForClickedURL = function(url) { $.app.openURL(url); return true; };
+delegate.decideNavigationForClickedURL = function(url) { $.app.openURL(url); return true; }; // open all links externally
 delegate.decideNavigationForMIME = function() { return false; };
 delegate.decideWindowOpenForURL = function(url) {
 	if (~url.indexOf("https://plus.google.com/hangouts/_/")) { //G+ hangouts a/v chat
@@ -63,7 +63,7 @@ delegate.receivedHangoutsMessage = function(tab, msg) {
 	// receives events from JS in 1st AppTab
 	// -> webkit.messageHandlers.receivedHangoutMessage.postMessage([from, replyTo, msg, cpar]);
 	$.app.postNotification(msg[0], msg[1], msg[2], msg[3]); // ...msg spread-op
-	//console.log(Date() + ' [posted user notification] ' + msg);
+	console.log(Date() + ' [posted user notification] ' + msg);
 };
 
 delegate.handleClickedNotification = function(title, subtitle, msg, id) {

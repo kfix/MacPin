@@ -197,7 +197,7 @@ extension WebViewController: WKNavigationDelegate {
 					width: CGFloat(windowFeatures.width ?? window.frame.size.width as NSNumber),
 					height: CGFloat(windowFeatures.height ?? window.frame.size.height as NSNumber)
 				)
-				if !webView.inFullScreenMode {
+				if !webView.inFullScreenMode && (window.styleMask & NSFullScreenWindowMask == 0) {
 					warn("resizing window to match window.open() size parameters passed: origin,size[\(newframe)]")
 					window.setFrame(newframe, display: true)
 				}
