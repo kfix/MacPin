@@ -47,22 +47,23 @@ extension AppDelegate: NSApplicationDelegate {
 	func applicationWillFinishLaunching(notification: NSNotification) { // dock icon bounces, also before self.openFile(foo.bar) is called
 		NSUserNotificationCenter.defaultUserNotificationCenter().delegate = self
 		let app = notification.object as? NSApplication
+		//let appname = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleName") ?? NSProcessInfo.processInfo().processName
+		let appname = NSRunningApplication.currentApplication().localizedName ?? NSProcessInfo.processInfo().processName
 
 		app!.mainMenu = NSMenu()
 
 		let appMenu = NSMenuItem()
 		appMenu.submenu = NSMenu()
-		appMenu.submenu?.addItem(MenuItem("Quit \(NSProcessInfo.processInfo().processName)", "terminate:", "q"))
-			//NSRunningApplication.currentApplication().localizedName ??
 		appMenu.submenu?.addItem(MenuItem("About", "orderFrontStandardAboutPanel:"))
 		appMenu.submenu?.addItem(MenuItem("Restart App", "loadSiteApp"))
-		appMenu.submenu?.addItem(MenuItem("Edit App...", "editSiteApp"))
+		//appMenu.submenu?.addItem(MenuItem("Edit App...", "editSiteApp")) // can't modify signed apps' Resources
 		app!.mainMenu?.addItem(appMenu) // 1st item shows up as CFPrintableName
 
 		app!.servicesMenu = NSMenu()
 		let svcMenu = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
 		svcMenu.submenu = app!.servicesMenu!
 		appMenu.submenu?.addItem(svcMenu)
+		appMenu.submenu?.addItem(MenuItem("Quit \(appname)", "terminate:", "q"))
 
 		let editMenu = NSMenuItem() //NSTextArea funcs
 		// plutil -p /System/Library/Frameworks/AppKit.framework/Resources/StandardKeyBinding.dict

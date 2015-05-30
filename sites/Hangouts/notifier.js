@@ -14,7 +14,7 @@ function xss_eval(event) {
 			//event.source is origin's .window, could send result of func there with postMessage()
 		}
 	}
-	
+
 }
 
 if (window == top) {
@@ -24,7 +24,7 @@ if (window == top) {
 		delete all the junk nodes in between these
 	<script>window.jstiming.load.tick('streamEnd');</script>*/
 
-	function getRoster() { return document.getElementById('gtn-roster-iframe-id-b'); } 
+	function getRoster() { return document.getElementById('gtn-roster-iframe-id-b'); }
 	function xssRoster() { /* ([func1, arg1, arg2], [func2, arg1, arg2])*/
 		// make arg[0] == iframe.id ?
 		getRoster().contentWindow.postMessage(Array.prototype.slice.call(arguments), '*'); // ordered dispatch
@@ -51,13 +51,16 @@ if (window == top) {
 
 if (window.name == 'gtn-roster-iframe-id-b') {
 //IIFE?
+
+	var roster;
+
 	function clickOn(sel) { document.querySelector(sel).click() }
 	function getTopConversation() { return document.querySelector('button[cpar]'); } //gets 1st convers in roster
 	// cpar=<SenderGAIA>_<ReceiverGAIA>
 	// SMS forwarded messages have ephermeral GAIA's (persist for length of conversation history?)
 	// cathartic messages just have cpar=<YourGAIA>
 
-	function notifyMessages(msgs) { 
+	function notifyMessages(msgs) {
 		for (el of msgs) { // el should be a <button>
 			var cpar = el.getAttribute('cpar');
 			var msg = el.innerText.split('\n').filter( function(v) { return (v.length > 0) }) //filter blank lines
@@ -99,12 +102,12 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 
 	function watchForRoster() {
 		var cfg = { attributes: false, childList: true, characterData: false, subtree: true };
-		var watch = new MutationObserver(function(muts) { 
+		var watch = new MutationObserver(function(muts) {
 			for (var mut of muts) {
 				if (mut.type === 'childList')
-					if (roster = mut.target.querySelector('div[tabindex="-1"]')) {
+					if (roster = mut.target.querySelector('div[aria-label=Conversations]')) {
 						console.log("Found Hangouts chat roster, dispatching HangoutsRosterReady event");
-						window.dispatchEvent(new window.CustomEvent('HangoutsRosterReady',{'detail':{'roster': roster}}));
+						window.dispatchEvent(new window.CustomEvent('HangoutsRosterReady',{'detail':{'roster': roster}})); //send ref to roster element
 						window.rosterWatcher.disconnect(); // FIXME: use 'this'
 						break;
 					}
@@ -120,7 +123,7 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 		var watch = new MutationObserver(function(muts) {
 			for (var mut of muts) {
 				if (mut.type === 'attributes')
-					if (mut.target.nodeName == 'DIV') 
+					if (mut.target.nodeName == 'DIV')
 						if (mut.target.getAttribute('aria-label') != mut.oldValue) //prevent duplicate notifications of fed-back identical messages from chats with myself
 							if (mut.target.getAttribute('aria-label').match(/ ([1-9]\d?) unread message/) != null) { //if more than 0 unreads, notify
 								console.log(Date() + ' [new message seen from:] ' + mut.target.innerText);
@@ -129,7 +132,7 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 								// document.evaluate('/button', mut.target, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null ).singleNodeValue
 							}
 			}
-			
+
 		});
 		watch.observe(roster, cfg);
 		return watch;
@@ -171,7 +174,7 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 			var keycode = key.charCodeAt(0); // String.fromCharCode(keycode)
 			var keyid = keyids[keycode];
 			for (kt of ["keydown", "keypress", "keyup"]) {
-				var kev = new KeyboardEvent(kt, { bubbles: true, cancelable: true, view: window, detail: 0, keyIdentifier: keyid, location: KeyboardEvent.DOM_KEY_LOCATION_STANDARD, ctrlKey: false, altKey: false, shiftKey: false, metaKey: false }); //key: keycode 
+				var kev = new KeyboardEvent(kt, { bubbles: true, cancelable: true, view: window, detail: 0, keyIdentifier: keyid, location: KeyboardEvent.DOM_KEY_LOCATION_STANDARD, ctrlKey: false, altKey: false, shiftKey: false, metaKey: false }); //key: keycode
 				if (kt == 'keypress') {
 					Object.defineProperty(kev, 'charCode', {'value': keycode, 'enumerable': true});
 				} else {
@@ -204,11 +207,11 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 	var rosterWatcher;
 	window.addEventListener("HangoutsRosterReady", function(event) {
 		console.log("Caught HangoutsRosterReady event, dispatching message watcher");
-		window.rosterWatcher.disconnect();
+		window.rosterWatcher.disconnect(); //don't need to keep searching for the roster anymore
 		setTimeout(function(){
 			webkit.messageHandlers.HangoutsRosterReady.postMessage([]); //callback JSCore to accept queued new message URLs
 		}, 10000); //need a little lag so hangouts can finish populating contacts in the roster
-		var chatWatcher = window.watchForNewMessages(event.detail['roster']); //watch the whole roster
+		var chatWatcher = window.watchForNewMessages(event.detail['roster']); //watch the found roster element
 	}, false);
 	rosterWatcher = window.watchForRoster();
 

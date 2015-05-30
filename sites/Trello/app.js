@@ -5,12 +5,10 @@
 var delegate = {}; // our delegate to receive events from the webview app
 var trello = {
 	transparent: true,
-	//url: "https://trello.com",
-	url: "file://"+ $.app.resourcePath + "/trello.webarchive",
+	url: $.app.pathExists($.app.resourcePath + '/trello.webarchive') ? "file://"+ $.app.resourcePath + "/trello.webarchive" : "https://trello.com",
 	postinject: ['styler'], //dnd
 	preinject: ['notifier'], //navigator
-	//agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.104 Smafari/537.36",
-	handlers: ['TrelloNotification', "MacPinPollStates"] //styler.js does polls
+	subscribeTo: ['TrelloNotification', "MacPinPollStates"] //styler.js does polls
 };
 
 function search(query) {
@@ -74,7 +72,6 @@ delegate.AppFinishedLaunching = function() {
 		$.launchedWithURL = '';
 	} else {
 		$.browser.tabSelected = new $.WebView(trello);
-		$.browser.tabSelected.loadURL("https://trello.com"); // FIXME: the webarchive points somewhere weird
 	}
 };
 delegate; //return this to macpin

@@ -1,3 +1,6 @@
+/* eslint-env browser */
+/* eslint builtins */
+
 if (~window.name.indexOf('h_gtn_')) { //this is an incoming phone call notifcation
 	webkit.messageHandlers.unhideApp.postMessage([]); //get the app in the user's face right now!!
 	window.addEventListener('DOMSubtreeModified', function(e){
@@ -23,7 +26,7 @@ if (~window.name.indexOf('h_gtn_')) { //this is an incoming phone call notifcati
 };
 
 if (window == top)
-(function(){
+(function(){ //IIFE
 	function injectCSS() {
         if (document.head) {
 			document.removeEventListener('DOMSubtreeModified', injectCSS, false);
@@ -65,7 +68,7 @@ if (window == top)
 		}
 	}
 	document.addEventListener('DOMSubtreeModified', injectCSS, false); //mutation events are deprecated
-})()
+})();
 
 if (window == top)
 window.addEventListener('resize', function(e){
@@ -75,3 +78,30 @@ window.addEventListener('resize', function(e){
 		roster.style.height = document.height - 1 + "px";
 	//return false;
 });
+
+if (window.name == 'preld') { //frame-id ^gtn_ this is a chatbox iframe
+	(function(){ //IIFE
+		function injectCSS() {
+	        if (document.head) {
+				document.removeEventListener('DOMSubtreeModified', injectCSS, false);
+
+				// show local native emoji font rather than Hangout's crappy emoji art
+				var css = document.createElement("style");
+				css.type = 'text/css';
+				css.id = 'appleEmoji'
+			    css.innerHTML = "\
+					span[data-emo] span { opacity: 1.0 !important; width: auto !important; } \
+					span[data-emo] div { display: none !important; } \
+				\
+				";
+				document.head.appendChild(css);
+				//document.head.insertBefore(css,document.head.childNodes[0]); //prepend
+				/*
+				<div id=":gp.co" class="tL8wMe xAWnQc" dir="ltr" style="text-align: left;"><span data-emo="🙌" class="Pt tGvGdc" style="
+"><span style="display:inline-block;">🙌</span><div class="e1f64c vm" style="display:none;"></div></span>🏿<span data-emo="🚫" class="Pt tGvGdc"><span style="opacity:0.0; width: 0; display:inline-block;">🚫</span><div class="e1f6ab vm" style="display:inline-block;"></div></span><span data-emo="🔫" class="Pt tGvGdc"><span style="opacity:0.0; width: 0; display:inline-block;">🔫</span><div class="e1f52b vm" style="display:inline-block;"></div></span></div>
+				*/
+			}
+		}
+		document.addEventListener('DOMSubtreeModified', injectCSS, false); //mutation events are deprecated
+	})();
+};

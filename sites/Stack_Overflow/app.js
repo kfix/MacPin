@@ -25,6 +25,27 @@ delegate.launchURL = function(url) {
 	}
 };
 
+delegate.decideNavigationForURL = function(url) {
+	var comps = url.split(':'),
+		scheme = comps.shift(),
+		addr = comps.shift();
+	switch (scheme) {
+		case "http":
+		case "https":
+			if (!~addr.indexOf("//stackoverflow.com") &&
+				!~addr.indexOf("//stackexchange.com")
+			) {
+				$.app.openURL(url); //pop all external links to system browser
+				console.log("opened "+url+" externally!");
+				return true; //tell webkit to do nothing
+			}
+		case "about":
+		case "file":
+		default:
+			return false;
+	}
+};
+
 delegate.handleUserInputtedInvalidURL = function(query) {
 	// assuming the invalid url is a search request
 	search(encodeURI(query));

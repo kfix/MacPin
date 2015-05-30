@@ -72,7 +72,7 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 	return true
 }
 
-func validateURL(urlstr: String) -> NSURL? {
+func validateURL(urlstr: String) -> NSURL? { // fallback: (String -> NSURL?)? = nil
 	// https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 	if urlstr.isEmpty { return nil }
 	if let urlp = NSURLComponents(string: urlstr) where find(urlstr, " ") == nil && !urlstr.hasPrefix("?") {
@@ -92,13 +92,18 @@ func validateURL(urlstr: String) -> NSURL? {
 	}
 
 	if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // the delegate function will open url directly
+	// return fallback?()
 
 	// maybe its a search query? check if blank and reformat it
+	// FIXME: this should get refactored to a browserController/OmniBoxController closure thats passed as fallback?
 	if !urlstr.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
 		let query = urlstr.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding),
 		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") {
 			return search
 		}
+	// as a fallback, could forcibly change OmniBox stringValue to raw search terms
+	// FIXME: support OpenSearch to search current site on-the-fly https://en.wikipedia.org/wiki/OpenSearch
+	// https://developer.mozilla.org/en-US/Add-ons/Creating_OpenSearch_plugins_for_Firefox
 
 	return nil
 }

@@ -225,7 +225,7 @@ import JavaScriptCore
 
 	func preinject(script: String) -> Bool { return loadUserScriptFromBundle(script, configuration.userContentController, .AtDocumentStart, onlyForTop: false) }
 	func postinject(script: String) -> Bool { return loadUserScriptFromBundle(script, configuration.userContentController, .AtDocumentEnd, onlyForTop: false) }
-	func addHandler(handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) }
+	func addHandler(handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) } //FIXME kill
 	func subscribeTo(handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) }
 
 	func REPL() {
@@ -240,14 +240,16 @@ import JavaScriptCore
 #if os(OSX)
 
 	func saveWebArchive() {
-		_getWebArchiveDataWithCompletionHandler() { (data: NSData!, err: NSError!) -> Void in
+		_getWebArchiveDataWithCompletionHandler() { [unowned self] (data: NSData!, err: NSError!) -> Void in
 			//pop open a save Panel to dump data into file
 			let saveDialog = NSSavePanel();
 			saveDialog.canCreateDirectories = true
 			saveDialog.allowedFileTypes = [kUTTypeWebArchive]
-			saveDialog.beginWithCompletionHandler() { (result: Int) -> Void in
-				if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
-					NSFileManager.defaultManager().createFileAtPath(path, contents: data, attributes: nil)
+			if let window = self.window {
+				saveDialog.beginSheetModalForWindow(window) { (result: Int) -> Void in
+					if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
+						NSFileManager.defaultManager().createFileAtPath(path, contents: data, attributes: nil)
+						}
 				}
 			}
 		}
