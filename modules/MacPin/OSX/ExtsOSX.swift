@@ -38,17 +38,16 @@ extension NSPasteboard {
 						// https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/UTIRef/Articles/System-DeclaredUniformTypeIdentifiers.html
 						// http://arstechnica.com/apple/2005/04/macosx-10-4/11/ http://www.cocoanetics.com/2012/09/fun-with-uti/
 						if !uti.description.isEmpty, let value = item.stringForType(uti.description) {
-							if var cftype = UTTypeCopyDescription(uti as CFString) {
+					 		if var cfdesc = UTTypeCopyDescription(uti as CFString), var cfmime = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassMIMEType) {
+								var desc = cfdesc.takeUnretainedValue()
+								var mime = cfmime.takeUnretainedValue()
+								warn("DnD: uti(\(uti)) `\(desc)` => types['\(mime)'] = '\(value)'")
+							} else if var cftype = UTTypeCopyDescription(uti as CFString) {
 								var type = cftype.takeUnretainedValue()
 								warn("DnD: uti(\(uti)) [\(type)] = '\(value)'")
-							} else if var cftag = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassNSPboardType) {
-								var tag = cftag.takeUnretainedValue()
-								warn("DnD: uti(\(uti)) <\(tag)> = '\(value)'")
-							} else if var cftag = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassMIMEType) {
-								var tag = cftag.takeUnretainedValue()
-								warn("DnD: uti(\(uti)) {\(tag)} = '\(value)'")
 							} else {
 								warn("DnD: uti(\(uti)) = '\(value)'")
+								//might be a dynamic UTI: http://alastairs-place.net/blog/2012/06/06/utis-are-better-than-you-think-and-heres-why/
 							} //O
 						} //M
 					} //G
@@ -57,6 +56,67 @@ extension NSPasteboard {
 		} //F
 	} //PewPewDIE!@#$!$#!@
 
+	func normalizeURLDrag() { //}-> [NSURL] {
+		// extracts any URLs dragged in, and makes the pasteboard writeable whilst restoring most of the original contents
+		//var urls: [NSURL] = []
+
+		var apsfctype = dataForType(kPasteboardTypeFilePromiseContent as String) //"com.apple.pasteboard.promised-file-content-type")
+		var apsfurl = dataForType(kPasteboardTypeFileURLPromise as String) //"com.apple.pasteboard.promised-file-url")
+		var urlstr = stringForType(kUTTypeURL as String)
+		var urlname = stringForType("public.url-name" as String)
+		var str = stringForType(NSStringPboardType as String)
+		var wkurls = WebURLsWithTitles.URLsFromPasteboard(self)
+
+		if let urls = readObjectsForClasses([NSURL.self], options: nil) as? [NSURL] {
+			clearContents() // have to wipe it clean in order to modify
+
+			// re-add any promises UTIs
+			if let ctype = apsfctype {
+				addTypes([kPasteboardTypeFilePromiseContent as String], owner: nil)
+				setData(ctype, forType: kPasteboardTypeFilePromiseContent as String)
+			}
+			if let url = apsfurl {
+				addTypes([kPasteboardTypeFileURLPromise as String], owner: nil)
+				setData(url, forType: kPasteboardTypeFileURLPromise as String)
+			}
+
+			if let url = urls.first {
+				addTypes([kUTTypeURL, NSStringPboardType], owner: nil) // *WebURLPboardType http://uti.schwa.io/identifier/public.url
+				setString(url.description, forType: kUTTypeURL as String) // -> public.url
+
+				setString(url.description, forType: NSStringPboardType as String) // -> text/plain
+				// https://github.com/WebKit/webkit/blob/fb77811f2b8164ce4c34fc63b496519be15f55ca/Source/WebCore/platform/mac/PasteboardMac.mm#L539
+			}
+
+/*
+			if let urlstr = urlstr, urlname = urlname {
+				addTypes([kUTTypeURL, "public.url-name"], owner: nil)
+				setString(urlstr, forType: kUTTypeURL as String) // -> public.url
+				setString(urlname, forType: "public.url-name") // -> public.url-name
+
+				// fake x-moz-url beaause Trello Inc. is BRAINDEAD
+				// text/x-moz-url seems to be used for inter-tab link drags in Chrome and FF
+				// https://hg.mozilla.org/mozilla-central/file/tip/dom/base/nsContentAreaDragDrop.cpp
+				// https://hg.mozilla.org/mozilla-central/file/tip/widget/cocoa/nsDragService.mm
+				// https://hg.mozilla.org/mozilla-central/file/tip/widget/cocoa/nsClipboard.mm
+				let mozuti = "dyn.ar34gq81k3p2su11upprr77c47pwru" //  => ?0=7:3=text/x-moz-url
+				addTypes([mozuti], owner: nil)
+				setString("\(urlstr)\n\(urlname)", forType: mozuti)
+			}
+*/
+			if let str = str {
+				addTypes([NSStringPboardType], owner: nil)
+				setString(str, forType: NSStringPboardType as String) // -> text/plain
+			}
+
+			addTypes(["WebURLsWithTitlesPboardType"], owner: nil)
+			WebURLsWithTitles.writeURLs(wkurls ?? urls, andTitles: nil, toPasteboard: self)
+			// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/History/WebURLsWithTitles.h
+		}
+
+		//return urls
+
+	}
 }
 
 extension WKView {
@@ -71,8 +131,8 @@ extension WKView {
 			// < forURL
 			WebURLsWithTitlesPboardType, //webkit proprietary
 			NSURLPboardType, // single url from older apps and Chromium -> text/uri-list
-			WebURLPboardType, //webkit proprietary: public.url
-			WebURLNamePboardType, //webkit proprietary: public.url-name
+			WebURLPboardType (kUTTypeURL), //webkit proprietary: public.url
+			WebURLNamePboardType (kUTTypeURLName), //webkit proprietary: public.url-name
 			NSStringPboardType, // public.utf8-plain-text -> WKJS: text/plain
 			NSFilenamesPboardType, // Finder -> text/uri-list & Files
 		])
@@ -85,78 +145,23 @@ extension WKView {
 	func shimmedPerformDragOperation(sender: NSDraggingInfo) -> Bool {
 		if sender.draggingSource() == nil { //dragged from external application
 			var pboard = sender.draggingPasteboard()
-			pboard.dump()
 
-			if var urls = WebURLsWithTitles.URLsFromPasteboard(pboard) { //drops from Safari
-				warn("DnD: WebKit URL array: \(urls)")
-			} else if var file = pboard.stringForType(kUTTypeFileURL as String) { //drops from Finder
+			if var file = pboard.stringForType(kUTTypeFileURL as String) { //drops from Finder
 				warn("DnD: file from Finder: \(file)")
-			} else if var zip = pboard.dataForType("org.chromium.drag-dummy-type") ?? pboard.dataForType("org.chromium.image-html") //Chromium
-				where kUTTypeURL as String != (pboard.availableTypeFromArray([kUTTypeURL as String]) ?? "") { // image or href link drops don't have URL UTIs?!
-				// Chromium uses "promises" NSPasteboard API:
-				//   http://www.cocoabuilder.com/archive/cocoa/314303-fwd-nspasteboarditem-kpasteboardtypefileurlpromise.html#314303
-				//   https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/DragandDrop/Tasks/DraggingFiles.html#//apple_ref/doc/uid/20001288-102943
-				// let's add a standard URL uti to this drag's pasteboard
-
-				// http://src.chromium.org/viewvc/chrome/trunk/src/content/browser/web_contents/web_drag_source_mac.mm
-				// http://src.chromium.org/viewvc/chrome/trunk/src/ui/base/dragdrop/cocoa_dnd_util.mm
-
-				// Chromium pastes need some massage for WebView to seamlessly open them, so imitate a Safari drag
-				// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/Misc/WebNSPasteboardExtras.mm#L118 conform to _web_bestURL()
-
-				var apsfctype = pboard.dataForType(kPasteboardTypeFilePromiseContent as String) //"com.apple.pasteboard.promised-file-content-type")
-				var apsfurl = pboard.dataForType(kPasteboardTypeFileURLPromise as String) //"com.apple.pasteboard.promised-file-url")
-
-				// get the pre-Lion, pre-UTI URL that Chromium *does* supply
-				if let url = NSURL(fromPasteboard: pboard) { // NSURLPBoardType
-					// https://github.com/WebKit/webkit/blob/53e0a1506a7b2408e86caa9f510477b5ee283487/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3330 drag out
-					// https://github.com/WebKit/webkit/search?q=datatransfer
-
-					pboard.clearContents() // have to wipe it clean in order to modify
-
-					pboard.addTypes(["WebURLsWithTitlesPboardType"], owner: nil)
-					WebURLsWithTitles.writeURLs([url], andTitles: nil, toPasteboard: pboard)
-					// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/History/WebURLsWithTitles.h
-
-					//pboard.addTypes([NSURLPboardType], owner: nil) // Apple URL pasteboard type -> text/url-list
-					//url.writeToPasteboard(pboard) //deprecated from 10.6+
-					// https://github.com/WebKit/webkit/blob/fb77811f2b8164ce4c34fc63b496519be15f55ca/Source/WebCore/platform/mac/PasteboardMac.mm#L543
-
-					pboard.addTypes([kUTTypeURL], owner: nil) // *WebURLPboardType http://uti.schwa.io/identifier/public.url
-					pboard.setString(url.description, forType: kUTTypeURL as String) // -> public.url
-
-					pboard.setString(url.description, forType: NSStringPboardType as String) // -> text/plain
-					// https://github.com/WebKit/webkit/blob/fb77811f2b8164ce4c34fc63b496519be15f55ca/Source/WebCore/platform/mac/PasteboardMac.mm#L539
-
-					// re-add the promises UTIs
-					if let ctype = apsfctype {
-						pboard.addTypes([kPasteboardTypeFilePromiseContent as String], owner: nil)
-						pboard.setData(ctype, forType: kPasteboardTypeFilePromiseContent as String)
-					}
-					if let url = apsfurl {
-						pboard.addTypes([kPasteboardTypeFileURLPromise as String], owner: nil)
-						pboard.setData(url, forType: kPasteboardTypeFileURLPromise as String)
-					}
-
-					//pboard.writeObjects([url])
-
-					pboard.dump()
-				}
-			} else if let url = NSURL(fromPasteboard: pboard) { // NSURLPBoardType
-				warn("DnD: pre-Lion pre-UTI URL drag: \(url)")
+			} else {
+				pboard.dump()
+				pboard.normalizeURLDrag()
+				pboard.dump()
 			}
-			// text/x-moz-url seems to be used for inter-tab link drags in Chrome and FF
-			// https://hg.mozilla.org/mozilla-central/file/tip/dom/base/nsContentAreaDragDrop.cpp
-			// https://hg.mozilla.org/mozilla-central/file/tip/widget/cocoa/nsDragService.mm
-			// https://hg.mozilla.org/mozilla-central/file/tip/widget/cocoa/nsClipboard.mm
 
 			if let urls = pboard.readObjectsForClasses([NSURL.self], options: nil) {
-				if AppScriptRuntime.shared.jsdelegate.tryFunc("handleDragAndDroppedURLs", urls.map({$0.description})) { return true } // app.js indicated it will handle drag itself
+				if AppScriptRuntime.shared.jsdelegate.tryFunc("handleDragAndDroppedURLs", urls.map({$0.description})) {
+			 		return true  // app.js indicated it handled drag itself
+				}
 			}
-
 		} // -from external app
 
-		return self.shimmedPerformDragOperation(sender) //return pre-swizzled method from WKWebView
+		return self.shimmedPerformDragOperation(sender) //return pre-swizzled method from WKWebView ..
 		// if current page doesn't have HTML5 DnD event observers, webview will just navigate to URL dropped in
 	}
 }

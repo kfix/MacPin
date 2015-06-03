@@ -20,6 +20,7 @@ import JavaScriptCore
 	//var canGoBack: Bool { get }
 	//var canGoForward: Bool { get }
 	//var hasOnlySecureContent: Bool { get }
+	var injected: [String] { get }
 	static var MatchedAddressOptions: [String:String] { get set }
 	func close()
 	func evalJS(js: String, _ withCallback: JSValue?)
@@ -39,6 +40,8 @@ import JavaScriptCore
 
 @objc class MPWebView: WKWebView, WebViewScriptExports {
 	static var MatchedAddressOptions: [String:String] = [:] // cvar singleton
+
+	var injected: [String] = [] //list of script-names already loaded
 
 	var jsdelegate = AppScriptRuntime.shared.jsdelegate
 
@@ -223,8 +226,16 @@ import JavaScriptCore
 		return false
 	}
 
-	func preinject(script: String) -> Bool { return loadUserScriptFromBundle(script, configuration.userContentController, .AtDocumentStart, onlyForTop: false) }
-	func postinject(script: String) -> Bool { return loadUserScriptFromBundle(script, configuration.userContentController, .AtDocumentEnd, onlyForTop: false) }
+	func preinject(script: String) -> Bool {
+		//if contains(injected, script) { return true } //already loaded
+		if !contains(injected, script) && loadUserScriptFromBundle(script, configuration.userContentController, .AtDocumentStart, onlyForTop: false) { injected.append(script); return true }
+		return false
+	}
+	func postinject(script: String) -> Bool {
+		//if contains(injected, script) { return true } //already loaded
+		if !contains(injected, script) && loadUserScriptFromBundle(script, configuration.userContentController, .AtDocumentEnd, onlyForTop: false) { injected.append(script); return true }
+		return false
+	}
 	func addHandler(handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) } //FIXME kill
 	func subscribeTo(handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) }
 

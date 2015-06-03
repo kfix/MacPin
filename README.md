@@ -1,22 +1,19 @@
 [![Join the chat at https://gitter.im/kfix/MacPin](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kfix/MacPin?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 # MacPin
 <center>
-MacPin creates a Mac OSX (& [iOS](#iOS)!) App shell for websites & webapps from a short JavaScript you provide.  
+MacPin creates OSX & [iOS](#iOS) apps for websites & webapps, configured with JavaScript.  
 ![screenie](/dock_screenshot.png?raw=true)  
 </center>
 
-The Browser UI is very minimal, just a tab-bar which disappears in Full-Screen mode, leaving only the site content.
+The Browser UI is very minimal, just a toolbar (with site tabs) that disappears in Full-Screen mode.
 
-MacPin apps sit in your Dock, App Switcher, and Launchpad.  
-Userscripts can be injected to facilitate posting to the Notification Center & recalling webapp locations/state from those posts.
+MacPin apps are shown in OSX's Dock, App Switcher, and Launchpad.  
 
-Custom URL schemes can also be registered to launch your App from any other app on your Mac.  
+Custom URL schemes can also be registered to launch a MacPin App from any other app on your Mac.  
 
 OSX 10.10 "Yosemite" or iOS 8.3 is required.  
 
-A suite of apps are prebuilt for download in the GitHub release.
-
-## Included Apps
+## Included Apps in the [Release](/releases)
 
 #### [Hangouts.app](http://plus.google.com/hangouts): SMS/IM/Video chat client for the desktop
 
@@ -62,7 +59,6 @@ Hooked URLs:
 * [`rss:`](rss://example.com/sampleblog.xml)
 
 #### [Trello.app](http://trello.com): Mind-mapper and project planner
-![screenie](/sites/Trello/screenshot.jpg?raw=true)  
 Hooked URLs:
 * [`trello:`](trello:search for something)
 
@@ -93,23 +89,45 @@ Hooked URLs:
 Some call these Apps [Site-specific Browsers](https://en.wikipedia.org/wiki/Site-specific_browser) or Hybrid apps.  
 They are configured with an imperative JavaScript which you need to copy-paste and customize.  
 
+Userscripts can be added to facilitate posting to the Notification Center & recalling webapp locations/state from those posts.
+
 Eventually, I plan to make a UI wizard to generate MacPin apps from MacPin. But for now:  
 
 ```
 cd ~/src/MacPin
 mkdir sites/MySite
-vim sites/MySite/app.js
-# peruse sites/*/app.js for available commands
-
-make
-open builds/macosx-x86*/apps/MySite.app
-# test, tweak, lather, repeat
+cp sites/MacPin/app.js sites/MySite
+$EDITOR sites/MySite/app.js
 
 # find a large & square .png for the app, like an App Store image.
 cp ~/Pictures/MySite.png sites/MySite/icon.png
 
+make MySite.app
+open builds/macosx-x86*/apps/MySite.app
+# test, tweak, lather, repeat
+
 make install
 open -a MySite.app
+```
+
+### sample app.js
+```
+/*eslint-env applescript*/
+/*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
+"use strict";
+
+var delegate = {}; // our delegate to receive events from the webview app
+
+delegate.AppFinishedLaunching = function() {
+	$.browser.tabSelected = new $.WebView({
+		url: "http://vine.co",
+		preinject: ['unpreloader'], // this prevents buffering every video in a feed. If you have a fast Mac and Internet, comment out this line
+		postinject: ['styler'],
+		agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Mobile/12B411" // mobile version doesnt autoplay on mouseover
+	});
+};
+
+delegate; //return this to macpin
 ```
 
 ## Hacking MacPin

@@ -71,7 +71,7 @@ endif
 
 # github settings for release: target
 #####
-VERSION		 := 1.3.0a3
+VERSION		 := 1.3.0b1
 LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin

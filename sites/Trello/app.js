@@ -5,15 +5,16 @@
 var delegate = {}; // our delegate to receive events from the webview app
 var trello = {
 	transparent: true,
-	url: $.app.pathExists($.app.resourcePath + '/trello.webarchive') ? "file://"+ $.app.resourcePath + "/trello.webarchive" : "https://trello.com",
-	postinject: ['styler'], //dnd
-	preinject: ['notifier'], //navigator
+	url: "https://trello.com",
+	postinject: ['styler'], 
+	preinject: ['notifier'], 
 	subscribeTo: ['TrelloNotification', "MacPinPollStates"] //styler.js does polls
 };
 
 function search(query) {
 	$.browser.tabSelected = new $.WebView({url: "https://trello.com/search?q="+query, postinject: ['styler']});
 	// will prompt user to search boards/cards for phrase
+	// would like to hook native JS to perform search instead
 }
 
 delegate.launchURL = function(url) {
@@ -66,6 +67,7 @@ delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(ur
 
 delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('trello');
+	$.browser.addShortcut('Trello', trello);
 
 	if ($.launchedWithURL != '') { // app was launched with a feed url
 		this.launchURL($.launchedWithURL);
