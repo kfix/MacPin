@@ -16,7 +16,10 @@ var useChromeAV = $.app.doesAppExist("com.google.Chrome"); // use Chrome's NaCL+
 var gaia; // your Google ID
 var delegate = {}; // our delegate to receive events from the webview app
 
-delegate.decideNavigationForClickedURL = function(url) { $.app.openURL(url); return true; }; // open all links externally
+delegate.decideNavigationForClickedURL = function(url) {
+	if (url.indexOf("//talkgadget.google.com")) { $.app.openURL(url); return true; }
+	return false;
+}; // open all links externally
 delegate.decideNavigationForMIME = function() { return false; };
 delegate.decideWindowOpenForURL = function(url) {
 	if (~url.indexOf("https://plus.google.com/hangouts/_/")) { //G+ hangouts a/v chat
@@ -26,8 +29,22 @@ delegate.decideWindowOpenForURL = function(url) {
 			$.browser.tabSelected = new $.WebView({url: url});
 		return true;
 	}
-	//if url ^= https://talkgadget.google.com/u/0/talkgadget/_/frame
+
+	/*
+	if (~url.indexOf("//talkgadget.google.com/u/0/talkgadget/_/frame")) {
+		$.browser.tabSelected = new $.WebView({url: url}); // chat pop-out should change tab to new chat tab, and not change size
+		return true; //doesn't work because parent webViewConfig is not passed through
+	}
+	*/
+
 	return false;
+};
+
+delegate.handleUserInputtedInvalidURL = function(query) {
+	// assuming the invalid url is a phone number
+	// check for all-nums or at-sign
+	hangoutsTab.evalJS("xssRoster(['inputAddress', '"+query+"']);");
+	return true; // tell MacPin to stop validating the URL
 };
 
 delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) calls this
@@ -47,6 +64,9 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 			hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['sendSMS']);"); //calls into AppTab[1]:notifier.js
 			break;
 		case 'tel':
+			$.browser.unhideApp();
+			hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['makeCall']);"); // Hangouts now does in-frame phone calls!
+			break;
 			if (useChromeAV) {
 				$.app.openURL("https://plus.google.com/hangouts/_/?hl=en&hpn="+addr+"&hip="+addr+"&hnc=0", "com.google.Chrome"); //use Chrome's NaCL+WebRTC Hangouts client
 			} else {
@@ -55,6 +75,7 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 			}
 			break;
 		default:
+			$.app.openURL(url);
 	}
 };
 
@@ -102,6 +123,7 @@ delegate.HangoutsRosterReady = function(tab) { // notifier.js will call this whe
 			console.log(err);
 		}
 	});
+	$.browser.addShortcut("Test call to MCI ANAC", "tel:18004444444");
 };
 
 delegate; //return this to macpin

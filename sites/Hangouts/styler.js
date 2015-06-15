@@ -95,13 +95,12 @@ if (window.name == 'preld') { //frame-id ^gtn_ this is a chatbox iframe
 				\
 				";
 				document.head.appendChild(css);
-				//document.head.insertBefore(css,document.head.childNodes[0]); //prepend
-				/*
-				<div id=":gp.co" class="tL8wMe xAWnQc" dir="ltr" style="text-align: left;"><span data-emo="🙌" class="Pt tGvGdc" style="
-"><span style="display:inline-block;">🙌</span><div class="e1f64c vm" style="display:none;"></div></span>🏿<span data-emo="🚫" class="Pt tGvGdc"><span style="opacity:0.0; width: 0; display:inline-block;">🚫</span><div class="e1f6ab vm" style="display:inline-block;"></div></span><span data-emo="🔫" class="Pt tGvGdc"><span style="opacity:0.0; width: 0; display:inline-block;">🔫</span><div class="e1f52b vm" style="display:inline-block;"></div></span></div>
-				*/
 			}
 		}
 		document.addEventListener('DOMSubtreeModified', injectCSS, false); //mutation events are deprecated
 	})();
+
+	// watch for pop-out button to appear
+	// document.querySelector('button[title="Pop-out"]').click() //auto-tab this chat
+	// then postMessage at macpin to switch to next tab
 };

@@ -162,6 +162,7 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 		var keyids = { // https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent.keyCode
 			8: 'backspace',
 			9: 'tab',
+			//10: 'newline',
 			13: 'enter',
 			27: 'esc',
 			32: 'space',
@@ -171,7 +172,7 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 			108: '.'
 		};
 		for (key of keys) {
-			var keycode = key.charCodeAt(0); // String.fromCharCode(keycode)
+			var keycode = (Number(key)) ? key : key.charCodeAt(0); // String.fromCharCode(keycode)
 			var keyid = keyids[keycode];
 			for (kt of ["keydown", "keypress", "keyup"]) {
 				var kev = new KeyboardEvent(kt, { bubbles: true, cancelable: true, view: window, detail: 0, keyIdentifier: keyid, location: KeyboardEvent.DOM_KEY_LOCATION_STANDARD, ctrlKey: false, altKey: false, shiftKey: false, metaKey: false }); //key: keycode
@@ -191,6 +192,61 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 
 	function sendSMS() { setTimeout(function(){
  		document.querySelector('a[title="Click to send SMS"]').click(); // a='Send SMS' -> @main window.frames['gtn_96gm6a']
+	}, 1000); } //wait for contact to get found
+	function makeCall() { setTimeout(function(){
+		//var tgt = document.querySelector("li[title='Call'] > div + div > div > div");
+		var tgt = document.querySelector("li[title='Call'] img");
+		//tgt.click();
+		tgt.focus();
+		var sz = tgt.getBoundingClientRect();
+		tgt.dispatchEvent(new MouseEvent('mouseover', {
+			view: window,
+			bubbles: true,
+			cancelable: false,
+			detail: 0,
+			screenX: sz.left,
+			screenY: sz.top,
+			clientX: sz.left,
+			clientY: sz.top,
+			ctrlKey: false,
+			altKey: false,
+			shiftKey: false,
+			metaKey: false,
+			button: 0,
+			relatedTarget: tgt
+		}));
+		tgt.dispatchEvent(new MouseEvent('mousedown', {
+			view: window,
+			bubbles: true,
+			cancelable: false,
+			detail: 0,
+			screenX: sz.left,
+			screenY: sz.top,
+			clientX: sz.left,
+			clientY: sz.top,
+			ctrlKey: false,
+			altKey: false,
+			shiftKey: false,
+			metaKey: false,
+			button: 0,
+			relatedTarget: undefined
+		}));
+		tgt.dispatchEvent(new MouseEvent('mouseup', {
+			view: window,
+			bubbles: true,
+			cancelable: false,
+			detail: 0,
+			screenX: sz.left,
+			screenY: sz.top,
+			clientX: sz.left,
+			clientY: sz.top,
+			ctrlKey: false,
+			altKey: false,
+			shiftKey: false,
+			metaKey: false,
+			button: 0,
+			relatedTarget: undefined
+		}));
 	}, 1000); } //wait for contact to get found
 	function openHangout() { document.querySelector('button[title="Message"]').click(); } // ||'Video call' -> @main window.frames['gtn_96gm6a']
 	function checkFirstFoundContact() { document.querySelector('input[type="checkbox"]').click(); } //input[name=select_result]
