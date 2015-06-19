@@ -10,10 +10,12 @@ var hangouts = {
 	url: "https://plus.google.com/hangouts"
 };
 $.browser.addShortcut("Google Hangouts", hangouts);
-var hangoutsTab = new $.WebView(hangouts);
-var useChromeAV = $.app.doesAppExist("com.google.Chrome"); // use Chrome's NaCL+WebRTC Hangouts client for A/V chats ( https://webrtchacks.com/hangout-analysis-philipp-hancke/ )
-// var useChromeAV = false // use NPAPI GoogleVoice & Video (Vidyo) plugin in WebKit ( https://encrypted.google.com/tools/dlpage/hangoutplugin )
-var gaia; // your Google ID
+var hangoutsTab = new $.WebView(hangouts); // start loading right way, its a big Closure app
+$.browser.addShortcut("Install Google Voice & Video plugin", "https://encrypted.google.com/tools/dlpage/hangoutplugin");
+$.browser.addShortcut("Get Contacts.app -> Hangouts.app plugin", "http://github.com/kfix/MacPin/tree/master/extras/AddressBookHangoutsPlugin");
+$.browser.addShortcut("Get OSX service for text-selected numbers", "http://github.com/kfix/MacPin/tree/master/extras/Call Phone with Hangouts.workflow");
+var gaia; // your numeric Google ID
+
 var delegate = {}; // our delegate to receive events from the webview app
 
 delegate.decideNavigationForClickedURL = function(url) {
@@ -54,24 +56,30 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 		addr = comps.shift();
 	switch (scheme) {
 		case 'hangouts':
-			// this should be a gmail address or email address that has been linked to a google account
+			// this could be a gmail address or email address that has been linked to a google account, or the Full Name linked to such addresses
 			// http://handleopenurl.com/scheme/hangouts
 			// https://productforums.google.com/forum/#!topic/hangouts/-FgLeX50Jck
-			//xssRoster(["inputAddress", addr, [' ','\r']]);
-			//xssRoster(['inputAddress', "+addr+", ['.','\b','\r']]);");
+			$.browser.unhideApp(); //user might have switched apps while waiting for roster to load
+			$.browser.tabSelected = hangoutsTab;
+			hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['checkFirstFoundContact']);"); //calls into AppTab[1]:notifier.js
 		case 'sms':
 			$.browser.unhideApp(); //user might have switched apps while waiting for roster to load
+			$.browser.tabSelected = hangoutsTab;
 			hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['sendSMS']);"); //calls into AppTab[1]:notifier.js
 			break;
 		case 'tel':
-			$.browser.unhideApp();
-			hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['makeCall']);"); // Hangouts now does in-frame phone calls!
-			break;
-			if (useChromeAV) {
-				$.app.openURL("https://plus.google.com/hangouts/_/?hl=en&hpn="+addr+"&hip="+addr+"&hnc=0", "com.google.Chrome"); //use Chrome's NaCL+WebRTC Hangouts client
-			} else {
+			if ($.app.pathExists('/Library/Internet Plug-Ins/googletalkbrowserplugin.plugin')) {
+				// use NPAPI GoogleVoice & Video (Vidyo) plugin in the WebView
 				$.browser.unhideApp(); //user might have switched apps while waiting for roster to load
-				$.browser.tabSelected = new $.WebView({url: "https://plus.google.com/hangouts/_/?hl=en&hpn="+addr+"&hip="+addr+"&hnc=0"});
+				$.browser.tabSelected = hangoutsTab;
+				hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['makeCall']);"); // Hangouts now does in-frame phone calls!
+			} else if ($.app.doesAppExist("com.google.Chrome")) {
+				// use Chrome's NaCL+WebRTC Hangouts client for A/V chats ( https://webrtchacks.com/hangout-analysis-philipp-hancke/ )
+				$.app.openURL("https://plus.google.com/hangouts/_/?hl=en&hpn="+addr+"&hip="+addr+"&hnc=0", "com.google.Chrome");
+			} else {
+				// no plugin or chrome ...
+				$.browser.tabSelected = new $.WebView({url: "https://encrypted.google.com/tools/dlpage/hangoutplugin"}); //prompt to install plugin
+				$.app.openURL("tel:"+addr, "com.apple.facetime"); // maybe they have iPhone w/Handoff, so try call w/ facetime
 			}
 			break;
 		default:
@@ -100,8 +108,8 @@ delegate.unhideApp = function(tab) {
 };
 
 delegate.AppFinishedLaunching = function() {
-	$.app.registerURLScheme('sms');
-	$.app.registerURLScheme('tel');
+	$.app.registerURLScheme('sms'); // `open -a Messages.app imessage:18004444444` still works
+	$.app.registerURLScheme('tel'); // `open -a Facetime.app tel:18004444444` still works
 	$.app.registerURLScheme('hangouts');
 	// OSX Yosemite safari recognizes and launches sms and tel links to any associated app
 	// https://github.com/WebKit/webkit/blob/ce77bdb93dbd24df1af5d44a475fe29b5816f8f9/Source/WebKit2/UIProcess/mac/WKActionMenuController.mm#L691
@@ -121,6 +129,7 @@ delegate.HangoutsRosterReady = function(tab) { // notifier.js will call this whe
 			console.log("Logged in as https://plus.google.com/"+gaia);
 		} else {
 			console.log(err);
+			//$.browser.tabSelected = new $.WebView({url: hangouts.url}); // G+ login prompt
 		}
 	});
 	$.browser.addShortcut("Test call to MCI ANAC", "tel:18004444444");
