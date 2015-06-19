@@ -588,15 +588,20 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 			warn("title not provided")
 			return
 		}
+		var mi: NSMenuItem
 		switch (obj) {
 			//case is String: fallthrough
 			//case is [String:AnyObject]: fallthrough
             //case is [String]: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: obj))
-            case let str as String: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: str))
-            case let dict as [String:AnyObject]: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: dict))
-            case let arr as [String]: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: obj))
-			default: warn("invalid shortcut object type!")
+            case let str as String: mi = MenuItem(title, "gotoShortcut:", target: self, represents: str)
+            case let dict as [String:AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: dict)
+            case let arr as [String]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: obj)
+			default:
+				warn("invalid shortcut object type!")
+				return
 		}
+        shortcutsMenu.addItem(mi)
+		mi.parentItem?.hidden = false
 	}
 
 	func gotoShortcut(sender: AnyObject?) {

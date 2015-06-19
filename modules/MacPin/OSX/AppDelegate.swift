@@ -118,6 +118,7 @@ extension AppDelegate: NSApplicationDelegate {
 		app!.mainMenu?.addItem(tabListMenu)
 
 		let shortcutsMenu = NSMenuItem(title: "Shortcuts", action: nil, keyEquivalent: "")
+		shortcutsMenu.hidden = true // not shown until $.browser.addShortcut(foo, url) is called
 		shortcutsMenu.submenu = browserController.shortcutsMenu
 		shortcutsMenu.submenu?.title = "Shortcuts"
 		app!.mainMenu?.addItem(shortcutsMenu)
@@ -236,7 +237,18 @@ extension AppDelegate: NSApplicationDelegate {
 				//case "public.data":
 				//case "public.html":
 				//case "public.folder":
-				case "com.netscape.javascript-source":
+				case "com.apple.web-internet-location": //.webloc http://stackoverflow.com/questions/146575/crafting-webloc-file
+					if let webloc = NSDictionary(contentsOfFile: filename), urlstr = webloc.valueForKey("URL") as? String {
+						if AppScriptRuntime.shared.jsdelegate.tryFunc("handleDragAndDroppedURLs", [urlstr]) {
+					 		return true  // app.js indicated it handled drag itself
+						} else if let url = validateURL(urlstr) {
+							browserController.tabSelected = MPWebView(url: url)
+							return true
+						}
+					}
+					return false
+
+				case "com.netscape.javascript-source": //.js
 					warn(filename)
 					AppScriptRuntime.shared.loadAppScript("file://\(filename)")
 					AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
@@ -253,7 +265,7 @@ extension AppDelegate: NSApplicationDelegate {
 			browserController.tabSelected = MPWebView(url: url)
 			return true
 		}
-		return false
+		return false // will generate modal error popup
 	}
 }
 
