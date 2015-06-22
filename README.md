@@ -13,7 +13,7 @@ Custom URL schemes can also be registered to launch a MacPin App from any other 
 
 OSX 10.10 "Yosemite" or iOS 8.3 is required.  
 
-## Included Apps in the [Release](/releases)
+## Included Apps in the [Release](https://github.com/kfix/MacPin/releases)
 
 #### [Hangouts.app](http://plus.google.com/hangouts): SMS/IM/Video chat client for the desktop
 
