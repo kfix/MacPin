@@ -82,10 +82,22 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 			} else {
 				 replyTo = 'hangouts:' + from;
 			}
+
+
 			if (body == "is video calling you" || body == "is calling you" || body == "You're in a call" || body == "You're in a video call") {
 				webkit.messageHandlers.unhideApp.postMessage([]); //get in the user's face right now!!
 			} else {
-				webkit.messageHandlers.receivedHangoutsMessage.postMessage([from, replyTo, body, cpar]);
+				//webkit.messageHandlers.receivedHangoutsMessage.postMessage([from, replyTo, body, cpar]);
+				var note = {
+					title: from,
+					subtitle: replyTo,
+					body: body,
+					tag: cpar
+				}
+
+				if (img = el.getElementsByTagName('IMG')[0].src) note.icon = img;
+
+				webkit.messageHandlers.receivedHTML5DesktopNotification.postMessage(note);
 			}
 		}
 	}

@@ -3,9 +3,27 @@
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
 
-var messenger = {url: 'https://www.messenger.com'};
+var messengerTab, messenger = {
+	url: 'https://www.messenger.com',
+	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
+	preinject: ['shim_html5_notifications']
+};
 
 var delegate = {}; // our delegate to receive events from the webview app
+
+delegate.receivedHTML5DesktopNotification = function(tab, note) {
+	console.log(Date() + ' [posted HTML5 notification] ' + note);
+	//tag: "mid.1434908822690:d3b8b216631a1b8625"
+	$.app.postHTML5Notification(note);
+};
+
+delegate.handleClickedNotification = function(title, subtitle, msg, id) {
+	console.log("JS: opening notification for: "+ [title, subtitle, msg, id]);
+	//<time class="_497p _2lpt" data-reactid=".0.1.$1.0.1.$0.0.0.0.0.0.0.2.$db=2mid=11434908822690=2d3b8b216631a1b8625"><span class="_3oh-" data-reactid=".0.1.$1.0.1.$0.0.0.0.0.0.0.2.$db=2mid=11434908822690=2d3b8b216631a1b8625.0">10:47am</span></time>
+	$.browser.tabSelected = messengerTab;
+	//messengerTab.evalJS();
+	return true;
+};
 
 delegate.launchURL = function(url) {
 	console.log("app.js: launching " + url);
@@ -44,6 +62,6 @@ delegate.decideNavigationForURL = function(url) {
 
 delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('Messenger', messenger);
-	$.browser.tabSelected = new $.WebView(messenger);
+	$.browser.tabSelected = messengerTab = new $.WebView(messenger);
 };
 delegate; //return this to macpin

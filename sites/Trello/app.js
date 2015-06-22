@@ -7,8 +7,8 @@ var trelloTab, trello = {
 	transparent: true,
 	url: "https://trello.com",
 	postinject: ['styler'],
-	preinject: ['notifier'],
-	subscribeTo: ['TrelloNotification', "MacPinPollStates"] //styler.js does polls
+	preinject: ['notifier', 'shim_html5_notifications'],
+	subscribeTo: ['TrelloNotification', 'receivedHTML5DesktopNotification', "MacPinPollStates"] //styler.js does polls
 };
 trelloTab = $.browser.tabSelected = new $.WebView(trello);
 
@@ -72,7 +72,7 @@ delegate.handleUserInputtedInvalidURL = function(query) {
 delegate.handleDragAndDroppedURLs = function(urls) {
 	console.log(urls);
 	for (var url of urls) {
-		$.browser.tabSelected = new $.WebView({url: url});
+		//$.browser.tabSelected = new $.WebView({url: url});
 	}
 }
 
@@ -80,6 +80,11 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 delegate.TrelloNotification = function(tab, msg) {
 	$.app.postNotification(msg[0], msg[1], msg[2]); //(...msg) //spread it
 	console.log(Date() + ' [posted user notification] ' + msg);
+};
+
+delegate.receivedHTML5DesktopNotification = function(tab, note) {
+	console.log(Date() + ' [posted HTML5 notification] ' + note);
+	$.app.postHTML5Notification(note);
 };
 
 delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(url); return true; };
