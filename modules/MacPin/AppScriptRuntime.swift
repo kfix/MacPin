@@ -18,6 +18,8 @@ import JavaScriptCore // https://github.com/WebKit/webkit/tree/master/Source/Jav
 import Prompt // https://github.com/neilpa/swift-libedit
 #endif
 
+import UserNotificationPrivates
+
 extension JSValue {
 	func tryFunc (method: String, argv: [AnyObject]) -> Bool {
 		if self.isObject() && self.hasProperty(method) {
@@ -49,7 +51,8 @@ extension JSValue {
 	var platformVersion: String { get }
 	func registerURLScheme(scheme: String)
 	func changeAppIcon(iconpath: String)
-	func postNotification(title: String, _ subtitle: String?, _ msg: String, _ id: String?)
+	func postNotification(title: String?, _ subtitle: String?, _ msg: String?, _ id: String?)
+	func postHTML5Notification(object: [String:AnyObject])
 	func openURL(urlstr: String, _ app: String?)
 	func sleep(secs: Double)
 	func doesAppExist(appstr: String) -> Bool
@@ -220,7 +223,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		return false
 	}
 
-	func pathExists(path: String) -> Bool {	return NSFileManager.defaultManager().fileExistsAtPath(path) }
+	func pathExists(path: String) -> Bool {	return NSFileManager.defaultManager().fileExistsAtPath((path as NSString).stringByExpandingTildeInPath) }
 
 	func openURL(urlstr: String, _ appid: String? = nil) {
 		if let url = NSURL(string: urlstr) {
@@ -278,17 +281,12 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
-	func postNotification(title: String, _ subtitle: String? = nil, _ msg: String, _ id: String? = nil) {
-		// there is an API for this in WebKit: http://playground.html5rocks.com/#simple_notifications
-		//  https://developer.apple.com/library/iad/documentation/AppleApplications/Conceptual/SafariJSProgTopics/Articles/SendingNotifications.html
-		//  but all my my WKWebView's report 2 (access denied) and won't display auth prompts
-		//  https://github.com/WebKit/webkit/search?q=webnotificationprovider  no api delegates in WK2 for notifications or geoloc yet
-		//  http://stackoverflow.com/questions/14237086/how-to-handle-html5-web-notifications-with-a-cocoa-webview
+	func postNotification(_ title: String? = nil, _ subtitle: String? = nil, _ msg: String?, _ id: String? = nil) {
 #if os(OSX)
 		let note = NSUserNotification()
-		note.title = title
+		note.title = title ?? ""
 		note.subtitle = subtitle ?? "" //empty strings wont be displayed
-		note.informativeText = msg
+		note.informativeText = msg ?? ""
 		//note.contentImage = ?bubble pic?
 		if let id = id { note.identifier = id }
 		//note.hasReplyButton = true
@@ -300,9 +298,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		// these can be listened for by all: http://pagesofinterest.net/blog/2012/09/observing-all-nsnotifications-within-an-nsapp/
 #elseif os(iOS)
 		let note = UILocalNotification()
-		note.alertTitle = title
+		note.alertTitle = title ?? ""
 		note.alertAction = "Open"
-		note.alertBody = "\(subtitle ?? String()) \(msg)"
+		note.alertBody = "\(subtitle ?? String()) \(msg ?? String())"
 		note.fireDate = NSDate()
 		if let id = id { note.userInfo = [ "identifier" : id ] }
 		UIApplication.sharedApplication().scheduleLocalNotification(note)
@@ -310,6 +308,55 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		//map passed-in blocks to notification responses?
 		// http://thecodeninja.tumblr.com/post/90742435155/notifications-in-ios-8-part-2-using-swift-what
 	}
+
+	func postHTML5Notification(object: [String:AnyObject]) {
+		// object's keys conforming to:
+		//   https://developer.mozilla.org/en-US/docs/Web/API/notification/Notification
+
+		// there is an API for this in WebKit: http://playground.html5rocks.com/#simple_notifications
+		//  https://developer.apple.com/library/iad/documentation/AppleApplications/Conceptual/SafariJSProgTopics/Articles/SendingNotifications.html
+		//  but all my my WKWebView's report 2 (access denied) and won't display auth prompts
+		//  https://github.com/WebKit/webkit/search?q=webnotificationprovider  no api delegates in WK2 for notifications or geoloc yet
+		//  http://stackoverflow.com/questions/14237086/how-to-handle-html5-web-notifications-with-a-cocoa-webview
+#if os(OSX)
+		let note = NSUserNotification()
+		for (key, value) in object {
+			switch value {
+				case let title as String where key == "title": note.title = title
+				case let subtitle as String where key == "subtitle": note.subtitle = subtitle // not-spec
+				case let body as String where key == "body": note.informativeText = body
+				case let tag as String where key == "tag": note.identifier = tag
+				case let icon as String where key == "icon":
+					if let url = NSURL(string: icon), img = NSImage(contentsOfURL: url) {
+						note._identityImage = img // left-side iTunes-ish http://stackoverflow.com/a/22586980/3878712
+						//note._imageURL = url //must be a file:// URL
+					}
+				case let image as String where key == "image": //not-spec
+					if let url = NSURL(string: image), img = NSImage(contentsOfURL: url) {
+						note.contentImage = img // right-side embed
+					}
+				default: warn("unhandled param: `\(key): \(value)`")
+			}
+		}
+		note.soundName = NSUserNotificationDefaultSoundName // something exotic?
+		NSUserNotificationCenter.defaultUserNotificationCenter().deliverNotification(note)
+#elseif os(iOS)
+		let note = UILocalNotification()
+		note.alertAction = "Open"
+		note.fireDate = NSDate()
+		for (key, value) in object {
+			switch value {
+				case let title as String where key == "title": note.alertTitle = title
+				case let body as String where key == "body": note.alertBody = body
+				case let tag as String where key == "tag": note.userInfo = [ "identifier" : tag ]
+				//case let icon as String where key == "icon": loadIcon(icon)
+				default: warn("unhandled param: `\(key): \(value)`")
+			}
+		}
+		UIApplication.sharedApplication().scheduleLocalNotification(note)
+#endif
+	}
+
 
 	func REPL() {
 		termiosREPL({ [unowned self] (line: String) -> Void in

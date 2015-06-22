@@ -1,0 +1,4 @@
+module UserNotificationPrivates {
+	umbrella header "UserNotificationPrivates.h"
+	export *
+}
