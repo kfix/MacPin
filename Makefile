@@ -33,7 +33,7 @@ appsig				?= -
 # https://developer.apple.com/library/mac/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919-CH1-TNTAG20
 #open -a 'iOS Simulator.app' foobar.crt #add cert to simulator keychain
 
-bundle_untracked	?= yes
+bundle_untracked	?= 0
 appdir				?= $(outdir)/apps
 appnames			= $(patsubst $(macpin_sites)/%,%.app,$(wildcard $(macpin_sites)/*))
 gen_apps			= $(patsubst $(macpin_sites)/%,$(appdir)/%.app,$(wildcard $(macpin_sites)/*))
@@ -60,8 +60,9 @@ test test.app release: codesign := yes
 endif
 wknightly: DYLD_FRAMEWORK_PATH=/Volumes/WebKit/WebKit.app/Contents/Frameworks/10.10
 reinstall: allapps uninstall install
-release: bundle_untracked :=
 noop: ;
+#allow these targets to pull in all files in sites/*/
+%.app install: bundle_untracked := 1
 
 ifeq ($(IS_A_REMAKE),)
 # parent make invocation
@@ -71,7 +72,7 @@ endif
 
 # github settings for release: target
 #####
-VERSION		 := 1.3.0b1
+VERSION		 := 1.3.0
 LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin
@@ -124,8 +125,8 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	$(patsubst %,cp % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
 	cp -RL templates/Resources $@/Contents
 	#git ls-files -zc $(bundle_untracked) $(macpin_sites)/$* | xargs -0 -J % install -DT % $@/Contents/Resources/
-	[ ! -z "$(bundle_untracked)" ] || git archive v$(VERSION) $(macpin_sites)/$*/ | tar -xv --strip-components 2 -C $@/Contents/Resources
-	[ ! -n "$(bundle_untracked)" ] || cp -RL $(macpin_sites)/$*/* $@/Contents/Resources/
+	(($(bundle_untracked))) || git archive HEAD $(macpin_sites)/$*/ | tar -xv --strip-components 2 -C $@/Contents/Resources
+	(($(bundle_untracked))) && cp -RL $(macpin_sites)/$*/* $@/Contents/Resources/ || true
 	install $(outdir)/Frameworks/*.dylib $@/Contents/Frameworks/
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist
 	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
