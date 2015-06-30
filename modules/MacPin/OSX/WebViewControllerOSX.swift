@@ -135,12 +135,10 @@ extension WebViewControllerOSX { // AppGUI funcs
 	}
 
 	func displayAlert(alert: NSAlert, _ completionHandler: (NSModalResponse) -> Void) {
-		//container?.tabSelected = self
-		//parentViewController?.presentViewController(self, animated: false, completion: nil) // FIXME
 		if let window = view.window {
 			alert.beginSheetModalForWindow(window, completionHandler: completionHandler)
 		} else {
-			//modal app alert
+			completionHandler(alert.runModal())
 		}
 	}
 
