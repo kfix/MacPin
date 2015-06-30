@@ -5,8 +5,8 @@
 var hangouts = {
 	transparent: true,
 	postinject: ["notifier"],
-	preinject: ["styler"],
-	subscribeTo: ['receivedHangoutsMessage', 'unhideApp', 'HangoutsRosterReady'],
+	preinject: ["styler", 'shim_html5_notifications'],
+	subscribeTo: ['receivedHTML5DesktopNotification','receivedHangoutsMessage', 'unhideApp', 'HangoutsRosterReady'],
 	url: "https://plus.google.com/hangouts"
 };
 $.browser.addShortcut("Google Hangouts", hangouts);
@@ -93,6 +93,11 @@ delegate.receivedHangoutsMessage = function(tab, msg) {
 	// -> webkit.messageHandlers.receivedHangoutMessage.postMessage([from, replyTo, msg, cpar]);
 	$.app.postNotification(msg[0], msg[1], msg[2], msg[3]); // ...msg spread-op
 	console.log(Date() + ' [posted user notification] ' + msg);
+};
+
+delegate.receivedHTML5DesktopNotification = function(tab, note) {
+	console.log(Date() + ' [posted HTML5 notification] ' + note);
+	$.app.postHTML5Notification(note);
 };
 
 delegate.handleClickedNotification = function(title, subtitle, msg, id) {
