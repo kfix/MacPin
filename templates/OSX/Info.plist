@@ -373,7 +373,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Websites you visit may request your location.</string>
 	<key>NSHighResolutionCapable</key>
-	<false/>
+	<true/>
 	<key>NSHighResolutionMagnifyAllowed</key>
 	<false/>
 	<key>NSHumanReadableCopyright</key>
