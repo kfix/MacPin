@@ -89,9 +89,19 @@ delegate.receivedHTML5DesktopNotification = function(tab, note) {
 
 delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(url); return true; };
 
+delegate.overrideBG = function(bgcolor) { trelloTab.evalJS('\
+	localStorage.overrideStockTrelloBlue ? delete localStorage.overrideStockTrelloBlue : localStorage.overrideStockTrelloBlue = "'+bgcolor+'";\
+	localStorage.darkMode ? delete localStorage.darkMode : localStorage.darkMode = "true";\
+	customizeBG();');
+};
+// https://github.com/MikoMagni/Trello-Monochrome-Safari/blob/master/Monochrome/trello_monochrome.css
+
 delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('trello');
 	$.browser.addShortcut('Trello', trello);
+
+	$.browser.addShortcut('Toggle Dark Mode', ['overrideBG', '125, 126, 244, 0.07']); // deep-purple
+	// window.TrelloVersion
 
 	if ($.launchedWithURL != '') { // app was launched with a search query
 		trelloTab.asyncEvalJS( // need to wait for app.js to load and render DOM

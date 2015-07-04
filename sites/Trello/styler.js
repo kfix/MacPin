@@ -1,52 +1,50 @@
+/*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
+/*globals webkit, document, window, localStorage*/
+
+"use strict";
+
 var macpinIsTransparent;
 
-window.addEventListener("MacPinWebViewChanged", function(event) {
-	window.macpinIsTransparent = event.detail["transparent"];
-	window.customizeBG();
+window.addEventListener("load", function(event) { 
+	webkit.messageHandlers.MacPinPollStates.postMessage(["transparent"]);
 }, false);
 
-var customizeBG = function() {
+window.addEventListener("MacPinWebViewChanged", function(event) {
+	macpinIsTransparent = event.detail["transparent"];
+	customizeBG();
+}, false);
+
+var customizeBG = function(el) {
+	var overrideStockTrelloBlue = localStorage.overrideStockTrelloBlue;
+	var darkMode = localStorage.darkMode;
+
 	var css = document.getElementById('customizeBG');
 	if (!css) {
-		var css = document.createElement("style");
+		css = document.createElement("style");
 		css.id = "customizeBG";
 		css.type = 'text/css';
 	}
-	if (window.macpinIsTransparent) {
-	    css.innerHTML = "body { background-color: rgba(125, 126, 244, 0.07) !important; } "; //Dark-Purple with translucency
-		// should just get rgb=getComputedStyle(document.body).backgroundColor.match(/[\d\.]+/g) and convert from original rgb() to rgba()
+
+	var stockTrelloBlue = "rgb(0, 121, 191)";
+	if ( (document.body.style.backgroundColor == stockTrelloBlue) && overrideStockTrelloBlue && macpinIsTransparent) {
+		css.innerHTML = 'body { background-color: rgba('+overrideStockTrelloBlue+') !important; } ';
+		// could get rgb=getComputedStyle(document.body).backgroundColor.match(/[\d\.]+/g) and convert from original rgb() to rgba()
 		// http://stackoverflow.com/q/6672374/3878712 http://davidwalsh.name/detect-invert-color
+	} else if ( (document.body.style.backgroundColor == stockTrelloBlue) && overrideStockTrelloBlue) {
+		css.innerHTML = 'body { background-color: rgba('+overrideStockTrelloBlue+') !important; } ';
 	} else {
-	    css.innerHTML = "body { background-color: rgb(14, 116, 175) !important; } "; //stock Trello blue
+		css.innerHTML = '{}';
 	}
+
+	if (darkMode) css.innerHTML += "\
+		body { -webkit-filter:invert(100%); }\
+		input,img,.window-cover,.list-card-cover,.attachment-thumbnail-preview,.js-open-board,.board-background-select { -webkit-filter:invert(100%); }\
+		span { color: black; }";
+	
+	if (darkMode && document.body.style.backgroundColor == "") document.body.style.backgroundColor = "black";
+
 	document.head.appendChild(css);
-}
-
-window.addEventListener("load", function(event) { 
-	//window.customizeBG();
-	webkit.messageHandlers.MacPinPollStates.postMessage(["transparent"]);
-}, false);
-
-//trello uses HTML5 pushState and Backbone.js, so this script needs to corrupt their machiniations
-(function(history){
-	var pushState = history.pushState;
-	history.pushState = function(state) {
-	if (typeof history.onpushstate == "function") {
-		history.onpushstate({state: state});
-	}
-	return pushState.apply(history, arguments);
-	}
-})(window.history);
-history.onpushstate = function(event) {
-	//setTimeout(window.customizeBG, 20000) //wait for new HTML to be generated
-	webkit.messageHandlers.MacPinPollStates.postMessage(["transparent"]);
 };
 
-/*
-window.addEventListener("popstate", function(event) {
-	// happens onLoad (Safari bug) and on manual fwd/backs, but not through board/card navigation pushState()s
-	window.customizeBG();
-	webkit.messageHandlers.MacPinPollStates.postMessage(["transparent"]);
-}, false);
-
-*/
+var bgWatch = new MutationObserver(function(muts) { customizeBG(); });
+bgWatch.observe(document.body, { attributes: true, attributeFilter: ["style"], childList: false, characterData: false, subtree: false });
