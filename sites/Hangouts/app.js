@@ -6,20 +6,30 @@ var hangouts = {
 	transparent: true,
 	postinject: ["notifier"],
 	preinject: ["styler", 'shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification','receivedHangoutsMessage', 'unhideApp', 'HangoutsRosterReady'],
+	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady'],
 	url: "https://plus.google.com/hangouts"
+};
+//var hangoutsAlt = Object.assign(hangouts, {url: "https://plus.google.com/u/1/hangouts"});
+var hangoutsAlt = {
+	transparent: true,
+	postinject: ["notifier"],
+	preinject: ["styler", 'shim_html5_notifications'],
+	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady'],
+	url: "https://plus.google.com/u/1/hangouts"
 };
 $.browser.addShortcut("Google Hangouts", hangouts);
 var hangoutsTab = new $.WebView(hangouts); // start loading right way, its a big Closure app
+$.browser.addShortcut("Log into Google Account", {url: "https://accounts.google.com/serviceloginauth"});
+$.browser.addShortcut("Open Hangouts tab using secondary Google account", hangoutsAlt);
 $.browser.addShortcut("Install Google Voice & Video plugin", "https://encrypted.google.com/tools/dlpage/hangoutplugin");
 $.browser.addShortcut("Get Contacts.app -> Hangouts.app plugin", "http://github.com/kfix/MacPin/tree/master/extras/AddressBookHangoutsPlugin");
 $.browser.addShortcut("Get OSX service for text-selected numbers", "http://github.com/kfix/MacPin/tree/master/extras/Call Phone with Hangouts.workflow");
-var gaia; // your numeric Google ID
+//var gaia; // your numeric Google ID
 
 var delegate = {}; // our delegate to receive events from the webview app
 
 delegate.decideNavigationForClickedURL = function(url) {
-	if (url.indexOf("//talkgadget.google.com")) { $.app.openURL(url); return true; }
+	if (url.indexOf("//talkgadget.google.com") && url.indexOf("//accounts.google.com")) { $.app.openURL(url); return true; }
 	return false;
 }; // open all links externally
 delegate.decideNavigationForMIME = function() { return false; };
@@ -82,28 +92,32 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 				$.app.openURL("tel:"+addr, "com.apple.facetime"); // maybe they have iPhone w/Handoff, so try call w/ facetime
 			}
 			break;
+		case 'https':
+			if (~url.indexOf("//accounts.google.com")) { $.browser.tabSelected.gotoURL(url); break; }
 		default:
 			$.app.openURL(url);
 	}
 };
 
-//addEventListener('receivedHangoutsMessage', function(e){...}, false); ??
-delegate.receivedHangoutsMessage = function(tab, msg) {
-	// receives events from JS in 1st AppTab
-	// -> webkit.messageHandlers.receivedHangoutMessage.postMessage([from, replyTo, msg, cpar]);
-	$.app.postNotification(msg[0], msg[1], msg[2], msg[3]); // ...msg spread-op
-	console.log(Date() + ' [posted user notification] ' + msg);
-};
-
 delegate.receivedHTML5DesktopNotification = function(tab, note) {
+	if (tab.gaia) note.tag += '__' + tab.gaia // add your Google ID to the notification tag
 	console.log(Date() + ' [posted HTML5 notification] ' + note);
 	$.app.postHTML5Notification(note);
 };
 
 delegate.handleClickedNotification = function(title, subtitle, msg, id) {
-	console.log("JS: opening notification for: "+ [title, subtitle, msg, id]);
-	$.browser.tabSelected = hangoutsTab;
-	hangoutsTab.evalJS('rosterClickOn("button[cpar='+"'"+id+"'"+']");');
+	console.log("JS: opening user notification for: "+ [title, subtitle, msg, id]);
+	//$.browser.tabSelected = hangoutsTab;
+	//hangoutsTab.evalJS('rosterClickOn("button[cpar='+"'"+id+"'"+']");');
+	var src = id.split('__'),
+		cpar = src.shift(),
+		gaia = src.shift();
+	for (var tab of $.browser.tabs) {
+		if (tab.gaia == gaia) {
+			$.browser.tabSelected = tab;
+			hangoutsTab.evalJS('rosterClickOn("button[cpar='+"'"+cpar+"'"+']");');
+		}
+	}
 	return true;
 };
 
@@ -130,8 +144,10 @@ delegate.HangoutsRosterReady = function(tab) { // notifier.js will call this whe
 	}
 	tab.evalJS('myGAIA();', function(res, err) {
 		if (res != '') {
-			gaia = res;
+			var gaia = res;
 			console.log("Logged in as https://plus.google.com/"+gaia);
+			tab.gaia = gaia;
+			//Object.defineProperty(tab, 'gaia', {value: gaia, writable: false});
 		} else {
 			console.log(err);
 			//$.browser.tabSelected = new $.WebView({url: hangouts.url}); // G+ login prompt
