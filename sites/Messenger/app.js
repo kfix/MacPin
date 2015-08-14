@@ -44,10 +44,10 @@ delegate.decideNavigationForURL = function(url) {
 	switch (scheme) {
 		case "http":
 		case "https": // https://github.com/rsms/fb-mac-messenger/blob/master/Messenger/AppDelegate.mm#L591
-			if (!~addr.indexOf("//www.messenger.com") ||
-				(!~addr.indexOf("//www.facebook.com") &&
-					(subpath == "login" || subpath == "checkpoint")
-				)
+			// https://www.messenger.com/login/fb_iframe_target/?userid=&name=&secret=&persistent=1&initial_request_id=
+			if (
+				(~addr.indexOf("//www.messenger.com") || ~addr.indexOf("//www.facebook.com")) &&
+				(subpath == "login" || subpath == "checkpoint")
 			) {
 				$.app.openURL(url); //pop all external links to system browser
 				console.log("opened "+url+" externally!");

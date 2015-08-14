@@ -57,6 +57,8 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('MacPin @ GitHub', 'http://github.com/kfix/MacPin');
 	$.browser.addShortcut('Browsing Test', 'http://browsingtest.appspot.com');
 	$.browser.addShortcut('resizeMyBrowser', 'http://resizemybrowser.com');
+
+	// http://user-agents.me
 	$.browser.addShortcut('UA: Safari Mac', ["setAgent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/600.6.3 (KHTML, like Gecko) Version/8.0.6 Safari/600.6.3"]);
 	$.browser.addShortcut('UA: iPhone', ["setAgent", "Mozilla/5.0 (iPhone; CPU iPhone OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"]);
 	$.browser.addShortcut('UA: iPad', ["setAgent", "Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"]);
@@ -73,7 +75,6 @@ delegate.AppFinishedLaunching = function() {
 
 	var editor = {
 		transparent: true,
-		postinject: ['dnd'],
 		url: 'data:text/html,'+escape('<html contenteditable>') // https://coderwall.com/p/lhsrcq/one-line-browser-notepad
 		// should use ace http://ace.c9.io/#nav=about
 	};
