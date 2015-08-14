@@ -126,6 +126,9 @@ clang += -mmacosx-version-min=10.10
 else ifeq ($(platform),iOS)
 clang += -miphoneos-version-min=8.3
 endif
+
+$(swiftlibdir):
+	xcode-select --install
 ########################
 
 $(outdir)/MacOS $(outdir)/exec $(outdir)/Frameworks $(outdir)/obj $(outdir)/Contents: ; install -d $@

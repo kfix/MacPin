@@ -193,7 +193,10 @@ install:
 endif
 
 clean:
-	-cd $(appdir) && for i in $(filter %.app,$^); do rm -rf $$i; done
+	-cd $(appdir) && for i in $(filter %.app,$^); do \
+		/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -u $$i; \
+		rm -rf $$i; \
+	done
 	-rm -rf $(outdir) $(xcassets)
 
 reset:
@@ -226,15 +229,16 @@ test.app: $(appdir)/$(macpin).app
 # http://stackoverflow.com/questions/24715891/access-a-swift-repl-in-cocoa-programs
 
 # make cross test.ios
+/usr/local/bin/ios-sim: ; brew install ios-sim
 ifeq ($(sdk)-$(arch),iphonesimulator-x86_64)
-test.ios: $(appdir)/$(macpin).app
+test.ios: $(appdir)/$(macpin).app /usr/local/bin/ios-sim
 	open -a "iOS Simulator.app"
 	xcrun simctl getenv booted foobar || sleep 5
 	@xcrun simctl list | grep $(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)
 	# pre-A7 devices (ipad mini 2, ipad air, iphone 5s) cannot run x86_64 builds
 	# if app closes without showing launch screen, try changing the simulated device to A7 or later
 	#xcrun simctl install booted $<; xcrun simctl launch booted $(template_bundle_id).$(macpin)
-	-ios-sim launch $< || sleep 10 #brew install ios-sim
+	-ios-sim launch $< || sleep 10
 	-tail -n100 ~/Library/Logs/CoreSimulator/$(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)/system.log
 	-@for i in ~/Library/Logs/DiagnosticReports/$(macpin)_$(shell date +%Y-%m-%d-%H%M)*_$(shell scutil --get LocalHostName).crash; do [ -f $$i ] && cat $$i && echo $$i; break; done
 else
