@@ -3,7 +3,8 @@
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
 
-var photosTab, photos = {url: 'https://photos.google.com'};
+var photosTab, photos = {url: 'https://photos.google.com'},
+	photosAlt = {url: 'https://photos.google.com/u/1'};
 
 var delegate = {}; // our delegate to receive events from the webview app
 
@@ -50,6 +51,7 @@ delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('googlephotos'); //IOS?
 	$.app.registerURLScheme('gphotos');
 	$.browser.addShortcut('Google Photos', photos);
+	$.browser.addShortcut('Google Photos (using secondary account)', photosAlt);
 	$.browser.addShortcut('Picasa Web Albums', 'http://picasaweb.google.com/lh/myphotos?noredirect=1');
 
 	if ($.launchedWithURL != '') { // app was launched with a feed url

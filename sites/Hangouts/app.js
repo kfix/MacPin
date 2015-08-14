@@ -23,7 +23,9 @@ $.browser.addShortcut("Log into Google Account", {url: "https://accounts.google.
 $.browser.addShortcut("Open Hangouts tab using secondary Google account", hangoutsAlt);
 $.browser.addShortcut("Install Google Voice & Video plugin", "https://encrypted.google.com/tools/dlpage/hangoutplugin");
 $.browser.addShortcut("Get Contacts.app -> Hangouts.app plugin", "http://github.com/kfix/MacPin/tree/master/extras/AddressBookHangoutsPlugin");
-$.browser.addShortcut("Get OSX service for text-selected numbers", "http://github.com/kfix/MacPin/tree/master/extras/Call Phone with Hangouts.workflow");
+$.browser.addShortcut("Get OSX service for text-selected numbers", "http://github.com/kfix/MacPin/tree/master/extras/Call%20Phone%20with%20Hangouts.workflow");
+$.browser.addShortcut("Google Voice call history", "https://www.google.com/voice/?pli=1#history")
+$.browser.addShortcut("(secondary account) Google Voice call history", "https://www.google.com/voice/b/1?pli=1#history")
 //var gaia; // your numeric Google ID
 
 var delegate = {}; // our delegate to receive events from the webview app
@@ -63,7 +65,7 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 	console.log("app.js: launching " + url);
 	var comps = url.split(':'),
 		scheme = comps.shift(),
-		addr = comps.shift();
+		addr = comps.shift().replace(/\//g, ''); // de-slashed
 	switch (scheme) {
 		case 'hangouts':
 			// this could be a gmail address or email address that has been linked to a google account, or the Full Name linked to such addresses
