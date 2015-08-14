@@ -7,8 +7,8 @@ var trelloTab, trello = {
 	transparent: true,
 	url: "https://trello.com",
 	postinject: ['styler'],
-	preinject: ['notifier', 'shim_html5_notifications'],
-	subscribeTo: ['TrelloNotification', 'receivedHTML5DesktopNotification', "MacPinPollStates"] //styler.js does polls
+	preinject: ['shim_html5_notifications'],
+	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"] //styler.js does polls
 };
 trelloTab = $.browser.tabSelected = new $.WebView(trello);
 
@@ -76,12 +76,7 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 	}
 }
 
-// Fluid API hook should trigger this
-delegate.TrelloNotification = function(tab, msg) {
-	$.app.postNotification(msg[0], msg[1], msg[2]); //(...msg) //spread it
-	console.log(Date() + ' [posted user notification] ' + msg);
-};
-
+// http://help.trello.com/article/793-receiving-trello-notifications
 delegate.receivedHTML5DesktopNotification = function(tab, note) {
 	console.log(Date() + ' [posted HTML5 notification] ' + note);
 	$.app.postHTML5Notification(note);
