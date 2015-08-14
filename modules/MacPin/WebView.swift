@@ -95,6 +95,9 @@ import JavaScriptCore
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
 		//configuration._websiteDataStore = _WKWebsiteDataStore.nonPersistentDataStore
+		if let app = NSApplication.sharedApplication().delegate as? AppDelegate {
+			configuration.processPool = app.webProcessPool
+		}
 		self.init(frame: CGRectZero, configuration: configuration)
 #if SAFARIDBG
 		_allowsRemoteInspection = true // start webinspectord child

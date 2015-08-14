@@ -62,7 +62,7 @@ extension JSValue {
 }
 
 class AppScriptRuntime: NSObject, AppScriptExports  {
-	static let shared = AppScriptRuntime()
+	static let shared = AppScriptRuntime() // create & export the singleton
 
 	var context = JSContext(virtualMachine: JSVirtualMachine())
 	var jsdelegate: JSValue

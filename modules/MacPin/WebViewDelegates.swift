@@ -30,19 +30,28 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 		if let webView = message.webView as? MPWebView {
 			//called from JS: webkit.messageHandlers.<messsage.name>.postMessage(<message.body>);
 			switch message.name {
+				//case "getGeolocation":
+					// Geolocator.sendLocationEvent(webView) // add this webview as a one-time subscriber
+				//case "watchGeolocation":
+					// Geolocator.subscribeToLocationEvents(webView) // add this webview as a continuous subscriber
+				//case "unwatchGeolocation":
+					// Geolocator.unsubscribeFromLocationEvents(webView) // remove this webview from subscribers
 				case "MacPinPollStates": // direct poll. app.js needs to authorize this handler per tab
 					//FIXME: should iterate message.body's [varnames] to send events for
 					webView.evaluateJavaScript( //for now, send an omnibus event with all varnames values
 						"window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(webView.transparent)}})); ",
 						completionHandler: nil)
-					fallthrough // also let JSRuntime get the request
 				default:
-					warn("\(message.name)() -> \(message.body)")
-					if jsdelegate.hasProperty(message.name) {
-						warn("forwarding webkit.messageHandlers.\(message.name) to jsdelegate.\(message.name)(webview,msg)")
-						jsdelegate.invokeMethod(message.name, withArguments: [webView, message.body])
-					}
+					true // no-op	
 			}
+
+			if jsdelegate.hasProperty(message.name) {
+				warn("forwarding webkit.messageHandlers.\(message.name) to jsdelegate.\(message.name)(webview,msg)")
+				jsdelegate.invokeMethod(message.name, withArguments: [webView, message.body])
+			} else {
+				warn("unhandled postMessage! \(message.name)() -> \(message.body)")
+			}
+
 		}
 	}
 }

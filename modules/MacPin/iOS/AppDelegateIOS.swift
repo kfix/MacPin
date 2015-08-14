@@ -4,13 +4,13 @@ import WebKitPrivates
 import Darwin
 
 @UIApplicationMain
-class AppDelegate: NSObject {
+class AppDelegateIOS: AppDelegate {
 	var window: UIWindow? = nil // don't assign up here, first value is persistently used for rotation size calculations!
 	var browserController = MobileBrowserViewController() //frame: UIScreen.mainScreen().applicationFrame)
 	override init() { super.init() }
 }
 
-extension AppDelegate: UIApplicationDelegate { //UIResponder
+extension AppDelegateIOS: UIApplicationDelegate { //UIResponder
 	func application(application: UIApplication, openURL url: NSURL, sourceApplication: String?, annotation: AnyObject?) -> Bool {
 		warn("`\(url)` -> AppScriptRuntime.shared.jsdelegate.launchURL()")
 		AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(url.description, forKeyedSubscript: "launchedWithURL")

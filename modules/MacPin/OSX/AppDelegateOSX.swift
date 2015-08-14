@@ -4,7 +4,7 @@ import WebKitPrivates
 import Darwin
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
-class AppDelegate: NSObject {
+class AppDelegateOSX: AppDelegate{
 
 	var effectController = EffectViewController()
 	var browserController = BrowserViewController()
@@ -33,7 +33,7 @@ class AppDelegate: NSObject {
 
 }
 
-extension AppDelegate: NSApplicationDelegate {
+extension AppDelegateOSX: NSApplicationDelegate {
 
 	func applicationDockMenu(sender: NSApplication) -> NSMenu? { return browserController.tabMenu }
 
@@ -269,7 +269,7 @@ extension AppDelegate: NSApplicationDelegate {
 	}
 }
 
-extension AppDelegate: NSUserNotificationCenterDelegate {
+extension AppDelegateOSX: NSUserNotificationCenterDelegate {
 	//didDeliverNotification
 	func userNotificationCenter(center: NSUserNotificationCenter, didActivateNotification notification: NSUserNotification) {
 		warn("user clicked notification")
@@ -284,10 +284,10 @@ extension AppDelegate: NSUserNotificationCenterDelegate {
 	func userNotificationCenter(center: NSUserNotificationCenter, shouldPresentNotification notification: NSUserNotification) -> Bool { return true }
 }
 
-extension AppDelegate: NSWindowRestoration {
+extension AppDelegateOSX: NSWindowRestoration {
 	// https://developer.apple.com/library/mac/documentation/General/Conceptual/MOSXAppProgrammingGuide/CoreAppDesign/CoreAppDesign.html#//apple_ref/doc/uid/TP40010543-CH3-SW35
 	class func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow!,NSError!) -> Void)) {
-		if let app = NSApplication.sharedApplication().delegate as? AppDelegate, let window = app.windowController.window {
+		if let app = NSApplication.sharedApplication().delegate as? AppDelegateOSX, let window = app.windowController.window {
 			completionHandler(window, nil)
 			//WKWebView._restoreFromSessionStateData ...
 		} else {
