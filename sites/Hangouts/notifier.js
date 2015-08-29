@@ -286,6 +286,3 @@ if (window.name == 'gtn-roster-iframe-id-b') {
 
 } // -gtn-roster-iframe-id-b?
 
-if (~window.name.indexOf('gtn_') && false) { // chat convo
-	// need to un-redirect recv'd urls. "do no evil?" quit harvesting conversations google.
-}

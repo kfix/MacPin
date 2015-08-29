@@ -31,9 +31,15 @@ $.browser.addShortcut("(secondary account) Google Voice call history", "https://
 var delegate = {}; // our delegate to receive events from the webview app
 
 delegate.decideNavigationForClickedURL = function(url) {
-	if (url.indexOf("//talkgadget.google.com") && url.indexOf("//accounts.google.com")) { $.app.openURL(url); return true; }
+	if (
+		url.indexOf("https://talkgadget.google.com") 
+		&& url.indexOf("https://accounts.google.com")
+		) { // open all links externally except those above
+			$.app.openURL(url);
+			return true;
+		}
 	return false;
-}; // open all links externally
+};
 delegate.decideNavigationForMIME = function() { return false; };
 delegate.decideWindowOpenForURL = function(url) {
 	if (~url.indexOf("https://plus.google.com/hangouts/_/")) { //G+ hangouts a/v chat
