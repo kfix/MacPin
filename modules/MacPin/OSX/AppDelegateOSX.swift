@@ -54,8 +54,12 @@ extension AppDelegateOSX: NSApplicationDelegate {
 
 		let appMenu = NSMenuItem()
 		appMenu.submenu = NSMenu()
-		appMenu.submenu?.addItem(MenuItem("About", "orderFrontStandardAboutPanel:"))
-		appMenu.submenu?.addItem(MenuItem("Restart App", "loadSiteApp"))
+		appMenu.submenu?.addItem(MenuItem("About \(appname)", "orderFrontStandardAboutPanel:"))
+		appMenu.submenu?.addItem(MenuItem("Restart \(appname)", "loadSiteApp"))
+		appMenu.submenu?.addItem(NSMenuItem.separatorItem())
+		appMenu.submenu?.addItem(MenuItem("Hide \(appname)", "hide:", "h", [.CommandKeyMask]))
+		appMenu.submenu?.addItem(MenuItem("Hide Others", "hideOtherApplications:", "H", [.CommandKeyMask, .ShiftKeyMask]))
+		appMenu.submenu?.addItem(NSMenuItem.separatorItem())
 		//appMenu.submenu?.addItem(MenuItem("Edit App...", "editSiteApp")) // can't modify signed apps' Resources
 		app!.mainMenu?.addItem(appMenu) // 1st item shows up as CFPrintableName
 
