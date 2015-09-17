@@ -78,7 +78,7 @@ import JavaScriptCore
 
 	let favicon: FavIcon = FavIcon()
 
-	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil) {
+	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false) {
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
 		let configuration = config ?? WKWebViewConfiguration()
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
@@ -95,8 +95,12 @@ import JavaScriptCore
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
 		//configuration._websiteDataStore = _WKWebsiteDataStore.nonPersistentDataStore
-		if let app = NSApplication.sharedApplication().delegate as? AppDelegate {
-			configuration.processPool = app.webProcessPool
+		if let app = NSApplication.sharedApplication().delegate as? AppDelegate, isolated = isolated {
+			if isolated {
+				configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
+			} else {
+				configuration.processPool = app.webProcessPool
+			}
 		}
 		self.init(frame: CGRectZero, configuration: configuration)
 #if SAFARIDBG
@@ -117,7 +121,12 @@ import JavaScriptCore
 	}
 
 	convenience required init?(object: [String:AnyObject]) {
-		self.init(config: nil)
+		// check for isolated pre-init
+		if let isolated = object["isolated"] as? Bool {
+			self.init(config: nil, isolated: isolated)
+		} else {
+			self.init(config: nil)
+		}
 		var url = NSURL(string: "about:blank")
 		for (key, value) in object {
 			switch value {
