@@ -61,7 +61,12 @@ delegate.decideNavigationForURL = function(url) {
 				!~addr.indexOf("//clients2.google.com") &&
 				!~addr.indexOf("//clients1.google.com") &&
 				!~addr.indexOf("//clients.google.com") &&
+				!~addr.indexOf("//plus.google.com") &&
 				!~addr.indexOf("//0.client-channel.google.com") &&
+				!~addr.indexOf("//1.client-channel.google.com") &&
+				!~addr.indexOf("//2.client-channel.google.com") &&
+				!~addr.indexOf("//3.client-channel.google.com") &&
+				!~addr.indexOf("//4.client-channel.google.com") &&
 				!~addr.indexOf("//www.youtube.com") // yt vids are usually embedded players
 			) {
 				$.app.openURL(url); //pop all external links to system browser
