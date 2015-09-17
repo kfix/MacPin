@@ -77,6 +77,7 @@ delegate.AppFinishedLaunching = function() {
 		transparent: true,
 		url: 'data:text/html,'+escape('<html contenteditable>') // https://coderwall.com/p/lhsrcq/one-line-browser-notepad
 		// should use ace http://ace.c9.io/#nav=about
+		// or CodeMirror.net
 	};
 	$.browser.addShortcut('HTML5 editor', editor);
 
