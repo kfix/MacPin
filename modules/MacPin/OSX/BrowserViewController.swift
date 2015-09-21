@@ -29,6 +29,7 @@ struct WeakThing<T: AnyObject> {
 	func switchToNextTab()
 	func switchToPreviousTab()
 	func newTabPrompt()
+	func newIsolatedTabPrompt()
 	func focusOnBrowser()
 	func unhideApp()
 	func bounceDock()
@@ -535,6 +536,11 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 	func newTabPrompt() {
 		//tabSelected = WebViewControllerOSX(url: NSURL(string: "about:blank")!)
 		tabSelected = MPWebView(url: NSURL(string: "about:blank")!)
+		revealOmniBox()
+	}
+
+	func newIsolatedTabPrompt() {
+		tabSelected = MPWebView([url: NSURL(string: "about:blank")!, isolated: true])
 		revealOmniBox()
 	}
 
