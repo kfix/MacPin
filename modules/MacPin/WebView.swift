@@ -80,7 +80,7 @@ import JavaScriptCore
 
 	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false) {
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
-		let configuration = config ?? WKWebViewConfiguration()
+		let configuration = config ?? WKWebViewConfiguration() // NSURLSessionConfiguration ? https://www.objc.io/issues/5-ios7/from-nsurlconnection-to-nsurlsession/
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
 #if os(OSX)
 		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
@@ -148,8 +148,8 @@ import JavaScriptCore
 		if let url = url { gotoURL(url) } else { return nil }
 	}
 
-	convenience required init(url: NSURL, agent: String? = nil) {
-		self.init(config: nil, agent: agent)
+	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false) {
+		self.init(config: nil, agent: agent, isolated: isolated)
 		gotoURL(url)
 	}
 

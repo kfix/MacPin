@@ -540,7 +540,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 	}
 
 	func newIsolatedTabPrompt() {
-		tabSelected = MPWebView([url: NSURL(string: "about:blank")!, isolated: true])
+		tabSelected = MPWebView(url: NSURL(string: "about:blank")!, agent: nil, isolated: true)
 		revealOmniBox()
 	}
 
