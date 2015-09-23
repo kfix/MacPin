@@ -39,7 +39,7 @@ func assert(condition: @autoclosure () -> Bool, _ message: String = "",
 */
 
 func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
-	if let scriptUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") {
+	if let scriptUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") where !basename.isEmpty {
 		warn("loading userscript: \(scriptUrl)")
 		var script = WKUserScript(
 			source: NSString(contentsOfURL: scriptUrl, encoding: NSUTF8StringEncoding, error: nil) as! String,
