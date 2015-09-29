@@ -21,7 +21,7 @@ function search(query) {
 	// https://developers.google.com/maps/documentation/ios/urlscheme#search
 	var mapper = (~$.browser.tabSelected.url.indexOf('//www.google.com/maps/')) ? $.browser.tabSelected : mapsTab;
 	mapper.evalJS( // hook app.js to perform search
-		"document.querySelector('input[aria-label=Search]').value = '" + query + "';" + 
+		"document.getElementById('searchboxinput').value = '" + query + "';" + 
 		 "document.getElementById('searchbox_form').submit();"
 		//"document.getElementById('searchbox_form').dispatchEvent(new Event('submit', {bubbles: true, cancelable: true}));"
 		// "document.querySelector('button[aria-label=Search]').click();"
