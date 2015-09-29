@@ -20,6 +20,7 @@ import JavaScriptCore
 	//var canGoBack: Bool { get }
 	//var canGoForward: Bool { get }
 	//var hasOnlySecureContent: Bool { get }
+	// var userLabel // allow to be initiated with a trackable tag
 	var injected: [String] { get }
 	static var MatchedAddressOptions: [String:String] { get set }
 	func close()
@@ -99,7 +100,7 @@ import JavaScriptCore
 			if isolated {
 				configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
 			} else {
-				configuration.processPool = app.webProcessPool
+				configuration.processPool = config?.processPool ?? app.webProcessPool
 			}
 		}
 		self.init(frame: CGRectZero, configuration: configuration)
