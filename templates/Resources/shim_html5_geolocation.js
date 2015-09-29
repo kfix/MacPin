@@ -16,12 +16,12 @@ function Coordinates(data) {
 	this.latitude = Number(data.latitude);
 	this.longitude = Number(data.longitude);
 	this.altitude = null;
-	this.accuracy = EARTH_RADIUS_M * Math.PI;
+	this.accuracy = 65; //EARTH_RADIUS_M * Math.PI;
 	this.altitudeAccuracy = null;
 	this.heading = null;
 	this.speed = null;
 }
-function Position(data) {
+function Geoposition(data) {
 	this.coords = new Coordinates(data);
 	this.timestamp = Date.now();
 }
@@ -31,9 +31,10 @@ navigator.geolocation.getCurrentPosition = function(cb, errcb, opts) {
 
 	window.addEventListener("gotCurrentGeolocation", function(e) {
 		window.removeEventListener('gotCurrentGeolocation', this, false); //one-time update
-		var pos = new Position(e.detail);
-		console.log(pos);
+		var pos = new Geoposition(e.detail);
+		//console.log(pos);
 		cb(pos);
+		// compare result with navigator.geolocation.getCurrentPosition(function(pos){console.log(pos);})
 	});
 
 };
