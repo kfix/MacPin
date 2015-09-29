@@ -122,8 +122,10 @@ libdirs				+= -L $(outdir)/Frameworks -L $(outdir)/obj
 incdirs				+= -I $(outdir)
 os_frameworks		+= -F $(sdkpath)/System/Library/Frameworks -L $(sdkpath)/System/Library/Frameworks
 frameworks			+= -F $(outdir)/Frameworks
-swiftlibdir			:= $(firstword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift/$(sdk) $(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(sdk)))
+swiftlibdir			:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift/$(sdk) $(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(sdk)))
+swiftstaticdir		:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift_static/$(sdk) $(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift_static/$(sdk)))
 $(info [$(eXcode)] compiling against $(sdkpath))
+$(info [$(eXcode)] swift libraries: $(swiftlibdir) $(swiftstaticdir))
 ifeq ($(platform),OSX)
 clang += -mmacosx-version-min=10.10
 else ifeq ($(platform),iOS)
