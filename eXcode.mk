@@ -83,20 +83,23 @@ incdirs				:= -I modules
 
 #find all modules with compilable source code
 build_mods			:= $(sort $(filter-out %/$(platform),$(patsubst modules/%/,%,$(dir $(wildcard modules/*/*.m modules/*/$(platform)/*.m modules/*/*.swift modules/*/$(platform)/*.swift)))))
-$(info [$(eXcode)] $$(build_mods) (Compilable modules): $(build_mods))
+$(info [$(eXcode)] $$(build_mods) (compilable modules): $(build_mods))
 
 #modules with compilable main() routines that can be built into executables
 exec_mods			:= $(sort $(patsubst %/$(platform),%,$(patsubst modules/%/,%,$(dir $(wildcard modules/*/main.swift modules/*/$(platform)/main.swift)))))
 exec_mods			:= $(sort $(exec_mods) $(patsubst %/$(platform),%,$(patsubst modules/%/,%,$(dir $(shell grep -l -s -e ^@NSApplicationMain -e ^@UIApplicationMain modules/*/*.swift modules/*/$(platform)/*.swift)))))
 execs				:= $(exec_mods:%=$(outdir)/exec/%)
-$(info [$(eXcode)] $$(execs) (Executables available to assemble): $(execs))
+$(info [$(eXcode)] $$(execs) (executables available to assemble): $(execs))
 
 #assume modules that ship executables will not need to be made into intermediate objects nor libraries
 build_mods			:= $(filter-out $(exec_mods),$(build_mods))
 
 # any modules left should be built into static libraries
 statics				:= $(patsubst %,$(outdir)/obj/lib%.a,$(build_mods:modules/%=%))
-$(info [$(eXcode)] $$(statics) (Static Libraries available to build): $(statics))
+$(info [$(eXcode)] $$(statics) (static libraries available to build): $(statics))
+
+dynamics			:= $(patsubst %,$(outdir)/Frameworks/lib%.dylib,$(build_mods:modules/%=%))
+$(info [$(eXcode)] $$(dynamics) (dynamic libraries available to build): $(dynamics))
 
 #objs				:= $(patsubst %,$(outdir)/obj/%.o,$(build_mods:modules/%=%))
 #$(info $(eXcode) - Objects available to build: $(objs))
@@ -119,8 +122,8 @@ libdirs				+= -L $(outdir)/Frameworks -L $(outdir)/obj
 incdirs				+= -I $(outdir)
 os_frameworks		+= -F $(sdkpath)/System/Library/Frameworks -L $(sdkpath)/System/Library/Frameworks
 frameworks			+= -F $(outdir)/Frameworks
-swiftlibdir			:= /Library/Developer/CommandLineTools/usr/lib/swift/$(sdk)
-$(info [$(eXcode)] Compiling against $(sdkpath))
+swiftlibdir			:= $(firstword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift/$(sdk) $(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(sdk)))
+$(info [$(eXcode)] compiling against $(sdkpath))
 ifeq ($(platform),OSX)
 clang += -mmacosx-version-min=10.10
 else ifeq ($(platform),iOS)
@@ -189,6 +192,9 @@ $(outdir)/obj/lib%.a: modules/%/*.m | $(outdir)/obj
 		$(clang) -ObjC -c $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) $$i; \
 	done;
 	libtool -static -o $@ $(patsubst %.m,$(dir $@)/lib$*/%.o,$(notdir $^))
+
+$(outdir)/obj/lib%.a: $(outdir)/obj/%.o
+	libtool -static -o $@ $^
 
 $(outdir)/libswift%.a: $(outdir)/obj/lib%.a
 	lipo -output $@ -create $^
