@@ -30,8 +30,8 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 		if let webView = message.webView as? MPWebView {
 			//called from JS: webkit.messageHandlers.<messsage.name>.postMessage(<message.body>);
 			switch message.name {
-				//case "getGeolocation":
-					// Geolocator.sendLocationEvent(webView) // add this webview as a one-time subscriber
+				case "getGeolocation":
+					Geolocator.shared.sendLocationEvent(webView) // add this webview as a one-time subscriber
 				//case "watchGeolocation":
 					// Geolocator.subscribeToLocationEvents(webView) // add this webview as a continuous subscriber
 				//case "unwatchGeolocation":
