@@ -19,6 +19,7 @@ import Prompt // https://github.com/neilpa/swift-libedit
 #endif
 
 import UserNotificationPrivates
+import SSKeychain // https://github.com/soffes/sskeychain
 
 extension JSValue {
 	func tryFunc (method: String, argv: [AnyObject]) -> Bool {
@@ -103,11 +104,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		context.objectForKeyedSubscript("$").setObject("", forKeyedSubscript: "launchedWithURL")
 		//context.objectForKeyedSubscript("$").setObject(GlobalUserScripts, forKeyedSubscript: "globalUserScripts")
 		context.objectForKeyedSubscript("$").setObject(MPWebView.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebView]
-#if os(OSX)
-		//context.objectForKeyedSubscript("$").setObject(WebViewControllerOSX.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebViewControllerOSX]
-#elseif os(iOS)
-		//context.objectForKeyedSubscript("$").setObject(WebViewControllerIOS.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebViewControllerIOS]
-#endif
+		context.objectForKeyedSubscript("$").setObject(SSKeychain.self, forKeyedSubscript: "keychain")
 
 		// set console.log to NSBlock that will call warn()
 		let logger: @objc_block String -> Void = { msg in warn(msg) }

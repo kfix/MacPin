@@ -1,0 +1,5 @@
+module SSKeychain {
+	umbrella header "SSKeychain.h"
+	link "SSKeychain"
+	export *
+}
