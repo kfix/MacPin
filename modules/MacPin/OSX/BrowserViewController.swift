@@ -79,13 +79,7 @@ struct WeakThing<T: AnyObject> {
 			tab.initialFirstResponder = view
 			tab.bind(NSLabelBinding, toObject: view, withKeyPath: "title", options: nil)
 			tab.bind(NSToolTipBinding, toObject: view, withKeyPath: "title", options: nil)
-			//if let wvc = tab.viewController as? WebViewController {
-			//	tab.bind(NSImageBinding, toObject: wvc.favicon, withKeyPath: "icon", options: nil)
-			//}
-			if let wv = tab.viewController?.representedObject as? MPWebView {
-				tab.bind(NSImageBinding, toObject: wv.favicon, withKeyPath: "icon", options: nil)
-			}
-
+			if let wvc = tab.viewController as? WebViewController { tab.bind(NSImageBinding, toObject: wvc.webview.favicon, withKeyPath: "icon", options: nil) }
 		}
 		super.insertTabViewItem(tab, atIndex: atIndex)
 	}
@@ -95,9 +89,7 @@ struct WeakThing<T: AnyObject> {
 			tab.initialFirstResponder = nil
 			tab.unbind(NSLabelBinding)
 			tab.unbind(NSToolTipBinding)
-			if let wvc = tab.viewController?.representedObject as? MPWebView {
-				tab.unbind(NSImageBinding)
-			}
+			if let wvc = tab.viewController as? WebViewController { tab.unbind(NSImageBinding) }
 			tab.label = ""
 			tab.toolTip = nil
 			tab.image = nil
@@ -157,24 +149,24 @@ struct WeakThing<T: AnyObject> {
 	}
 
 	override func toolbar(toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: String, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
-		let ti = NSToolbarItem(itemIdentifier: itemIdentifier)
-		ti.minSize = CGSize(width: 24, height: 24)
-		ti.maxSize = CGSize(width: 36, height: 36)
-		ti.visibilityPriority = NSToolbarItemVisibilityPriorityLow
-		ti.paletteLabel = itemIdentifier
-
-		let btn = NSButton()
-		let btnCell = btn.cell() as! NSButtonCell
-		//btnCell.controlSize = .SmallControlSize
-		btn.toolTip = itemIdentifier
-		btn.image = NSImage(named: NSImageNamePreferencesGeneral) // https://hetima.github.io/fucking_nsimage_syntax/
-		btn.bezelStyle = .RecessedBezelStyle // RoundRectBezelStyle ShadowlessSquareBezelStyle
-		btn.setButtonType(.MomentaryLightButton) //MomentaryChangeButton MomentaryPushInButton
-		btn.target = nil // walk the Responder Chain
-		btn.sendActionOn(Int(NSEventMask.LeftMouseDownMask.rawValue))
-		ti.view = btn
-
 		if let btnType = BrowserButtons(rawValue: itemIdentifier) {
+			let ti = NSToolbarItem(itemIdentifier: itemIdentifier)
+			ti.minSize = CGSize(width: 24, height: 24)
+			ti.maxSize = CGSize(width: 36, height: 36)
+			ti.visibilityPriority = NSToolbarItemVisibilityPriorityLow
+			ti.paletteLabel = itemIdentifier
+
+			let btn = NSButton()
+			let btnCell = btn.cell() as! NSButtonCell
+			//btnCell.controlSize = .SmallControlSize
+			btn.toolTip = itemIdentifier
+			btn.image = NSImage(named: NSImageNamePreferencesGeneral) // https://hetima.github.io/fucking_nsimage_syntax/
+			btn.bezelStyle = .RecessedBezelStyle // RoundRectBezelStyle ShadowlessSquareBezelStyle
+			btn.setButtonType(.MomentaryLightButton) //MomentaryChangeButton MomentaryPushInButton
+			btn.target = nil // walk the Responder Chain
+			btn.sendActionOn(Int(NSEventMask.LeftMouseDownMask.rawValue))
+			ti.view = btn
+
 			switch (btnType) {
 				case .Share:
 					btn.image = NSImage(named: NSImageNameShareTemplate)
@@ -301,7 +293,12 @@ struct WeakThing<T: AnyObject> {
 	override func viewDidAppear() {
 		super.viewDidAppear()
 		if let window = view.window, toolbar = window.toolbar {
-			toolbar.delegate = self
+			//if #available(OSX 10.11, *) {
+			if NSProcessInfo().isOperatingSystemAtLeastVersion(NSOperatingSystemVersion(majorVersion: 10, minorVersion: 11, patchVersion: 0)) {
+				// FIXME: toolbar delegation broken on El Capitan http://www.openradar.me/22348095
+			} else {
+				toolbar.delegate = self 
+			}
 			toolbar.allowsUserCustomization = true
 			toolbar.displayMode = .IconOnly
 			toolbar.sizeMode = .Small //favicons are usually 16*2
