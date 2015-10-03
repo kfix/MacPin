@@ -25,19 +25,12 @@ if (window == top)
 
 			var css = document.createElement("style");
 			css.type = 'text/css';
-			css.id = 'unSocialSpam';
+			css.id = 'MacPinUnclutter';
 		    css.innerHTML = "\
-			    body, #content { overflow: hidden; background-color: transparent !important; }\
-			    #contentPane, #gb, #gba, #notify-widget-pane { display: none; }\
-				div[title='Display Notifications'] { display: none; }\
-				div[title='Add People'] { display: none; }\
-				div[guidedhelpid='streamcontent'] { display: none; }\
-				div[style='height: 60px;'] { display: none; }\
-				div[style='top: 60px;'] { display: none; }\
-				#content > div:first-of-type { display: none; }\
-				div[guidedhelpid='chat_mole_icon'] { display: none; }\
-				div[style='top: 104px;'] { top: 0px !important; }\
-				#ozIdRtRibbonChatRoster { height: 800px; margin-left: 0px; }\
+			    body { overflow: hidden; background-color: transparent !important; }\
+			    #gb, #gba { display: none; }\
+				#hangout-landing-chat { left: 60px; top: 0px; }\
+				div[aria-label='Open background photo'] > div { background-image: none; }\
 			";
 			document.head.appendChild(css);
 			//document.head.insertBefore(css,document.head.childNodes[0]); //prepend
@@ -45,17 +38,6 @@ if (window == top)
 	}
 	document.addEventListener('DOMSubtreeModified', injectCSS, false); //mutation events are deprecated
 })();
-
-if (window == top)
-window.addEventListener('resize', function(e){
-	//e.preventDefault();
-	//e.stopPropagation();
-	if (roster = document.getElementById('ozIdRtRibbonChatRoster'))
-		roster.style.height = document.height - 1 + "px";
-	//return false;
-});
-
-
 
 if (window.name == 'preld') { //frame-id ^gtn_ this is a chatbox iframe
 	// remove google's redirect wrappers on all messaged links
@@ -84,8 +66,8 @@ if (window.name == 'preld') { //frame-id ^gtn_ this is a chatbox iframe
 	watchForGoogleRedirects(document);
 }
 
-if (window.name == 'preld') { //frame-id ^gtn_ this is a chatbox iframe
-	(function(){ //IIFE
+if ((window.name == 'preld') || ~window.name.indexOf('gtn_')) { //frame-id ^gtn_ this is a chatbox iframe
+	//(function(){ //IIFE
 		function injectCSS() {
 	        if (document.head) {
 				document.removeEventListener('DOMSubtreeModified', injectCSS, false);
@@ -104,7 +86,24 @@ if (window.name == 'preld') { //frame-id ^gtn_ this is a chatbox iframe
 		}
 		document.addEventListener('DOMSubtreeModified', injectCSS, false); //mutation events are deprecated
 
+		/*		
+		function autoPop() {
+			// auto-tab all opened chats (via window.open)
+			if (btn = document.querySelector('button[title="Pop-out"]')) {
+				console.log("got a pop-out button!");
+				console.log(btn);
+				document.removeEventListener('DOMSubtreeModified', autoPop, false);
+				setTimeout(function(){
+					btn.click();
+					webkit.messageHandlers.SwitchToNewestTab.postMessage([]);
+				}, 5000); //need a little lag so closure can associate window.open() to the button
+			}
+		}
+		document.addEventListener('DOMSubtreeModified', autoPop, false); 
+		*/
+
 		document.addEventListener('DOMSubtreeModified', function(e){
+	
 			// enable keyboard to quickly take/reject phone calls
 			if (btn = document.querySelector('button[title="Answer call"]')) { //answer button
 				var from = document.QuerySelector('div[googlevoice]').innerText;
@@ -130,9 +129,6 @@ if (window.name == 'preld') { //frame-id ^gtn_ this is a chatbox iframe
 				webkit.messageHandlers.unhideApp.postMessage([]); //get the app in the user's face right now!!
 			}
 		});
-	})();
+	//})(); //IIFE
 
-	// watch for pop-out button to appear
-	// document.querySelector('button[title="Pop-out"]').click() //auto-tab this chat
-	// then postMessage at macpin to switch to next tab
 };

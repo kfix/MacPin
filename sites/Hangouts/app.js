@@ -4,18 +4,19 @@
 
 var hangouts = {
 	transparent: true,
-	postinject: ["notifier"],
+	postinject: ["notifier", "convopopper"],
 	preinject: ["styler", 'shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady'],
-	url: "https://plus.google.com/hangouts"
+	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady', 'SwitchToNewestTab'],
+	url: "https://hangouts.google.com"
 };
-//var hangoutsAlt = Object.assign(hangouts, {url: "https://plus.google.com/u/1/hangouts"});
+//var hangoutsAlt = Object.assign({}, hangouts, {url: "https://plus.google.com/u/1/hangouts"});
 var hangoutsAlt = {
 	transparent: true,
 	postinject: ["notifier"],
 	preinject: ["styler", 'shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady'],
-	url: "https://plus.google.com/u/1/hangouts"
+	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady', 'SwitchToNewestTab'],
+	//url: "https://plus.google.com/u/1/hangouts"
+	url: "https://hangouts.google.com/u/1"
 };
 $.browser.addShortcut("Google Hangouts", hangouts);
 var hangoutsTab = new $.WebView(hangouts); // start loading right way, its a big Closure app
@@ -34,6 +35,7 @@ delegate.decideNavigationForClickedURL = function(url) {
 	if (
 		url.indexOf("https://talkgadget.google.com") 
 		&& url.indexOf("https://accounts.google.com")
+		&& url.indexOf("https://hangouts.google.com")
 		) { // open all links externally except those above
 			$.app.openURL(url);
 			return true;
@@ -86,11 +88,13 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 			hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['sendSMS']);"); //calls into AppTab[1]:notifier.js
 			break;
 		case 'tel':
+			// TODO: interpret commas as 2-sec delays and pounds as pounds
 			if ($.app.pathExists('/Library/Internet Plug-Ins/googletalkbrowserplugin.plugin')) {
 				// use NPAPI GoogleVoice & Video (Vidyo) plugin in the WebView
 				$.browser.unhideApp(); //user might have switched apps while waiting for roster to load
 				$.browser.tabSelected = hangoutsTab;
 				hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['makeCall']);"); // Hangouts now does in-frame phone calls!
+				// TODO: use callback to get new chatbox frame name, simulate keypress events over it? 
 			} else if ($.app.doesAppExist("com.google.Chrome")) {
 				// use Chrome's NaCL+WebRTC Hangouts client for A/V chats ( https://webrtchacks.com/hangout-analysis-philipp-hancke/ )
 				$.app.openURL("https://plus.google.com/hangouts/_/?hl=en&hpn="+addr+"&hip="+addr+"&hnc=0", "com.google.Chrome");
@@ -105,6 +109,12 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 		default:
 			$.app.openURL(url);
 	}
+};
+
+delegate.SwitchToNewestTab = function(tab, msg) {
+	// find tab with largest ctime
+	//$.browser.tabSelected = $.browser.tabs[1];
+	$.browser.switchToNextTab()
 };
 
 delegate.receivedHTML5DesktopNotification = function(tab, note) {
@@ -150,6 +160,7 @@ delegate.HangoutsRosterReady = function(tab) { // notifier.js will call this whe
 		this.launchURL($.launchedWithURL);
 		$.launchedWithURL = '';
 	}
+/*
 	tab.evalJS('myGAIA();', function(res, err) {
 		if (res != '') {
 			var gaia = res;
@@ -161,6 +172,7 @@ delegate.HangoutsRosterReady = function(tab) { // notifier.js will call this whe
 			//$.browser.tabSelected = new $.WebView({url: hangouts.url}); // G+ login prompt
 		}
 	});
+*/
 	$.browser.addShortcut("Test call to MCI ANAC", "tel:18004444444");
 };
 
