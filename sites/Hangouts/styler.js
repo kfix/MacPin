@@ -27,10 +27,14 @@ if (window == top)
 			css.type = 'text/css';
 			css.id = 'MacPinUnclutter';
 		    css.innerHTML = "\
-			    body { overflow: hidden; background-color: transparent !important; }\
+			    body { overflow: hidden; background-color: transparent !important; font-family: -apple-system-font !important; }\
 			    #gb, #gba { display: none; }\
-				#hangout-landing-chat { left: 60px; top: 0px; }\
-				div[aria-label='Open background photo'] > div { background-image: none; }\
+				#hangout-landing-chat { left: 60px; top: 0px; width: 250px; }\
+				div[aria-label='Open background photo'] > div { background-image: none !important; background: none !important; }\
+				img:nth-of-type(2) { display: none; }\
+				#hangout-landing-chat + div { background-color: transparent !important; }\
+				#hangout-landing-chat + div > div > div { display: none !important; }\
+				#hangout-landing-chat + div + div[jsaction] { display: none !important; }\
 			";
 			document.head.appendChild(css);
 			//document.head.insertBefore(css,document.head.childNodes[0]); //prepend
@@ -38,6 +42,26 @@ if (window == top)
 	}
 	document.addEventListener('DOMSubtreeModified', injectCSS, false); //mutation events are deprecated
 })();
+
+if (window.name == 'gtn-roster-iframe-id-b') { // roster
+		function injectCSS2() {
+	        if (document.head) {
+				document.removeEventListener('DOMSubtreeModified', injectCSS2, false);
+
+				// show local native emoji font rather than Hangout's crappy emoji art
+				var css = document.createElement("style");
+				css.type = 'text/css';
+				css.id = 'MacPinDeFuglify'
+			    css.innerHTML = "\
+			    	body, div, li, input { font-family: -apple-system-font !important; }\
+			    	button, div, li, input { font-size: 9pt !important; }\
+				\
+				";
+				document.head.appendChild(css);
+			}
+		}
+		document.addEventListener('DOMSubtreeModified', injectCSS2, false); //mutation events are deprecated
+}
 
 if (window.name == 'preld') { //frame-id ^gtn_ this is a chatbox iframe
 	// remove google's redirect wrappers on all messaged links
@@ -77,6 +101,7 @@ if ((window.name == 'preld') || ~window.name.indexOf('gtn_')) { //frame-id ^gtn_
 				css.type = 'text/css';
 				css.id = 'appleEmoji'
 			    css.innerHTML = "\
+			    	body, div, input { font-family: -apple-system-font !important; }\
 					span[data-emo] span { opacity: 1.0 !important; width: auto !important; font-size: 12pt; } \
 					span[data-emo] div { display: none !important; } \
 				\

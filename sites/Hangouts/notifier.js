@@ -1,7 +1,7 @@
 function xss_eval(event) {
 	console.log('origin['+event.origin +'] called @'+window.name+'.postMessage() -> req: '+event.data);
 
-	if ( event.origin != "https://plus.google.com" ) return; //only handle messages from main frame
+	if ( event.origin != "https://hangouts.google.com" ) return; //only handle messages from main frame
 
 	var calls = event.data.slice();
 	for (argv of calls) {
@@ -19,7 +19,6 @@ function xss_eval(event) {
 
 if (window == top) {
 	window.dispatchEvent(new Event('resize')); //resize the roster per styler.js on cold reloads in fullscreen
-	document.querySelector('a[href="/stream"]').parentNode.remove(); // -G+ page selector tray list
 	/* <script>window.jstiming.load.tick('streamStart');</script>
 		delete all the junk nodes in between these
 	<script>window.jstiming.load.tick('streamEnd');</script>*/
