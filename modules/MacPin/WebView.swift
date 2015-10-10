@@ -96,7 +96,7 @@ import JavaScriptCore
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
 		//configuration._websiteDataStore = _WKWebsiteDataStore.nonPersistentDataStore
-		if let app = NSApplication.sharedApplication().delegate as? AppDelegate, isolated = isolated {
+		if let app = Application.sharedApplication().delegate as? AppDelegate, isolated = isolated {
 			if isolated {
 				configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
 			} else {
