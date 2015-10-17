@@ -67,7 +67,7 @@ $(info [$(eXcode)] $$(sdk) := $(sdk))
 $(info [$(eXcode)] $$(target) := $(target))
 ###########################
 
-# some poetry to figure out what in modules/* is compilable to objects, libraries, and executables
+# This is some poetry to figure out what in modules/* is compilable to objects, libraries, and executables
 # you may need to add linkage dependencies to specific object targets if swift/clang can't figure them out from *.modulemap and *.swiftmodule
 #   someobj.o: linklibs := -lSomeLib -lFooThing.o
 #	someobj.o: linkdirs := -L /opt/SomeProductWithSomeLib/lib
@@ -76,8 +76,6 @@ $(info [$(eXcode)] $$(target) := $(target))
 ###########################
 
 #modules with clang modulemaps (and probably associated C-headers and linklib hints)
-#include_mods		:= $(sort $(patsubst %/,%,$(dir $(wildcard modules/*/*.modulemap modules/*/$(platform)/*.modulemap))))
-#incdirs				+= $(addprefix -I ,$(include_mods))
 incdirs				:= -I modules
 # ^ clang will recurse one more level to check modules/*/*.modulemaps
 
@@ -97,9 +95,11 @@ build_mods			:= $(filter-out $(exec_mods),$(build_mods))
 # any modules left should be built into static libraries
 statics				:= $(patsubst %,$(outdir)/obj/lib%.a,$(build_mods:modules/%=%))
 $(info [$(eXcode)] $$(statics) (static libraries available to build): $(statics))
+statics:	$(statics);
 
 dynamics			:= $(patsubst %,$(outdir)/Frameworks/lib%.dylib,$(build_mods:modules/%=%))
 $(info [$(eXcode)] $$(dynamics) (dynamic libraries available to build): $(dynamics))
+dynamics:	$(dynamics);
 
 #objs				:= $(patsubst %,$(outdir)/obj/%.o,$(build_mods:modules/%=%))
 #$(info $(eXcode) - Objects available to build: $(objs))
@@ -202,6 +202,6 @@ $(outdir)/libswift%.a: $(outdir)/obj/lib%.a
 	lipo -output $@ -create $^
 
 .PRECIOUS: $(outdir)/Frameworks/lib%.dylib $(outdir)/obj/%.o $(outdir)/exec/% $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc
-.PHONY: submake_% $(outdir)/Frameworks/libswift%.dylib
+.PHONY: submake_% $(outdir)/Frameworks/libswift%.dylib statics dynamics
 .LIBPATTERNS: lib%.dylib lib%.a
 MAKEFLAGS += --no-builtin-rules

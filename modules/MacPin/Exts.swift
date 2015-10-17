@@ -14,7 +14,9 @@ import UIKit
 #endif
 
 #if arch(x86_64) || arch(i386)
+import Async // https://github.com/duemunk/Async
 import Prompt // https://github.com/neilpa/swift-libedit
+var prompter: Async? = nil
 #endif
 
 func warn(_ msg: String = String(), function: StaticString = __FUNCTION__, file: StaticString = __FILE__, line: UWord = __LINE__, column: UWord = __COLUMN__) {
@@ -110,8 +112,7 @@ func validateURL(urlstr: String) -> NSURL? { // fallback: (String -> NSURL?)? = 
 
 func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2: StaticString = __FUNCTION__, abort:(()->Void)? = nil) {
 #if arch(x86_64) || arch(i386)
-	let backgroundQueue = dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0)
-	dispatch_async(backgroundQueue, { // console ops in background thread
+	prompter = Async.background {
 		let prompt = Prompt(argv0: Process.unsafeArgv[0]) // should make this a singleton, so the AppDel termination can kill it
 		while (true) {
 			print("\(ps1): ") // prompt prefix
@@ -130,12 +131,8 @@ func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, p
 			// L: command completed, restart loop
 			println() //newline
 		}
-#if os(OSX)
-		NSApplication.sharedApplication().terminate(nil)
-#elseif os(iOS)
-		//UIApplication.sharedApplication().terminateWithSuccess() // http://blog.ib-soft.net/2013/01/programmatically-terminate-ios.html
-#endif
-	})
+		// user CTRL-D'd!
+	}
 #else
 	println("Prompt() not available on this device.")
 #endif

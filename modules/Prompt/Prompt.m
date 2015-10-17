@@ -42,7 +42,7 @@ HistEvent _ev;
         history_end(_hist);
         _hist = NULL;
     }
-    
+	el_reset(_el); // make tty sane
     if (_el != NULL) {
         el_end(_el);
         _el = NULL;
@@ -54,7 +54,7 @@ HistEvent _ev;
     
     // line includes the trailing newline
     int count;
-    const char* line = el_gets(_el, &count); // FIXME kill this when app is terminated so dealloc cleanups get done
+    const char* line = el_gets(_el, &count);
     
     if (count > 0) {
         history(_hist, &_ev, H_ENTER, line);

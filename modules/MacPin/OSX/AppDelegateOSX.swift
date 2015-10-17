@@ -231,7 +231,15 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		return error
 	}
 
-	func applicationWillTerminate(notification: NSNotification) { NSUserDefaults.standardUserDefaults().synchronize() }
+	func applicationWillTerminate(notification: NSNotification) {
+		NSUserDefaults.standardUserDefaults().synchronize()
+#if arch(x86_64) || arch(i386)
+		if let prompter = prompter {
+			warn("App terminated by System/GUI, press CTRL-D to exit REPL!")
+			prompter.wait()	// wait for user to shutdown the prompt
+		}
+#endif
+	}
 
 	func applicationShouldTerminateAfterLastWindowClosed(app: NSApplication) -> Bool { return true }
 
