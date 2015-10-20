@@ -7,6 +7,8 @@ class WindowController: NSWindowController, NSWindowDelegate {
 	override init(window: NSWindow?) {
 		// take care of awakeFromNib() & windowDidLoad() tasks, which are not called for NIBless windows
 		super.init(window: window)
+		
+		let appearance = NSUserDefaults.standardUserDefaults().stringForKey("AppleInterfaceStyle") ?? "Light"
 		if let window = window {
 			window.collectionBehavior = .FullScreenPrimary | .ParticipatesInCycle | .Managed | .CanJoinAllSpaces
 			window.styleMask |= NSUnifiedTitleAndToolbarWindowMask
@@ -15,7 +17,11 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			window.opaque = true
 			window.hasShadow = true
 			window.titleVisibility = .Hidden
-			window.appearance = NSAppearance(named: NSAppearanceNameVibrantDark) // Aqua LightContent VibrantDark VibrantLight //FIXME add a setter?
+			if appearance == "Dark" {
+				window.appearance = NSAppearance(named: NSAppearanceNameVibrantDark) // match overall system dark-mode
+			} else {
+				window.appearance = NSAppearance(named: NSAppearanceNameVibrantLight) // Aqua LightContent VibrantDark VibrantLight
+			}
 			window.identifier = "browser"
 			//window.registerForDraggedTypes([NSPasteboardTypeString, NSURLPboardType, NSFilenamesPboardType]) //wkwebviews do this themselves
 			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
