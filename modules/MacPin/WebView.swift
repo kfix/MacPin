@@ -250,7 +250,10 @@ import JavaScriptCore
 		return false
 	}
 	func addHandler(handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) } //FIXME kill
-	func subscribeTo(handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) }
+	func subscribeTo(handler: String) { 
+		configuration.userContentController.removeScriptMessageHandlerForName(handler)
+		configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler)
+	}
 
 	func REPL() {
 		termiosREPL({ (line: String) -> Void in
