@@ -41,6 +41,8 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 					webView.evaluateJavaScript( //for now, send an omnibus event with all varnames values
 						"window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(webView.transparent)}})); ",
 						completionHandler: nil)
+				//case "MacPinGotDownloadedChunk":
+					//msg = [dst_uri, range, data]
 				default:
 					true // no-op	
 			}
@@ -215,6 +217,7 @@ extension WebViewController: WKNavigationDelegate {
 #endif
 		//if !tgt.description.isEmpty { evalJS("window.name = '\(tgt)';") }
 		if !openurl.description.isEmpty { wv.gotoURL(openurl) } // this should be deferred with a timer so all chained JS calls on the window.open() instanciation can finish executing
+		jsdelegate.tryFunc("DidWindowOpenForURL", openurl.description, wv) // allow app.js to tweak any created windows 
 		return wv // window.open() -> Window()
 		//return nil //window.open() -> undefined
 	}
