@@ -254,18 +254,15 @@ struct WeakThing<T: AnyObject> {
 	// optional func toolbarDidRemoveItem(_ notification: NSNotification)
 
 	override func loadView() {
-		tabView = NSTabView()
-		tabView.identifier = "NSTabView"
-		tabView.tabViewType = .NoTabsNoBorder
-		tabView.drawsBackground = false // let the window be the background
-		//tabView.delegate = self // http://www.openradar.me/19732856
 		//tabView.autoresizesSubviews = false
 		//tabView.translatesAutoresizingMaskIntoConstraints = false
 		super.loadView()
-		// note, .view != tabView, view wraps tabView + whatever tabStyle is selected
 	}
 
 	override func viewDidLoad() {
+		// note, .view != tabView, view wraps tabView + whatever tabStyle is selected
+		tabView.tabViewType = .NoTabsNoBorder
+		tabView.drawsBackground = false // let the window be the background
 		identifier = "TabViewController"
 		tabStyle = .Toolbar // this will reinit window.toolbar to mirror the tabview itembar
 		//tabStyle = .Unspecified
@@ -294,8 +291,10 @@ struct WeakThing<T: AnyObject> {
 		super.viewDidAppear()
 		if let window = view.window, toolbar = window.toolbar {
 			//if #available(OSX 10.11, *) {
-			if NSProcessInfo().isOperatingSystemAtLeastVersion(NSOperatingSystemVersion(majorVersion: 10, minorVersion: 11, patchVersion: 0)) {
-				// FIXME: toolbar delegation broken on El Capitan http://www.openradar.me/22348095
+			if NSProcessInfo().isOperatingSystemAtLeastVersion(NSOperatingSystemVersion(majorVersion: 10, minorVersion: 11, patchVersion: 0)) &&
+					// FIXME: toolbar delegation broken on El Capitan http://www.openradar.me/22348095
+				!NSProcessInfo().isOperatingSystemAtLeastVersion(NSOperatingSystemVersion(majorVersion: 10, minorVersion: 11, patchVersion: 2)) {
+					// fixed in 10.11.2 final https://forums.developer.apple.com/thread/14237#88260
 			} else {
 				toolbar.delegate = self 
 			}
