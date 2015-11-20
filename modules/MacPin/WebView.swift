@@ -79,7 +79,7 @@ import JavaScriptCore
 
 	let favicon: FavIcon = FavIcon()
 
-	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false) {
+	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false, private: Bool? = false) {
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
 		let configuration = config ?? WKWebViewConfiguration() // NSURLSessionConfiguration ? https://www.objc.io/issues/5-ios7/from-nsurlconnection-to-nsurlsession/
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
@@ -95,7 +95,7 @@ import JavaScriptCore
 #endif
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
-		//configuration._websiteDataStore = _WKWebsiteDataStore.nonPersistentDataStore
+		if let private = private { if private { configuration.websiteDataStore = WKWebsiteDataStore.nonPersistentDataStore() } }
 		if let app = Application.sharedApplication().delegate as? AppDelegate, isolated = isolated {
 			if isolated {
 				configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
@@ -125,6 +125,9 @@ import JavaScriptCore
 		// check for isolated pre-init
 		if let isolated = object["isolated"] as? Bool {
 			self.init(config: nil, isolated: isolated)
+		else if let private = object["private"] as? Bool {
+			// a private tab would imply isolation, not sweating lack of isolated+private corner case
+			self.init(config: nil, private: private)
 		} else {
 			self.init(config: nil)
 		}
@@ -203,13 +206,13 @@ import JavaScriptCore
 	func close() { removeFromSuperview() } // signal VC too?
 
 	func gotoURL(url: NSURL) {
-		if url.scheme == "file" {
-			//webview.loadFileURL(url, allowingReadAccessToURL: url.URLByDeletingLastPathComponent!) //load file and allow link access to its parent dir
-			//		waiting on http://trac.webkit.org/changeset/174029/trunk to land
-			//webview._addOriginAccessWhitelistEntry(WithSourceOrigin:destinationProtocol:destinationHost:allowDestinationSubdomains:)
-			// need to allow loads from file:// to inject NSBundle's CSS
-		}
-		loadRequest(NSURLRequest(URL: url))
+		//if #available(OSX 10.11, *) && url.scheme == "file" {
+		//	// need to allow loads from file:// to inject CSS files as src= from Resources/
+		//	loadFileURL(url, allowingReadAccessToURL: url.URLByDeletingLastPathComponent!) //load file and allow link access to its parent dir
+		//	loadFileURL(url, allowingReadAccessToURL: NSBundle.mainBundle().resourcePath) 
+		//} else {
+			loadRequest(NSURLRequest(URL: url))
+		//}
 	}
 
 	func loadURL(urlstr: String) -> Bool {
