@@ -4,18 +4,17 @@
 
 var hangouts = {
 	transparent: true,
-	postinject: ["notifier", "convopopper"],
+	postinject: ["notifier"], // "convopopper"],
 	preinject: ["styler", 'shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady', 'SwitchToNewestTab'],
+	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady', 'SwitchToThisTab'],
 	url: "https://hangouts.google.com"
 };
 //var hangoutsAlt = Object.assign({}, hangouts, {url: "https://plus.google.com/u/1/hangouts"});
 var hangoutsAlt = {
 	transparent: true,
-	postinject: ["notifier"],
+	postinject: ["notifier"], // "convopopper"],
 	preinject: ["styler", 'shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady', 'SwitchToNewestTab'],
-	//url: "https://plus.google.com/u/1/hangouts"
+	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady', 'SwitchToThisTab'],
 	url: "https://hangouts.google.com/u/1"
 };
 $.browser.addShortcut("Google Hangouts", hangouts);
@@ -30,6 +29,8 @@ $.browser.addShortcut("(secondary account) Google Voice call history", "https://
 //var gaia; // your numeric Google ID
 
 var delegate = {}; // our delegate to receive events from the webview app
+
+delegate.DidWindowOpenForURL = function(url, webview) { webview.subscribeTo("SwitchToThisTab"); } //all popped-up tabs can select themselves
 
 delegate.decideNavigationForClickedURL = function(url) {
 	if (
@@ -111,10 +112,8 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 	}
 };
 
-delegate.SwitchToNewestTab = function(tab, msg) {
-	// find tab with largest ctime
-	//$.browser.tabSelected = $.browser.tabs[1];
-	$.browser.switchToNextTab()
+delegate.SwitchToThisTab = function(tab, msg) {
+	if (tab) $.browser.tabSelected = tab;
 };
 
 delegate.receivedHTML5DesktopNotification = function(tab, note) {
@@ -130,8 +129,12 @@ delegate.handleClickedNotification = function(title, subtitle, msg, id) {
 	var src = id.split('__'),
 		cpar = src.shift(),
 		gaia = src.shift();
+	//var [cpar, gaia] = id.split('__'); //ES6...OSX 10.11 ?
 	for (var tab of $.browser.tabs) {
-		if (tab.gaia == gaia) {
+		if ((tab.cpar == cpar) && (tab.gaia == gaia)) {
+			// a popped out tab already exists for this conversation
+			$.browser.tabSelected = tab;
+		} else if (tab.gaia == gaia) {
 			$.browser.tabSelected = tab;
 			hangoutsTab.evalJS('rosterClickOn("button[cpar='+"'"+cpar+"'"+']");');
 		}

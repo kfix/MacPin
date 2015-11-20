@@ -549,7 +549,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 			//presentViewControllerAsSheet(omnibox) // modal, yuck
 			var poprect = view.bounds
 			poprect.size.height -= omnibox.preferredContentSize.height + 12 // make room at the top to stuff the popover
-			presentViewController(omnibox, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSMaxYEdge, behavior: NSPopoverBehavior.Semitransient)
+			presentViewController(omnibox, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSMaxYEdge, behavior: NSPopoverBehavior.Transient)
 		}
 	}
 

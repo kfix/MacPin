@@ -98,13 +98,50 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.tabSelected = new $.WebView(repl);
 };
 
+
+// from seeDebugger.js
+function vtype(obj) {
+  var bracketed = Object.prototype.toString.call(obj);
+  var vt = bracketed.substring(8, bracketed.length - 1);
+  if (vt == 'Object') {
+    if ('length' in obj && 'slice' in obj && 'number' == typeof obj.length) {
+      return 'Array';
+    }
+    if ('originalEvent' in obj && 'target' in obj && 'type' in obj) {
+      return vtype(obj.originalEvent);
+    }
+  }
+  return vt;
+}
+function isprimitive(vt) {
+  switch (vt) {
+    case 'String':
+    case 'Number':
+    case 'Boolean':
+    case 'Undefined':
+    case 'Date':
+    case 'RegExp':
+    case 'Null':
+	case 'Object':
+      return true;
+  }
+  return false;
+}
+
+
 delegate.evalREPL = function(tab, msg) {
 	var command = msg;
 	var result;
 	try {
 		result = eval(command);
-		// need to identify whether an object or literal and dump accordingly
-		result = [result, ' -> ' + JSON.stringify(result)];
+		var description = JSON.stringify(result, function (k,v) { //replacer func
+			var type = vtype(v);
+			if (!isprimitive(type)) return type;
+			return v;
+		}, 1);
+		var rtype = vtype(result);
+		if (!isprimitive(rtype)) description = result.__proto__ ? Object.getOwnPropertyNames(result.__proto__) : Object.getOwnPropertyNames(result); //dump props of custom objects
+		result = [`[${rtype}]:  ${description}`];
 	} catch(e) {
 		result = e;
 	}
