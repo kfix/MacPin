@@ -79,7 +79,7 @@ import JavaScriptCore
 
 	let favicon: FavIcon = FavIcon()
 
-	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false, private: Bool? = false) {
+	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
 		let configuration = config ?? WKWebViewConfiguration() // NSURLSessionConfiguration ? https://www.objc.io/issues/5-ios7/from-nsurlconnection-to-nsurlsession/
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
@@ -95,7 +95,7 @@ import JavaScriptCore
 #endif
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
-		if let private = private { if private { configuration.websiteDataStore = WKWebsiteDataStore.nonPersistentDataStore() } }
+		//if let privacy = privacy { if privacy { configuration.websiteDataStore = WKWebsiteDataStore.nonPersistentDataStore() } }
 		if let app = Application.sharedApplication().delegate as? AppDelegate, isolated = isolated {
 			if isolated {
 				configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
@@ -125,9 +125,9 @@ import JavaScriptCore
 		// check for isolated pre-init
 		if let isolated = object["isolated"] as? Bool {
 			self.init(config: nil, isolated: isolated)
-		else if let private = object["private"] as? Bool {
+		} else if let privacy = object["private"] as? Bool {
 			// a private tab would imply isolation, not sweating lack of isolated+private corner case
-			self.init(config: nil, private: private)
+			self.init(config: nil, privacy: privacy)
 		} else {
 			self.init(config: nil)
 		}
