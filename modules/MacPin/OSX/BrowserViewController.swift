@@ -121,6 +121,7 @@ struct WeakThing<T: AnyObject> {
 
 	override func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] {
 		let tabs = super.toolbarAllowedItemIdentifiers(toolbar) ?? []
+		warn(tabs.description)
 		return tabs + [
 			NSToolbarSeparatorItemIdentifier,
 			NSToolbarSpaceItemIdentifier,

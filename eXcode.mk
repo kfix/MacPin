@@ -27,7 +27,7 @@ archs_iphoneos		?= arm arm64
 arch				?= $(shell uname -m)
 
 target_OSX			?= apple-macosx10.10
-target_iOS			?= apple-ios8.3
+target_iOS			?= apple-ios8.4
 target				?= $(target_OSX)
 
 ifneq ($(SIM_ONLY),)
@@ -136,34 +136,36 @@ $(swiftlibdir):
 	xcode-select --install
 ########################
 
-$(outdir)/MacOS $(outdir)/exec $(outdir)/Frameworks $(outdir)/obj $(outdir)/Contents: ; install -d $@
+$(outdir)/MacOS $(outdir)/exec $(outdir)/Frameworks $(outdir)/obj $(outdir)/Contents $(outdir)/SwiftSupport: ; install -d $@
 
-#$(outdir)/Frameworks/libswift%.dylib: $(outdir)/exec/* | $(outdir)/Frameworks
-#python2.7 -m macholib find $@ | awk ...
-# http://pythonhosted.org//macholib/scripts.html
-# python -m macholib standalone $@
-# python -m macholib find $@
 define bundle_libswift
 	for lib in $$(otool -L $@ | awk -F '[/ ]' '$$2 ~ /^libswift.*\.dylib/ { printf $$2 " " }'); do \
-		cp $(swiftlibdir)/$$lib $(outdir)/Frameworks; \
+		cp $(swiftlibdir)/$$lib $(outdir)/SwiftSupport; \
 	done
 endef
-#^ my guess is that Swift will eventually become a system framework when Apple starts using it to build iOS/OSX system apps ...
-# yup, Swift 2.0 2015Q4 ~ 2016Q1
+#^ my hope is that Swift will eventually become a system framework when Apple starts using it to build iOS/OSX system apps ...
+#  https://forums.developer.apple.com/message/9714
+#  http://mjtsai.com/blog/2015/06/12/swift-libraries-not-included-in-ios-9-or-el-capitan/
 
 #$(outdir)/exec/%: libdirs += -L $(swiftlibdir)
-$(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks
+$(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks $(outdir)/SwiftSupport
 	# grab the .d's of $^ and build any used modules ....
-	$(clang) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -o $@ $^
+	$(clang) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../SwiftSupport -o $@ $^
 	$(bundle_libswift)
 
 # this is for standalone utility/helper programs, use module/main.swift for Application starters
 $(outdir)/exec/%: execs/$(platform)/%.swift | $(outdir)/exec
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
+		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
 		-module-name $*.MainExec \
 		-emit-executable -o $@ \
 		$(filter %.swift,$+)
+
+$(outdir)/Symbols/%.symbol: $(outdir)/exec/%
+	# allow creation of "symbolicated crash logs" via Xcode7
+	install -d %(outdir)/Symbols
+	xcrun -sdk $(sdk) symbols -noTextInSOD -noDaemon -arch all -symbolsPackageDir $(outdir)/Symbols $^
 
 $(outdir)/Frameworks/lib%.dylib $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/$(platform)/*.swift | $(outdir)/Frameworks
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
@@ -202,6 +204,6 @@ $(outdir)/libswift%.a: $(outdir)/obj/lib%.a
 	lipo -output $@ -create $^
 
 .PRECIOUS: $(outdir)/Frameworks/lib%.dylib $(outdir)/obj/%.o $(outdir)/exec/% $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc
-.PHONY: submake_% $(outdir)/Frameworks/libswift%.dylib statics dynamics
+.PHONY: submake_% statics dynamics
 .LIBPATTERNS: lib%.dylib lib%.a
 MAKEFLAGS += --no-builtin-rules

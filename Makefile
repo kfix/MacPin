@@ -5,7 +5,8 @@ builddir			?= build
 
 # scan modules/ and define cross: target and vars: outdir, platform, arch, sdk, target, objs, execs, statics, incdirs, libdirs, linklibs, frameworks
 archs_macosx		?= x86_64
-# ^ supporting Yosemite only, so don't bother with 32-bit builds
+# ^ supporting Yosemite+ only, so don't bother with 32-bit builds
+archs_iphonesimulator	?= i386 x86_64
 include eXcode.mk
 
 # now layout the MacPin .apps to generate
@@ -43,7 +44,7 @@ $(foreach app,$(gen_apps), $(info $(app)) )
 
 ifeq ($(filter $(arch),$(archs_macosx)),)
 # only intel platforms have libedit so only those execs can have terminal CLIs
-$(execs): $(filter-out %/libPrompt.a, $(statics))
+$(execs): $(filter-out %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics))
 else
 $(execs): $(statics)
 endif
@@ -121,13 +122,14 @@ $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/
 # https://developer.apple.com/library/mac/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
 # https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html
 $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/
-	@install -d $@ $@/Contents/MacOS $@/Contents/Frameworks $@/Contents/Resources
+	@install -d $@ $@/Contents/MacOS $@/Contents/Resources
 	$(patsubst %,cp % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
 	cp -RL templates/Resources $@/Contents
 	#git ls-files -zc $(bundle_untracked) $(macpin_sites)/$* | xargs -0 -J % install -DT % $@/Contents/Resources/
 	(($(bundle_untracked))) || git archive HEAD $(macpin_sites)/$*/ | tar -xv --strip-components 2 -C $@/Contents/Resources
 	(($(bundle_untracked))) && cp -RL $(macpin_sites)/$*/* $@/Contents/Resources/ || true
-	install $(outdir)/Frameworks/*.dylib $@/Contents/Frameworks/
+	[ ! -n "$(wildcard $(outdir)/Frameworks/*.dylib)" ] || cp -a $(outdir)/Frameworks $@/Contents
+	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/Contents
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist
 	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
 	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s $(appsig) -f --deep --ignore-resources --entitlements $(outdir)/entitlements.plist $@
@@ -152,9 +154,13 @@ $(appdir)/%.app/LaunchScreen.nib: templates/$(platform)/LaunchScreen.xib
 
 $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/entitlements.plist $(appdir)/%.app/Info.plist templates/$(platform)/LaunchScreen.xib $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Assets.car templates/Resources templates/Resources/*
 	@install -d $@ $@/Frameworks
+	@install -d $@ $@/SwiftSupport
 	$(patsubst %,cp % $@/$*;,$(filter $(outdir)/exec/%,$^))
 	install_name_tool -rpath @loader_path/../Frameworks @loader_path/Frameworks $@/$*
-	install $(outdir)/Frameworks/*.dylib $@/Frameworks/
+	install_name_tool -rpath @loader_path/../SwiftSwupport @loader_path/SwiftSupport $@/$*
+	[ ! -n "$(wildcard $(outdir)/Frameworks/*.dylib)" ] || cp -a $(outdir)/Frameworks $@/
+	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/
+
 	cp -RL $(macpin_sites)/$*/* $@/
 	@touch $@
 endif

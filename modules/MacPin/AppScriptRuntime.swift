@@ -6,6 +6,7 @@
 
 #if os(OSX)
 import AppKit
+import OSAKit
 #elseif os(iOS)
 import UIKit
 #endif
@@ -58,8 +59,12 @@ extension JSValue {
 	func sleep(secs: Double)
 	func doesAppExist(appstr: String) -> Bool
 	func pathExists(path: String) -> Bool
+	//func promptToSaveFile(filename: String?, mimetype: String?) -> String?
 	//func evalAppleScript(code: String) //expose NSAppleScript?
 	func loadAppScript(urlstr: String) -> JSValue?
+	func evalJXA(script: String)
+	func evalAppleScript(script: String)
+	//func callAppleScriptLibrary(library: String, call: String, args: [AnyObject])
 }
 
 class AppScriptRuntime: NSObject, AppScriptExports  {
@@ -306,6 +311,23 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		// http://thecodeninja.tumblr.com/post/90742435155/notifications-in-ios-8-part-2-using-swift-what
 	}
 
+/*
+	func promptToSaveFile(filename: String? = nil, mimetype: String? = nil, callback: (String)? = nil) {
+		let saveDialog = NSSavePanel();
+		saveDialog.canCreateDirectories = true
+		//saveDialog.allowedFileTypes = [mimetypeUTI]
+		if let filename = filename { saveDialog.nameFieldStringValue = filename }
+		if let window = self.window {
+			saveDialog.beginSheetModalForWindow(window) { (result: Int) -> Void in
+				if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
+					NSFileManager.defaultManager().createFileAtPath(path, contents: data, attributes: nil)
+					if let callback = callback { callback(path); }
+				}
+			}
+		}
+	}
+*/
+
 	func postHTML5Notification(object: [String:AnyObject]) {
 		// object's keys conforming to:
 		//   https://developer.mozilla.org/en-US/docs/Web/API/notification/Notification
@@ -361,4 +383,51 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			println(self.context.evaluateScript(line))
 		})
 	}
+	
+	func evalJXA(script: String) {
+#if os(OSX)
+		var error: NSDictionary?
+		let osa = OSAScript(source: script, language: OSALanguage(forName: "JavaScript"))
+		if let output = osa.executeAndReturnError(&error) {
+			warn(output.description)
+		} else if (error != nil) {
+			warn("error: \(error)")
+		}
+#endif
+	}
+
+	// FIXME?: do i want to allow raw AS to be run?
+	func evalAppleScript(script: String) {
+#if os(OSX)
+		var error: NSDictionary?
+		if let scriptObject = NSAppleScript(source: script) {
+		if let output: NSAppleEventDescriptor = scriptObject.executeAndReturnError(&error) {
+			// does this interpreter persist?
+			//  http://lists.apple.com/archives/applescript-users/2015/Jan/msg00164.html
+			warn(output.description)
+		} else if (error != nil) {
+			warn("error: \(error)")
+		}
+}
+#endif
+	}
+/*
+	func callAppleScriptLibrary(library: String, call: String, args: [AnyObject]) {
+#if os(OSX)
+		//let myJXAScript = "Library(\(library)).\(call)()" // FIXME: translate args
+		let myAppleScript = "tell script \"\(library)\" to log its \(call)()" // FIXME: translate args
+		var error: NSDictionary?
+		if let scriptObject = NSAppleScript(source: myAppleScript) {
+		if let output: NSAppleEventDescriptor = scriptObject.executeAndReturnError(&error) {
+			// does this interpreter persist?
+			//  http://lists.apple.com/archives/applescript-users/2015/Jan/msg00164.html
+			//   same whiner? http://stackoverflow.com/a/26317146
+			warn(output.description)
+		} else if (error != nil) {
+			warn("error: \(error)")
+		}
+}
+#endif
+	}
+*/
 }

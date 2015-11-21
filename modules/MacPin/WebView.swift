@@ -17,6 +17,7 @@ import JavaScriptCore
 	var url: String { get set }
 	var transparent: Bool { get set }
 	var userAgent: String { get set }
+	var allowsMagnification: Bool { get set }
 	//var canGoBack: Bool { get }
 	//var canGoForward: Bool { get }
 	//var hasOnlySecureContent: Bool { get }
@@ -137,6 +138,7 @@ import JavaScriptCore
 				case let urlstr as String where key == "url": url = NSURL(string: urlstr)
 				case let agent as String where key == "agent": _customUserAgent = agent
 				case let icon as String where key == "icon": loadIcon(icon)
+				case let magnification as Bool where key == "allowsMagnification": allowsMagnification = magnification
 				case let transparent as Bool where key == "transparent":
 #if os(OSX)
 					_drawsTransparentBackground = transparent
