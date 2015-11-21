@@ -17,6 +17,7 @@ import JavaScriptCore
 	var url: String { get set }
 	var transparent: Bool { get set }
 	var userAgent: String { get set }
+	var allowsMagnification: Bool { get set }
 	//var canGoBack: Bool { get }
 	//var canGoForward: Bool { get }
 	//var hasOnlySecureContent: Bool { get }
