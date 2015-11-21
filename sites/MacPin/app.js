@@ -50,6 +50,13 @@ delegate.injectTab = function(script, init) {
 };
 
 delegate.setAgent = function(agent) { $.browser.tabSelected.userAgent = agent; };
+//delegate.testAS = function() { $.app.evalAppleScript('display alert "testing!"'); };
+delegate.testAS = function() { $.app.evalJXA(`
+	var script = Application.currentApplication();
+	script.includeStandardAdditions = true;
+	script.displayNotification('JXA evaluated!', { withTitle: '${$.app.name}', subtitle: 'Done' });
+	script.displayAlert('testing!');`
+);};
 
 delegate.AppFinishedLaunching = function() {
 	//$.browser.unhideApp();
@@ -70,6 +77,7 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('see.js console', ['injectTab', 'seeDebugger', 'see.init();']); // http://davidbau.com/archives/2013/04/19/debugging_locals_with_seejs.html
 	$.browser.addShortcut('Simulate TouchEvents', ['injectTab', 'thumbs']); // http://mwbrooks.github.io/thumbs.js/
 	$.browser.addShortcut('Log DnDs to console', ['injectTab', 'dnd']);
+	$.browser.addShortcut('test AppleScript', ['testAS']);
 
 	if ($.app.doesAppExist("com.google.Chrome")) $.browser.addShortcut('Open in Chrome', ['openInChrome']);
 
@@ -146,8 +154,8 @@ delegate.evalREPL = function(tab, msg) {
 		result = e;
 	}
 	console.log(result);
-	tab.evalJS("window.dispatchEvent(new window.CustomEvent('returnREPL',{'detail':{'result': "+result+"}}));");
-	tab.evalJS("returnREPL('"+escape(result)+"');");
+	tab.evalJS(`window.dispatchEvent(new window.CustomEvent('returnREPL',{'detail':{'result': ${result}}}));`);
+	tab.evalJS(`returnREPL('${escape(result)}');`);
 };
 
 delegate.closeREPL = function(tab, msg) {
