@@ -24,8 +24,8 @@ function addFeedViaJS(feedUrl) {
 
 // handles cmd-line and LaunchServices openURL()s
 delegate.launchURL = function(url) {
-	var addURL = getAddFeedLink(url);
-	if (addURL) {
+	var addURL;
+	if (addURL = getAddFeedLink(url)) {
 		$.browser.tabSelected = diggTab;
 		$.browser.unhideApp();
 		diggTab.evalJS(addFeedViaJS(addURL));
@@ -45,10 +45,8 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 			" (feed = document.head.querySelector('link[type*=atom]')) ) { feed.href } else { false };",
 			2, // delay (in seconds) to wait for tab to load
 			function(result) { // callback
-				if (result) {
-					var addURL = getAddFeedLink(result);
-					if (addURL) diggTab.evalJS(addFeedViaJS(addURL));
-				};
+				var addURL;
+				if (result && (addURL = getAddFeedLink(result))) diggTab.evalJS(addFeedViaJS(addURL));
 				tab.close(); //FIXME doesn't do diddly
 			}
 		);
@@ -56,12 +54,15 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 	return true; // bypass WKWebView's default handler
 };
 
+delegate.addCurrentPageToFeeds = function() { delegate.launchURL('feed:' + $.browser.tabSelected.url); }
+
 delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('feed');
 	$.app.registerURLScheme('rss');
 
 	$.browser.addShortcut("Digg Reader", digg);
 	$.browser.addShortcut("Get OSX service for text-selected feeds", "http://github.com/kfix/MacPin/tree/master/extras/Open Feed with Digg.workflow");
+	$.browser.addShortcut("Add current page to Digg Reader feeds", ["addCurrentPageToFeeds"]);
 
 	$.browser.tabSelected = diggTab;
 
