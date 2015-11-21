@@ -121,6 +121,7 @@ struct WeakThing<T: AnyObject> {
 
 	override func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] {
 		let tabs = super.toolbarAllowedItemIdentifiers(toolbar) ?? []
+		warn(tabs.description)
 		return tabs + [
 			NSToolbarSeparatorItemIdentifier,
 			NSToolbarSpaceItemIdentifier,
@@ -255,7 +256,7 @@ struct WeakThing<T: AnyObject> {
 
 	override func loadView() {
 		tabView = NSTabView()
-		tabView.identifier = "NSTabView"
+		//tabView.identifier = "NSTabView"
 		tabView.tabViewType = .NoTabsNoBorder
 		tabView.drawsBackground = false // let the window be the background
 		//tabView.delegate = self // http://www.openradar.me/19732856
@@ -266,7 +267,7 @@ struct WeakThing<T: AnyObject> {
 	}
 
 	override func viewDidLoad() {
-		identifier = "TabViewController"
+		//identifier = "TabViewController"
 		tabStyle = .Toolbar // this will reinit window.toolbar to mirror the tabview itembar
 		//tabStyle = .Unspecified
 		//tabStyle = .SegmentedControlOnTop
