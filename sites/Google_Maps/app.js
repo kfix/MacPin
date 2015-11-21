@@ -7,13 +7,20 @@ var mapsTab, maps = {
 	url: "https://maps.google.com",
 	postinject: [],
 	preinject: ['shim_html5_notifications', 'shim_html5_geolocation'],
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates", "getGeolocation", "watchGeolocation, deactivateGeolocation"]
+	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates", "getGeolocation", "watchGeolocation, deactivateGeolocation"],
+	allowsMagnification: false // lets gmaps JS handle pinch-zooms
 }, mapsAlt = {
 	url: "https://www.google.com/maps/?authuser=1",
 	postinject: [],
 	preinject: ['shim_html5_notifications', 'shim_html5_geolocation'],
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates", "getGeolocation", "watchGeolocation, deactivateGeolocation"]
+	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates", "getGeolocation", "watchGeolocation, deactivateGeolocation"],
+	allowsMagnification: false // lets gmaps JS handle pinch-zooms
 };
+
+// need to map pinchIn to scrollUp, pinchOut to scrollDown
+// rotate?
+// two-finger slide for tilt?
+// https://github.com/ekryski/caress-client
 
 mapsTab = $.browser.tabSelected = new $.WebView(maps);
 

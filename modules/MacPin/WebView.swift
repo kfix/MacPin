@@ -138,6 +138,7 @@ import JavaScriptCore
 				case let urlstr as String where key == "url": url = NSURL(string: urlstr)
 				case let agent as String where key == "agent": _customUserAgent = agent
 				case let icon as String where key == "icon": loadIcon(icon)
+				case let magnification as Bool where key == "allowsMagnification": allowsMagnification = magnification
 				case let transparent as Bool where key == "transparent":
 #if os(OSX)
 					_drawsTransparentBackground = transparent
