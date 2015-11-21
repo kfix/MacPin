@@ -58,6 +58,7 @@ extension JSValue {
 	func sleep(secs: Double)
 	func doesAppExist(appstr: String) -> Bool
 	func pathExists(path: String) -> Bool
+	//func promptToSaveFile(filename: String?, mimetype: String?) -> String?
 	//func evalAppleScript(code: String) //expose NSAppleScript?
 	func loadAppScript(urlstr: String) -> JSValue?
 }
@@ -305,6 +306,23 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		//map passed-in blocks to notification responses?
 		// http://thecodeninja.tumblr.com/post/90742435155/notifications-in-ios-8-part-2-using-swift-what
 	}
+
+/*
+	func promptToSaveFile(filename: String? = nil, mimetype: String? = nil, callback: (String)? = nil) {
+		let saveDialog = NSSavePanel();
+		saveDialog.canCreateDirectories = true
+		//saveDialog.allowedFileTypes = [mimetypeUTI]
+		if let filename = filename { saveDialog.nameFieldStringValue = filename }
+		if let window = self.window {
+			saveDialog.beginSheetModalForWindow(window) { (result: Int) -> Void in
+				if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
+					NSFileManager.defaultManager().createFileAtPath(path, contents: data, attributes: nil)
+					if let callback = callback { callback(path); }
+				}
+			}
+		}
+	}
+*/
 
 	func postHTML5Notification(object: [String:AnyObject]) {
 		// object's keys conforming to:
