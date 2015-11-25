@@ -29,8 +29,6 @@ class AppDelegateOSX: AppDelegate{
 		}
 		//replyEvent == ??
 	}
-
-
 }
 
 extension AppDelegateOSX: NSApplicationDelegate {
@@ -97,6 +95,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Stop Loading", "stopLoading:", ".", [.CommandKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Print Page", "print:")) //NSView
 		tabMenu.submenu?.addItem(MenuItem("Print Tab", "printTab", target: browserController)) //bc
+		tabMenu.submenu?.addItem(MenuItem("Copy view as PDF text", "copyAsPDF")) //webview
 		tabMenu.submenu?.addItem(MenuItem("Save Web Archive...", "saveWebArchive")) //webview
 		tabMenu.submenu?.addItem(MenuItem("Open in default Browser", "askToOpenCurrentURL")) //webview
 		app!.mainMenu?.addItem(tabMenu)
@@ -306,5 +305,27 @@ extension AppDelegateOSX: NSWindowRestoration {
 		} else {
 			completionHandler(nil, nil)
 		}
+	}
+}
+
+// modules/WebKitPrivates/_WKDownloadDelegate.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
+// https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
+extension AppDelegateOSX: _WKDownloadDelegate {
+	override func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
+		warn(download.description)
+		//pop open a save Panel to dump data into file
+		let saveDialog = NSSavePanel();
+		saveDialog.canCreateDirectories = true
+		saveDialog.nameFieldStringValue = filename
+		if let app = NSApplication.sharedApplication().delegate as? AppDelegateOSX, let window = app.windowController.window {
+			let result = saveDialog.runModal()
+			if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
+				warn(path)
+				return path
+			}
+		}
+		download.cancel()
+		return ""
 	}
 }

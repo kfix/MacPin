@@ -103,6 +103,9 @@ import JavaScriptCore
 			} else {
 				configuration.processPool = config?.processPool ?? app.webProcessPool
 			}
+#if os(OSX)
+			configuration.processPool._downloadDelegate = app
+#endif
 		}
 		self.init(frame: CGRectZero, configuration: configuration)
 #if SAFARIDBG
@@ -290,6 +293,7 @@ import JavaScriptCore
 	override func validateUserInterfaceItem(anItem: NSValidatedUserInterfaceItem) -> Bool {
 		switch (anItem.action().description) {
 			//case "askToOpenCurrentURL": return true
+			case "copyAsPDF": fallthrough
 			case "saveWebArchive": return true
 			default:
 				return super.validateUserInterfaceItem(anItem)
@@ -310,6 +314,13 @@ import JavaScriptCore
 		//  (-[WKWebView performDragOperation:]):
 		// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/DragandDrop/Concepts/dragsource.html#//apple_ref/doc/uid/20000976-CJBFBADF
 		// https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSView_Class/index.html#//apple_ref/occ/instm/NSView/beginDraggingSessionWithItems:event:source:
+	}
+
+	//func dumpImage() -> NSImage { return NSImage(data: view.dataWithPDFInsideRect(view.bounds)) }
+	func copyAsPDF() {
+		let pb = NSPasteboard.generalPasteboard()
+		pb.clearContents()
+		writePDFInsideRect(bounds, toPasteboard: pb)
 	}
 
 #endif

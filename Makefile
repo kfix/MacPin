@@ -110,6 +110,9 @@ $(outdir)/entitlements.plist: templates/$(platform)/entitlements.plist
 
 ifeq ($(platform),OSX)
 
+%.scpt: %.jxa
+	osacompile -l JavaScript -o $@ $<
+
 $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/Assets.car: $(xcassets)/%.xcassets
 	@install -d $(dir $@)
 	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
@@ -254,7 +257,7 @@ endif
 
 # need to gen static html with https://github.com/realm/jazzy
 doc: $(execs) $(objs)
-	for i in $(build_mods); do echo ":print_module $$i" | xcrun swift $(incdirs) -deprecated-integrated-repl; done
+	for i in $(build_mods) WebKit WebKitPrivates; do echo ":print_module $$i" | xcrun swift $(incdirs) -deprecated-integrated-repl; done
 	#xcrun swift-ide-test -print-module -source-filename /dev/null -print-regular-comments -module-to-print Prompt
 	#xcrun swift-ide-test -sdk "$(sdkpath)" -source-filename=. -print-module -module-to-print="Prompt" -synthesize-sugar-on-types -module-print-submodules -print-implicit-attrs
 
