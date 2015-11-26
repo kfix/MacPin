@@ -59,12 +59,8 @@ extension JSValue {
 	func sleep(secs: Double)
 	func doesAppExist(appstr: String) -> Bool
 	func pathExists(path: String) -> Bool
-	//func promptToSaveFile(filename: String?, mimetype: String?) -> String?
-	//func evalAppleScript(code: String) //expose NSAppleScript?
 	func loadAppScript(urlstr: String) -> JSValue?
-	func evalJXA(script: String)
-	func evalAppleScript(script: String)
-	//func callAppleScriptLibrary(library: String, call: String, args: [AnyObject])
+	func callJXALibrary(library: String, _ call: String, _ args: [AnyObject])
 }
 
 class AppScriptRuntime: NSObject, AppScriptExports  {
@@ -197,7 +193,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 			 	return context.evaluateScript(script as String, withSourceURL: scriptURL) // returns JSValue!
 			} else {
-				// hmm, using self.context for the syntax check ssems to evaluate the contents anyways
+				// hmm, using self.context for the syntax check seems to evaluate the contents anyways
 				// need to make a throwaway dupe of it
 				warn("bad syntax: \(scriptURL)")
 				if exception.isObject() { warn("got errObj") }
@@ -396,38 +392,19 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
-	// FIXME?: do i want to allow raw AS to be run?
-	func evalAppleScript(script: String) {
+	func callJXALibrary(library: String, _ call: String, _ args: [AnyObject]) {
+		warn(args.description)
 #if os(OSX)
+		let script = "eval = null; function run() { return Library('\(library)').\(call).apply(this, arguments); }"
 		var error: NSDictionary?
-		if let scriptObject = NSAppleScript(source: script) {
-		if let output: NSAppleEventDescriptor = scriptObject.executeAndReturnError(&error) {
-			// does this interpreter persist?
-			//  http://lists.apple.com/archives/applescript-users/2015/Jan/msg00164.html
+		let osa = OSAScript(source: script, language: OSALanguage(forName: "JavaScript"))
+		if let output: NSAppleEventDescriptor = osa.executeHandlerWithName("run", arguments: args, error: &error) {
+			// does this interpreter persist? http://lists.apple.com/archives/applescript-users/2015/Jan/msg00164.html
 			warn(output.description)
 		} else if (error != nil) {
 			warn("error: \(error)")
 		}
-}
 #endif
 	}
-/*
-	func callAppleScriptLibrary(library: String, call: String, args: [AnyObject]) {
-#if os(OSX)
-		//let myJXAScript = "Library(\(library)).\(call)()" // FIXME: translate args
-		let myAppleScript = "tell script \"\(library)\" to log its \(call)()" // FIXME: translate args
-		var error: NSDictionary?
-		if let scriptObject = NSAppleScript(source: myAppleScript) {
-		if let output: NSAppleEventDescriptor = scriptObject.executeAndReturnError(&error) {
-			// does this interpreter persist?
-			//  http://lists.apple.com/archives/applescript-users/2015/Jan/msg00164.html
-			//   same whiner? http://stackoverflow.com/a/26317146
-			warn(output.description)
-		} else if (error != nil) {
-			warn("error: \(error)")
-		}
-}
-#endif
-	}
-*/
+
 }

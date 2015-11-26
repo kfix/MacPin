@@ -57,6 +57,7 @@ delegate.testAS = function() { $.app.evalJXA(`
 	script.displayNotification('JXA evaluated!', { withTitle: '${$.app.name}', subtitle: 'Done' });
 	script.displayAlert('testing!');`
 );};
+delegate.testAS = function() { $.app.callJXALibrary('test', 'test', [1]); };
 
 delegate.AppFinishedLaunching = function() {
 	//$.browser.unhideApp();
