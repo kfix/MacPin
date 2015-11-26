@@ -7,9 +7,6 @@
 // https://developer.apple.com/library/prerelease/ios/documentation/General/Conceptual/ExtensibilityPG/ExtensionScenarios.html#//apple_ref/doc/uid/TP40014214-CH21-SW2
 // https://developer.apple.com/library/mac/documentation/Foundation/Reference/NSURLSessionUploadTask_class/index.html
 
-//and how about downloads? right now they are passed to safari
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKDownloadDelegate.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
 
 // lookup table for NSError codes gotten while browsing
 // http://nshipster.com/nserror/#nsurlerrordomain-&-cfnetworkerrors
@@ -24,6 +21,7 @@ let WebKitErrorDomain = "WebKitErrorDomain"
 #endif
 
 import WebKit
+import WebKitPrivates
 
 extension AppScriptRuntime: WKScriptMessageHandler {
 	func userContentController(userContentController: WKUserContentController, didReceiveScriptMessage message: WKScriptMessage) {
@@ -41,8 +39,6 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 					webView.evaluateJavaScript( //for now, send an omnibus event with all varnames values
 						"window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(webView.transparent)}})); ",
 						completionHandler: nil)
-				//case "MacPinGotDownloadedChunk":
-					//msg = [dst_uri, range, data]
 				default:
 					true // no-op	
 			}
@@ -119,6 +115,7 @@ extension WebViewController: WKNavigationDelegate {
 			// invalid url? should raise error
 			warn("navType:\(navigationAction.navigationType.rawValue) sourceFrame:(\(navigationAction.sourceFrame?.request.URL)) -> \(url)")
 			decisionHandler(.Cancel)
+			//decisionHandler(WKNavigationActionPolicy._WKNavigationActionPolicyDownload);
 		}
 	}
 
@@ -147,13 +144,28 @@ extension WebViewController: WKNavigationDelegate {
 
 		if jsdelegate.tryFunc("decideNavigationForMIME", mime, url.description) { decisionHandler(.Cancel); return } //FIXME perf hit?
 
-		if navigationResponse.canShowMIMEType {
-			decisionHandler(.Allow)
-		} else {
-			warn("cannot render requested MIME-type:\(mime) @ \(url)")
-			if !jsdelegate.tryFunc("handleUnrenderableMIME", mime, url.description, fn) { askToOpenURL(url) }
-			decisionHandler(.Cancel)
+		// http://stackoverflow.com/q/33156567/3878712
+		if let httpResponse = navigationResponse.response as? NSHTTPURLResponse {
+			if let headers = httpResponse.allHeaderFields as? [String: String], url = httpResponse.URL {
+				if let cookies = NSHTTPCookie.cookiesWithResponseHeaderFields(headers, forURL: url) as? [NSHTTPCookie] {
+					for cookie in cookies {
+						//warn("Recv'd cookie[\(cookie.name)]: \(cookie.value)")
+						warn(cookie.description)
+					}
+				}
+			}
 		}
+
+		if !navigationResponse.canShowMIMEType {
+			warn("cannot render requested MIME-type:\(mime) @ \(url)")
+			if !jsdelegate.tryFunc("handleUnrenderableMIME", mime, url.description, fn) {
+				//askToOpenURL(url) // punt to safari
+				decisionHandler(WKNavigationResponsePolicy(rawValue: WKNavigationResponsePolicy.Allow.rawValue + 1)!) // .BecomeDownload
+				return
+			}
+		}
+
+		decisionHandler(.Allow)
 	}
 
 	func webView(webView: WKWebView, didFailNavigation navigation: WKNavigation!, withError error: NSError) { //error during commited main frame navigation
@@ -227,3 +239,5 @@ extension WebViewController: WKNavigationDelegate {
 		webView.reload()
 	}
 }
+
+
