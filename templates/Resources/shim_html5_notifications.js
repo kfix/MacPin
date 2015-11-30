@@ -1,4 +1,5 @@
-/* eslint-env: applescript */
+/* eslint-env browser */
+/* eslint-env builtins */
 // WK2 doesn't have delegates for requesting permission
 // so we swizzle MacPin's notification hook into the Notification API object.
 // https://developer.mozilla.org/en-US/docs/Web/API/Notification/Using_Web_Notifications
