@@ -5,6 +5,7 @@
 import AppKit
 import WebKit
 import WebKitPrivates
+import UTIKit
 
 class MenuItem: NSMenuItem {
 	convenience init(_ itemName: String?, _ anAction: String?, _ charCode: String? = nil, _ keyflags: [NSEventModifierFlags] = [], target aTarget: AnyObject? = nil, represents: AnyObject? = nil) {
@@ -179,10 +180,17 @@ func displayError(error: NSError, _ vc: NSViewController? = nil) {
 	}
 }
 
-func askToOpenURL(url: NSURL?) {
+func askToOpenURL(url: NSURL?) { //uti: UTIType? = nil
 	let app = NSApplication.sharedApplication()
 	let window = app.mainWindow
+	let wk = NSWorkspace.sharedWorkspace()
 	app.unhide(nil)
+				// if let uti = uti, opener = LSCopyDefaultRoleHandlerForContentType(UTI, kLSRolesAll)
+					// offer to send url directly to compatible app if there is one
+					//wk.iconForFileType(uti)
+					//wk.localizedDescriptionForType(uti)
+					// ask to open direct, .Cancel & return if we did
+
 	if let url = url, window = window, opener = NSWorkspace.sharedWorkspace().URLForApplicationToOpenURL(url) {
 		if opener == NSBundle.mainBundle().bundleURL {
 			// macpin is already the registered handler for this (probably custom) url scheme, so just open it
@@ -195,9 +203,9 @@ func askToOpenURL(url: NSURL?) {
 		alert.addButtonWithTitle("OK")
 		alert.addButtonWithTitle("Cancel")
 		alert.informativeText = url.description
-		alert.icon = NSWorkspace.sharedWorkspace().iconForFile(opener.path!)
+		alert.icon = wk.iconForFile(opener.path!)
 		alert.beginSheetModalForWindow(window, completionHandler:{(response:NSModalResponse) -> Void in
-			if response == NSAlertFirstButtonReturn { NSWorkspace.sharedWorkspace().openURL(url) }
+			if response == NSAlertFirstButtonReturn { wk.openURL(url) }
  		})
 		return
 	}

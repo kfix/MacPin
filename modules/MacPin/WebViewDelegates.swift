@@ -22,6 +22,7 @@ let WebKitErrorDomain = "WebKitErrorDomain"
 
 import WebKit
 import WebKitPrivates
+import UTIKit
 
 extension AppScriptRuntime: WKScriptMessageHandler {
 	func userContentController(userContentController: WKUserContentController, didReceiveScriptMessage message: WKScriptMessage) {
@@ -141,11 +142,17 @@ extension WebViewController: WKNavigationDelegate {
 		let mime = navigationResponse.response.MIMEType!
 		let url = navigationResponse.response.URL!
 		let fn = navigationResponse.response.suggestedFilename!
+		let len = navigationResponse.response.expectedContentLength
+		let enc = navigationResponse.response.textEncodingName
 
 		if jsdelegate.tryFunc("decideNavigationForMIME", mime, url.description) { decisionHandler(.Cancel); return } //FIXME perf hit?
 
-		// http://stackoverflow.com/q/33156567/3878712
+		// if explicitly attached as file, download it
 		if let httpResponse = navigationResponse.response as? NSHTTPURLResponse {
+			let code = httpResponse.statusCode
+			let status = NSHTTPURLResponse.localizedStringForStatusCode(code)
+			//let hdr = resp.allHeaderFields
+			//if let cd = hdr.objectForKey("Content-Disposition") as? String where cd.hasPrefix("attachment") { warn("got attachment! \(cd) \(fn)") }
 			if let headers = httpResponse.allHeaderFields as? [String: String], url = httpResponse.URL {
 				if let cookies = NSHTTPCookie.cookiesWithResponseHeaderFields(headers, forURL: url) as? [NSHTTPCookie] {
 					for cookie in cookies {
@@ -153,15 +160,31 @@ extension WebViewController: WKNavigationDelegate {
 						warn(cookie.description)
 					}
 				}
+				// got filename?
+				// JS hook?
+				if let cd = headers["Content-Disposition"] where cd.hasPrefix("attachment") {
+					warn("got attachment! \(cd) \(fn)")
+					decisionHandler(WKNavigationResponsePolicy(rawValue: WKNavigationResponsePolicy.Allow.rawValue + 1)!) // .BecomeDownload - offer to download
+					return
+				}
 			}
 		}
 
 		if !navigationResponse.canShowMIMEType {
-			warn("cannot render requested MIME-type:\(mime) @ \(url)")
 			if !jsdelegate.tryFunc("handleUnrenderableMIME", mime, url.description, fn) {
-				//askToOpenURL(url) // punt to safari
-				decisionHandler(WKNavigationResponsePolicy(rawValue: WKNavigationResponsePolicy.Allow.rawValue + 1)!) // .BecomeDownload
-				return
+				let uti = UTI(MIMEType: mime) 
+				warn("cannot render requested MIME-type:\(mime) @ \(url)")
+				// if scheme is not http|https && askToOpenURL(url)
+					 // .Cancel & return if we did open()'d
+				// else if askToOpenURL(open, uti: uti) // if compaitble app for mime
+					// offer to send url directly to compatible app if there is one
+					//let wk = NSWorkspace.currentWorkspace()
+					//wk.iconForFileType(uti)
+					//wk.localizedDescriptionForType(uti)
+					// ask to open direct, .Cancel & return if we did
+				// else download it
+					decisionHandler(WKNavigationResponsePolicy(rawValue: WKNavigationResponsePolicy.Allow.rawValue + 1)!) // .BecomeDownload - offer to download
+					return
 			}
 		}
 
