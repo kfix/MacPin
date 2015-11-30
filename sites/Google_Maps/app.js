@@ -116,7 +116,7 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('Google Maps (using secondary account)', mapsAlt);
 	$.browser.addShortcut('Google Maps Dev Team blog', "http://google-latlong.blogspot.com");
 	$.browser.addShortcut('Classic gMaps', "http://gokml.net/maps");
-	$.browser.addShortcut("Install 'Show Address in Google Maps app' service", 'file://'+$.app.resourcePath+'/Show Address in Google Maps app.workflow');
+	$.browser.addShortcut("Install 'Show Address in Google Maps app' service", 'file://'+$.app.resourcePath+'/'+escape('Show Address in Google Maps app.workflow'));
 
 	if ($.launchedWithURL != '') { // app was launched with a search query
 		mapsTab.asyncEvalJS( // need to wait for app.js to load and render DOM
