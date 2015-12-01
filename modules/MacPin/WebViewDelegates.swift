@@ -2,11 +2,9 @@
 ///
 /// Handle modal & interactive webview prompts and errors
 
-// need a <input type="file"> picker & uploader protocol delegate
-// https://github.com/WebKit/webkit/commit/a12c1fc70fa906a39a0593aa4124f24427e232e7
-// https://developer.apple.com/library/prerelease/ios/documentation/General/Conceptual/ExtensibilityPG/ExtensionScenarios.html#//apple_ref/doc/uid/TP40014214-CH21-SW2
-// https://developer.apple.com/library/mac/documentation/Foundation/Reference/NSURLSessionUploadTask_class/index.html
-
+// WK2 on Mac is missing a <input type="file"> picker & uploader delegate
+// iOS WK2: https://github.com/WebKit/webkit/commit/a12c1fc70fa906a39a0593aa4124f24427e232e7
+// for now, just drag files onto file-input buttons, it really works!
 
 // lookup table for NSError codes gotten while browsing
 // http://nshipster.com/nserror/#nsurlerrordomain-&-cfnetworkerrors

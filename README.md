@@ -151,11 +151,11 @@ The JavaScript API for app construction is undocumented and non-final.
 If you want to play with it, run any MacPin app with the `-i` argument in Terminal to get a JS console (or `make repl`).  
 Safari can also remotely inspect the `JSContext` of debug builds.
 
-Some browser functionality is inoperative & unimplementable due to WKWebKit's immaturity:
-
-* File Uploads via File Picker (HTML5 drag & drop is working)
-* Geolocation
+Some browser functionality is currently unimplementable in WKWebKit:
+* File Picker for upload via HTML4 `<input type="file">` buttons
+  * Workaround: drag files onto the buttons, it works!
 * Printing
+  * Workaround: Tab->Save Web Archive, open in Safari and then Print.
 
 And some things I just haven't had need to write:
 
