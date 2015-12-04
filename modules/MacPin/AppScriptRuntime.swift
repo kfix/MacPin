@@ -15,6 +15,8 @@ import Foundation
 import JavaScriptCore // https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
 // https://developer.apple.com/library/mac/documentation/General/Reference/APIDiffsMacOSX10_10SeedDiff/modules/JavaScriptCore.html
 
+import XMLHttpRequest // https://github.com/Lukas-Stuehrk/XMLHTTPRequest
+
 #if arch(x86_64) || arch(i386)
 import Prompt // https://github.com/neilpa/swift-libedit
 #endif
@@ -106,6 +108,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		//context.objectForKeyedSubscript("$").setObject(GlobalUserScripts, forKeyedSubscript: "globalUserScripts")
 		context.objectForKeyedSubscript("$").setObject(MPWebView.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebView]
 		context.objectForKeyedSubscript("$").setObject(SSKeychain.self, forKeyedSubscript: "keychain")
+		//XMLHttpRequest().extend(context.objectForKeyedSubscript("$")) // allows `new $.XMLHTTPRequest` for doing xHr's
+		XMLHttpRequest().extend(context) // allows `new XMLHTTPRequest` for doing xHr's
 
 		// set console.log to NSBlock that will call warn()
 		let logger: @objc_block String -> Void = { msg in warn(msg) }
@@ -190,7 +194,10 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				warn("\(scriptURL): syntax checked ok")
 				context.name = "\(context.name) <\(urlstr)>"
 				// FIXME: assumes last script loaded is the source file of *all* thrown errors, which is not always true
-
+#if DEBUG
+#else
+				context.evaluateScript("eval = null;") // Saaaaaaafe Plaaaaace
+#endif
 			 	return context.evaluateScript(script as String, withSourceURL: scriptURL) // returns JSValue!
 			} else {
 				// hmm, using self.context for the syntax check seems to evaluate the contents anyways
@@ -374,12 +381,22 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 
 	func REPL() {
-		termiosREPL({ [unowned self] (line: String) -> Void in
+		termiosREPL(
+			{ [unowned self] (line: String) -> Void in // eval:
 			// jsdelegate.tryFunc("termiosREPL", [line])
 			println(self.context.evaluateScript(line))
-		})
+			},
+			ps1: __FILE__,
+			ps2: __FUNCTION__,
+			abort: { () -> Void in
+#if os(OSX)
+				NSApplication.sharedApplication().terminate(self)
+#endif
+			}
+		)
 	}
 	
+#if DEBUG
 	func evalJXA(script: String) {
 #if os(OSX)
 		var error: NSDictionary?
@@ -391,11 +408,18 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		}
 #endif
 	}
+#else
+	func evalJXA(script: String) { } // noop
+#endif
 
 	func callJXALibrary(library: String, _ call: String, _ args: [AnyObject]) {
 		warn(args.description)
 #if os(OSX)
+#if DEBUG
+		let script = "function run() { return Library('\(library)').\(call).apply(this, arguments); }"
+#else
 		let script = "eval = null; function run() { return Library('\(library)').\(call).apply(this, arguments); }"
+#endif
 		var error: NSDictionary?
 		let osa = OSAScript(source: script, language: OSALanguage(forName: "JavaScript"))
 		if let output: NSAppleEventDescriptor = osa.executeHandlerWithName("run", arguments: args, error: &error) {

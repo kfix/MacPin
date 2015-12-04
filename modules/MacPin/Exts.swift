@@ -124,7 +124,7 @@ func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, p
 		    } else { // stdin closed
 				dispatch_async(dispatch_get_main_queue(), { () -> Void in
 					if let abort = abort { abort() }
-						else { println("Got EOF from stdin, closing REPL!") }
+						else { println("Got EOF from stdin, stopping REPL.") }
 				})
 				break
 			}

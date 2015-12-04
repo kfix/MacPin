@@ -53,7 +53,7 @@ ifeq ($(platform),OSX)
 endif
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly $(gen_apps): $(execs)
-test apirepl tabrepl test.app test.ios: debug := -g -D SAFARIDBG -D DBGMENU -D APP2JSLOG
+test apirepl tabrepl test.app test.ios: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
 ifeq ($(appsig),-)
 codesign := yes
 else ifneq ($(appsig),)
@@ -105,8 +105,11 @@ $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/Info.plist: templates/$(plat
 $(outdir)/entitlements.plist: templates/$(platform)/entitlements.plist
 	$(gen_plist_template)
 
-# phony target for cmdline convenience
-%.app: $(appdir)/%.app ; @echo Finished building $<
+# phony targets for cmdline convenience
+%.app: $(appdir)/%.app
+sites/%: $(appdir)/%.app
+	@echo Finished building $<
+#modules/%: $(outdir)/obj/%.o
 
 ifeq ($(platform),OSX)
 
@@ -302,5 +305,5 @@ release:
 endif
 
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib
-.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release wknightly doc swiftrepl %.app zip $(ZIP) upload
+.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release wknightly doc swiftrepl %.app zip $(ZIP) upload sites/% modules/%
 .SUFFIXES:
