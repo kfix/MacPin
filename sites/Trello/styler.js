@@ -26,13 +26,16 @@ var customizeBG = function(el) {
 	}
 
 	var stockTrelloBlue = "rgb(0, 121, 191)";
-	if ( (document.body.style.backgroundColor == stockTrelloBlue) && overrideStockTrelloBlue && macpinIsTransparent) {
-		css.innerHTML = 'body { background-color: rgba('+overrideStockTrelloBlue+') !important; } ';
+	if (macpinIsTransparent) {
+		css.innerHTML = 'body { background-color: transparent !important; } ';
 		// could get rgb=getComputedStyle(document.body).backgroundColor.match(/[\d\.]+/g) and convert from original rgb() to rgba()
 		// http://stackoverflow.com/q/6672374/3878712 http://davidwalsh.name/detect-invert-color
+		document.body.style.backgroundColor = "transparent";
 	} else if ( (document.body.style.backgroundColor == stockTrelloBlue) && overrideStockTrelloBlue) {
 		css.innerHTML = 'body { background-color: rgba('+overrideStockTrelloBlue+') !important; } ';
+		document.body.style.backgroundColor = 'rgba('+overrideStockTrelloBlue+')';
 	} else {
+		document.body.style.backgroundColor = stockTrelloBlue;
 		css.innerHTML = '{}';
 	}
 
@@ -40,8 +43,8 @@ var customizeBG = function(el) {
 		body { -webkit-filter:invert(100%); }\
 		input,img,.window-cover,.list-card-cover,.attachment-thumbnail-preview,.js-open-board,.board-background-select { -webkit-filter:invert(100%); }\
 		span { color: black; }";
-	
-	if (darkMode && document.body.style.backgroundColor == "") document.body.style.backgroundColor = "black";
+
+	if (darkMode && !macpinIsTransparent && document.body.style.backgroundColor == "") document.body.style.backgroundColor = "black";
 
 	document.head.appendChild(css);
 };
