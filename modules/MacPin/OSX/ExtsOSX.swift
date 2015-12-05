@@ -6,6 +6,7 @@ import AppKit
 import WebKit
 import WebKitPrivates
 import UTIKit
+import Darwin
 
 class MenuItem: NSMenuItem {
 	convenience init(_ itemName: String?, _ anAction: String?, _ charCode: String? = nil, _ keyflags: [NSEventModifierFlags] = [], target aTarget: AnyObject? = nil, represents: AnyObject? = nil) {
@@ -170,13 +171,15 @@ extension WKView {
 // show an NSError to the user, attaching it to any given view
 func displayError(error: NSError, _ vc: NSViewController? = nil) {
 	warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
-	if let window = vc?.view.window {
-		// display it as a NSPanel sheet
-		vc?.view.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
-	} else if let window = NSApplication.sharedApplication().mainWindow {
-		window.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
-	} else {
-		NSApplication.sharedApplication().presentError(error)
+	if Darwin.isatty(Int32(0)) == 0 { // don't popup these modal alerts if REPL() is active on STDIN!
+		if let window = vc?.view.window {
+			// display it as a NSPanel sheet
+			vc?.view.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
+		} else if let window = NSApplication.sharedApplication().mainWindow {
+			window.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
+		} else {
+			NSApplication.sharedApplication().presentError(error)
+		}
 	}
 }
 

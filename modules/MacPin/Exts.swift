@@ -112,26 +112,25 @@ func validateURL(urlstr: String) -> NSURL? { // fallback: (String -> NSURL?)? = 
 
 func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2: StaticString = __FUNCTION__, abort:(()->Void)? = nil) {
 #if arch(x86_64) || arch(i386)
+	NSProcessInfo.processInfo().disableSuddenTermination()
 	prompter = Async.background {
-		let prompt = Prompt(argv0: Process.unsafeArgv[0]) // should make this a singleton, so the AppDel termination can kill it
+		let prompt = Prompt(argv0: Process.unsafeArgv[0], prompt: "\(ps1)[\(ps2)]:> ")
 		while (true) {
-			print("\(ps1): ") // prompt prefix
 		    if let line = prompt.gets() { // R: blocks here until Enter pressed
-				print("\(ps2): ") // result prefix
-				dispatch_async(dispatch_get_main_queue(), { () -> Void in //return to main thread to evaluate code
+				if !line.hasPrefix("\n") {
+					print("| ") // result prefix
 					eval?(line) // E:, P:
-				})
-		    } else { // stdin closed
-				dispatch_async(dispatch_get_main_queue(), { () -> Void in
-					if let abort = abort { abort() }
-						else { println("Got EOF from stdin, stopping REPL.") }
-				})
+					//println() //newline
+				}
+		    } else { // stdin closed or EOF'd
+				if let abort = abort { abort() }
+					else { println("\(ps1): got EOF from stdin, stopping \(ps2)") }
 				break
 			}
-			// L: command completed, restart loop
-			println() //newline
+			// L: command dispatched, restart loop
 		}
-		// user CTRL-D'd!
+		// prompt loop killed, dealloc'd?
+		NSApplication.sharedApplication().replyToApplicationShouldTerminate(true) // allow app to close if it was waiting on prompter
 	}
 #else
 	println("Prompt() not available on this device.")

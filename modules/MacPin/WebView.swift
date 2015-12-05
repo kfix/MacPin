@@ -266,14 +266,20 @@ import JavaScriptCore
 	func REPL() {
 		termiosREPL({ (line: String) -> Void in
 			self.evaluateJavaScript(line, completionHandler:{ [unowned self] (result: AnyObject!, exception: NSError!) -> Void in
+				// FIXME: the JS execs async so these print()s don't consistently precede the REPL thread's prompt line
 				println(result)
-				println(exception)
+				if exception != nil { println("Error: \(exception)") }
 			})
+		},
+		ps1: __FILE__,
+		ps2: __FUNCTION__,
+		abort: { [unowned self] () -> Void in
+			// EOF'd by Ctrl-D
+			// self.close() // FIXME: self is still retained (by the browser?)
 		})
 	}
 
 #if os(OSX)
-
 	func saveWebArchive() {
 		_getWebArchiveDataWithCompletionHandler() { [unowned self] (data: NSData!, err: NSError!) -> Void in
 			//pop open a save Panel to dump data into file

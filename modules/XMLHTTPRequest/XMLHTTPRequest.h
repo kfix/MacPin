@@ -39,4 +39,5 @@ NS_ENUM(NSUInteger , ReadyState) {
 - (instancetype)initWithURLSession: (NSURLSession *)urlSession;
 
 - (void)extend:(id)jsContext;
+- (NSString *)description;
 @end

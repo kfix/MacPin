@@ -50,14 +50,7 @@ delegate.injectTab = function(script, init) {
 };
 
 delegate.setAgent = function(agent) { $.browser.tabSelected.userAgent = agent; };
-//delegate.testAS = function() { $.app.evalAppleScript('display alert "testing!"'); };
-delegate.testAS = function() { $.app.evalJXA(`
-	var script = Application.currentApplication();
-	script.includeStandardAdditions = true;
-	script.displayNotification('JXA evaluated!', { withTitle: '${$.app.name}', subtitle: 'Done' });
-	script.displayAlert('testing!');`
-);};
-delegate.testAS = function() { $.app.callJXALibrary('test', 'test', [1]); };
+delegate.testAS = function() { $.app.callJXALibrary('test', 'doTest', Array.prototype.slice.call(arguments)); };
 
 delegate.AppFinishedLaunching = function() {
 	//$.browser.unhideApp();
@@ -78,7 +71,7 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('see.js console', ['injectTab', 'seeDebugger', 'see.init();']); // http://davidbau.com/archives/2013/04/19/debugging_locals_with_seejs.html
 	$.browser.addShortcut('Simulate TouchEvents', ['injectTab', 'thumbs']); // http://mwbrooks.github.io/thumbs.js/
 	$.browser.addShortcut('Log DnDs to console', ['injectTab', 'dnd']);
-	$.browser.addShortcut('test AppleScript', ['testAS']);
+	$.browser.addShortcut('test AppleScript', ['testAS', "whooo", '1']);
 
 	if ($.app.doesAppExist("com.google.Chrome")) $.browser.addShortcut('Open in Chrome', ['openInChrome']);
 
@@ -90,77 +83,34 @@ delegate.AppFinishedLaunching = function() {
 	};
 	$.browser.addShortcut('HTML5 editor', editor);
 
-	$.browser.tabSelected = new $.WebView(editor);
-	//$.browser.pushTab(new $.WebView(editor));
-	//.evalJS("document.body.textContent = 'Go ahead, type in here!';");
-	//.evalJS("window.location.href = 'data:text/html, <html contenteditable>';"); //another way without escaping
-
-	//if ($.app.platform === 'iOS') $.browser.pushTab(new $.WebView({url: 'http://github.com/kfix/MacPin'}));
-	if ($.app.platform === 'iOS') $.browser.tabSelected = new $.WebView({url: 'http://github.com/kfix/MacPin'});
-
 	var repl = {
 		transparent: true,
 		url: 'file://'+ $.app.resourcePath + '/repl.html',
 		handlers: ['evalREPL', 'closeREPL']
 	};
-	$.browser.addShortcut('MacPin App.js REPL', repl);
-	$.browser.tabSelected = new $.WebView(repl);
+	$.browser.addShortcut('MacPin/app.js debugging REPL', repl);
+
+	$.browser.tabSelected = new $.WebView({url: 'http://github.com/kfix/MacPin'});
 };
-
-
-// from seeDebugger.js
-function vtype(obj) {
-  var bracketed = Object.prototype.toString.call(obj);
-  var vt = bracketed.substring(8, bracketed.length - 1);
-  if (vt == 'Object') {
-    if ('length' in obj && 'slice' in obj && 'number' == typeof obj.length) {
-      return 'Array';
-    }
-    if ('originalEvent' in obj && 'target' in obj && 'type' in obj) {
-      return vtype(obj.originalEvent);
-    }
-  }
-  return vt;
-}
-function isprimitive(vt) {
-  switch (vt) {
-    case 'String':
-    case 'Number':
-    case 'Boolean':
-    case 'Undefined':
-    case 'Date':
-    case 'RegExp':
-    case 'Null':
-	case 'Object':
-      return true;
-  }
-  return false;
-}
-
 
 delegate.evalREPL = function(tab, msg) {
 	var command = msg;
 	var result;
 	try {
 		result = eval(command);
-		var description = JSON.stringify(result, function (k,v) { //replacer func
-			var type = vtype(v);
-			if (!isprimitive(type)) return type;
-			return v;
-		}, 1);
-		var rtype = vtype(result);
-		if (!isprimitive(rtype)) description = result.__proto__ ? Object.getOwnPropertyNames(result.__proto__) : Object.getOwnPropertyNames(result); //dump props of custom objects
-		result = [`[${rtype}]:  ${description}`];
 	} catch(e) {
 		result = e;
 	}
-	console.log(result);
-	tab.evalJS(`window.dispatchEvent(new window.CustomEvent('returnREPL',{'detail':{'result': ${result}}}));`);
-	tab.evalJS(`returnREPL('${escape(result)}');`);
+	var ret = delegate.REPLprint(result);
+	console.log(ret);
+	tab.evalJS(`window.dispatchEvent(new window.CustomEvent('returnREPL',{'detail':{'result': ${ret}}}));`);
+	tab.evalJS(`returnREPL('${escape(ret)}');`);
 };
 
 delegate.closeREPL = function(tab, msg) {
 	tab.close();
 };
+
+$.app.loadAppScript(`file://${$.app.resourcePath}/app_repl.js`);
 
 delegate; //return this to macpin

@@ -15,7 +15,9 @@ import Foundation
 import JavaScriptCore // https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
 // https://developer.apple.com/library/mac/documentation/General/Reference/APIDiffsMacOSX10_10SeedDiff/modules/JavaScriptCore.html
 
-import XMLHttpRequest // https://github.com/Lukas-Stuehrk/XMLHTTPRequest
+#if DEBUG
+import XMLHTTPRequest // https://github.com/Lukas-Stuehrk/XMLHTTPRequest
+#endif
 
 #if arch(x86_64) || arch(i386)
 import Prompt // https://github.com/neilpa/swift-libedit
@@ -62,7 +64,10 @@ extension JSValue {
 	func doesAppExist(appstr: String) -> Bool
 	func pathExists(path: String) -> Bool
 	func loadAppScript(urlstr: String) -> JSValue?
+#if DEBUG
+	func evalJXA(script: String)
 	func callJXALibrary(library: String, _ call: String, _ args: [AnyObject])
+#endif
 }
 
 class AppScriptRuntime: NSObject, AppScriptExports  {
@@ -108,8 +113,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		//context.objectForKeyedSubscript("$").setObject(GlobalUserScripts, forKeyedSubscript: "globalUserScripts")
 		context.objectForKeyedSubscript("$").setObject(MPWebView.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebView]
 		context.objectForKeyedSubscript("$").setObject(SSKeychain.self, forKeyedSubscript: "keychain")
-		//XMLHttpRequest().extend(context.objectForKeyedSubscript("$")) // allows `new $.XMLHTTPRequest` for doing xHr's
+#if DEBUG
 		XMLHttpRequest().extend(context) // allows `new XMLHTTPRequest` for doing xHr's
+#endif
 
 		// set console.log to NSBlock that will call warn()
 		let logger: @objc_block String -> Void = { msg in warn(msg) }
@@ -142,9 +148,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	func loadSiteApp() {
 		let app = (NSBundle.mainBundle().objectForInfoDictionaryKey("MacPin-AppScriptName") as? String) ?? "app"
-
-		//context.objectForKeyedSubscript("$").setObject(self, forKeyedSubscript: "osx") //FIXME: deprecate
-		context.objectForKeyedSubscript("$").setObject(self, forKeyedSubscript: "app") //better nomenclature
+		context.objectForKeyedSubscript("$").setObject(self, forKeyedSubscript: "app")
 
 		if let app_js = NSBundle.mainBundle().URLForResource(app, withExtension: "js") {
 
@@ -382,13 +386,20 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	func REPL() {
 		termiosREPL(
-			{ [unowned self] (line: String) -> Void in // eval:
-			// jsdelegate.tryFunc("termiosREPL", [line])
-			println(self.context.evaluateScript(line))
+			{ [unowned self] (line: String) -> Void in 
+				let val = self.context.evaluateScript(line)
+				if self.jsdelegate.isObject() && self.jsdelegate.hasProperty("REPLprint") { // app.js will customize output
+					if let ret = self.jsdelegate.invokeMethod("REPLprint", withArguments: [val]).toString() {
+						println(ret)
+					}
+				} else { // no REPLprint handler, just eval and dump
+					println(val)
+				}
 			},
 			ps1: __FILE__,
 			ps2: __FUNCTION__,
 			abort: { () -> Void in
+				// EOF'd by Ctrl-D
 #if os(OSX)
 				NSApplication.sharedApplication().terminate(self)
 #endif
@@ -396,7 +407,6 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		)
 	}
 	
-#if DEBUG
 	func evalJXA(script: String) {
 #if os(OSX)
 		var error: NSDictionary?
@@ -408,12 +418,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		}
 #endif
 	}
-#else
-	func evalJXA(script: String) { } // noop
-#endif
 
 	func callJXALibrary(library: String, _ call: String, _ args: [AnyObject]) {
-		warn(args.description)
 #if os(OSX)
 #if DEBUG
 		let script = "function run() { return Library('\(library)').\(call).apply(this, arguments); }"

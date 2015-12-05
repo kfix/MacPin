@@ -230,11 +230,21 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		return error
 	}
 
+	func applicationShouldTerminate(sender: NSApplication) -> NSApplicationTerminateReply {
+		warn()
+#if arch(x86_64) || arch(i386)
+		if let prompter = prompter {
+			return .TerminateLater
+		}
+#endif
+		return .TerminateNow
+	}
+
 	func applicationWillTerminate(notification: NSNotification) {
+		warn()
 		NSUserDefaults.standardUserDefaults().synchronize()
 #if arch(x86_64) || arch(i386)
 		if let prompter = prompter {
-			warn("App terminated by System/GUI")
 			prompter.wait()	// let prompt cleanup the TTY
 		}
 #endif

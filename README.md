@@ -11,7 +11,7 @@ MacPin apps are shown in OSX's Dock, App Switcher, and Launchpad.
 
 Custom URL schemes can also be registered to launch a MacPin App from any other app on your Mac.  
 
-OSX 10.10 "Yosemite" or iOS 8.3 is required.  
+OSX 10.11 "El Capitan" or iOS 9 is required.  
 
 ## Included Apps in the [Release](https://github.com/kfix/MacPin/releases)
 

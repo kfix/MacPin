@@ -158,9 +158,9 @@ extension WebViewController: WKNavigationDelegate {
 						warn(cookie.description)
 					}
 				}
-				// got filename?
-				// JS hook?
+
 				if let cd = headers["Content-Disposition"] where cd.hasPrefix("attachment") {
+					// JS hook?
 					warn("got attachment! \(cd) \(fn)")
 					decisionHandler(WKNavigationResponsePolicy(rawValue: WKNavigationResponsePolicy.Allow.rawValue + 1)!) // .BecomeDownload - offer to download
 					return
@@ -173,13 +173,9 @@ extension WebViewController: WKNavigationDelegate {
 				let uti = UTI(MIMEType: mime) 
 				warn("cannot render requested MIME-type:\(mime) @ \(url)")
 				// if scheme is not http|https && askToOpenURL(url)
-					 // .Cancel & return if we did open()'d
-				// else if askToOpenURL(open, uti: uti) // if compaitble app for mime
-					// offer to send url directly to compatible app if there is one
-					//let wk = NSWorkspace.currentWorkspace()
-					//wk.iconForFileType(uti)
-					//wk.localizedDescriptionForType(uti)
-					// ask to open direct, .Cancel & return if we did
+					 // .Cancel & return if we open()'d
+				// else if askToOpenURL(open, uti: uti) // if compatible app for mime
+					 // .Cancel & return if we open()'d
 				// else download it
 					decisionHandler(WKNavigationResponsePolicy(rawValue: WKNavigationResponsePolicy.Allow.rawValue + 1)!) // .BecomeDownload - offer to download
 					return

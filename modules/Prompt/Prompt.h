@@ -10,7 +10,7 @@
 
 @interface Prompt : NSObject
 
-- (instancetype) initWithArgv0:(const char*)argv0;
+- (instancetype) initWithArgv0:(const char*)argv0 prompt:(NSString *)prompt;
 - (NSString*) gets;
 
 @end

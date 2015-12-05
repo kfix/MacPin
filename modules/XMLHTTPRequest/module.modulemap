@@ -1,4 +1,4 @@
-module XMLHttpRequest {
+module XMLHTTPRequest {
 	umbrella header "XMLHttpRequest.h"
 	link "XMLHttpRequest"
 	export *

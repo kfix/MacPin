@@ -11,8 +11,9 @@
 #import <histedit.h>
 // `man editline`
 
-char* prompt(EditLine *e) {
-    return "> "; // FIXME needs a setter
+const char * el_prompt = "> " ;
+const char* prompter(EditLine *e) {
+    return el_prompt;
 }
 
 @implementation Prompt
@@ -21,11 +22,12 @@ EditLine* _el;
 History* _hist;
 HistEvent _ev;
 
-- (instancetype) initWithArgv0:(const char*)argv0 {
+- (instancetype) initWithArgv0:(const char*)argv0 prompt:(NSString *)prompt {
     if (self = [super init]) {
+        el_prompt = [[NSString stringWithFormat:@"<%s> %@", argv0, prompt] UTF8String];
         // Setup the editor
-        _el = el_init(argv0, stdin, stdout, stderr);
-        el_set(_el, EL_PROMPT, &prompt);
+        _el = el_init(argv0, stdin, stdout, stderr); // argv0 designates the .editrc app-name cfgs to use
+        el_set(_el, EL_PROMPT, &prompter);
         el_set(_el, EL_EDITOR, "emacs");
         
         // With support for history
@@ -42,16 +44,15 @@ HistEvent _ev;
         history_end(_hist);
         _hist = NULL;
     }
-	el_reset(_el); // make tty sane
+    el_reset(_el); // make tty sane
     if (_el != NULL) {
         el_end(_el);
         _el = NULL;
     }
-	[super dealloc];
+    [super dealloc];
 }
 
 - (NSString*) gets {
-    
     // line includes the trailing newline
     int count;
     const char* line = el_gets(_el, &count);

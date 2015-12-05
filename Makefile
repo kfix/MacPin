@@ -73,7 +73,7 @@ endif
 
 # github settings for release: target
 #####
-VERSION		 := 1.3.0
+VERSION		 := 1.4.0
 LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin
@@ -114,7 +114,7 @@ sites/%: $(appdir)/%.app
 ifeq ($(platform),OSX)
 
 %.scpt: %.jxa
-	osacompile -l JavaScript -o $@ $<
+	osacompile -l JavaScript -o "$@" "$<"
 
 $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/Assets.car: $(xcassets)/%.xcassets
 	@install -d $(dir $@)
@@ -286,11 +286,12 @@ tag:
 	git tag -f -a v$(VERSION) -m 'release $(VERSION)'
 
 zip: $(ZIP)
-$(ZIP):
+$(ZIP): .zipignore
 	[ ! -f $(ZIP) ] || rm $(ZIP)
-	zip -r $@ extras/*.workflow --exclude .DS_Store
-	cd $(appdir) && zip -g -r $@ *.app --exclude .DS_Store
+	zip -r $@ extras/*.workflow --exclude @extras/.zipignore
+	cd $(appdir) && zip -g -ws -r $@ *.app --exclude @$(realpath $+)
 
+testrelease: clean tag allapps $(ZIP)
 ifneq ($(GITHUB_ACCESS_TOKEN),)
 release: clean tag allapps $(ZIP) upload
 upload:
@@ -305,5 +306,5 @@ release:
 endif
 
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib
-.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release wknightly doc swiftrepl %.app zip $(ZIP) upload sites/% modules/%
+.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release wknightly doc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease
 .SUFFIXES:

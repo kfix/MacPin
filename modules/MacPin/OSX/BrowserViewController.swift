@@ -613,7 +613,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 				case let urlstr as String: AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr)
 				// or fire event in jsdelegate if string, NSURLs do launchURL
 				case let dict as [String:AnyObject]: tabSelected = MPWebView(object: dict)
-                case let arr as [String] where arr.count > 0: AppScriptRuntime.shared.jsdelegate.tryFunc(arr.first!, argv: Array(dropFirst(arr)))
+                case let arr as [String] where arr.count > 0: AppScriptRuntime.shared.jsdelegate.tryFunc(arr.first!, argv: Array(dropFirst(arr))) // FIXME: only handles Lists of String, not ints & bools too
 				default: warn("invalid shortcut object type!")
 			}
 		}

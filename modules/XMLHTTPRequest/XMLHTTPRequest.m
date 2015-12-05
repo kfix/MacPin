@@ -105,4 +105,7 @@
     _responseHeaders = responseHeaders;
 }
 
+- (NSString *)description {
+    return [NSString stringWithFormat:@"<XMLHttpRequest %p> %@", self, _urlSession];
+}
 @end
