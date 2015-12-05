@@ -40,15 +40,6 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 	return ret;
 };
 
-delegate.injectTab = function(script, init) {
-	if ($.browser.tabSelected.postinject(script)) {
-		$.browser.tabSelected.evalJS('window.location.reload(false);'); // must reload page after injection
-		if (init) $.browser.tabSelected.asyncEvalJS(init, 2);
-	} else { // script is already injected, so just init it again
-		if (init) $.browser.tabSelected.evalJS(init);
-	}
-};
-
 delegate.setAgent = function(agent) { $.browser.tabSelected.userAgent = agent; };
 delegate.testAS = function() { $.app.callJXALibrary('test', 'doTest', Array.prototype.slice.call(arguments)); };
 
@@ -111,6 +102,7 @@ delegate.closeREPL = function(tab, msg) {
 	tab.close();
 };
 
+$.app.loadAppScript(`file://${$.app.resourcePath}/app_injectTab.js`);
 $.app.loadAppScript(`file://${$.app.resourcePath}/app_repl.js`);
 
 delegate; //return this to macpin
