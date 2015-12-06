@@ -141,8 +141,8 @@ extension AppDelegateOSX: NSApplicationDelegate {
 #endif
 		app!.mainMenu?.addItem(dbgMenu)
 
-		var origDnD = class_getInstanceMethod(WKView.self, "performDragOperation:")
-		var newDnD = class_getInstanceMethod(WKView.self, "shimmedPerformDragOperation:")
+		let origDnD = class_getInstanceMethod(WKView.self, "performDragOperation:")
+		let newDnD = class_getInstanceMethod(WKView.self, "shimmedPerformDragOperation:")
 		method_exchangeImplementations(origDnD, newDnD) //swizzle that shizzle to enable logging of DnD's
 
 		windowController.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
@@ -172,7 +172,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 
 		//warn("focus is on `\(windowController.window?.firstResponder)`")
 
-		for (idx, arg) in enumerate(Process.arguments) {
+		for (idx, arg) in Process.arguments.enumerate() {
 			switch (arg) {
 				case "-i":
 					if isatty(1) == 1 { AppScriptRuntime.shared.REPL() } //open a JS console on the terminal, if present
@@ -192,7 +192,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 							break
 						}
 
-						if let tabnum = Process.arguments[idx + 1].toInt() where browserController.tabs.count >= tabnum { // next argv should be tab number
+						if let tabnum = Int(Process.arguments[idx + 1]) where browserController.tabs.count >= tabnum { // next argv should be tab number
 							browserController.tabs[tabnum].REPL() // open a JS Console on the requested tab number
 						} else {
 							browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
@@ -216,14 +216,13 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		// not in iOS: http://stackoverflow.com/a/13083203/3878712
 		// NOPE, this can cause loops warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 		if error.domain == NSURLErrorDomain {
-			if let userInfo = error.userInfo {
-				if let errstr = userInfo[NSLocalizedDescriptionKey] as? String {
-					if let url = userInfo[NSURLErrorFailingURLStringErrorKey] as? String {
-						var newUserInfo = userInfo
-						newUserInfo[NSLocalizedDescriptionKey] = "\(errstr)\n\n\(url)" // add failed url to error message
-						let newerror = NSError(domain: error.domain, code: error.code, userInfo: newUserInfo)
-						return newerror
-					}
+			let uI = error.userInfo 
+			if let errstr = uI[NSLocalizedDescriptionKey] as? String {
+				if let url = uI[NSURLErrorFailingURLStringErrorKey] as? String {
+					var newUserInfo = uI
+					newUserInfo[NSLocalizedDescriptionKey] = "\(errstr)\n\n\(url)" // add failed url to error message
+					let newerror = NSError(domain: error.domain, code: error.code, userInfo: newUserInfo)
+					return newerror
 				}
 			}
 		}
@@ -233,9 +232,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 	func applicationShouldTerminate(sender: NSApplication) -> NSApplicationTerminateReply {
 		warn()
 #if arch(x86_64) || arch(i386)
-		if let prompter = prompter {
-			return .TerminateLater
-		}
+		if prompter != nil { return .TerminateLater }
 #endif
 		return .TerminateNow
 	}
@@ -254,7 +251,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 
 	// handles drag-to-dock-badge, /usr/bin/open and argv[1] requests specifiying urls & local pathnames
 	func application(theApplication: NSApplication, openFile filename: String) -> Bool {
-		if let ftype = NSWorkspace.sharedWorkspace().typeOfFile(filename, error: nil) {
+		if let ftype = try? NSWorkspace.sharedWorkspace().typeOfFile(filename) {
 			switch ftype {
 				//case "public.data":
 				//case "public.html":
@@ -308,7 +305,7 @@ extension AppDelegateOSX: NSUserNotificationCenterDelegate {
 
 extension AppDelegateOSX: NSWindowRestoration {
 	// https://developer.apple.com/library/mac/documentation/General/Conceptual/MOSXAppProgrammingGuide/CoreAppDesign/CoreAppDesign.html#//apple_ref/doc/uid/TP40010543-CH3-SW35
-	class func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow!,NSError!) -> Void)) {
+	class func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow?,NSError?) -> Void)) {
 		if let app = NSApplication.sharedApplication().delegate as? AppDelegateOSX, let window = app.windowController.window {
 			completionHandler(window, nil)
 			//WKWebView._restoreFromSessionStateData ...
@@ -321,20 +318,21 @@ extension AppDelegateOSX: NSWindowRestoration {
 // modules/WebKitPrivates/_WKDownloadDelegate.h
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
 // https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
-extension AppDelegateOSX: _WKDownloadDelegate {
+extension AppDelegateOSX {
 	override func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
 		warn(download.description)
 		//pop open a save Panel to dump data into file
 		let saveDialog = NSSavePanel();
 		saveDialog.canCreateDirectories = true
 		saveDialog.nameFieldStringValue = filename
-		if let app = NSApplication.sharedApplication().delegate as? AppDelegateOSX, let window = app.windowController.window {
+		//if let app = NSApplication.sharedApplication().delegate as? AppDelegateOSX, let window = app.windowController.window {
+			//saveDialog.beginSheetModalForWindow(window, completionHandler: { (choice: Int) } // _download can't wait for this async block to report back after the sheet is closed!
 			let result = saveDialog.runModal()
 			if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
 				warn(path)
 				return path
 			}
-		}
+		//}
 		download.cancel()
 		return ""
 	}

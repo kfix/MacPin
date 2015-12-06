@@ -21,7 +21,7 @@ struct WeakThing<T: AnyObject> {
 	var isToolbarShown: Bool { get set }
 	//var tabs: [AnyObject] { get } // alias to childViewControllers
 	var tabs: [MPWebView] { get set }
-	var childViewControllers: [AnyObject] { get set } // .push() doesn't work nor trigger property observer
+	var childViewControllers: [NSViewController] { get set } // .push() doesn't work nor trigger property observer
 	var tabSelected: AnyObject? { get set }
     //var matchedAddressOptions: [String:String] { get set }
 	func pushTab(webview: AnyObject) // JSExport does not seem to like signatures with custom types
@@ -85,11 +85,11 @@ struct WeakThing<T: AnyObject> {
 	}
 
 	override func removeTabViewItem(tab: NSTabViewItem) {
-		if let view = tab.view {
+		if let _ = tab.view {
 			tab.initialFirstResponder = nil
 			tab.unbind(NSLabelBinding)
 			tab.unbind(NSToolTipBinding)
-			if let wvc = tab.viewController as? WebViewController { tab.unbind(NSImageBinding) }
+			if let _ = tab.viewController as? WebViewController { tab.unbind(NSImageBinding) }
 			tab.label = ""
 			tab.toolTip = nil
 			tab.image = nil
@@ -98,7 +98,7 @@ struct WeakThing<T: AnyObject> {
 		tabView.selectNextTabViewItem(self) //safari behavior
 	}
 
-	override func tabView(tabView: NSTabView, willSelectTabViewItem tabViewItem: NSTabViewItem) {
+	private func tabView(tabView: NSTabView, willSelectTabViewItem tabViewItem: NSTabViewItem) {
 		super.tabView(tabView, willSelectTabViewItem: tabViewItem)
 		//if omnibox.webview != nil { omnibox.unbind("webview") }
 		if let wv = tabViewItem.view as? MPWebView {
@@ -107,7 +107,7 @@ struct WeakThing<T: AnyObject> {
 		}
 	}
 
-	override func tabView(tabView: NSTabView, didSelectTabViewItem tabViewItem: NSTabViewItem) {
+	private func tabView(tabView: NSTabView, didSelectTabViewItem tabViewItem: NSTabViewItem) {
 		super.tabView(tabView, didSelectTabViewItem: tabViewItem)
 		if let window = view.window, view = tabViewItem.view {
 			window.makeFirstResponder(view) // steal app focus to whatever the tab represents
@@ -119,7 +119,7 @@ struct WeakThing<T: AnyObject> {
 		if tabView.tabViewItems.count == 0 { view.window?.performClose(nil) }
 	}
 
-	override func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] {
+	private func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] {
 		let tabs = super.toolbarAllowedItemIdentifiers(toolbar) ?? []
 		warn(tabs.description)
 		return tabs + [
@@ -143,7 +143,7 @@ struct WeakThing<T: AnyObject> {
 		]
 	}
 
-	override func toolbarDefaultItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] {
+	private func toolbarDefaultItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] {
 		let tabs = super.toolbarDefaultItemIdentifiers(toolbar) ?? []
 		return [BrowserButtons.Share.rawValue, BrowserButtons.NewTab.rawValue] + tabs + [BrowserButtons.OmniBox.rawValue] // [NSToolbarFlexibleSpaceItemIdentifier]
 		//tabviewcontroller remembers where tabs was and keeps pushing new tabs to that position
@@ -158,7 +158,7 @@ struct WeakThing<T: AnyObject> {
 			ti.paletteLabel = itemIdentifier
 
 			let btn = NSButton()
-			let btnCell = btn.cell() as! NSButtonCell
+			let btnCell = btn.cell
 			//btnCell.controlSize = .SmallControlSize
 			btn.toolTip = itemIdentifier
 			btn.image = NSImage(named: NSImageNamePreferencesGeneral) // https://hetima.github.io/fucking_nsimage_syntax/
@@ -198,8 +198,8 @@ struct WeakThing<T: AnyObject> {
 					let seg = NSSegmentedControl()
 					seg.segmentCount = 2
 					seg.segmentStyle = .Separated
-					let segCell = seg.cell() as! NSSegmentedCell
-					segCell.trackingMode = .Momentary
+					let segCell = seg.cell as! NSSegmentedCell
+					seg.trackingMode = .Momentary
 					seg.action = Selector("goBack:")
 
 					seg.setImage(NSImage(named: NSImageNameGoLeftTemplate), forSegment: 0)
@@ -276,7 +276,7 @@ struct WeakThing<T: AnyObject> {
 		view.layer?.masksToBounds = true // include layer contents in clipping effects
 		view.canDrawSubviewsIntoLayer = true // coalesce all subviews' layers into this one
 
-		view.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable //resize tabview to match parent ContentView size
+		view.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable] //resize tabview to match parent ContentView size
 		view.autoresizesSubviews = true // resize tabbed subviews based on their autoresizingMasks
 		transitionOptions = .None //.Crossfade .SlideUp/Down/Left/Right/Forward/Backward
 
@@ -317,7 +317,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 	}
 
 	deinit { warn(description) }
-	override var description: String { return "<\(reflect(self).summary)> `\(title ?? String())`" }
+	override var description: String { return "<\(Mirror(reflecting: self))> `\(title ?? String())`" }
 
 	var defaultUserAgent: String? = nil // {
 	//	get { }
@@ -326,7 +326,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 	// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/mac/UserAgentMac.mm
 
 	var isFullscreen: Bool {
-		get { return (view.window?.contentView as? NSView)?.inFullScreenMode ?? false }
+		get { return view.window?.contentView?.inFullScreenMode ?? false }
 		set(bool) { if bool != isFullscreen { view.window!.toggleFullScreen(nil) } }
 	}
 
@@ -365,23 +365,21 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 */
 
 	var tabs: [MPWebView] {
-		get { return childViewControllers.filter({ $0 is WebViewControllerOSX }).map({ $0.webview }) } // returns mutable *copy*, which is why .push() can't work
+		get { return childViewControllers.filter({ $0 is WebViewControllerOSX }).map({ ($0 as! WebViewControllerOSX).webview }) } // returns mutable *copy*, which is why .push() can't work
 			// ^ put an observer on childViewController to update a weak stored array of WebViews, or do that as part of add/removeChildVC()
 			// then you have a stable reference that you can have JS do .push()s on
 
 		set { // allow `$.browser.tabs = $.browser.tabs.slice(0)` to work by diffing newValue against childViewControllers
 			// crashes if you pass in a non [MPWebView] array from JS
 			for webview in tabs { //removals
-				//if !contains(newValue, webview) { // crashes
-				if (find(newValue, webview) ?? -1) < 0 {
+				if newValue.contains(webview) {
 					if let wvc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === webview }).first as? WebViewControllerOSX {
 						wvc.removeFromParentViewController()
 					}
 				}
 			}
 			for webview in newValue { //additions
-				//if !contains(tabs, webview) { // crashes
-				if (find(tabs, webview) ?? -1) < 0 {
+				if !tabs.contains(webview) {
 					addChildViewController(WebViewControllerOSX(webview: webview))
 				}
 			}
@@ -393,11 +391,9 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 	var tabSelected: AnyObject? {
 		get {
 			if selectedTabViewItemIndex == -1 { return nil } // no tabs? bupkiss!
-			if let vc = childViewControllers[selectedTabViewItemIndex] as? NSViewController {
-				if let obj: AnyObject = vc.representedObject { return obj } // try returning an actual model first
-				return vc
-			}
-			return nil
+			let vc = childViewControllers[selectedTabViewItemIndex] 
+			if let obj: AnyObject = vc.representedObject { return obj } // try returning an actual model first
+			return vc
 		}
 		set(obj) {
 			switch (obj) {
@@ -550,7 +546,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 			//presentViewControllerAsSheet(omnibox) // modal, yuck
 			var poprect = view.bounds
 			poprect.size.height -= omnibox.preferredContentSize.height + 12 // make room at the top to stuff the popover
-			presentViewController(omnibox, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSMaxYEdge, behavior: NSPopoverBehavior.Transient)
+			presentViewController(omnibox, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSRectEdge.MaxY, behavior: NSPopoverBehavior.Transient)
 		}
 	}
 
@@ -582,7 +578,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 	func printTab() {
 		// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/Printing/osxp_printapps/osxp_printapps.html#//apple_ref/doc/uid/20000861-BAJBFGED
 		//var printer = NSPrintOperation(view: tabSelected!.view, printInfo: NSPrintInfo.sharedPrintInfo()) //same as webview.print()
-		var printer = NSPrintOperation(view: view, printInfo: NSPrintInfo.sharedPrintInfo()) // prints 8pgs of blurView
+		let printer = NSPrintOperation(view: view, printInfo: NSPrintInfo.sharedPrintInfo()) // prints 8pgs of blurView
 		printer.runOperation()
 	}
 
@@ -598,7 +594,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
             //case is [String]: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: obj))
             case let str as String: mi = MenuItem(title, "gotoShortcut:", target: self, represents: str)
             case let dict as [String:AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: dict)
-            case let arr as [String]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: obj)
+            case is [String]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: obj)
 			default:
 				warn("invalid shortcut object type!")
 				return
@@ -613,7 +609,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 				case let urlstr as String: AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr)
 				// or fire event in jsdelegate if string, NSURLs do launchURL
 				case let dict as [String:AnyObject]: tabSelected = MPWebView(object: dict)
-                case let arr as [String] where arr.count > 0: AppScriptRuntime.shared.jsdelegate.tryFunc(arr.first!, argv: Array(dropFirst(arr))) // FIXME: only handles Lists of String, not ints & bools too
+                case let arr as [String] where arr.count > 0: AppScriptRuntime.shared.jsdelegate.tryFunc(arr.first!, argv: Array(arr.dropFirst())) // FIXME: only handles Lists of String, not ints & bools too
 				default: warn("invalid shortcut object type!")
 			}
 		}

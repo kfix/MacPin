@@ -18,7 +18,7 @@ class EffectViewController: NSViewController {
 	
 	override func viewDidLoad() {
 		view.autoresizesSubviews = true
-		view.autoresizingMask = .ViewWidthSizable | .ViewHeightSizable //shouldn't matter if this is the contentView
+		view.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable] //shouldn't matter if this is the contentView
 		//view.translatesAutoresizingMaskIntoConstraints = true
 	}
 }

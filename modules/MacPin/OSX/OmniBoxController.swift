@@ -58,7 +58,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			}
 		}
 		willSet(newwv) { 
-			if let wv = webview {
+			if let _ = webview {
 				nextResponder = nil
 				view.nextKeyView = nil
 				view.unbind(NSToolTipBinding)
@@ -103,7 +103,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 
 		urlbox.delegate = self
 
-		if let cell = urlbox.cell() as? NSTextFieldCell {
+		if let cell = urlbox.cell as? NSTextFieldCell {
 			cell.placeholderString = "Navigate to URL"
 			cell.scrollable = true
 			cell.action = Selector("userEnteredURL")
@@ -157,7 +157,7 @@ extension OmniBoxController: NSTextFieldDelegate {
 
 	//func textDidChange(aNotification: NSNotification)
 	func textShouldEndEditing(textObject: NSText) -> Bool { //user attempting to focus out of field
-		if let url = validateURL(textObject.string ?? "") { return true } //allow focusout
+		if let _ = validateURL(textObject.string ?? "") { return true } //allow focusout
 		warn("invalid url entered: \(textObject.string)")
 		return false //NSBeep()s, keeps focus
 	}

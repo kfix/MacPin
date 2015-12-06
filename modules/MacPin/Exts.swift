@@ -19,7 +19,7 @@ import Prompt // https://github.com/neilpa/swift-libedit
 var prompter: Async? = nil
 #endif
 
-func warn(_ msg: String = String(), function: StaticString = __FUNCTION__, file: StaticString = __FILE__, line: UWord = __LINE__, column: UWord = __COLUMN__) {
+func warn(_ msg: String = String(), function: StaticString = __FUNCTION__, file: StaticString = __FILE__, line: UInt = __LINE__, column: UInt = __COLUMN__) {
 	// https://github.com/swisspol/XLFacility ?
 	NSFileHandle.fileHandleWithStandardError().writeData(("[\(NSDate())] <\(file):\(line):\(column)> [\(function)] \(msg)\n").dataUsingEncoding(NSUTF8StringEncoding)!)
 #if WARN2NSLOG
@@ -43,12 +43,12 @@ func assert(condition: @autoclosure () -> Bool, _ message: String = "",
 func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
 	if let scriptUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") where !basename.isEmpty {
 		warn("loading userscript: \(scriptUrl)")
-		var script = WKUserScript(
-			source: NSString(contentsOfURL: scriptUrl, encoding: NSUTF8StringEncoding, error: nil) as! String,
+		let script = WKUserScript(
+			source: (try? NSString(contentsOfURL: scriptUrl, encoding: NSUTF8StringEncoding) as String) ?? "",
 		    injectionTime: inject,
 		    forMainFrameOnly: onlyForTop
 		)
-		if webctl.userScripts.filter({$0 as! WKUserScript == script}).count < 1 { // don't re-add identical userscripts
+		if webctl.userScripts.filter({$0 == script}).count < 1 { // don't re-add identical userscripts
 		//if (find(webctl.userScripts, script) ?? -1) < 0 { // don't re-add identical userscripts
 			webctl.addUserScript(script)
 		} else { warn("\(scriptUrl) already loaded!"); return false }
@@ -77,7 +77,7 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 func validateURL(urlstr: String) -> NSURL? { // fallback: (String -> NSURL?)? = nil
 	// https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 	if urlstr.isEmpty { return nil }
-	if let urlp = NSURLComponents(string: urlstr) where find(urlstr, " ") == nil && !urlstr.hasPrefix("?") {
+	if let urlp = NSURLComponents(string: urlstr) where !urlstr.characters.contains(" ") && !urlstr.hasPrefix("?") {
 		if urlstr.hasPrefix("/") || urlstr.hasPrefix("~/") { urlp.scheme = "file" } // FIXME: check if bare filepath points to actual file/dir
 		if !((urlp.path ?? "").isEmpty) && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
 			urlp.scheme = "http"
@@ -86,8 +86,9 @@ func validateURL(urlstr: String) -> NSURL? { // fallback: (String -> NSURL?)? = 
 		}
 		if let url = urlp.URL, host = urlp.host {
 			//do preemptive nslookup on urlp.host
-			var chost = host.cStringUsingEncoding(NSUTF8StringEncoding)!
-			if gethostbyname2(&chost, AF_INET).hashValue > 0 || gethostbyname2(&chost, AF_INET6).hashValue > 0 { // failed lookups return null pointer
+			let chost = host.cStringUsingEncoding(NSUTF8StringEncoding)!
+			// FIXME use higher level APIs for NAT64
+			if gethostbyname2(chost, AF_INET).hashValue > 0 || gethostbyname2(chost, AF_INET6).hashValue > 0 { // failed lookups return null pointer
 				return url // hostname resolved, so use this url
 			}
 		}
@@ -124,7 +125,7 @@ func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, p
 				}
 		    } else { // stdin closed or EOF'd
 				if let abort = abort { abort() }
-					else { println("\(ps1): got EOF from stdin, stopping \(ps2)") }
+					else { print("\(ps1): got EOF from stdin, stopping \(ps2)") }
 				break
 			}
 			// L: command dispatched, restart loop

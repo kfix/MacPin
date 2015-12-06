@@ -59,5 +59,5 @@ import JavaScriptCore
 	func askToOpenCurrentURL() { askToOpenURL(webview.URL!) }
 
 	// sugar for opening a new tab in parent browser VC
-	func popup(webview: MPWebView) { parentViewController?.addChildViewController(self.dynamicType(webview: webview)) }
+	func popup(webview: MPWebView) { parentViewController?.addChildViewController(self.dynamicType.init(webview: webview)) }
 }

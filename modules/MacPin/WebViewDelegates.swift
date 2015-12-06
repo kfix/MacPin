@@ -68,9 +68,8 @@ extension WebViewController: WKNavigationDelegate {
 	}
 
 	func webView(webView: WKWebView, decidePolicyForNavigationAction navigationAction: WKNavigationAction, decisionHandler: (WKNavigationActionPolicy) -> Void) {
-		let url = navigationAction.request.URL
-		if let url = url, scheme = url.scheme {
-			switch scheme {
+		if let url = navigationAction.request.URL {
+			switch url.scheme {
 				case "data": fallthrough
 				case "file": fallthrough
 				case "about": fallthrough
@@ -89,8 +88,8 @@ extension WebViewController: WKNavigationDelegate {
 #if os(OSX)
 					let mousebtn = navigationAction.buttonNumber
 					let modkeys = navigationAction.modifierFlags
-					if (modkeys & NSEventModifierFlags.AlternateKeyMask).rawValue != 0 { NSWorkspace.sharedWorkspace().openURL(url) } //alt-click
-						else if (modkeys & NSEventModifierFlags.CommandKeyMask).rawValue != 0 { popup(MPWebView(url: url, agent: webView._customUserAgent)) } //cmd-click
+					if modkeys.contains(NSEventModifierFlags.AlternateKeyMask) { NSWorkspace.sharedWorkspace().openURL(url) } //alt-click
+						else if modkeys.contains(NSEventModifierFlags.CommandKeyMask) { popup(MPWebView(url: url, agent: webView._customUserAgent)) } //cmd-click
 						else if !jsdelegate.tryFunc("decideNavigationForClickedURL", url.description) { // allow override from JS
 							if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
 							popup(MPWebView(url: url, agent: webView._customUserAgent)) // middle-clicked, or out of frame target link
@@ -112,7 +111,7 @@ extension WebViewController: WKNavigationDelegate {
 			}
 		} else {
 			// invalid url? should raise error
-			warn("navType:\(navigationAction.navigationType.rawValue) sourceFrame:(\(navigationAction.sourceFrame?.request.URL)) -> \(url)")
+			warn("navType:\(navigationAction.navigationType.rawValue) sourceFrame:(\(navigationAction.sourceFrame.request.URL)) -> No URL!")
 			decisionHandler(.Cancel)
 			//decisionHandler(WKNavigationActionPolicy._WKNavigationActionPolicyDownload);
 		}
@@ -140,23 +139,22 @@ extension WebViewController: WKNavigationDelegate {
 		let mime = navigationResponse.response.MIMEType!
 		let url = navigationResponse.response.URL!
 		let fn = navigationResponse.response.suggestedFilename!
-		let len = navigationResponse.response.expectedContentLength
-		let enc = navigationResponse.response.textEncodingName
+		//let len = navigationResponse.response.expectedContentLength
+		//let enc = navigationResponse.response.textEncodingName
 
 		if jsdelegate.tryFunc("decideNavigationForMIME", mime, url.description) { decisionHandler(.Cancel); return } //FIXME perf hit?
 
 		// if explicitly attached as file, download it
 		if let httpResponse = navigationResponse.response as? NSHTTPURLResponse {
-			let code = httpResponse.statusCode
-			let status = NSHTTPURLResponse.localizedStringForStatusCode(code)
+			//let code = httpResponse.statusCode
+			//let status = NSHTTPURLResponse.localizedStringForStatusCode(code)
 			//let hdr = resp.allHeaderFields
 			//if let cd = hdr.objectForKey("Content-Disposition") as? String where cd.hasPrefix("attachment") { warn("got attachment! \(cd) \(fn)") }
 			if let headers = httpResponse.allHeaderFields as? [String: String], url = httpResponse.URL {
-				if let cookies = NSHTTPCookie.cookiesWithResponseHeaderFields(headers, forURL: url) as? [NSHTTPCookie] {
-					for cookie in cookies {
-						//warn("Recv'd cookie[\(cookie.name)]: \(cookie.value)")
-						warn(cookie.description)
-					}
+				let cookies = NSHTTPCookie.cookiesWithResponseHeaderFields(headers, forURL: url)
+				for cookie in cookies {
+					//warn("Recv'd cookie[\(cookie.name)]: \(cookie.value)")
+					warn(cookie.description)
 				}
 
 				if let cd = headers["Content-Disposition"] where cd.hasPrefix("attachment") {
@@ -170,7 +168,7 @@ extension WebViewController: WKNavigationDelegate {
 
 		if !navigationResponse.canShowMIMEType {
 			if !jsdelegate.tryFunc("handleUnrenderableMIME", mime, url.description, fn) {
-				let uti = UTI(MIMEType: mime) 
+				//let uti = UTI(MIMEType: mime) 
 				warn("cannot render requested MIME-type:\(mime) @ \(url)")
 				// if scheme is not http|https && askToOpenURL(url)
 					 // .Cancel & return if we open()'d
@@ -216,10 +214,10 @@ extension WebViewController: WKNavigationDelegate {
 		// https://developer.mozilla.org/en-US/docs/Web/API/window.open
 		// https://developer.apple.com/library/prerelease/ios/documentation/WebKit/Reference/WKWindowFeatures_Ref/index.html
 
-		let srcurl = navigationAction.sourceFrame?.request.URL ?? NSURL(string:String())!
+		let srcurl = navigationAction.sourceFrame.request.URL ?? NSURL(string:String())!
 		let openurl = navigationAction.request.URL ?? NSURL(string:String())!
 		let tgt = (navigationAction.targetFrame == nil) ? NSURL(string:String())! : navigationAction.targetFrame!.request.URL
-		let tgtdom = navigationAction.targetFrame?.request.mainDocumentURL ?? NSURL(string:String())!
+		//let tgtdom = navigationAction.targetFrame?.request.mainDocumentURL ?? NSURL(string:String())!
 		//^tgt is given as a string in JS and WKWebView synthesizes a WKFrameInfo from it _IF_ it matches an iframe title in the DOM
 		// otherwise == nil
 		// RDAR? would like the tgt string to be passed here

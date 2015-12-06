@@ -10,7 +10,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 		
 		let appearance = NSUserDefaults.standardUserDefaults().stringForKey("AppleInterfaceStyle") ?? "Light"
 		if let window = window {
-			window.collectionBehavior = .FullScreenPrimary | .ParticipatesInCycle | .Managed | .CanJoinAllSpaces
+			window.collectionBehavior = [NSWindowCollectionBehavior.FullScreenPrimary, NSWindowCollectionBehavior.ParticipatesInCycle, NSWindowCollectionBehavior.Managed, NSWindowCollectionBehavior.CanJoinAllSpaces]
 			window.styleMask |= NSUnifiedTitleAndToolbarWindowMask
 			window.movableByWindowBackground = true
 			window.backgroundColor = NSColor.whiteColor()
@@ -30,7 +30,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			window.restorationClass = AppDelegate.self
 			window.sharingType = .ReadWrite
 			NSApplication.sharedApplication().windowsMenu = NSMenu()
-			NSApplication.sharedApplication().addWindowsItem(window, title: window.title!, filename: false)
+			NSApplication.sharedApplication().addWindowsItem(window, title: window.title, filename: false)
 		}
 		shouldCascadeWindows = false // messes with Autosave
 		windowFrameAutosaveName = "browser"
@@ -41,7 +41,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
 
 	func window(window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplicationPresentationOptions) -> NSApplicationPresentationOptions {
-		return NSApplicationPresentationOptions.AutoHideToolbar | NSApplicationPresentationOptions.AutoHideMenuBar | NSApplicationPresentationOptions.FullScreen | proposedOptions
+		return [NSApplicationPresentationOptions.AutoHideToolbar, NSApplicationPresentationOptions.AutoHideMenuBar, NSApplicationPresentationOptions.FullScreen, proposedOptions]
 	}
 
 	func toggleTitlebar() {

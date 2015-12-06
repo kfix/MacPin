@@ -15,7 +15,7 @@ class Geolocator: NSObject  {
 	}
 
 	func sendLocationEvent(webview: MPWebView) {
-		if !contains(subscribers, webview) { subscribers.append(webview) }
+		if !subscribers.contains(webview) { subscribers.append(webview) }
 		manager.stopUpdatingLocation()
 		manager.startUpdatingLocation()
 	}

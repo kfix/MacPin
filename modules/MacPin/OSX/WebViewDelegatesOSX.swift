@@ -4,11 +4,11 @@
 
 import WebKit
 
-extension WebViewControllerOSX: WKUIDelegate {
+extension WebViewControllerOSX {
 
 	func webView(webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
-		var alert = NSAlert()
-		alert.messageText = webView.title
+		let alert = NSAlert()
+		alert.messageText = webView.title ?? ""
 		alert.addButtonWithTitle("Dismiss")
 		alert.informativeText = message
 		alert.icon = webview.favicon.icon
@@ -17,8 +17,8 @@ extension WebViewControllerOSX: WKUIDelegate {
 	}
 
 	func webView(webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
-		var alert = NSAlert()
-		alert.messageText = webView.title
+		let alert = NSAlert()
+		alert.messageText = webView.title ?? ""
 		alert.addButtonWithTitle("OK")
 		alert.addButtonWithTitle("Cancel")
 		alert.informativeText = message
@@ -27,12 +27,12 @@ extension WebViewControllerOSX: WKUIDelegate {
 	}
 
 	func webView(webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String!) -> Void) {
-		var alert = NSAlert()
-		alert.messageText = webView.title
+		let alert = NSAlert()
+		alert.messageText = webView.title ?? ""
 		alert.addButtonWithTitle("Submit")
 		alert.informativeText = prompt
 		alert.icon = NSApplication.sharedApplication().applicationIconImage
-		var input = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
+		let input = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
 		input.stringValue = defaultText ?? ""
 		input.editable = true
  		alert.accessoryView = input
@@ -41,7 +41,7 @@ extension WebViewControllerOSX: WKUIDelegate {
 
 	func _webView(webView: WKWebView, printFrame: WKFrameInfo) { 
 		warn("JS: `window.print();`")
-		var printer = NSPrintOperation(view: webView, printInfo: NSPrintInfo.sharedPrintInfo())
+		let printer = NSPrintOperation(view: webView, printInfo: NSPrintInfo.sharedPrintInfo())
 		// seems to work very early on in the first loaded page, then just becomes blank pages
 		// PDF = This view requires setWantsLayer:YES when blendingMode == NSVisualEffectBlendingModeWithinWindow
 
@@ -57,19 +57,19 @@ extension WebViewControllerOSX: WKUIDelegate {
 
 }
 
-extension WebViewControllerOSX: WKNavigationDelegate {
+extension WebViewControllerOSX {
 
 	func webView(webView: WKWebView, didReceiveAuthenticationChallenge challenge: NSURLAuthenticationChallenge,
 		completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
 
-		if let am = challenge.protectionSpace.authenticationMethod where am == NSURLAuthenticationMethodServerTrust {
+		if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
 			completionHandler(.PerformDefaultHandling, nil)
 			return
 		}
 		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.URL ?? String())]")	
 
 		let alert = NSAlert()
-		alert.messageText = webView.title
+		alert.messageText = webView.title ?? ""
 		alert.addButtonWithTitle("Submit")
 		alert.addButtonWithTitle("Cancel")
 		alert.informativeText = "auth challenge"
