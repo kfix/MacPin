@@ -26,8 +26,8 @@ archs_iphonesimulator	?= $(archs_macosx)
 archs_iphoneos		?= arm arm64
 arch				?= $(shell uname -m)
 
-target_OSX			?= apple-macosx10.10
-target_iOS			?= apple-ios8.4
+target_OSX			?= apple-macosx10.11
+target_iOS			?= apple-ios9.1
 target				?= $(target_OSX)
 
 ifneq ($(SIM_ONLY),)
