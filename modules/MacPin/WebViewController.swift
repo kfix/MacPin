@@ -30,8 +30,8 @@ import JavaScriptCore
 		view = webview
 	}
 #elseif os(iOS)
-	required init(coder aDecoder: NSCoder) { super.init(coder: aDecoder) }
-	required init(webview: MPWebView) {
+	required init?(coder aDecoder: NSCoder) { super.init(coder: aDecoder) }
+	required init!(webview: MPWebView) {
 		super.init(nibName: nil, bundle: nil)
 		webview.UIDelegate = self //alert(), window.open(): see <platform>/WebViewDelegates
 		webview.navigationDelegate = self // allows/denies navigation actions: see WebViewDelegates

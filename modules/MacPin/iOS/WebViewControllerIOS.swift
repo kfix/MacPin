@@ -13,7 +13,7 @@ import WebKit
 		super.viewDidLoad()
 		//view.wantsLayer = true //use CALayer to coalesce views
 		//^ default=true:  https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3641
-		view.autoresizingMask = .FlexibleHeight | .FlexibleWidth
+		view.autoresizingMask = [.FlexibleHeight , .FlexibleWidth]
 	}
 	
 	override func viewWillAppear(animated: Bool) { // window popping up with this tab already selected & showing
@@ -22,7 +22,7 @@ import WebKit
 
 	//override func removeFromParentViewController() { super.removeFromParentViewController() }
 
-	deinit { warn("\(reflect(self).summary)") }
+	deinit { warn("\(Mirror(reflecting: self))") }
 	
 	//override func closeTab() { dismissViewControllerAnimated(true, completion: nil); super() }
 

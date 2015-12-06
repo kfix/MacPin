@@ -74,8 +74,8 @@ import JavaScriptCore
 		}
 	}
 #elseif os(iOS)
-	// no overlaying MacPin apps upon other apps in iOS, so make it a no-op
-	var transparent = false
+	var transparent = false // no overlaying MacPin apps upon other apps in iOS, so make it a no-op
+	var allowsMagnification = true // not exposed on iOS WebKit, make it no-op
 #endif
 
 	let favicon: FavIcon = FavIcon()

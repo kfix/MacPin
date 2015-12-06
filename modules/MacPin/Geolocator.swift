@@ -30,7 +30,7 @@ extension Geolocator: CLLocationManagerDelegate {
 		//if (error != nil) { warn(error) }
 	}
 
-	func locationManager(manager: CLLocationManager!, didUpdateLocations locations: [AnyObject]!) {
+	private func locationManager(manager: CLLocationManager!, didUpdateLocations locations: [AnyObject]!) {
 		if let location = locations.last as? CLLocation where locations.count > 0 {
 			currentLocation = location
 			warn("lat: \(location.coordinate.latitude) lon:\(location.coordinate.longitude)")

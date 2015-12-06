@@ -11,7 +11,7 @@ class AppDelegateIOS: AppDelegate {
 }
 
 extension AppDelegateIOS: UIApplicationDelegate { //UIResponder
-	func application(application: UIApplication, openURL url: NSURL, sourceApplication: String?, annotation: AnyObject?) -> Bool {
+	func application(application: UIApplication, openURL url: NSURL, sourceApplication: String?, annotation: AnyObject) -> Bool {
 		warn("`\(url)` -> AppScriptRuntime.shared.jsdelegate.launchURL()")
 		AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(url.description, forKeyedSubscript: "launchedWithURL")
 		AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", url.description)
@@ -19,7 +19,7 @@ extension AppDelegateIOS: UIApplicationDelegate { //UIResponder
 	}
 
 	func application(application: UIApplication, willFinishLaunchingWithOptions launchOptions: [NSObject : AnyObject]?) -> Bool { // state not restored, UI not presented
-		application.registerUserNotificationSettings(UIUserNotificationSettings(forTypes: UIUserNotificationType.Sound | UIUserNotificationType.Alert | UIUserNotificationType.Badge, categories: nil))
+		application.registerUserNotificationSettings(UIUserNotificationSettings(forTypes: [UIUserNotificationType.Sound, UIUserNotificationType.Alert, UIUserNotificationType.Badge], categories: nil))
 
 		return true //FIXME
 	}
@@ -61,7 +61,7 @@ extension AppDelegateIOS: UIApplicationDelegate { //UIResponder
 
 		browserController.view.frame = UIScreen.mainScreen().bounds
 
-		if !AppScriptRuntime.shared.context.objectForKeyedSubscript("$").objectForKeyedSubscript("browser").isObject() { //first run, not an app restore
+		if !AppScriptRuntime.shared.context.objectForKeyedSubscript("$").objectForKeyedSubscript("browser").isObject { //first run, not an app restore
 			AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
 			AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
 			AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")

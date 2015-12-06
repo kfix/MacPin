@@ -25,7 +25,7 @@ import ViewPrivates
 
 extension UIView {
 	func dumpFrame() {
-		var screen = UIScreen.mainScreen().bounds
+		let screen = UIScreen.mainScreen().bounds
 		warn("screen: \(screen.size.width),\(screen.size.height)")
 		warn("frame: @\(frame.origin.x),\(frame.origin.y) \(frame.size.width),\(frame.size.height)")
 		warn("bounds: @\(bounds.origin.x),\(bounds.origin.y) \(bounds.size.width),\(bounds.size.height)")
@@ -64,9 +64,9 @@ extension UIView {
 			}
 			if let wvc = selectedViewController as? WebViewController {
 				lastContentOffset = wvc.webview.scrollView.contentOffset.y // update scrolling tracker
-	        	wvc.addObserver(self, forKeyPath: "webview.estimatedProgress", options: .New | .Initial, context: &kvoCtx)
-	        	wvc.addObserver(self, forKeyPath: "webview.URL", options: .New | .Initial, context: &kvoCtx)
-	        	wvc.addObserver(self, forKeyPath: "webview.title", options: .New | .Initial, context: &kvoCtx)
+	        	wvc.addObserver(self, forKeyPath: "webview.estimatedProgress", options: [.New, .Initial], context: &kvoCtx)
+	        	wvc.addObserver(self, forKeyPath: "webview.URL", options: [.New, .Initial], context: &kvoCtx)
+	        	wvc.addObserver(self, forKeyPath: "webview.title", options: [.New, .Initial], context: &kvoCtx)
 			}
 		}
 	}
@@ -123,16 +123,16 @@ extension UIView {
 
 		view = UIView()
 		view.backgroundColor = nil // transparent base view
-		view.autoresizingMask = .FlexibleHeight | .FlexibleWidth //resize base view to match superview size (if any)
+		view.autoresizingMask = [.FlexibleHeight, .FlexibleWidth] //resize base view to match superview size (if any)
 		view.autoresizesSubviews = true // resize tabbed subviews based on their autoresizingMasks
-		var swipeLeft = UISwipeGestureRecognizer(target: self, action: Selector("switchToNextTab"))
+		let swipeLeft = UISwipeGestureRecognizer(target: self, action: Selector("switchToNextTab"))
 		swipeLeft.direction = UISwipeGestureRecognizerDirection.Left
 		view.addGestureRecognizer(swipeLeft)
-		var swipeRight = UISwipeGestureRecognizer(target: self, action: Selector("switchToPreviousTab"))
+		let swipeRight = UISwipeGestureRecognizer(target: self, action: Selector("switchToPreviousTab"))
 		swipeRight.direction = UISwipeGestureRecognizerDirection.Right
 		view.addGestureRecognizer(swipeRight)
 
-		tabView.autoresizingMask = .FlexibleHeight | .FlexibleWidth //resize selected VC's view to match superview size (if any)
+		tabView.autoresizingMask = [.FlexibleHeight, .FlexibleWidth] //resize selected VC's view to match superview size (if any)
 		tabView.autoresizesSubviews = true // resize tabbed subviews based on their autoresizingMasks
 		tabView.backgroundColor = UIColor.redColor()
 		view.addSubview(tabView)
@@ -190,7 +190,7 @@ extension UIView {
 		], animated: false)
 		//toolBar.barTintColor = UIColor.blackColor()
 		//toolBar.barStyle = UIBarStyle.Black
-		toolBar.setTranslatesAutoresizingMaskIntoConstraints(false)
+		//toolBar.setTranslatesAutoresizingMaskIntoConstraints(false)
 		toolBar.translucent = true
 
 		tabList.dataSource = self
@@ -208,7 +208,7 @@ extension UIView {
 	override func viewWillLayoutSubviews() { // do manual layout of our views
 		toolBar.hidden = !showBars
 
-		var statusHeight = UIApplication.sharedApplication().statusBarFrame.size.height
+		let statusHeight = UIApplication.sharedApplication().statusBarFrame.size.height
 		tabView.frame = view.bounds
 
 		blurBar.frame = showBars ?
@@ -232,10 +232,10 @@ extension UIView {
 		contentInset.bottom = showBars ? toolBar.frame.size.height : 0
 	}
 
-	override var description: String { return "<\(reflect(self).summary)> `\(title ?? String())`" }
+	override var description: String { return "<\(Mirror(reflecting: self))> `\(title ?? String())`" }
 
 	func indexOfChildViewController(vc: UIViewController) -> Int {
-		for (index, el) in enumerate(childViewControllers) {
+		for (index, el) in childViewControllers.enumerate() {
 			if el === vc { return index }
 		}
 		return -3
@@ -267,13 +267,13 @@ extension UIView {
 
 	override func viewWillTransitionToSize(size: CGSize, withTransitionCoordinator coordinator: UIViewControllerTransitionCoordinator) {
 		view.dumpFrame()
-		var oldStatusHeight = UIApplication.sharedApplication().statusBarFrame.size.height
+		let oldStatusHeight = UIApplication.sharedApplication().statusBarFrame.size.height
 		warn("rotating size to \(size.width),\(size.height)")
 		coordinator.animateAlongsideTransition({ (UIViewControllerTransitionCoordinatorContext) -> Void in
 		}, completion: { [unowned self] (UIViewControllerTransitionCoordinatorContext) -> Void in
 			self.view.frame.size = size
-			var newStatusHeight = UIApplication.sharedApplication().statusBarFrame.size.height
-			var statusDelta = newStatusHeight - oldStatusHeight
+			let newStatusHeight = UIApplication.sharedApplication().statusBarFrame.size.height
+			let statusDelta = newStatusHeight - oldStatusHeight
 			warn("rotation completed: statusBar changed: \(statusDelta)")
 			//self.view.dumpFrame()
 			self.view.setNeedsLayout()
@@ -284,7 +284,7 @@ extension UIView {
 
 	func appWillChangeStatusBarFrameNotification(notification: NSNotification) {
 		if let status = notification.userInfo?[UIApplicationStatusBarFrameUserInfoKey] as? NSValue {
-			var statusRect = status.CGRectValue()
+			let statusRect = status.CGRectValue()
 			warn("\(statusRect.size.height)") // FIXME: this is off-phase if app started in landscape mode on iPhone
 		}
 	}
@@ -292,9 +292,9 @@ extension UIView {
 	//override func sizeForChildContentContainer(container: UIContentContainer, withParentContainerSize parentSize: CGSize) -> CGSize {}
 	// return view.frame.size - status & toolbars?
 
-	override func supportedInterfaceOrientations() -> Int { return Int(UIInterfaceOrientationMask.All.rawValue) }
+	private func supportedInterfaceOrientations() -> Int { return Int(UIInterfaceOrientationMask.All.rawValue) }
 
-	override func observeValueForKeyPath(keyPath: String, ofObject object: AnyObject, change: [NSObject : AnyObject], context: UnsafeMutablePointer<Void>) {
+	private func observeValueForKeyPath(keyPath: String, ofObject object: AnyObject, change: [NSObject : AnyObject], context: UnsafeMutablePointer<Void>) {
 		switch (keyPath) {
 			case "webview.estimatedProgress": if let prog = change[NSKeyValueChangeNewKey] as? Float {
 					if prog == 1 {
@@ -305,9 +305,9 @@ extension UIView {
 						progBar.setProgress(prog, animated: true)
 					}
 				}
-			case "webview.URL":	if let url = change[NSKeyValueChangeNewKey] as? NSURL, urlstr = url.absoluteString {
+			case "webview.URL":	if let url = change[NSKeyValueChangeNewKey] as? NSURL {
 					//navBar.text = urlstr
-					navBox.text = urlstr
+					navBox.text = url.absoluteString
 				}
 			case "webview.title": if let title = change[NSKeyValueChangeNewKey] as? String where !title.isEmpty {
 					//navBar.prompt = title
@@ -319,7 +319,7 @@ extension UIView {
 
 }
 
-extension MobileBrowserViewController: MobileBrowserScriptExports {
+extension MobileBrowserViewController {
 	var tabs: [MPWebView] { return childViewControllers.filter({ $0 is WebViewControllerIOS }).map({ ($0 as! WebViewControllerIOS).webview }) }
 
 	var selectedViewControllerIndex: Int {
@@ -369,7 +369,7 @@ extension MobileBrowserViewController: MobileBrowserScriptExports {
 	func switchToNextTab() { selectedViewControllerIndex += 1 }
 	func closeCurrentTab() {
 		if let vc = selectedViewController {
-			var idx = selectedViewControllerIndex
+			let idx = selectedViewControllerIndex
 			//if childViewControllers.count > 2 { newTabPrompt() }
 			switchToNextTab()
 			if idx == selectedViewControllerIndex { switchToPreviousTab() }
@@ -384,8 +384,8 @@ extension MobileBrowserViewController: MobileBrowserScriptExports {
 extension MobileBrowserViewController: UISearchBarDelegate {
 	func searchBarSearchButtonClicked(searchBar: UISearchBar) {
 		warn()
-		if let wvc = selectedViewController as? WebViewController, url = validateURL(searchBar.text) {
-			searchBar.text = url.absoluteString!
+		if let wvc = selectedViewController as? WebViewController, url = validateURL(searchBar.text ?? "") {
+			searchBar.text = url.absoluteString
 			wvc.webview.gotoURL(url as NSURL)
 		} else {
 			warn("invalid url was requested!")
@@ -399,9 +399,9 @@ extension MobileBrowserViewController: UISearchBarDelegate {
 
 extension MobileBrowserViewController: UITextFieldDelegate {
 	func textFieldShouldReturn(textField: UITextField) -> Bool {
-		if let wvc = selectedViewController as? WebViewController, url = validateURL(textField.text), urlstr = url.absoluteString {
+		if let wvc = selectedViewController as? WebViewController, url = validateURL(textField.text ?? "") {
 			textField.resignFirstResponder()
-			textField.text = urlstr
+			textField.text = url.absoluteString
 			wvc.webview.gotoURL(url as NSURL)
 		} else {
 			warn("invalid url was requested!")
@@ -419,7 +419,7 @@ extension MobileBrowserViewController: UIScrollViewDelegate {
 	func scrollViewWillBeginDragging(scrollView: UIScrollView) { warn("\(lastContentOffset)") }
 
 	func scrollViewDidScroll(scrollView: UIScrollView) {
-		var drag = scrollView.contentOffset.y
+		let drag = scrollView.contentOffset.y
 		if (scrollView.dragging || scrollView.tracking) && !scrollView.decelerating { //active-touch scrolling in progress
 			if (lastContentOffset > drag) { // scrolling Up
 				showBars = true
@@ -443,7 +443,7 @@ extension MobileBrowserViewController: UITableViewDataSource, UITableViewDelegat
 	}
 
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCellWithIdentifier("TableViewCell", forIndexPath: indexPath) as! UITableViewCell
+        let cell = tableView.dequeueReusableCellWithIdentifier("TableViewCell", forIndexPath: indexPath)
 
         let wv = tabs[indexPath.row]
         if let wti = wv.title where !wti.isEmpty { title = wti }

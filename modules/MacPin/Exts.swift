@@ -113,7 +113,9 @@ func validateURL(urlstr: String) -> NSURL? { // fallback: (String -> NSURL?)? = 
 
 func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2: StaticString = __FUNCTION__, abort:(()->Void)? = nil) {
 #if arch(x86_64) || arch(i386)
+#if os(OSX)
 	NSProcessInfo.processInfo().disableSuddenTermination()
+#endif
 	prompter = Async.background {
 		let prompt = Prompt(argv0: Process.unsafeArgv[0], prompt: "\(ps1)[\(ps2)]:> ")
 		while (true) {
@@ -131,7 +133,9 @@ func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, p
 			// L: command dispatched, restart loop
 		}
 		// prompt loop killed, dealloc'd?
+#if os(OSX)
 		NSApplication.sharedApplication().replyToApplicationShouldTerminate(true) // allow app to close if it was waiting on prompter
+#endif
 	}
 #else
 	println("Prompt() not available on this device.")

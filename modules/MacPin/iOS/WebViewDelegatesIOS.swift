@@ -4,7 +4,7 @@
 
 import WebKit
 
-extension WebViewControllerIOS: WKUIDelegate {
+extension WebViewControllerIOS {
 
 	func webView(webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
 		let alerter = UIAlertController(title: webView.title, message: message, preferredStyle: .Alert) //.ActionSheet
@@ -29,7 +29,7 @@ extension WebViewControllerIOS: WKUIDelegate {
 		alerter.addTextFieldWithConfigurationHandler { (tf) in tf.placeholder = defaultText ?? "" } //; promptTF = tf; }
 
 		let Submit = UIAlertAction(title: "Submit", style: .Default) { [unowned alerter] (_) in 
-			if let tf = alerter.textFields?.first as? UITextField { completionHandler(tf.text) }
+			if let tf = alerter.textFields?.first { completionHandler(tf.text) }
 			//completionHandler(promptTF?.text ?? "") //doesn't retain?
 		}
 		alerter.addAction(Submit)
@@ -48,12 +48,12 @@ extension WebViewControllerIOS: WKUIDelegate {
 
 }
 
-extension WebViewControllerIOS: WKNavigationDelegate {
+extension WebViewControllerIOS {
 
 	func webView(webView: WKWebView, didReceiveAuthenticationChallenge challenge: NSURLAuthenticationChallenge,
 		completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
 
-		if let am = challenge.protectionSpace.authenticationMethod where am == NSURLAuthenticationMethodServerTrust {
+		if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
 			completionHandler(.PerformDefaultHandling, nil)
 			return
 		}
@@ -73,10 +73,10 @@ extension WebViewControllerIOS: WKNavigationDelegate {
 		}
 
 		let Login = UIAlertAction(title: "Login", style: .Default) { [unowned alerter] (_) in 
-			if let user = alerter.textFields?.first as? UITextField, pass = alerter.textFields?[1] as? UITextField {
+			if let user = alerter.textFields?.first, pass = alerter.textFields?[1] {
 				completionHandler(.UseCredential, NSURLCredential(
-					user: user.text,
-					password: pass.text,
+					user: user.text ?? "",
+					password: pass.text ?? "",
 					persistence: .Permanent
 				))
 			}
