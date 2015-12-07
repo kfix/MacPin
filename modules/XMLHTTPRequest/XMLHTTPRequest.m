@@ -7,7 +7,7 @@
     NSURL *_url;
     bool _async;
     NSMutableDictionary *_requestHeaders;
-    NSDictionary *_responseHeaders;
+    NSMutableDictionary *_responseHeaders;
 };
 
 @synthesize responseText;
@@ -28,6 +28,7 @@
         _urlSession = urlSession;
         self.readyState = @(XMLHttpRequestUNSENT);
         _requestHeaders = [NSMutableDictionary new];
+		_responseHeaders = [NSMutableDictionary new];
     }
     return self;
 }
@@ -49,13 +50,14 @@
 - (void)open:(NSString *)httpMethod :(NSString *)url :(bool)async {
     // TODO should throw an error if called with wrong arguments
     _httpMethod = httpMethod;
-    _url = [NSURL URLWithString:url];
+    _url = [[NSURL alloc] initWithString:url];
     _async = async;
     self.readyState = @(XMLHTTPRequestOPENED);
 }
 
 - (void)send:(id)data {
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:_url];
+	//NSLog(@"XMLHTTPRequest send(): %@ %@", _httpMethod, [_url absoluteURL]);
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:_url];
     for (NSString *name in _requestHeaders) {
         [request setValue:_requestHeaders[name] forHTTPHeaderField:name];
     }
@@ -67,15 +69,22 @@
     __block __weak XMLHttpRequest *weakSelf = self;
 
     id completionHandler = ^(NSData *receivedData, NSURLResponse *response, NSError *error) {
-        NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
-        weakSelf.readyState = @(XMLHTTPRequestDONE); // TODO
-        weakSelf.status = @(httpResponse.statusCode);
-        weakSelf.responseText = [[NSString alloc] initWithData:receivedData
+		if (response != nil) {
+	        NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
+	        weakSelf.readyState = @(XMLHTTPRequestDONE); // TODO
+    	    weakSelf.status = @(httpResponse.statusCode);
+        	weakSelf.responseText = [[NSString alloc] initWithData:receivedData
                                                   encoding:NSUTF8StringEncoding];
-        [weakSelf setAllResponseHeaders:[httpResponse allHeaderFields]];
-        if (weakSelf.onreadystatechange != nil) {
-            [weakSelf.onreadystatechange callWithArguments:@[]];
-        }
+	        [weakSelf setAllResponseHeaders:[httpResponse allHeaderFields]];
+	        if (weakSelf.onreadystatechange != nil) {
+    	        [weakSelf.onreadystatechange callWithArguments:@[]];
+	        }
+		} else if (error != nil) {
+			NSLog(@"XMLHTTPRequest error: %@", error);
+	        if (weakSelf.onerror != nil) { // https://developer.mozilla.org/en-US/docs/Web/Events/error
+    	        [weakSelf.onerror callWithArguments:@[[error description]]];
+	        }
+		}
     };
     NSURLSessionDataTask *task = [_urlSession dataTaskWithRequest:request
                                                 completionHandler:completionHandler];
@@ -89,23 +98,31 @@
 - (NSString *)getAllResponseHeaders {
     NSMutableString *responseHeaders = [NSMutableString new];
     for (NSString *key in _responseHeaders) {
-        [responseHeaders appendString:key];
+        [responseHeaders appendString:key]; // cast to string!!
         [responseHeaders appendString:@": "];
         [responseHeaders appendString:_responseHeaders[key]];
         [responseHeaders appendString:@"\n"];
     }
     return responseHeaders;
+	// FIXME should return JS:null if no response yet received!
 }
 
-- (NSString *)getReponseHeader:(NSString *)name {
+- (NSString *)getResponseHeader:(NSString *)name {
+	NSLog(@"Getting header %@", name);
     return _responseHeaders[name];
 }
 
 - (void)setAllResponseHeaders:(NSDictionary *)responseHeaders {
-    _responseHeaders = responseHeaders;
+	//NSLog(@"Setting headers %@", responseHeaders);
+	[_responseHeaders removeAllObjects];
+	NSEnumerator *e = [responseHeaders keyEnumerator];
+	NSString *headerName;
+	while( headerName = [e nextObject] ) {
+		[_responseHeaders setValue:[responseHeaders objectForKey:headerName] forKey:headerName];
+	}
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"<XMLHttpRequest %p> %@", self, _urlSession];
+    return [NSString stringWithFormat:@"<XMLHttpRequest %p> %@ %@", self, _httpMethod, _url];
 }
 @end

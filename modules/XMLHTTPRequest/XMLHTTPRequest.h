@@ -17,19 +17,19 @@ NS_ENUM(NSUInteger , ReadyState) {
 };
 
 @protocol XMLHttpRequest <JSExport>
-@property (nonatomic) NSString *responseText;
-@property (nonatomic) JSValue *onreadystatechange;
-@property (nonatomic) NSNumber *readyState;
-@property (nonatomic) JSValue *onload;
-@property (nonatomic) JSValue *onerror;
-@property (nonatomic) NSNumber *status;
+@property (nonatomic, copy) NSString *responseText;
+@property (nonatomic, strong) JSValue *onreadystatechange;
+@property (nonatomic, copy) NSNumber *readyState;
+@property (nonatomic, strong) JSValue *onload;
+@property (nonatomic, strong) JSValue *onerror;
+@property (nonatomic, copy) NSNumber *status;
 
 
 -(void)open:(NSString *)httpMethod :(NSString *)url :(bool)async;
 -(void)send:(id)data;
 -(void)setRequestHeader: (NSString *)name :(NSString *)value;
 -(NSString *)getAllResponseHeaders;
--(NSString *)getReponseHeader:(NSString *)name;
+-(NSString *)getResponseHeader:(NSString *)name;
 @end
 
 
