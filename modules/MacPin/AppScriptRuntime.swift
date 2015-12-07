@@ -383,6 +383,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 
 	func REPL() {
+#if os(OSX)
+		NSProcessInfo.processInfo().disableAutomaticTermination("REPL")
+#endif
 		termiosREPL(
 			{ [unowned self] (line: String) -> Void in 
 				let val = self.context.evaluateScript(line)
@@ -399,6 +402,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			abort: { () -> Void in
 				// EOF'd by Ctrl-D
 #if os(OSX)
+				NSProcessInfo.processInfo().enableAutomaticTermination("REPL")
 				NSApplication.sharedApplication().terminate(self)
 #endif
 			}

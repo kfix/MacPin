@@ -232,9 +232,9 @@ extension AppDelegateOSX: NSApplicationDelegate {
 
 	func applicationShouldTerminate(sender: NSApplication) -> NSApplicationTerminateReply {
 		warn()
-#if arch(x86_64) || arch(i386)
-		if prompter != nil { return .TerminateLater }
-#endif
+//#if arch(x86_64) || arch(i386)
+//		if prompter != nil { return .TerminateLater }
+//#endif
 		return .TerminateNow
 	}
 
