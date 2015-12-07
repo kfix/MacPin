@@ -15,9 +15,7 @@ import Foundation
 import JavaScriptCore // https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
 // https://developer.apple.com/library/mac/documentation/General/Reference/APIDiffsMacOSX10_10SeedDiff/modules/JavaScriptCore.html
 
-#if DEBUG
 import XMLHTTPRequest // https://github.com/Lukas-Stuehrk/XMLHTTPRequest
-#endif
 
 #if arch(x86_64) || arch(i386)
 import Prompt // https://github.com/neilpa/swift-libedit
@@ -108,15 +106,14 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
     override init() {
 		context.name = "AppScriptRuntime"
 		context.evaluateScript("$ = {};") //default global for our exports
-		jsdelegate = context.evaluateScript("{};")! //default property-less delegate obj
-		context.objectForKeyedSubscript("$").setObject("", forKeyedSubscript: "launchedWithURL") // FIXME: use 'arguments' ES5 convention?
+		jsdelegate = context.evaluateScript("{};")! //default property-less delegate obj // FIXME: #11 make an App() from ES6 class
+		context.objectForKeyedSubscript("$").setObject("", forKeyedSubscript: "launchedWithURL") // FIXME: use context.currentArguments ?
 		//context.objectForKeyedSubscript("$").setObject(GlobalUserScripts, forKeyedSubscript: "globalUserScripts")
 		// FIXME: make .extend methods for all MacPin classes that want to export constructors?
 		context.objectForKeyedSubscript("$").setObject(MPWebView.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebView]
 		context.objectForKeyedSubscript("$").setObject(SSKeychain.self, forKeyedSubscript: "keychain")
-#if DEBUG
+		// context.globalObject.setObject
 		XMLHttpRequest().extend(context) // allows `new XMLHTTPRequest` for doing xHr's
-#endif
 
 		// set console.log to NSBlock that will call warn()
 		let logger: @convention(block) String -> Void = { msg in warn(msg) }

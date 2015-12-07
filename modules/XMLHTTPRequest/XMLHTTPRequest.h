@@ -9,19 +9,19 @@
 #endif
 
 NS_ENUM(NSUInteger , ReadyState) {
-    XMLHttpRequestUNSENT =0,	// open()has not been called yet.
-    XMLHTTPRequestOPENED,	    // send()has not been called yet.
-    XMLHTTPRequestHEADERS,      // RECEIVED	send() has been called, and headers and status are available.
+    XMLHttpRequestUNSENT =0,    // open()has not been called yet.
+    XMLHTTPRequestOPENED,       // send()has not been called yet.
+    XMLHTTPRequestHEADERS,      // RECEIVED send() has been called, and headers and status are available.
     XMLHTTPRequestLOADING,      // Downloading; responseText holds partial data.
     XMLHTTPRequestDONE          // The operation is complete.
 };
 
 @protocol XMLHttpRequest <JSExport>
 @property (nonatomic, copy) NSString *responseText;
-@property (nonatomic, strong) JSValue *onreadystatechange;
+@property (assign) JSValue *onreadystatechange;
 @property (nonatomic, copy) NSNumber *readyState;
-@property (nonatomic, strong) JSValue *onload;
-@property (nonatomic, strong) JSValue *onerror;
+@property (assign) JSValue *onload;
+@property (assign) JSValue *onerror;
 @property (nonatomic, copy) NSNumber *status;
 
 
@@ -40,4 +40,5 @@ NS_ENUM(NSUInteger , ReadyState) {
 
 - (void)extend:(id)jsContext;
 - (NSString *)description;
+- (JSManagedValue *)m_makeCallback:(JSValue *)value;
 @end
