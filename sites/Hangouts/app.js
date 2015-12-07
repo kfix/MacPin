@@ -9,14 +9,7 @@ var hangouts = {
 	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady', 'SwitchToThisTab'],
 	url: "https://hangouts.google.com"
 };
-//var hangoutsAlt = Object.assign({}, hangouts, {url: "https://plus.google.com/u/1/hangouts"});
-var hangoutsAlt = {
-	transparent: true,
-	postinject: ["notifier"], // "convopopper"],
-	preinject: ["styler", 'shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady', 'SwitchToThisTab'],
-	url: "https://hangouts.google.com/u/1"
-};
+var hangoutsAlt = Object.assign({}, hangouts, {url: "https://plus.google.com/u/1/hangouts"});
 $.browser.addShortcut("Google Hangouts", hangouts);
 var hangoutsTab = new $.WebView(hangouts); // start loading right way, its a big Closure app
 $.browser.addShortcut("Log into Google Account", {url: "https://accounts.google.com/serviceloginauth"});
@@ -37,6 +30,7 @@ delegate.decideNavigationForClickedURL = function(url) {
 		url.indexOf("https://talkgadget.google.com") 
 		&& url.indexOf("https://accounts.google.com")
 		&& url.indexOf("https://hangouts.google.com")
+		&& url.indexOf("https//www.google.com/a/")
 		) { // open all links externally except those above
 			$.app.openURL(url);
 			return true;

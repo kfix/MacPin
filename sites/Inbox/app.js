@@ -9,13 +9,8 @@ var inboxTab, inbox = {
 	postinject: [],
 	preinject: ['shim_html5_notifications'],
 	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"]
-}, inboxAlt = {
-	transparent:false,
-	url: "https://inbox.google.com/u/1",
-	postinject: [],
-	preinject: ['shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"]
 };
+var inboxAlt = Object.assign({}, inbox, {url: "https://inbox.google.com/u/1"});
 inboxTab = $.browser.tabSelected = new $.WebView(inbox);
 
 function search(query) {

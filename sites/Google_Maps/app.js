@@ -9,13 +9,8 @@ var mapsTab, maps = {
 	preinject: ['shim_html5_notifications', 'shim_html5_geolocation'],
 	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates", "getGeolocation", "watchGeolocation, deactivateGeolocation"],
 	allowsMagnification: false // lets gmaps JS handle pinch-zooms
-}, mapsAlt = {
-	url: "https://www.google.com/maps/?authuser=1",
-	postinject: [],
-	preinject: ['shim_html5_notifications', 'shim_html5_geolocation'],
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates", "getGeolocation", "watchGeolocation, deactivateGeolocation"],
-	allowsMagnification: false // lets gmaps JS handle pinch-zooms
 };
+var mapsAlt = Object.assign({}, drive, {url: "https://www.google.com/maps/?authuser=1"});
 
 // need to map pinchIn to scrollUp, pinchOut to scrollDown
 // rotate?
@@ -60,6 +55,7 @@ delegate.decideNavigationForURL = function(url) {
 		case "https":
 			if (!~addr.indexOf("//maps.google.com") &&
 				!~addr.indexOf("//accounts.google.com") &&
+				!~addr.indexOf("//www.google.com/a/") &&
 				!~addr.indexOf("//places.google.com") &&
 				!~addr.indexOf("//plus.google.com") &&
 				!~addr.indexOf("//www.google.com/maps/") &&

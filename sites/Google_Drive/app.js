@@ -9,13 +9,8 @@ var driveTab, drive = {
 	postinject: [],
 	preinject: ['shim_html5_notifications'],
 	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"]
-}, driveAlt = {
-	transparent:false,
-	url: "https://drive.google.com/drive/u/1",
-	postinject: [],
-	preinject: ['shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"]
 };
+var driveAlt = Object.assign({}, drive, {url: "https://drive.google.com/drive/u/1"});
 driveTab = $.browser.tabSelected = new $.WebView(drive);
 
 function search(query) {
@@ -43,6 +38,7 @@ delegate.launchURL = function(url) {
 	}
 };
 
+//this.decideNavigationForURL <- [https://accounts.google.com/ServiceLogin?service=wise&passive=1209600&continue=https://drive.google.com/drive/u/1/&followup=https://drive.google.com/drive/u/1/&emr=1&authuser=1]
 delegate.decideNavigationForURL = function(url) {
 	var comps = url.split(':'),
 		scheme = comps.shift(),
@@ -77,7 +73,10 @@ delegate.decideNavigationForURL = function(url) {
 				!~addr.indexOf("//4.talkgadget.google.com") &&
 				!~addr.indexOf("//5.talkgadget.google.com") &&
 				!~addr.indexOf("//6.talkgadget.google.com") &&
-				!~addr.indexOf("//www.youtube.com") // yt vids are usually embedded players
+				!~addr.indexOf("//content.googleapis.com") &&
+				!~addr.indexOf("//www.youtube.com") && // yt vids are usually embedded players
+				!~addr.indexOf("//www.google.com/a/") &&
+				!unescape(unescape(addr)).match("//accounts.google.com/")
 			) {
 				$.app.openURL(url); //pop all external links to system browser
 				console.log("opened "+url+" externally!");
