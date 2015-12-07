@@ -383,6 +383,15 @@
 	<key>NSSupportsSuddenTermination</key>
 	<true/>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.10.3</string>
+	<string>10.11.1</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSThirdPartyExceptionAllowsInsecureHTTPLoads</key>
+		<true/>
+		<key>NSThirdPartyExceptionRequiresForwardSecrecy</key>
+		<false/>
+	</dict>
 </dict>
 </plist>

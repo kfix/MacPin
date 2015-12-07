@@ -119,7 +119,7 @@ ifeq ($(platform),OSX)
 $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/Assets.car: $(xcassets)/%.xcassets
 	@install -d $(dir $@)
 	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
-		--platform $(sdk) --minimum-deployment-target 10.11 --target-device mac \
+		--platform $(sdk) --minimum-deployment-target $(target_ver_OSX) --target-device mac \
 		--compress-pngs --compile $(dir $@) $(realpath $<)
 	test -f $@
 
@@ -151,7 +151,7 @@ else ifeq ($(platform),iOS)
 $(appdir)/%.app/Assets.car: $(xcassets)/%.xcassets $(xcassets)/icons8.xcassets
 	@install -d $(dir $@)
 	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
-		--platform $(sdk) --minimum-deployment-target 9.1  --target-device iphone  --target-device ipad --app-icon AppIcon \
+		--platform $(sdk) --minimum-deployment-target $(target_ver_iOS)  --target-device iphone  --target-device ipad --app-icon AppIcon \
 		--compress-pngs --compile $(dir $@) $(realpath $(filter %.xcassets, $^))
 	test -f $@
 

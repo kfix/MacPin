@@ -26,8 +26,10 @@ archs_iphonesimulator	?= $(archs_macosx)
 archs_iphoneos		?= arm arm64
 arch				?= $(shell uname -m)
 
-target_OSX			?= apple-macosx10.11
-target_iOS			?= apple-ios9.1
+target_ver_OSX		?= 10.11
+target_OSX			?= apple-macosx$(target_ver_OSX)
+target_ver_iOS		?= 9.1
+target_iOS			?= apple-ios$(target_ver_iOS)
 target				?= $(target_OSX)
 
 ifneq ($(SIM_ONLY),)
@@ -118,18 +120,18 @@ swiftc				:= xcrun -sdk $(sdk) swiftc -target $(arch)-$(target_$(platform)) $(ve
 clang				:= xcrun -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platform)) $(verbose)
 #-fobj-arc
 
-libdirs				+= -L $(outdir)/Frameworks -L $(outdir)/obj
+libdirs				:= -L $(outdir)/Frameworks -L $(outdir)/obj
 incdirs				+= -I $(outdir)
 os_frameworks		+= -F $(sdkpath)/System/Library/Frameworks -L $(sdkpath)/System/Library/Frameworks
-frameworks			+= -F $(outdir)/Frameworks
+frameworks			:= -F $(outdir)/Frameworks
 swiftlibdir			:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift/$(sdk) $(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(sdk)))
 swiftstaticdir		:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift_static/$(sdk) $(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift_static/$(sdk)))
 $(info [$(eXcode)] compiling against $(sdkpath))
 $(info [$(eXcode)] swift libraries: $(swiftlibdir) $(swiftstaticdir))
 ifeq ($(platform),OSX)
-clang += -mmacosx-version-min=10.10
+clang += -mmacosx-version-min=$(target_ver_OSX)
 else ifeq ($(platform),iOS)
-clang += -miphoneos-version-min=8.3
+clang += -miphoneos-version-min=$(target_ver_iOS)
 endif
 
 $(swiftlibdir):
