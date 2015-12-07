@@ -15,6 +15,7 @@ const char * el_prompt = "> " ;
 const char* prompter(EditLine *e) {
     return el_prompt;
 }
+const char * historypath;
 
 @implementation Prompt
 
@@ -24,6 +25,7 @@ HistEvent _ev;
 
 - (instancetype) initWithArgv0:(const char*)argv0 prompt:(NSString *)prompt {
     if (self = [super init]) {
+        historypath = [[NSTemporaryDirectory() stringByAppendingString:@".REPL_history"] UTF8String];
         el_prompt = [[NSString stringWithFormat:@"<%s> %@", argv0, prompt] UTF8String];
         // Setup the editor
         _el = el_init(argv0, stdin, stdout, stderr); // argv0 designates the .editrc app-name cfgs to use
@@ -34,6 +36,7 @@ HistEvent _ev;
         _hist = history_init();
         history(_hist, &_ev, H_SETSIZE, 800);
         el_set(_el, EL_HIST, history, _hist);
+        history(_hist, &_ev, H_LOAD, historypath);
     }
     
     return self;
@@ -41,6 +44,8 @@ HistEvent _ev;
 
 - (void) dealloc {
     if (_hist != NULL) {
+        history(_hist, &_ev, H_SAVE, historypath);
+        NSLog(@"saved REPL command history to: %s", historypath);
         history_end(_hist);
         _hist = NULL;
     }
@@ -65,5 +70,4 @@ HistEvent _ev;
 
     return nil;
 }
-
 @end
