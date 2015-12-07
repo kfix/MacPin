@@ -8,7 +8,7 @@
 #import "_WKDownloadDelegate.h"
 #import "WKProcessPoolPrivate.h"
 
-#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR || TARGET_OS_SIMULATOR
 // no DnD on iOS
 #else 
 #import "WebURLsWithTitles.h"
