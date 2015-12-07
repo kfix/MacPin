@@ -265,7 +265,7 @@ import JavaScriptCore
 
 	func REPL() {
 		termiosREPL({ (line: String) -> Void in
-			self.evaluateJavaScript(line, completionHandler:{ [unowned self] (result: AnyObject?, exception: NSError?) -> Void in
+			self.evaluateJavaScript(line, completionHandler:{ (result: AnyObject?, exception: NSError?) -> Void in
 				// FIXME: the JS execs async so these print()s don't consistently precede the REPL thread's prompt line
 				if let result = result { Swift.print(result) }
 				if let exception = exception { Swift.print("Error: \(exception)") }
@@ -273,7 +273,7 @@ import JavaScriptCore
 		},
 		ps1: __FILE__,
 		ps2: __FUNCTION__,
-		abort: { [unowned self] () -> Void in
+		abort: { () -> Void in
 			// EOF'd by Ctrl-D
 			// self.close() // FIXME: self is still retained (by the browser?)
 		})

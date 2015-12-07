@@ -229,7 +229,7 @@ extension WebViewController: WKNavigationDelegate {
 #if os(OSX)
 		if (windowFeatures.allowsResizing ?? 0) == 1 {
 			if let window = view.window {
-				var newframe = CGRect(
+				let newframe = CGRect(
 					x: CGFloat(windowFeatures.x ?? window.frame.origin.x as NSNumber),
 					y: CGFloat(windowFeatures.y ?? window.frame.origin.y as NSNumber),
 					width: CGFloat(windowFeatures.width ?? window.frame.size.width as NSNumber),

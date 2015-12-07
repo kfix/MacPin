@@ -175,6 +175,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		for (idx, arg) in Process.arguments.enumerate() {
 			switch (arg) {
 				case "-i":
+					if let repl_js = NSBundle.mainBundle().URLForResource("app_repl", withExtension: "js") { AppScriptRuntime.shared.loadAppScript(repl_js.description); }
 					if isatty(1) == 1 { AppScriptRuntime.shared.REPL() } //open a JS console on the terminal, if present
 					// would like to natively implement a simple remote console for webkit-using osx apps, Valence only targets IOS-usbmuxd based stuff.
 					// https://www.webkit.org/blog/1875/announcing-remote-debugging-protocol-v1-0/

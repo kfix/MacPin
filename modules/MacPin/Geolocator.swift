@@ -25,12 +25,12 @@ class Geolocator: NSObject  {
 
 extension Geolocator: CLLocationManagerDelegate {
 
-	func locationManager(manager: CLLocationManager!, didFailWithError error: NSError!) {
+	func locationManager(manager: CLLocationManager, didFailWithError error: NSError) {
 		manager.stopUpdatingLocation()
 		//if (error != nil) { warn(error) }
 	}
 
-	private func locationManager(manager: CLLocationManager!, didUpdateLocations locations: [AnyObject]!) {
+	@objc internal func locationManager(manager: CLLocationManager, didUpdateLocations locations: [AnyObject]) {
 		if let location = locations.last as? CLLocation where locations.count > 0 {
 			currentLocation = location
 			warn("lat: \(location.coordinate.latitude) lon:\(location.coordinate.longitude)")
@@ -45,7 +45,7 @@ extension Geolocator: CLLocationManagerDelegate {
 		}
     }
 
-	func locationManager(manager: CLLocationManager!, didChangeAuthorizationStatus status: CLAuthorizationStatus) {
+	func locationManager(manager: CLLocationManager, didChangeAuthorizationStatus status: CLAuthorizationStatus) {
 		switch status {
 			//case CLAuthorizationStatus.Restricted:
 			//case CLAuthorizationStatus.Denied:

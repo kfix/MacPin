@@ -109,8 +109,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		context.name = "AppScriptRuntime"
 		context.evaluateScript("$ = {};") //default global for our exports
 		jsdelegate = context.evaluateScript("{};")! //default property-less delegate obj
-		context.objectForKeyedSubscript("$").setObject("", forKeyedSubscript: "launchedWithURL")
+		context.objectForKeyedSubscript("$").setObject("", forKeyedSubscript: "launchedWithURL") // FIXME: use 'arguments' ES5 convention?
 		//context.objectForKeyedSubscript("$").setObject(GlobalUserScripts, forKeyedSubscript: "globalUserScripts")
+		// FIXME: make .extend methods for all MacPin classes that want to export constructors?
 		context.objectForKeyedSubscript("$").setObject(MPWebView.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebView]
 		context.objectForKeyedSubscript("$").setObject(SSKeychain.self, forKeyedSubscript: "keychain")
 #if DEBUG
@@ -166,7 +167,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			}
 
 			if let jsval = loadAppScript(app_js.description) {
-				if jsval.isObject {
+				if jsval.isObject { // FIXME: #11 - if JSValueIsInstanceOfConstructor(context.JSGlobalContextRef, jsval.JSValueRef, context.objectForKeyedSubscript("App").JSValueRef, nil)
 					warn("\(app_js) loaded as AppScriptRuntime.shared.jsdelegate")
 					jsdelegate = jsval
 				}
@@ -290,7 +291,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
-	func postNotification(_ title: String? = nil, _ subtitle: String? = nil, _ msg: String?, _ id: String? = nil) {
+	func postNotification(title: String? = nil, _ subtitle: String? = nil, _ msg: String?, _ id: String? = nil) {
 #if os(OSX)
 		let note = NSUserNotification()
 		note.title = title ?? ""

@@ -158,7 +158,7 @@ struct WeakThing<T: AnyObject> {
 			ti.paletteLabel = itemIdentifier
 
 			let btn = NSButton()
-			let btnCell = btn.cell
+			//let btnCell = btn.cell
 			//btnCell.controlSize = .SmallControlSize
 			btn.toolTip = itemIdentifier
 			btn.image = NSImage(named: NSImageNamePreferencesGeneral) // https://hetima.github.io/fucking_nsimage_syntax/
@@ -239,10 +239,6 @@ struct WeakThing<T: AnyObject> {
 					ti.maxSize = CGSize(width: 600, height: 24)
 					ti.view = flag ? omnibox.view : NSTextField()
 					return ti
-
-				default:
-					warn("unimplemented toolbar button requested: \(itemIdentifier)")
-					return nil
 			}
 		} else {
 			// let NSTabViewController map a TabViewItem to this ToolbarItem
