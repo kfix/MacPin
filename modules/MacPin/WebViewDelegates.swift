@@ -81,7 +81,7 @@ extension WebViewController: WKNavigationDelegate {
 					decisionHandler(.Cancel)
 			}
 
-			if jsdelegate.tryFunc("decideNavigationForURL", url.description) { decisionHandler(.Cancel); return }
+			if jsdelegate.tryFunc("decideNavigationForURL", url.description, webView) { decisionHandler(.Cancel); return }
 
 			switch navigationAction.navigationType {
 				case .LinkActivated:
@@ -90,12 +90,12 @@ extension WebViewController: WKNavigationDelegate {
 					let modkeys = navigationAction.modifierFlags
 					if modkeys.contains(NSEventModifierFlags.AlternateKeyMask) { NSWorkspace.sharedWorkspace().openURL(url) } //alt-click
 						else if modkeys.contains(NSEventModifierFlags.CommandKeyMask) { popup(MPWebView(url: url, agent: webView._customUserAgent)) } //cmd-click
-						else if !jsdelegate.tryFunc("decideNavigationForClickedURL", url.description) { // allow override from JS
+						else if !jsdelegate.tryFunc("decideNavigationForClickedURL", url.description, webView) { // allow override from JS
 							if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
 							popup(MPWebView(url: url, agent: webView._customUserAgent)) // middle-clicked, or out of frame target link
 						}
 #elseif os(iOS)
-					if !jsdelegate.tryFunc("decideNavigationForClickedURL", url.description) { // allow override from JS
+					if !jsdelegate.tryFunc("decideNavigationForClickedURL", url.description, webView) { // allow override from JS
 						if navigationAction.targetFrame != nil { fallthrough } // tapped in_frame target link
 						popup(MPWebView(url: url, agent: webView._customUserAgent)) // out of frame target link
 					}
@@ -142,7 +142,7 @@ extension WebViewController: WKNavigationDelegate {
 		//let len = navigationResponse.response.expectedContentLength
 		//let enc = navigationResponse.response.textEncodingName
 
-		if jsdelegate.tryFunc("decideNavigationForMIME", mime, url.description) { decisionHandler(.Cancel); return } //FIXME perf hit?
+		if jsdelegate.tryFunc("decideNavigationForMIME", mime, url.description, webView) { decisionHandler(.Cancel); return } //FIXME perf hit?
 
 		// if explicitly attached as file, download it
 		if let httpResponse = navigationResponse.response as? NSHTTPURLResponse {
@@ -167,7 +167,7 @@ extension WebViewController: WKNavigationDelegate {
 		}
 
 		if !navigationResponse.canShowMIMEType {
-			if !jsdelegate.tryFunc("handleUnrenderableMIME", mime, url.description, fn) {
+			if !jsdelegate.tryFunc("handleUnrenderableMIME", mime, url.description, fn, webView) {
 				//let uti = UTI(MIMEType: mime) 
 				warn("cannot render requested MIME-type:\(mime) @ \(url)")
 				// if scheme is not http|https && askToOpenURL(url)
@@ -223,7 +223,7 @@ extension WebViewController: WKNavigationDelegate {
 		// RDAR? would like the tgt string to be passed here
 
 		warn("<\(srcurl)>: window.open(\(openurl), \(tgt))")
-		if jsdelegate.tryFunc("decideWindowOpenForURL", openurl.description) { return nil }
+		if jsdelegate.tryFunc("decideWindowOpenForURL", openurl.description, webView) { return nil }
 		let wv = MPWebView(config: configuration, agent: webView._customUserAgent)
 		popup(wv)
 #if os(OSX)
@@ -244,7 +244,7 @@ extension WebViewController: WKNavigationDelegate {
 #endif
 		//if !tgt.description.isEmpty { evalJS("window.name = '\(tgt)';") }
 		if !openurl.description.isEmpty { wv.gotoURL(openurl) } // this should be deferred with a timer so all chained JS calls on the window.open() instanciation can finish executing
-		jsdelegate.tryFunc("DidWindowOpenForURL", openurl.description, wv) // allow app.js to tweak any created windows 
+		jsdelegate.tryFunc("DidWindowOpenForURL", openurl.description, wv, webView) // allow app.js to tweak any created windows
 		return wv // window.open() -> Window()
 		//return nil //window.open() -> undefined
 	}

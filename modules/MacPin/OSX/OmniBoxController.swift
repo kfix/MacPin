@@ -112,6 +112,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			cell.usesSingleLineMode = true
 			cell.focusRingType = .None
 			//cell.currentEditor()?.delegate = self // do live validation of input URL before Enter is pressed
+			// FIXME: handle cmd+enter for open in new tab
 		}
 
 		// should have a grid of all tabs below the urlbox, safari style. NSCollectionView?
@@ -128,10 +129,14 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	}
 
 	func userEnteredURL() {
-		if let tf = view as? NSTextField, url = validateURL(tf.stringValue) {
+		if let tf = view as? NSTextField, url = validateURL(tf.stringValue, fallback: { [unowned self] (urlstr: String) -> NSURL? in 
+			if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr, self.webview ?? false) { return nil } // app.js did its own thing FIXME: it should be able to return URL<->NSURL
+			return nil
+		}){
 			if let wv = webview { //would be cool if I could just kick up gotoURL to nextResponder as NSResponder
 				view.window?.makeFirstResponder(wv) // no effect if this vc was brought up as a modal sheet
-				wv.gotoURL(url as NSURL)
+				warn(url.description)
+				wv.gotoURL(url)
 				cancelOperation(self)
 			} else { // tab-less browser window ...
 				parentViewController?.addChildViewController(WebViewControllerOSX(webview: MPWebView(url: url))) // is parentVC the toolbar or contentView VC??

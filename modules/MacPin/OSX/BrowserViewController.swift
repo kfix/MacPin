@@ -98,18 +98,16 @@ struct WeakThing<T: AnyObject> {
 		tabView.selectNextTabViewItem(self) //safari behavior
 	}
 
-	private func tabView(tabView: NSTabView, willSelectTabViewItem tabViewItem: NSTabViewItem) {
+	override func tabView(tabView: NSTabView, willSelectTabViewItem tabViewItem: NSTabViewItem?) {
 		super.tabView(tabView, willSelectTabViewItem: tabViewItem)
-		//if omnibox.webview != nil { omnibox.unbind("webview") }
-		if let wv = tabViewItem.view as? MPWebView {
-			//omnibox.bind("webview", toObject: tabViewItem, withKeyPath: "view", options: nil)
+		if let view = tabViewItem?.view, let wv = view as? MPWebView {
 			omnibox.webview = wv
 		}
 	}
 
-	private func tabView(tabView: NSTabView, didSelectTabViewItem tabViewItem: NSTabViewItem) {
+	override func tabView(tabView: NSTabView, didSelectTabViewItem tabViewItem: NSTabViewItem?) {
 		super.tabView(tabView, didSelectTabViewItem: tabViewItem)
-		if let window = view.window, view = tabViewItem.view {
+		if let window = view.window, view = tabViewItem?.view {
 			window.makeFirstResponder(view) // steal app focus to whatever the tab represents
 		}
 	}
@@ -119,7 +117,7 @@ struct WeakThing<T: AnyObject> {
 		if tabView.tabViewItems.count == 0 { view.window?.performClose(nil) }
 	}
 
-	private func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] {
+	override func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [String] {
 		let tabs = super.toolbarAllowedItemIdentifiers(toolbar) ?? []
 		warn(tabs.description)
 		return tabs + [
@@ -143,7 +141,7 @@ struct WeakThing<T: AnyObject> {
 		]
 	}
 
-	private func toolbarDefaultItemIdentifiers(toolbar: NSToolbar) -> [AnyObject] {
+	override func toolbarDefaultItemIdentifiers(toolbar: NSToolbar) -> [String] {
 		let tabs = super.toolbarDefaultItemIdentifiers(toolbar) ?? []
 		return [BrowserButtons.Share.rawValue, BrowserButtons.NewTab.rawValue] + tabs + [BrowserButtons.OmniBox.rawValue] // [NSToolbarFlexibleSpaceItemIdentifier]
 		//tabviewcontroller remembers where tabs was and keeps pushing new tabs to that position
@@ -421,8 +419,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 			//mi.image?.size = NSSize(width: 16, height: 16) //FIXME: not limiting the size
 			mi.representedObject = wvc // FIXME: anti-retain needed?
 			mi.target = self
-			tabMenu.addItem(mi)
-			//if omnibox.webview == nil { omnibox.webview = wv } //very first tab added
+			//tabMenu.addItem(mi)
 
 			//let gridItem = tabGrid.newItemForRepresentedObject(wvc)
 			//gridItem.imageView = wv.favicon.icon
@@ -465,7 +462,6 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 
 			// unassign strong property references that will cause a retain cycle
 			//if omnibox.representedObject === wvc { omnibox.representedObject = nil }
-			//if omnibox.webview === wvc.webview { omnibox.webview = nil }
 			if let mitem = tabMenu.itemAtIndex(tabMenu.indexOfItemWithRepresentedObject(wvc)) {
 				mitem.unbind(NSTitleBinding)
 				mitem.unbind(NSImageBinding)
@@ -538,6 +534,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 			// if omnibox is already visible somewhere in the window, move key focus there
 			view.window?.makeFirstResponder(omnibox.view)
 		} else {
+			//let omnibox = OmniBoxController(webViewController: self)
 			// otherwise, present it as a sheet or popover aligned under the window-top/toolbar
 			//presentViewControllerAsSheet(omnibox) // modal, yuck
 			var poprect = view.bounds

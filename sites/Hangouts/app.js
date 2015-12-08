@@ -23,7 +23,7 @@ $.browser.addShortcut("(secondary account) Google Voice call history", "https://
 
 var delegate = {}; // our delegate to receive events from the webview app
 
-delegate.DidWindowOpenForURL = function(url, webview) { webview.subscribeTo("SwitchToThisTab"); } //all popped-up tabs can select themselves
+delegate.DidWindowOpenForURL = function(url, child, parent) { child.subscribeTo("SwitchToThisTab"); } //all popped-up tabs can select themselves
 
 delegate.decideNavigationForClickedURL = function(url) {
 	if (

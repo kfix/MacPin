@@ -1,6 +1,6 @@
-/// MacPin Extensions
+/// MacPin Generics
 ///
-/// Global-scope utility functions
+/// Classless "generic" utility functions
 
 import Foundation
 import JavaScriptCore
@@ -74,7 +74,7 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 	return true
 }
 
-func validateURL(urlstr: String) -> NSURL? { // fallback: (String -> NSURL?)? = nil
+func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? {
 	// https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 	if urlstr.isEmpty { return nil }
 	if let urlp = NSURLComponents(string: urlstr) where !urlstr.characters.contains(" ") && !urlstr.hasPrefix("?") {
@@ -94,21 +94,22 @@ func validateURL(urlstr: String) -> NSURL? { // fallback: (String -> NSURL?)? = 
 		}
 	}
 
-	if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // the delegate function will open url directly
-	// return fallback?()
-
-	// maybe its a search query? check if blank and reformat it
-	// FIXME: this should get refactored to a browserController/OmniBoxController closure thats passed as fallback?
-	if !urlstr.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
+	if let url = fallback?(urlstr) { return url } // caller provided a failure mode which returned the url
+	else if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // compat with generic JS handler method
+	else {
+		// maybe its a search query? check if blank and reformat it
+		// FIXME: this should get refactored to a browserController/OmniBoxController closure thats passed as fallback?
+		if !urlstr.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
 		let query = urlstr.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding),
 		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") {
 			return search
 		}
-	// as a fallback, could forcibly change OmniBox stringValue to raw search terms
-	// FIXME: support OpenSearch to search current site on-the-fly https://en.wikipedia.org/wiki/OpenSearch
-	// https://developer.mozilla.org/en-US/Add-ons/Creating_OpenSearch_plugins_for_Firefox
+		// as a fallback, could forcibly change OmniBox stringValue to raw search terms
+		// FIXME: support OpenSearch to search current site on-the-fly https://en.wikipedia.org/wiki/OpenSearch
+		// https://developer.mozilla.org/en-US/Add-ons/Creating_OpenSearch_plugins_for_Firefox
 
-	return nil
+		return nil
+	}
 }
 
 func termiosREPL(eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2: StaticString = __FUNCTION__, abort:(()->Void)? = nil) {
