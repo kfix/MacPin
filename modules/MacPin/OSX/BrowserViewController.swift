@@ -419,7 +419,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 			//mi.image?.size = NSSize(width: 16, height: 16) //FIXME: not limiting the size
 			mi.representedObject = wvc // FIXME: anti-retain needed?
 			mi.target = self
-			//tabMenu.addItem(mi)
+			tabMenu.addItem(mi)
 
 			//let gridItem = tabGrid.newItemForRepresentedObject(wvc)
 			//gridItem.imageView = wv.favicon.icon
@@ -460,8 +460,6 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 		if let wvc = childViewControllers[index] as? WebViewController {
 			//if let tabIdx = find(tabs, wvc.webview) { tabs.removeAtIndex(tabIdx) }
 
-			// unassign strong property references that will cause a retain cycle
-			//if omnibox.representedObject === wvc { omnibox.representedObject = nil }
 			if let mitem = tabMenu.itemAtIndex(tabMenu.indexOfItemWithRepresentedObject(wvc)) {
 				mitem.unbind(NSTitleBinding)
 				mitem.unbind(NSImageBinding)
