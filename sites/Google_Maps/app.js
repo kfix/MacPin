@@ -7,10 +7,11 @@ var mapsTab, maps = {
 	url: "https://maps.google.com",
 	postinject: [],
 	preinject: ['shim_html5_notifications', 'shim_html5_geolocation'],
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates", "getGeolocation", "watchGeolocation, deactivateGeolocation"],
+	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
 	allowsMagnification: false // lets gmaps JS handle pinch-zooms
 };
-var mapsAlt = Object.assign({}, drive, {url: "https://www.google.com/maps/?authuser=1"});
+if ($.app.platform == "OSX") maps.subscribeTo.push("MacPinPollStates", "getGeolocation", "watchGeolocation", "deactivateGeolocation");
+var mapsAlt = Object.assign({}, maps, {url: "https://www.google.com/maps/?authuser=1"});
 
 // need to map pinchIn to scrollUp, pinchOut to scrollDown
 // rotate?

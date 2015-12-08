@@ -29,23 +29,28 @@ installdir			:= ~/Applications
 # http://www.objc.io/issue-17/inside-code-signing.html
 #`security find-identity`
 # https://developer.apple.com/library/mac/documentation/Security/Conceptual/CodeSigningGuide/Procedures/Procedures.html#//apple_ref/doc/uid/TP40005929-CH4-SW13
+appsig_iOS			:= iPhone Developer
+appsig_OSX			:= Mac Developer
 appsig				?= -
 # ^ ad-hoc, not so great
 # https://developer.apple.com/library/mac/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919-CH1-TNTAG20
 #open -a 'iOS Simulator.app' foobar.crt #add cert to simulator keychain
 
 bundle_untracked	?= 0
-appdir				?= $(outdir)/apps
+appdir				:= $(outdir)/apps
 appnames			= $(patsubst $(macpin_sites)/%,%.app,$(wildcard $(macpin_sites)/*))
 gen_apps			= $(patsubst $(macpin_sites)/%,$(appdir)/%.app,$(wildcard $(macpin_sites)/*))
 #gen_action_exts	= $(patsubst %,$(appdir)/%.appex,$(apps))
 $(info Buildable MacPin apps:)
 $(foreach app,$(gen_apps), $(info $(app)) )
 
-ifeq ($(filter $(arch),$(archs_macosx)),)
+ifeq (,$(filter $(arch),$(archs_macosx)))
+$(info Prompt filtered! $(execs))
 # only intel platforms have libedit so only those execs can have terminal CLIs
-$(execs): $(filter-out %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics))
+$(execs): $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics))
+$(info $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics)))
 else
+$(info Prompt unfiltered! $(execs))
 $(execs): $(statics)
 endif
 
@@ -54,18 +59,25 @@ endif
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly $(gen_apps): $(execs)
 test apirepl tabrepl test.app test.ios: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
-ifeq ($(appsig),-)
+
+ifeq (iphonesimulator, $(sdk))
+codesign :=
+else ifneq (,$(appsig_$(platform)))
+appsig	:= $(appsig_$(platform))
+codesign := yes
+else ifeq ($(appsig),-)
 codesign := yes
 else ifneq ($(appsig),)
 test test.app release: codesign := yes
 endif
+
 wknightly: DYLD_FRAMEWORK_PATH=/Volumes/WebKit/WebKit.app/Contents/Frameworks/10.10
 reinstall: allapps uninstall install
 noop: ;
 #allow these targets to pull in all files in sites/*/
 %.app install: bundle_untracked := 1
 
-ifeq ($(IS_A_REMAKE),)
+ifeq (0,$(MAKELEVEL))
 # parent make invocation
 else
 #submake
@@ -139,9 +151,9 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/Contents
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist
 	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
-	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s $(appsig) -f --deep --ignore-resources --entitlements $(outdir)/entitlements.plist $@
+	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/entitlements.plist $@
 	-codesign --display -r- --verbose=4 --entitlements :- $@
-	-spctl --verbose=4 --assess --type execute $@
+	-spctl -vvvv --raw --assess --type execute $@
 	-asctl container acl list -file $@
 	@touch $@
 #xattr -w com.apple.application-instance $(shell echo uuidgen) $@
@@ -167,8 +179,11 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/entitlements.pl
 	install_name_tool -rpath @loader_path/../SwiftSupport @loader_path/SwiftSupport $@/$*
 	[ ! -n "$(wildcard $(outdir)/Frameworks/*.dylib)" ] || cp -a $(outdir)/Frameworks $@/
 	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/
-
-	cp -RL $(macpin_sites)/$*/* $@/
+	rsync -av --exclude='Library/' $(macpin_sites)/$*/ $@
+	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/entitlements.plist $@
+	-codesign --display -r- --verbose=4 --entitlements :- $@
+	-spctl -vvvv --raw --assess --type execute $@
+	-asctl container acl list -file $@
 	@touch $@
 endif
 
@@ -194,7 +209,7 @@ $(appdir)/%.share.appex: $(icons)/%.icns $(macpin_sites)/$*/appex.share.plist $(
 
 ifeq ($(sdk)-$(arch),iphonesimulator-x86_64)
 install:
-	open -a "iOS Simulator.app"
+	open -a "/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app"
 	xcrun simctl getenv booted foobar || sleep 5
 	@xcrun simctl list | grep $(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)
 	# pre-A7 devices (ipad mini 2, ipad air, iphone 5s) cannot run x86_64 builds
@@ -227,7 +242,6 @@ test:
 	#-defaults delete $(macpin)
 	($< http://browsingtest.appspot.com)
 
-#`rlwrap macpin -i` could work instead of modules/Prompt
 apirepl: ; ($< -i)
 tabrepl: ; ($< -t)
 
@@ -235,7 +249,7 @@ test.app: $(appdir)/$(macpin).app
 	#banner ':-}' | open -a $$PWD/$^ -f
 	#-defaults delete $(template_bundle_id).$(macpin)
 	#(open $^) &
-	($^/Contents/MacOS/$(macpin))
+	($^/Contents/MacOS/$(macpin) -i)
 # https://github.com/WebKit/webkit/blob/master/Tools/Scripts/webkitdirs.pm
 
 # debug: $(appdir)/test.app
@@ -245,13 +259,14 @@ test.app: $(appdir)/$(macpin).app
 /usr/local/bin/ios-sim: ; brew install ios-sim
 ifeq ($(sdk)-$(arch),iphonesimulator-x86_64)
 test.ios: $(appdir)/$(macpin).app /usr/local/bin/ios-sim
-	open -a "iOS Simulator.app"
+	plutil -convert binary1 $</Info.plist
+	-open -a "iOS Simulator.app"
 	xcrun simctl getenv booted foobar || sleep 5
 	@xcrun simctl list | grep $(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)
 	# pre-A7 devices (ipad mini 2, ipad air, iphone 5s) cannot run x86_64 builds
 	# if app closes without showing launch screen, try changing the simulated device to A7 or later
 	#xcrun simctl install booted $<; xcrun simctl launch booted $(template_bundle_id).$(macpin)
-	-ios-sim launch $< || sleep 10
+	-ios-sim --devicetypeid "iPhone-6s,9.1" launch $< || sleep 10
 	-tail -n100 ~/Library/Logs/CoreSimulator/$(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)/system.log
 	-@for i in ~/Library/Logs/DiagnosticReports/$(macpin)_$(shell date +%Y-%m-%d-%H%M)*_$(shell scutil --get LocalHostName).crash; do [ -f $$i ] && cat $$i && echo $$i; break; done
 else

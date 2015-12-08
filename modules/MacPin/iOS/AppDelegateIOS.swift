@@ -37,13 +37,22 @@ extension AppDelegateIOS: UIApplicationDelegate { //UIResponder
 		//	https://developer.apple.com/library/ios/documentation/WindowsViews/Conceptual/WindowAndScreenGuide/UsingExternalDisplay/UsingExternalDisplay.html#//apple_ref/doc/uid/TP40012555-CH3-SW1
 
 
-		for arg in Process.arguments {
+		for (idx, arg) in Process.arguments.enumerate() {
 			switch (arg) {
 				case "-i":
 					if isatty(1) == 1 { AppScriptRuntime.shared.REPL() } //open a JS console on the terminal, if present
-				case "-iT":
-					warn()
-					if isatty(1) == 1 { browserController.tabSelected?.REPL() } //open a JS console for the first tab WebView on the terminal, if present
+				case "-t":
+					if isatty(1) == 1 {
+						if idx + 1 >= Process.arguments.count { // no arg after this one
+							browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
+							break
+						}
+						if let tabnum = Int(Process.arguments[idx + 1]) where browserController.tabs.count >= tabnum { // next argv should be tab number
+							browserController.tabs[tabnum].REPL() // open a JS Console on the requested tab number
+						} else {
+							browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
+						}
+					}
 					// ooh, pretty: https://github.com/Naituw/WBWebViewConsole
 					// https://github.com/Naituw/WBWebViewConsole/blob/master/WBWebViewConsole/Views/WBWebViewConsoleInputView.m
 				default:

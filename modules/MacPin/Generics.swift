@@ -133,7 +133,7 @@ func termiosREPL(eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2
 		// prompt loop killed, dealloc'd?
 	}
 #else
-	println("Prompt() not available on this device.")
+	print("Prompt() not available on this device.")
 #endif
 }
 

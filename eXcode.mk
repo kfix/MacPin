@@ -23,7 +23,7 @@ sdk					?= macosx
 
 archs_macosx		?= i386 x86_64
 archs_iphonesimulator	?= $(archs_macosx)
-archs_iphoneos		?= arm arm64
+archs_iphoneos		?= armv7 armv7s arm64
 arch				?= $(shell uname -m)
 
 target_ver_OSX		?= 10.11
@@ -43,12 +43,12 @@ outdir				:= $(builddir)/$(sdk)-$(arch)-$(target_$(platform))
 #-> platform, sdk, arch, target
 #$(info $(0) $(1) $(2) $(3) $(4))
 define REMAKE_template
-submake_$(1)_$(2)_$(3)_$(4): ; $$(MAKE) platform=$(1) sdk=$(2) arch=$(3) target=$(4) IS_A_REMAKE=1 $(filter-out cross,$(MAKECMDGOALS))
+submake_$(1)_$(2)_$(3)_$(4): ; $$(MAKE) platform=$(1) sdk=$(2) arch=$(3) target=$(4) $(filter-out cross,$(MAKECMDGOALS))
 allarchs += submake_$(1)_$(2)_$(3)_$(4)
 cross: submake_$(1)_$(2)_$(3)_$(4)
 endef
 
-ifeq ($(IS_A_REMAKE),)
+ifeq (0,$(MAKELEVEL))
 # this is the parent invocation of make
 allarches	=
 cross: ; @echo [$(eXcode)] Finished target $@: $^
@@ -80,6 +80,7 @@ $(info [$(eXcode)] $$(target) := $(target))
 #modules with clang modulemaps (and probably associated C-headers and linklib hints)
 incdirs				:= -I modules
 # ^ clang will recurse one more level to check modules/*/*.modulemaps
+#incdirs += /Applications/Xcode.app/Contents/Developer//Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(sdk)/$(arch)/
 
 #find all modules with compilable source code
 build_mods			:= $(sort $(filter-out %/$(platform),$(patsubst modules/%/,%,$(dir $(wildcard modules/*/*.m modules/*/$(platform)/*.m modules/*/*.swift modules/*/$(platform)/*.swift)))))
@@ -97,11 +98,11 @@ build_mods			:= $(filter-out $(exec_mods),$(build_mods))
 # any modules left should be built into static libraries
 statics				:= $(patsubst %,$(outdir)/obj/lib%.a,$(build_mods:modules/%=%))
 $(info [$(eXcode)] $$(statics) (static libraries available to build): $(statics))
-statics:	$(statics);
+#statics:	$(statics);
 
 dynamics			:= $(patsubst %,$(outdir)/Frameworks/lib%.dylib,$(build_mods:modules/%=%))
 $(info [$(eXcode)] $$(dynamics) (dynamic libraries available to build): $(dynamics))
-dynamics:	$(dynamics);
+#dynamics:	$(dynamics);
 
 #objs				:= $(patsubst %,$(outdir)/obj/%.o,$(build_mods:modules/%=%))
 #$(info $(eXcode) - Objects available to build: $(objs))
@@ -122,7 +123,7 @@ clang				:= xcrun -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platfor
 
 libdirs				:= -L $(outdir)/Frameworks -L $(outdir)/obj
 incdirs				+= -I $(outdir)
-os_frameworks		+= -F $(sdkpath)/System/Library/Frameworks -L $(sdkpath)/System/Library/Frameworks
+os_frameworks		:= -F $(sdkpath)/System/Library/Frameworks -L $(sdkpath)/System/Library/Frameworks
 frameworks			:= -F $(outdir)/Frameworks
 swiftlibdir			:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift/$(sdk) $(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(sdk)))
 swiftstaticdir		:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift_static/$(sdk) $(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift_static/$(sdk)))
@@ -194,10 +195,10 @@ $(outdir)/Frameworks/lib%.dylib: modules/%/*.m | $(outdir)/Frameworks
 # https://developer.apple.com/library/mac/documentation/General/Reference/InfoPlistKeyReference/Articles/SystemExtensionKeys.html#//apple_ref/doc/uid/TP40014212-SW15
 
 $(outdir)/obj/lib%.a: modules/%/*.m | $(outdir)/obj
-	mkdir $(dir $@)/lib$*; cd $(dir $@)/lib$*; for i in $(realpath $^); do \
+	mkdir $(dir $@)lib$*; cd $(dir $@)lib$*; for i in $(realpath $^); do \
 		$(clang) -ObjC -c $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) $$i; \
 	done;
-	libtool -static -o $@ $(patsubst %.m,$(dir $@)/lib$*/%.o,$(notdir $^))
+	libtool -static -o $@ $(patsubst %.m,$(dir $@)lib$*/%.o,$(notdir $^))
 
 $(outdir)/obj/lib%.a: $(outdir)/obj/%.o
 	libtool -static -o $@ $^

@@ -8,11 +8,13 @@ class Geolocator: NSObject  {
 
 	var subscribers: [MPWebView] = []
 
+#if os(OSX)
 	override init() {
 		super.init()
 		manager.delegate = self
 		manager.desiredAccuracy = kCLLocationAccuracyBest
 	}
+#endif
 
 	func sendLocationEvent(webview: MPWebView) {
 		if !subscribers.contains(webview) { subscribers.append(webview) }
@@ -30,7 +32,12 @@ extension Geolocator: CLLocationManagerDelegate {
 		//if (error != nil) { warn(error) }
 	}
 
-	@objc internal func locationManager(manager: CLLocationManager, didUpdateLocations locations: [AnyObject]) {
+//iOS9:
+//	func locationManager(manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+//		if let location = locations.last {
+
+#if os(OSX)
+	func locationManager(manager: CLLocationManager, didUpdateLocations locations: [AnyObject]) {
 		if let location = locations.last as? CLLocation where locations.count > 0 {
 			currentLocation = location
 			warn("lat: \(location.coordinate.latitude) lon:\(location.coordinate.longitude)")
@@ -44,6 +51,7 @@ extension Geolocator: CLLocationManagerDelegate {
 
 		}
     }
+#endif
 
 	func locationManager(manager: CLLocationManager, didChangeAuthorizationStatus status: CLAuthorizationStatus) {
 		switch status {
