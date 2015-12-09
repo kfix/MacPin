@@ -384,6 +384,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	func REPL() {
 #if os(OSX)
+		NSProcessInfo.processInfo().disableSuddenTermination()
 		NSProcessInfo.processInfo().disableAutomaticTermination("REPL")
 #endif
 		termiosREPL(
@@ -402,6 +403,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			abort: { () -> Void in
 				// EOF'd by Ctrl-D
 #if os(OSX)
+				NSProcessInfo.processInfo().enableSuddenTermination()
 				NSProcessInfo.processInfo().enableAutomaticTermination("REPL")
 				NSApplication.sharedApplication().terminate(self)
 #endif
