@@ -14,7 +14,7 @@ macpin				:= MacPin
 macpin_sites		?= sites
 
 template_bundle_id	:= com.github.kfix.MacPin
-xcassets			?= $(builddir)/xcassets/$(platform)
+xcassets			:= $(builddir)/xcassets/$(platform)
 icontypes			:= imageset
 
 ifeq ($(platform),OSX)
@@ -34,7 +34,9 @@ appsig_OSX			:= Mac Developer
 appsig				?= -
 # ^ ad-hoc, not so great
 # https://developer.apple.com/library/mac/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919-CH1-TNTAG20
-#open -a 'iOS Simulator.app' foobar.crt #add cert to simulator keychain
+
+# https://developer.apple.com/library/ios/technotes/tn2415/_index.html
+mobileprov_team_id := HKFYQ3A8TC
 
 bundle_untracked	?= 0
 appdir				:= $(outdir)/apps
@@ -107,14 +109,14 @@ $(xcassets)/%.xcassets: templates/xcassets/%/*.png
 #Render plist template w/shell vars
 define gen_plist_template
 	install -d $(dir $@)
-	EXECUTABLE_NAME=$* BUNDLE_ID=$(template_bundle_id).$* eval "echo \"$$(cat $<)\"" > $@
+	EXECUTABLE_NAME=$* BUNDLE_ID=$(template_bundle_id).$* PROV_ID=$(mobileprov_team_id) eval "echo \"$$(cat $<)\"" > $@
 endef
 
 # https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
 # https://developer.apple.com/library/ios/qa/qa1686/_index.html
 $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/Info.plist: templates/$(platform)/Info.plist
 	$(gen_plist_template)
-$(outdir)/entitlements.plist: templates/$(platform)/entitlements.plist
+$(outdir)/%.entitlements.plist: templates/$(platform)/entitlements.plist
 	$(gen_plist_template)
 
 # phony targets for cmdline convenience
@@ -139,7 +141,7 @@ $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/
 # https://developer.apple.com/library/mac/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html#//apple_ref/doc/uid/10000123i-CH101-SW1
 # https://developer.apple.com/library/mac/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
 # https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html
-$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/
+$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/
 	@install -d $@ $@/Contents/MacOS $@/Contents/Resources
 	$(patsubst %,cp % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
 	cp -RL templates/Resources $@/Contents
@@ -151,7 +153,7 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/Contents
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist
 	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
-	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/entitlements.plist $@
+	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
 	-codesign --display -r- --verbose=4 --entitlements :- $@
 	-spctl -vvvv --raw --assess --type execute $@
 	-asctl container acl list -file $@
@@ -171,7 +173,7 @@ $(appdir)/%.app/LaunchScreen.nib: templates/$(platform)/LaunchScreen.xib
 	@install -d $(dir $@)
 	ibtool --compile $@ $<
 
-$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/entitlements.plist $(appdir)/%.app/Info.plist templates/$(platform)/LaunchScreen.xib $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Assets.car templates/Resources templates/Resources/*
+$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.plist $(appdir)/%.app/Info.plist templates/$(platform)/LaunchScreen.xib $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Assets.car templates/Resources templates/Resources/*
 	@install -d $@ $@/Frameworks
 	@install -d $@ $@/SwiftSupport
 	$(patsubst %,cp % $@/$*;,$(filter $(outdir)/exec/%,$^))
@@ -180,7 +182,7 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/entitlements.pl
 	[ ! -n "$(wildcard $(outdir)/Frameworks/*.dylib)" ] || cp -a $(outdir)/Frameworks $@/
 	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/
 	rsync -av --exclude='Library/' $(macpin_sites)/$*/ $@
-	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/entitlements.plist $@
+	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
 	-codesign --display -r- --verbose=4 --entitlements :- $@
 	-spctl -vvvv --raw --assess --type execute $@
 	-asctl container acl list -file $@
@@ -215,6 +217,9 @@ install:
 	# pre-A7 devices (ipad mini 2, ipad air, iphone 5s) cannot run x86_64 builds
 	# if app closes without showing launch screen, try changing the simulated device to A7 or later
 	for i in $(filter %.app,$^); do xcrun simctl install booted $$i; done
+else ifeq ($(sdk)-$(arch),iphoneos-arm64)
+install: /usr/local/bin/ios-deploy
+	for i in $(filter %.app,$^); do ios-deploy -b $$i; done
 else
 install:
 	cp -R $(filter %.app,$^) ~/Applications
@@ -256,19 +261,22 @@ test.app: $(appdir)/$(macpin).app
 # http://stackoverflow.com/questions/24715891/access-a-swift-repl-in-cocoa-programs
 
 # make cross test.ios
-/usr/local/bin/ios-sim: ; brew install ios-sim
+/usr/local/bin/ios-sim: ; npm -g install ios-sim
+/usr/local/bin/ios-deploy: ; npm -g install ios-deploy
 ifeq ($(sdk)-$(arch),iphonesimulator-x86_64)
-test.ios: $(appdir)/$(macpin).app /usr/local/bin/ios-sim
+test.ios: $(appdir)/$(macpin).app
 	plutil -convert binary1 $</Info.plist
-	-open -a "iOS Simulator.app"
+	open -a "/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app"
 	xcrun simctl getenv booted foobar || sleep 5
 	@xcrun simctl list | grep $(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)
 	# pre-A7 devices (ipad mini 2, ipad air, iphone 5s) cannot run x86_64 builds
 	# if app closes without showing launch screen, try changing the simulated device to A7 or later
-	#xcrun simctl install booted $<; xcrun simctl launch booted $(template_bundle_id).$(macpin)
-	-ios-sim --devicetypeid "iPhone-6s,9.1" launch $< || sleep 10
+	xcrun simctl install booted $<; xcrun simctl launch booted $(template_bundle_id).$(macpin)
 	-tail -n100 ~/Library/Logs/CoreSimulator/$(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)/system.log
 	-@for i in ~/Library/Logs/DiagnosticReports/$(macpin)_$(shell date +%Y-%m-%d-%H%M)*_$(shell scutil --get LocalHostName).crash; do [ -f $$i ] && cat $$i && echo $$i; break; done
+else ifeq ($(sdk)-$(arch),iphoneos-arm64)
+test.ios: $(appdir)/$(macpin).app /usr/local/bin/ios-deploy
+	ios-deploy -b $<
 else
 test.ios: ;
 # make SIM_ONLY=1 test.ios
@@ -321,5 +329,5 @@ release:
 endif
 
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib
-.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release wknightly doc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease
+.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release wknightly doc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics
 .SUFFIXES:
