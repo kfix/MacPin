@@ -18,6 +18,7 @@ function vtype(obj) {
   return vt;
 }
 function isprimitive(vt) {
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects
   switch (vt) {
     case 'String':
     case 'Number':
@@ -27,6 +28,7 @@ function isprimitive(vt) {
     case 'RegExp':
     case 'Null':
 	case 'Object':
+	case 'GlobalObject':
       return true;
   }
   return false;
@@ -36,12 +38,17 @@ function isprimitive(vt) {
 delegate.REPLprint = function(result) {
 	var description = JSON.stringify(result, function (k,v) { //replacer func
 		var type = vtype(v);
+		if (vtype == 'GlobalObject') {
+			var ret = {};
+			for (pn in Object.getOwnPropertyNames(result)) { ret[pN] = result[pN]; }
+			return ret;
+		}
 		if (!isprimitive(type)) return type;
 		return v;
 	}, 1);
 	var rtype = vtype(result);
-	if (!isprimitive(rtype)) description = result.__proto__ ? Object.getOwnPropertyNames(result.__proto__) : Object.getOwnPropertyNames(result); //dump props of custom objects
-	if (rtype == 'Function') description += '\n' + result.toString(); // dump funcs' code
-	var ret = `[${rtype}]:  ${description}`;
+	if (rtype == 'Function') description = result.toString(); // dump funcs' code
+	if (result.__proto__) description += `\n${rtype}.__proto__: ${Object.getOwnPropertyNames(result.__proto__)}`;
+	var ret = `[${rtype}] = ${description}`;
 	return ret;
 };
