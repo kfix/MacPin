@@ -36,14 +36,16 @@ delegate.launchURL = function(url) {
 	var comps = url.split(':'),
 		scheme = comps.shift(),
 		addr = comps.shift();
-	switch (scheme + ':') {
-		case 'googlemaps:':
-		case 'gmaps:':
+	switch (scheme) {
+		case 'googlemaps':
+		case 'gmaps':
 			$.browser.unhideApp();
 			$.browser.tabSelected = mapsTab;
 			search(decodeURI(addr));
 			break;
 		default:
+			$.app.openURL(url);
+			console.log("opened "+url+" externally!");
 	}
 };
 
@@ -113,7 +115,7 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('Google Maps (using secondary account)', mapsAlt);
 	$.browser.addShortcut('Google Maps Dev Team blog', "http://google-latlong.blogspot.com");
 	$.browser.addShortcut('Classic gMaps', "http://gokml.net/maps");
-	$.browser.addShortcut("Install 'Show Address in Google Maps app' service", 'file://'+$.app.resourcePath+'/'+escape('Show Address in Google Maps app.workflow'));
+	$.browser.addShortcut("Install 'Show Address in Google Maps app' service", `http://github.com/kfix/MacPin/tree/master/extras/${escape('Show Address in Google Maps app.workflow')}`);
 
 	if ($.launchedWithURL != '') { // app was launched with a search query
 		mapsTab.asyncEvalJS( // need to wait for app.js to load and render DOM
