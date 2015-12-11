@@ -95,6 +95,7 @@ extension WebViewController: WKNavigationDelegate {
 							popup(MPWebView(url: url, agent: webView._customUserAgent)) // middle-clicked, or out of frame target link
 						}
 #elseif os(iOS)
+					// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/ios/WKActionSheetAssistant.mm
 					if !jsdelegate.tryFunc("decideNavigationForClickedURL", url.description, webView) { // allow override from JS
 						if navigationAction.targetFrame != nil { fallthrough } // tapped in_frame target link
 						popup(MPWebView(url: url, agent: webView._customUserAgent)) // out of frame target link

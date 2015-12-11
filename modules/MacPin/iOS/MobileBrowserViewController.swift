@@ -292,28 +292,30 @@ extension UIView {
 	//override func sizeForChildContentContainer(container: UIContentContainer, withParentContainerSize parentSize: CGSize) -> CGSize {}
 	// return view.frame.size - status & toolbars?
 
-	private func supportedInterfaceOrientations() -> Int { return Int(UIInterfaceOrientationMask.All.rawValue) }
+	override func supportedInterfaceOrientations() -> UIInterfaceOrientationMask { return .All }
 
-	private func observeValueForKeyPath(keyPath: String, ofObject object: AnyObject, change: [NSObject : AnyObject], context: UnsafeMutablePointer<Void>) {
-		switch (keyPath) {
-			case "webview.estimatedProgress": if let prog = change[NSKeyValueChangeNewKey] as? Float {
-					if prog == 1 {
-						progBar.progress = 0.0
-						progBar.hidden = true
-					} else {
-						progBar.hidden = false
-						progBar.setProgress(prog, animated: true)
+	override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutablePointer<Void>) {
+		if let keyPath = keyPath {
+			switch (keyPath) {
+				case "webview.estimatedProgress": if let prog = change?[NSKeyValueChangeNewKey] as? Float {
+						if prog == 1 {
+							progBar.progress = 0.0
+							progBar.hidden = true
+						} else {
+							progBar.hidden = false
+							progBar.setProgress(prog, animated: true)
+						}
 					}
-				}
-			case "webview.URL":	if let url = change[NSKeyValueChangeNewKey] as? NSURL {
-					//navBar.text = urlstr
-					navBox.text = url.absoluteString
-				}
-			case "webview.title": if let title = change[NSKeyValueChangeNewKey] as? String where !title.isEmpty {
-					//navBar.prompt = title
-					navBox.text = title
-				}
-			default: warn(keyPath)
+				case "webview.URL":	if let url = change?[NSKeyValueChangeNewKey] as? NSURL {
+						//navBar.text = urlstr
+						navBox.text = url.absoluteString
+					}
+				case "webview.title": if let title = change?[NSKeyValueChangeNewKey] as? String where !title.isEmpty {
+						//navBar.prompt = title
+						navBox.text = title
+					}
+				default: warn(keyPath)
+			}
 		}
 	}
 

@@ -30,7 +30,7 @@ installdir			:= ~/Applications
 #`security find-identity`
 # https://developer.apple.com/library/mac/documentation/Security/Conceptual/CodeSigningGuide/Procedures/Procedures.html#//apple_ref/doc/uid/TP40005929-CH4-SW13
 appsig_iOS			:= iPhone Developer
-appsig_OSX			:= Mac Developer
+#appsig_OSX			:= Mac Developer
 appsig				?= -
 # ^ ad-hoc, not so great
 # https://developer.apple.com/library/mac/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919-CH1-TNTAG20
@@ -47,12 +47,10 @@ $(info Buildable MacPin apps:)
 $(foreach app,$(gen_apps), $(info $(app)) )
 
 ifeq (,$(filter $(arch),$(archs_macosx)))
-$(info Prompt filtered! $(execs))
 # only intel platforms have libedit so only those execs can have terminal CLIs
 $(execs): $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics))
 $(info $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics)))
 else
-$(info Prompt unfiltered! $(execs))
 $(execs): $(statics)
 endif
 
@@ -61,6 +59,7 @@ endif
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly $(gen_apps): $(execs)
 test apirepl tabrepl test.app test.ios: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
+test apirepl tabrepl test.app test.ios: $(execs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))
 codesign :=
@@ -70,6 +69,7 @@ codesign := yes
 else ifeq ($(appsig),-)
 codesign := yes
 else ifneq ($(appsig),)
+test test.app release: appsig := -
 test test.app release: codesign := yes
 endif
 
@@ -261,6 +261,7 @@ test.app: $(appdir)/$(macpin).app
 # http://stackoverflow.com/questions/24715891/access-a-swift-repl-in-cocoa-programs
 
 # make cross test.ios
+# .crash: https://developer.apple.com/library/ios/technotes/tn2151/_index.html
 /usr/local/bin/ios-sim: ; npm -g install ios-sim
 /usr/local/bin/ios-deploy: ; npm -g install ios-deploy
 ifeq ($(sdk)-$(arch),iphonesimulator-x86_64)
@@ -271,12 +272,12 @@ test.ios: $(appdir)/$(macpin).app
 	@xcrun simctl list | grep $(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)
 	# pre-A7 devices (ipad mini 2, ipad air, iphone 5s) cannot run x86_64 builds
 	# if app closes without showing launch screen, try changing the simulated device to A7 or later
-	xcrun simctl install booted $<; xcrun simctl launch booted $(template_bundle_id).$(macpin)
+	-xcrun simctl install booted $<; xcrun simctl launch booted $(template_bundle_id).$(macpin) true
 	-tail -n100 ~/Library/Logs/CoreSimulator/$(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)/system.log
 	-@for i in ~/Library/Logs/DiagnosticReports/$(macpin)_$(shell date +%Y-%m-%d-%H%M)*_$(shell scutil --get LocalHostName).crash; do [ -f $$i ] && cat $$i && echo $$i; break; done
 else ifeq ($(sdk)-$(arch),iphoneos-arm64)
 test.ios: $(appdir)/$(macpin).app /usr/local/bin/ios-deploy
-	ios-deploy -b $<
+	ios-deploy -d -b $<
 else
 test.ios: ;
 # make SIM_ONLY=1 test.ios

@@ -235,7 +235,11 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	func openURL(urlstr: String, _ appid: String? = nil) {
 		if let url = NSURL(string: urlstr) {
 #if os(OSX)
-			NSWorkspace.sharedWorkspace().openURLs([url], withAppBundleIdentifier: appid, options: .Default, additionalEventParamDescriptor: nil, launchIdentifiers: nil)
+			if let appid = appid where appid != "undefined" {
+				NSWorkspace.sharedWorkspace().openURLs([url], withAppBundleIdentifier: appid, options: .Default, additionalEventParamDescriptor: nil, launchIdentifiers: nil)
+			} else {
+				NSWorkspace.sharedWorkspace().openURL(url)
+			}
 			//options: .Default .NewInstance .AndHideOthers
 			// FIXME: need to force focus on appid too, already launched apps may not pop-up#elseif os (iOS)
 #elseif os(iOS)

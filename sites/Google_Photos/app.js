@@ -5,11 +5,12 @@
 
 var photosTab, photos = {url: 'https://photos.google.com'},
 	photosAlt = {url: 'https://photos.google.com/u/1'};
+$.browser.tabSelected = photosTab = new $.WebView(photos);
 
 var delegate = {}; // our delegate to receive events from the webview app
 
 function search(query) {
-	$.browser.tabSelected = photosTab = new $.WebView({url: "https://photos.google.com/search/"+query}); // FIXME: do this in JS
+	photosTab.loadURL("https://photos.google.com/search/"+query); // FIXME: do this in JS
 }
 
 delegate.launchURL = function(url) {
@@ -17,13 +18,18 @@ delegate.launchURL = function(url) {
 	var comps = url.split(':'),
 		scheme = comps.shift(),
 		addr = comps.shift();
-	switch (scheme + ':') {
-		case 'file:':
+	switch (scheme) {
+		case 'http':
+		case 'https':
+		case 'file':
 			// prompt to do upload
-			photosTab.evalJS('confirm("Upload '+addr+'?");');
+			photosTab.evalJS('confirm("Upload '+url+'?");');
+			// http://stackoverflow.com/a/30565302/3878712
+			// document.querySelector("input[type='file']").click()
+			// document.querySelector("div[aria-label='Upload photos']").click()
 			break;
-		case 'googlephotos:':
-		case 'gphotos:':
+		case 'googlephotos':
+		case 'gphotos':
 			search(addr);
 			break;
 		default:
@@ -34,6 +40,8 @@ delegate.launchURL = function(url) {
 delegate.handleUserInputtedInvalidURL = function(query) {
 	// assuming the invalid url is a search request
 	search(encodeURI(query));
+	if ($.app.pathExists(query)) this.launchURL('file://' + query);
+	else search(encodeURI(query)); // assuming the invalid url is a search request
 	return true; // tell MacPin to stop validating the URL
 };
 
@@ -44,7 +52,7 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 		this.launchURL(url);
 		//$.browser.tabSelected = new $.WebView({url: url});
 	}
-	//return true;
+	return true;
 }
 
 delegate.AppFinishedLaunching = function() {
@@ -57,8 +65,6 @@ delegate.AppFinishedLaunching = function() {
 	if ($.launchedWithURL != '') { // app was launched with a feed url
 		this.launchURL($.launchedWithURL);
 		$.launchedWithURL = '';
-	} else {
-		$.browser.tabSelected = new $.WebView(photos);
 	}
 };
 delegate; //return this to macpin

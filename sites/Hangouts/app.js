@@ -86,6 +86,7 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 			// TODO: interpret commas as 2-sec delays and pounds as pounds
 			if ($.app.pathExists('/Library/Internet Plug-Ins/googletalkbrowserplugin.plugin')) {
 				// use NPAPI GoogleVoice & Video (Vidyo) plugin in the WebView
+				// window.a also seems to have a list of loaded plugins
 				$.browser.unhideApp(); //user might have switched apps while waiting for roster to load
 				$.browser.tabSelected = hangoutsTab;
 				hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['makeCall']);"); // Hangouts now does in-frame phone calls!

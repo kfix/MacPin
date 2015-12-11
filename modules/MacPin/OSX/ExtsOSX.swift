@@ -68,6 +68,7 @@ extension NSPasteboard {
 		let wkurls = WebURLsWithTitles.URLsFromPasteboard(self)
 
 		if let urls = readObjectsForClasses([NSURL.self], options: nil) as? [NSURL] {
+			// FIXME: pass file urls to separate JS handler - image drags from safari to dock icons are tmpfiles
 			clearContents() // have to wipe it clean in order to modify
 
 			// re-add any promises UTIs
