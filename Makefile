@@ -59,6 +59,7 @@ endif
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly $(gen_apps): $(execs)
 test apirepl tabrepl test.app test.ios: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
+test apirepl tabrepl test.app test.ios: $(execs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))
 codesign :=
@@ -260,6 +261,7 @@ test.app: $(appdir)/$(macpin).app
 # http://stackoverflow.com/questions/24715891/access-a-swift-repl-in-cocoa-programs
 
 # make cross test.ios
+# .crash: https://developer.apple.com/library/ios/technotes/tn2151/_index.html
 /usr/local/bin/ios-sim: ; npm -g install ios-sim
 /usr/local/bin/ios-deploy: ; npm -g install ios-deploy
 ifeq ($(sdk)-$(arch),iphonesimulator-x86_64)

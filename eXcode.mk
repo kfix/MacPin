@@ -151,13 +151,16 @@ define bundle_libswift
 	for lib in $$(otool -L $@ | awk -F '[/ ]' '$$2 ~ /^libswift.*\.dylib/ { printf $$2 " " }'); do \
 		cp $(swiftlibdir)/$$lib $(outdir)/SwiftSupport; \
 		for sublib in $$(otool -L $(swiftlibdir)/$$lib | awk -F '[/ ]' '$$2 ~ /libswift.*\.dylib/ { printf $$2 " " }'); do \
-			[ ! -f $(outdir)/SwiftSupport/$$sublib ] && cp $(swiftlibdir)/$$sublib $(outdir)/SwiftSupport; \
+			[ -f $(outdir)/SwiftSupport/$$sublib ] || cp $(swiftlibdir)/$$sublib $(outdir)/SwiftSupport; \
 		done; \
 	done;
 endef
 #^ my hope is that Swift will eventually become a system framework when Apple starts using it to build iOS/OSX system apps ...
 #  https://forums.developer.apple.com/message/9714
 #  http://mjtsai.com/blog/2015/06/12/swift-libraries-not-included-in-ios-9-or-el-capitan/
+
+$(outdir)/exec/%.dSYM: $(outdir)/exec/%
+	dsymutil $<
 
 #$(outdir)/exec/%: libdirs += -L $(swiftlibdir)
 $(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks $(outdir)/SwiftSupport
