@@ -36,6 +36,12 @@ ifneq ($(SIM_ONLY),)
 sdk := iphonesimulator
 platform := iOS
 target := $(target_iOS)
+else ifneq ($(A9_ONLY),)
+sdk := iphoneos
+platform := iOS
+target := $(target_iOS)
+arch := arm64
+archs_iphoneos := arm64
 endif
 
 outdir				:= $(builddir)/$(sdk)-$(arch)-$(target_$(platform))
@@ -144,7 +150,10 @@ $(outdir)/MacOS $(outdir)/exec $(outdir)/Frameworks $(outdir)/obj $(outdir)/Cont
 define bundle_libswift
 	for lib in $$(otool -L $@ | awk -F '[/ ]' '$$2 ~ /^libswift.*\.dylib/ { printf $$2 " " }'); do \
 		cp $(swiftlibdir)/$$lib $(outdir)/SwiftSupport; \
-	done
+		for sublib in $$(otool -L $(swiftlibdir)/$$lib | awk -F '[/ ]' '$$2 ~ /libswift.*\.dylib/ { printf $$2 " " }'); do \
+			[ ! -f $(outdir)/SwiftSupport/$$sublib ] && cp $(swiftlibdir)/$$sublib $(outdir)/SwiftSupport; \
+		done; \
+	done;
 endef
 #^ my hope is that Swift will eventually become a system framework when Apple starts using it to build iOS/OSX system apps ...
 #  https://forums.developer.apple.com/message/9714

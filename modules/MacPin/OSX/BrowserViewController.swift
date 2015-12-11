@@ -245,8 +245,9 @@ struct WeakThing<T: AnyObject> {
 		}
 	}
 
-	// optional func toolbarWillAddItem(_ notification: NSNotification)
-	// optional func toolbarDidRemoveItem(_ notification: NSNotification)
+	// override func toolbarWillAddItem(notification: NSNotification)
+	//	if let ti = notification.userInfo?["item"] as? NSToolbarItem, tb = ti.toolbar, tgt = ti.target as? TabViewController, btn = t i.view as? NSButton { warn(ti.itermIdentifier) }
+	// override func toolbarDidRemoveItem(notification: NSNotification)
 
 	override func loadView() {
 		//tabView.autoresizesSubviews = false
@@ -549,6 +550,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 		app.unhide() // un-minimize app
 		app.activateWithOptions(.ActivateIgnoringOtherApps) // brings up key window
 		view.window?.makeKeyAndOrderFront(nil) // steals key focus
+		// CoreProcess stealer: https://github.com/gnachman/iTerm2/commit/c2a79333da01116ce84ec38d573fd95e3f632e4f
 	}
 
 	func unhideApp() { // un-minimizes app, but doesn't steal key focus or screen or menubar
@@ -562,6 +564,11 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 		NSApplication.sharedApplication().arrangeInFront(self)
 		view.window?.makeKeyAndOrderFront(nil)
 */
+	}
+
+	func indicateTab(vc: NSViewController) {
+		// if VC has a tab, flash a popover pointed at its toolbar button to indicate its location<F29>
+		//if let tvi = tabViewItemForViewController(vc) { }
 	}
 
 	func bounceDock() { NSApplication.sharedApplication().requestUserAttention(.InformationalRequest) } //Critical keeps bouncing
