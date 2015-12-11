@@ -66,28 +66,25 @@ if (window.name == 'gtn-roster-iframe-id-b') { // roster
 if (window.name == 'preld') { //frame-id ^gtn_ this is a chatbox iframe
 	// remove google's redirect wrappers on all messaged links
 	// no evil being done here, amirite? -GoogleBruh
-	function fixLink(el) {
-		if (el.nodeName == 'A')
-			if (~el.href.indexOf("http://www.google.com/url?q="))
-				el.href = el.text;
-	}
 
-	function watchForGoogleRedirects(el) {
-		//look for changed element attributes in the chat list representing new messages and send them to the notifier
-					//for (var link of mut.target.querySelectorAll('a[href^="http://www.google.com/url?q="]'))
-		var cfg = { attributes: true, attributeFilter: ['href'], childList: true, characterData: false, subtree: true };
-		var watch = new MutationObserver(function(muts) {
-			for (var mut of muts) 
-				if (mut.type === 'childList')
-					Array.prototype.forEach.call(mut.addedNodes, fixLink);
-				if (mut.type === 'attributes')
-					if (mut.attributeName == 'href')
-						fixLink(mut.target);
-		});
-		watch.observe(el, cfg);
-		return watch;
-	}
-	watchForGoogleRedirects(document);
+	// from https://github.com/canisbos/DirectLinks/blob/master/DirectLinks.safariextension/injected.js
+	document.addEventListener('mousedown', function (e) {
+		var et = e.target, lc = -1;
+		while (et && !(et instanceof HTMLAnchorElement) && (3 > lc++))
+		    et = et.parentElement;
+		if (!et || !et.href) 
+		    return;
+		var link = et;
+		e.stopPropagation();
+		if (link.getAttribute('onmousedown')) {
+		    link.removeAttribute('onmousedown');
+		    if (link.pathname === '/url') {
+		        if ((/[?&]url=[^&]+/).test(link.search)) {
+		            link.href = decodeURIComponent(link.search.split(/[?&]url=/)[1].split('&')[0]);
+		        }
+		    }
+		}
+	}, false);
 }
 
 if ((window.name == 'preld') || ~window.name.indexOf('gtn_')) { //frame-id ^gtn_ this is a chatbox iframe
