@@ -59,7 +59,7 @@ endif
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly $(gen_apps): $(execs)
 test apirepl tabrepl test.app test.ios: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
-test apirepl tabrepl test.app test.ios: $(execs:%=%.dSYM)
+test apirepl tabrepl test.app test.ios: | $(execs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))
 codesign :=
