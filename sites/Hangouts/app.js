@@ -34,7 +34,13 @@ delegate.decideNavigationForClickedURL = function(url) {
 		) { // open all links externally except those above
 			$.app.openURL(url);
 			return true;
-		}
+	}
+	if (~url.indexOf("https://www.google.com/url?q=")) {
+		// stripping obnoxious google redirector
+		url = decodeURIComponent(url.slice(29));
+		$.app.openURL(url);
+		return true;
+	} 
 	return false;
 };
 delegate.decideNavigationForMIME = function() { return false; };

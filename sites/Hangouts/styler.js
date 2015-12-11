@@ -64,10 +64,10 @@ if (window.name == 'gtn-roster-iframe-id-b') { // roster
 		document.addEventListener('DOMSubtreeModified', injectCSS2, false); //mutation events are deprecated
 }
 
-if (window.name == 'preld') { //frame-id ^gtn_ this is a chatbox iframe
+if ((window.name == 'preld') || ~window.name.indexOf('gtn_')) { //frame-id ^gtn_ this is a chatbox iframe
+
 	// remove google's redirect wrappers on all messaged links
 	// no evil being done here, amirite? -GoogleBruh
-
 	// from https://github.com/canisbos/DirectLinks/blob/master/DirectLinks.safariextension/injected.js
 	document.addEventListener('mousedown', function (e) {
 		var et = e.target, lc = -1;
@@ -76,38 +76,31 @@ if (window.name == 'preld') { //frame-id ^gtn_ this is a chatbox iframe
 		if (!et || !et.href) 
 		    return;
 		var link = et;
-		e.stopPropagation();
-		if (link.getAttribute('onmousedown')) {
-		    link.removeAttribute('onmousedown');
-		    if (link.pathname === '/url') {
-		        if ((/[?&]url=[^&]+/).test(link.search)) {
-		            link.href = decodeURIComponent(link.search.split(/[?&]url=/)[1].split('&')[0]);
-		        }
-		    }
+	    if ((link.host === "www.google.com") && (link.pathname === '/url')) {
+	        if ((/[?&]q=[^&]+/).test(link.search)) {
+	            link.href = decodeURIComponent(link.search.split(/[?&]q=/)[1].split('&')[0]);
+	        }
 		}
-	}, false);
-}
+	}, true); // true captures the event on the down-pass from document to element
 
-if ((window.name == 'preld') || ~window.name.indexOf('gtn_')) { //frame-id ^gtn_ this is a chatbox iframe
-	//(function(){ //IIFE
-		function injectCSS() {
-	        if (document.head) {
-				document.removeEventListener('DOMSubtreeModified', injectCSS, false);
+	function injectCSS() {
+	    if (document.head) {
+			document.removeEventListener('DOMSubtreeModified', injectCSS, false);
 
-				// show local native emoji font rather than Hangout's crappy emoji art
-				var css = document.createElement("style");
-				css.type = 'text/css';
-				css.id = 'appleEmoji'
-			    css.innerHTML = "\
-			    	body, div, input { font-family: -apple-system-font !important; }\
-					span[data-emo] span { opacity: 1.0 !important; width: auto !important; font-size: 12pt; } \
-					span[data-emo] div { display: none !important; } \
-				\
-				";
-				document.head.appendChild(css);
-			}
+			// show local native emoji font rather than Hangout's crappy emoji art
+			var css = document.createElement("style");
+			css.type = 'text/css';
+			css.id = 'appleEmoji'
+		    css.innerHTML = "\
+		    	body, div, input { font-family: -apple-system-font !important; }\
+				span[data-emo] span { opacity: 1.0 !important; width: auto !important; font-size: 12pt; } \
+				span[data-emo] div { display: none !important; } \
+			\
+			";
+			document.head.appendChild(css);
 		}
-		document.addEventListener('DOMSubtreeModified', injectCSS, false); //mutation events are deprecated
+	}
+	document.addEventListener('DOMSubtreeModified', injectCSS, false); //mutation events are deprecated
 
 		/*		
 		function autoPop() {
