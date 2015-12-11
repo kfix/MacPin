@@ -3,6 +3,7 @@
 
 if (window == top)
 (function(){ //IIFE
+	// window.args ...
 	function injectCSS() {
         if (document.head) {
 			document.removeEventListener('DOMSubtreeModified', injectCSS, false);
