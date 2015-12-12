@@ -7,8 +7,15 @@ var delegate = {}; // our delegate to receive events from the webview app
 
 delegate.openInChrome = function() {
 	console.log($.browser.tabSelected.url);
-	$.app.openURL($.browser.tabSelected.url, "com.google.Chrome");
-	// need iOS version
+	switch ($.app.platform) {
+		case "OSX":
+			$.app.openURL($.browser.tabSelected.url, "com.google.Chrome");
+			break;
+		case "iOS":
+			$.app.openURL($.browser.tabSelected.url,
+				url.startsWith("https://") ? "googlechromes" : "googlechrome");
+			break;
+	}
 };
 
 // handles cmd-line and LaunchServices openURL()s
@@ -80,7 +87,7 @@ delegate.AppFinishedLaunching = function() {
 		handlers: ['evalREPL', 'closeREPL']
 	};
 	$.browser.addShortcut('MacPin/app.js debugging REPL', repl);
-
+	if ($.app.platform === "OSX") $.app.changeAppIcon(`file://${$.app.resourcePath}/icon.png`);
 	$.browser.tabSelected = new $.WebView({url: 'http://github.com/kfix/MacPin'});
 };
 

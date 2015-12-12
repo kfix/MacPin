@@ -40,7 +40,7 @@ delegate.launchURL = function(url) {
 	}
 };
 
-delegate.decideNavigationForURL = function(url) {
+delegate.decideNavigationForURL = function(url, webview) {
 	var comps = url.split(':'),
 		scheme = comps.shift(),
 		addr = comps.shift();
