@@ -7,6 +7,11 @@ builddir			?= build
 archs_macosx		?= x86_64
 # ^ supporting Yosemite+ only, so don't bother with 32-bit builds
 archs_iphonesimulator	?= i386 x86_64
+
+archs_iphoneos		?= arm64
+target_ver_OSX		?= 10.11
+target_ver_iOS		?= 9.1
+
 include eXcode.mk
 
 # now layout the MacPin .apps to generate
@@ -70,7 +75,6 @@ else ifeq ($(appsig),-)
 codesign := yes
 else ifneq ($(appsig),)
 test test.app release: appsig := -
-test test.app release: codesign := yes
 endif
 
 wknightly: DYLD_FRAMEWORK_PATH=/Volumes/WebKit/WebKit.app/Contents/Frameworks/10.10
@@ -144,6 +148,7 @@ $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/
 $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/
 	@install -d $@ $@/Contents/MacOS $@/Contents/Resources
 	$(patsubst %,cp % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
+	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/Contents/MacOS/$*.dSYM;,$(filter $(outdir)/exec/%.dSYM,$^))
 	cp -RL templates/Resources $@/Contents
 	#git ls-files -zc $(bundle_untracked) $(macpin_sites)/$* | xargs -0 -J % install -DT % $@/Contents/Resources/
 	(($(bundle_untracked))) || git archive HEAD $(macpin_sites)/$*/ | tar -xv --strip-components 2 -C $@/Contents/Resources
@@ -177,6 +182,7 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.
 	@install -d $@ $@/Frameworks
 	@install -d $@ $@/SwiftSupport
 	$(patsubst %,cp % $@/$*;,$(filter $(outdir)/exec/%,$^))
+	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/$*.dSYM;,$(filter $(outdir)/exec/%.dSYM,$^))
 	install_name_tool -rpath @loader_path/../Frameworks @loader_path/Frameworks $@/$*
 	install_name_tool -rpath @loader_path/../SwiftSupport @loader_path/SwiftSupport $@/$*
 	[ ! -n "$(wildcard $(outdir)/Frameworks/*.dylib)" ] || cp -a $(outdir)/Frameworks $@/
@@ -262,6 +268,7 @@ test.app: $(appdir)/$(macpin).app
 
 # make cross test.ios
 # .crash: https://developer.apple.com/library/ios/technotes/tn2151/_index.html
+# & https://developer.apple.com/library/ios/qa/qa1747/_index.html
 /usr/local/bin/ios-sim: ; npm -g install ios-sim
 /usr/local/bin/ios-deploy: ; npm -g install ios-deploy
 ifeq ($(sdk)-$(arch),iphonesimulator-x86_64)
