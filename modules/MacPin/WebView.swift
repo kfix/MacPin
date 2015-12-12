@@ -6,6 +6,7 @@
 import WebKit
 import WebKitPrivates
 import JavaScriptCore
+import UTIKit
 
 @objc protocol WebViewScriptExports: JSExport { // $.WebView & $.browser.tabs[WebView]
 	init?(object: [String:AnyObject]) //> new WebView({url: 'http://example.com'});
@@ -76,6 +77,7 @@ import JavaScriptCore
 #elseif os(iOS)
 	var transparent = false // no overlaying MacPin apps upon other apps in iOS, so make it a no-op
 	var allowsMagnification = true // not exposed on iOS WebKit, make it no-op
+	var allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
 #endif
 
 	let favicon: FavIcon = FavIcon()
@@ -280,6 +282,8 @@ import JavaScriptCore
 	}
 
 #if os(OSX)
+
+	// FIXME: unified save*()s like Safari does with a drop-down for "Page Source" & Web Archive, or auto-mime for single non-HTML asset
 	func saveWebArchive() {
 		_getWebArchiveDataWithCompletionHandler() { [unowned self] (data: NSData!, err: NSError!) -> Void in
 			//pop open a save Panel to dump data into file
@@ -296,11 +300,31 @@ import JavaScriptCore
 		}
 	}
 
+	func savePage() {
+		_getMainResourceDataWithCompletionHandler() { [unowned self] (data: NSData!, err: NSError!) -> Void in
+			//pop open a save Panel to dump data into file
+			let saveDialog = NSSavePanel();
+			saveDialog.canCreateDirectories = true
+			if let mime = self._MIMEType, uti = UTI(MIMEType: mime) { 
+				saveDialog.allowedFileTypes = [uti.UTIString]
+			}
+			if let window = self.window {
+				saveDialog.beginSheetModalForWindow(window) { (result: Int) -> Void in
+					if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
+						NSFileManager.defaultManager().createFileAtPath(path, contents: data, attributes: nil)
+						}
+				}
+			}
+		}
+	}
+
 	override func validateUserInterfaceItem(anItem: NSValidatedUserInterfaceItem) -> Bool {
 		switch (anItem.action().description) {
 			//case "askToOpenCurrentURL": return true
 			case "copyAsPDF": fallthrough
 			case "saveWebArchive": return true
+			case "savePage": return true
+			//case "printWebView:": return true // _printOperation not avail in 10.11.2's WebKit
 			default:
 				return super.validateUserInterfaceItem(anItem)
 		}
@@ -330,6 +354,8 @@ import JavaScriptCore
 		pb.clearContents()
 		writePDFInsideRect(bounds, toPasteboard: pb)
 	}
+
+	func printWebView(sender: AnyObject?) { _printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo()) }
 
 #endif
 }

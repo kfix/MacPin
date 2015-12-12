@@ -93,11 +93,10 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Go Back", "goBack:", "[", [.CommandKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Go Forward", "goForward:", "]", [.CommandKeyMask]))	//webview
 		tabMenu.submenu?.addItem(MenuItem("Stop Loading", "stopLoading:", ".", [.CommandKeyMask])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Print Page", "print:")) //NSView
-		tabMenu.submenu?.addItem(MenuItem("Print Tab", "printTab", target: browserController)) //bc
-		tabMenu.submenu?.addItem(MenuItem("Copy view as PDF text", "copyAsPDF")) //webview
-		tabMenu.submenu?.addItem(MenuItem("Save Web Archive...", "saveWebArchive")) //webview
-		tabMenu.submenu?.addItem(MenuItem("Open in default Browser", "askToOpenCurrentURL")) //webview
+		tabMenu.submenu?.addItem(MenuItem("Print Page...", "printWebView:", "p", [.CommandKeyMask])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Save Web Archive...", "saveWebArchive", "s", [.CommandKeyMask, .ShiftKeyMask])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Save Page...", "savePage", "s", [.CommandKeyMask])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Open with Default Browser", "askToOpenCurrentURL", "d", [.CommandKeyMask])) //wvc
 		app!.mainMenu?.addItem(tabMenu)
 
 		let winMenu = NSMenuItem() //BrowserViewController and NSWindow funcs
@@ -110,7 +109,6 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		//winMenu.submenu?.addItem(MenuItem("Edit Toolbar", "runToolbarCustomizationPalette:"))
 		winMenu.submenu?.addItem(MenuItem("New Tab", "newTabPrompt", "t", [.CommandKeyMask])) //bc
 		winMenu.submenu?.addItem(MenuItem("New Isolated Tab", "newIsolatedTabPrompt", "t", [.ControlKeyMask, .CommandKeyMask])) //bc
-		//winMenu.submenu?.addItem(MenuItem("Close Tab", "closeCurrentTab", "w", [.CommandKeyMask])) //bc
 		winMenu.submenu?.addItem(MenuItem("Close Tab", "closeTab", "w", [.CommandKeyMask])) //wvc, bc
 		winMenu.submenu?.addItem(MenuItem("Show Next Tab", "selectNextTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask])) //bc
 		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", "selectPreviousTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask, .ShiftKeyMask])) //bc

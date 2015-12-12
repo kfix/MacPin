@@ -573,13 +573,6 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 
 	func bounceDock() { NSApplication.sharedApplication().requestUserAttention(.InformationalRequest) } //Critical keeps bouncing
 
-	func printTab() {
-		// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/Printing/osxp_printapps/osxp_printapps.html#//apple_ref/doc/uid/20000861-BAJBFGED
-		//var printer = NSPrintOperation(view: tabSelected!.view, printInfo: NSPrintInfo.sharedPrintInfo()) //same as webview.print()
-		let printer = NSPrintOperation(view: view, printInfo: NSPrintInfo.sharedPrintInfo()) // prints 8pgs of blurView
-		printer.runOperation()
-	}
-
 	func addShortcut(title: String, _ obj: AnyObject?) {
 		if title.isEmpty {
 			warn("title not provided")

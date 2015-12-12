@@ -103,10 +103,14 @@ extension WebViewController: WKNavigationDelegate {
 #endif
 					warn("-> .Cancel -- user clicked <a href=\(url) target=_blank> or middle-clicked: opening externally")
     		        decisionHandler(.Cancel)
+
+				// FIXME: allow JS to hook all of these
 				case .FormSubmitted: fallthrough
+				case .FormResubmitted: fallthrough
+					// FIXME: dump form headers
 				case .BackForward: fallthrough
 				case .Reload: fallthrough
-				case .FormResubmitted: fallthrough
+					// FIXME: check if user is forcing Download
 				case .Other: fallthrough
 				default: decisionHandler(.Allow)
 			}

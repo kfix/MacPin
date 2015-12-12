@@ -365,7 +365,8 @@ extension MobileBrowserViewController {
 
 	func pushTab(webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerIOS(webview: webview)) } }
 
-	func addShortcut(title: String, _ obj: AnyObject?) {}
+	func addShortcut(title: String, _ obj: AnyObject?) {} // FIXME: populate bottom section of tabList with App shortcuts
+	// + Force Touch AppIcon menu?
 
 	func switchToPreviousTab() { selectedViewControllerIndex -= 1 }
 	func switchToNextTab() { selectedViewControllerIndex += 1 }
