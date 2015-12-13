@@ -194,6 +194,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		//menu.popUpMenu(menu.itemArray.first, atLocation: NSPointFromCGPoint(CGPointMake(0,0)), inView: self.view)
 	}
 
+/*
 	func validateUserInterfaceItem(anItem: NSValidatedUserInterfaceItem) -> Bool {
 		switch (anItem.action().description) {
 			case "performTextFinderAction:":
@@ -201,9 +202,10 @@ extension WebViewControllerOSX { // AppGUI funcs
 			default:
 				break
 		}
-		//return false
-		return webview.validateUserInterfaceItem(anItem)
+		return false
+		//return webview.validateUserInterfaceItem(anItem)
 	}
+*/
 
 }
 
