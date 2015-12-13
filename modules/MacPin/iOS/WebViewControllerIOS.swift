@@ -22,7 +22,7 @@ import WebKit
 
 	//override func removeFromParentViewController() { super.removeFromParentViewController() }
 
-	deinit { warn("\(Mirror(reflecting: self))") }
+	deinit { warn("\(self.dynamicType)") }
 	
 	//override func closeTab() { dismissViewControllerAnimated(true, completion: nil); super() }
 

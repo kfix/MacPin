@@ -164,7 +164,7 @@ import UTIKit
 		gotoURL(url)
 	}
 
-	override var description: String { return "\(Mirror(reflecting: self)) `\(title ?? String())` [\(URL ?? String())]" }
+	override var description: String { return "<\(self.dynamicType)> `\(title ?? String())` [\(URL ?? String())]" }
 	deinit { warn(description) }
 
 	func evalJS(js: String, _ withCallback: JSValue? = nil) {

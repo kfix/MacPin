@@ -312,7 +312,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 	}
 
 	deinit { warn(description) }
-	override var description: String { return "<\(Mirror(reflecting: self))> `\(title ?? String())`" }
+	override var description: String { return "<\(self.dynamicType))> `\(title ?? String())`" }
 
 	var defaultUserAgent: String? = nil // {
 	//	get { }

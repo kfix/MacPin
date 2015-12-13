@@ -125,7 +125,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		super.init()
 	}
 
-	override var description: String { return "<\(Mirror(reflecting: self))> [\(appPath)] `\(context.name)`" }
+	override var description: String { return "<\(self.dynamicType)> [\(appPath)] `\(context.name)`" }
 
 	func sleep(secs: Double) {
 		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * secs))

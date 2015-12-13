@@ -232,7 +232,7 @@ extension UIView {
 		contentInset.bottom = showBars ? toolBar.frame.size.height : 0
 	}
 
-	override var description: String { return "<\(Mirror(reflecting: self))> `\(title ?? String())`" }
+	override var description: String { return "<\(self.dynamicType)> `\(title ?? String())`" }
 
 	func indexOfChildViewController(vc: UIViewController) -> Int {
 		for (index, el) in childViewControllers.enumerate() {
