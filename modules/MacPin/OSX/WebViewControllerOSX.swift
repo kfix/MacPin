@@ -5,7 +5,24 @@
 import WebKit
 import WebKitPrivates
 
-@objc class WebViewControllerOSX: WebViewController {
+@objc class WebViewControllerOSX: WebViewController, NSTextFinderBarContainer {
+	let textFinder = NSTextFinder()
+	var findBarView: NSView? {
+		willSet { if findBarView != nil { findBarVisible = false } }
+		didSet { if findBarView != nil { findBarVisible = true } }
+	}
+	private var _findBarVisible = false
+	var findBarVisible: Bool {
+		@objc(isFindBarVisible) get { return _findBarVisible }
+		set(vis) {
+			_findBarVisible = vis
+			if let findview = findBarView { 
+				vis ? view.addSubview(findview) : findview.removeFromSuperview()
+			}
+			layout()
+		}
+	}
+
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		//view.wantsLayer = true //use CALayer to coalesce views
@@ -27,6 +44,20 @@ import WebKitPrivates
 		bind(NSTitleBinding, toObject: webview, withKeyPath: "title", options: nil)
 		//backMenu.delegate = self
 		//forwardMenu.delegate = self
+
+		webview._editable = true
+		textFinder.client = webview
+		textFinder.findBarContainer = self
+		textFinder.incrementalSearchingEnabled = true
+		textFinder.incrementalSearchingShouldDimContentView = true
+	}
+
+	func contentView() -> NSView? { return webview }
+
+	override func performTextFinderAction(sender: AnyObject?) {
+		if let control = sender as? NSMenuItem, action = NSTextFinderAction(rawValue: control.tag) {
+			textFinder.performAction(action)
+		}
 	}
 
 	override func viewWillAppear() { // window popping up with this tab already selected & showing
@@ -50,6 +81,21 @@ import WebKitPrivates
 
 	override func viewDidDisappear() {
 		super.viewDidDisappear()
+	}
+
+	func findBarViewDidChangeHeight() { layout() }
+
+	func layout() {
+		warn()
+		if let find = findBarView where findBarVisible {
+			find.frame = CGRect(x: view.bounds.origin.x,
+				y: view.bounds.origin.y + view.bounds.size.height - find.frame.size.height,
+				width: view.bounds.size.width, height: find.frame.size.height)
+			webview.frame = CGRect(x: view.bounds.origin.x, y: view.bounds.origin.y, width: view.bounds.size.width,
+				height: view.bounds.size.height - find.frame.size.height)
+		} else {
+			webview.frame = view.bounds
+		}
 	}
 
 	override func viewWillLayout() {
@@ -146,6 +192,17 @@ extension WebViewControllerOSX { // AppGUI funcs
 		let _ = NSMenu(title:"popup")
 		// items: [itemTitle:String eventName:String], when clicked, fire event in jsdelegate?
 		//menu.popUpMenu(menu.itemArray.first, atLocation: NSPointFromCGPoint(CGPointMake(0,0)), inView: self.view)
+	}
+
+	func validateUserInterfaceItem(anItem: NSValidatedUserInterfaceItem) -> Bool {
+		switch (anItem.action().description) {
+			case "performTextFinderAction:":
+				if let action = NSTextFinderAction(rawValue: anItem.tag()) where textFinder.validateAction(action) { return true }
+			default:
+				break
+		}
+		//return false
+		return webview.validateUserInterfaceItem(anItem)
 	}
 
 }

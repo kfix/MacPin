@@ -9,18 +9,20 @@ import UTIKit
 import Darwin
 
 class MenuItem: NSMenuItem {
-	convenience init(_ itemName: String?, _ anAction: String?, _ charCode: String? = nil, _ keyflags: [NSEventModifierFlags] = [], target aTarget: AnyObject? = nil, represents: AnyObject? = nil) {
+	convenience init(_ itemName: String?, _ anAction: String? = nil, _ charCode: String? = nil, _ keyflags: [NSEventModifierFlags] = [], target aTarget: AnyObject? = nil, represents: AnyObject? = nil, tag aTag: Int = 0) {
 		self.init(
 			title: itemName ?? "",
-			action: Selector(anAction!),
+			action: anAction != nil ? Selector(anAction!) : nil,
 			keyEquivalent: charCode ?? ""
 		)
+
 		for keyflag in keyflags {
 			keyEquivalentModifierMask |= Int(keyflag.rawValue)
 			 // .[AlphaShift|Shift|Control|Alternate|Command|Numeric|Function|Help]KeyMask
 		}
 		target = aTarget
 		representedObject = represents
+		tag = aTag
 		// menu item actions walk the responder chain if target == nil
 		// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/EventOverview/EventArchitecture/EventArchitecture.html#//apple_ref/doc/uid/10000060i-CH3-SW9
 		// https://developer.apple.com/library/mac/releasenotes/AppKit/RN-AppKit/#10_10ViewController

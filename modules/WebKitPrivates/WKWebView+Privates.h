@@ -24,7 +24,7 @@ typedef NS_ENUM(NSInteger, _WKPaginationMode) {
 @property (nonatomic, setter=_setAutomaticallyAdjustsContentInsets:) BOOL _automaticallyAdjustsContentInsets;
 #endif
 
-//@property (nonatomic, getter=_isEditable, setter=_setEditable:) BOOL _editable;
+@property (nonatomic, getter=_isEditable, setter=_setEditable:) BOOL _editable WK_AVAILABLE(10_11, 9_0);
 @property (nonatomic, setter=_setAddsVisitedLinks:) BOOL _addsVisitedLinks;
 @property (nonatomic, setter=_setAllowsRemoteInspection:) BOOL _allowsRemoteInspection;
 @property (copy, setter=_setCustomUserAgent:) NSString *_customUserAgent;
@@ -46,10 +46,6 @@ typedef NS_ENUM(NSInteger, _WKPaginationMode) {
 @property (nonatomic, readonly) NSURL *_committedURL;
 @property (nonatomic, readonly) NSString *_MIMEType;
 //@property (nonatomic, weak, setter=_setDiagnosticLoggingDelegate:) id <_WKDiagnosticLoggingDelegate> _diagnosticLoggingDelegate WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-//@property (nonatomic, weak, setter=_setFindDelegate:) id <_WKFindDelegate> _findDelegate;
-//- (void)_findString:(NSString *)string options:(_WKFindOptions)options maxCount:(NSUInteger)maxCount;
-//- (void)_countStringMatches:(NSString *)string options:(_WKFindOptions)options maxCount:(NSUInteger)maxCount;
-//- (void)_hideFindUI;
 //https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKFormDelegate.h
 //@property (nonatomic, weak, setter=_setFormDelegate:) id <_WKFormDelegate> _formDelegate;
 
@@ -57,3 +53,28 @@ typedef NS_ENUM(NSInteger, _WKPaginationMode) {
 - (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo; // prints top frame
 //- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 @end
+
+// https://github.com/WebKit/webkit/commit/1e291e88d96caa8e5421f81bd570e90b1af02ff4
+#if !TARGET_OS_IPHONE
+@interface WKWebView (WKNSTextFinderClient) <NSTextFinderClient>
+@end
+
+typedef enum : NSUInteger {
+    NSTextFinderAsynchronousDocumentFindOptionsBackwards = 1 << 0,
+    NSTextFinderAsynchronousDocumentFindOptionsWrap = 1 << 1,
+    NSTextFinderAsynchronousDocumentFindOptionsCaseInsensitive = 1 << 2,
+    NSTextFinderAsynchronousDocumentFindOptionsStartsWith = 1 << 3,
+} NSTextFinderAsynchronousDocumentFindOptions;
+
+
+@protocol NSTextFinderAsynchronousDocumentFindMatch <NSObject>
+@property (retain, nonatomic, readonly) NSArray *textRects;
+@end
+
+@interface WKWebView (NSTextFinderSupport)
+- (void)findMatchesForString:(NSString *)targetString relativeToMatch:(id <NSTextFinderAsynchronousDocumentFindMatch>)relativeMatch findOptions:(NSTextFinderAsynchronousDocumentFindOptions)findOptions maxResults:(NSUInteger)maxResults resultCollector:(void (^)(NSArray *matches, BOOL didWrap))resultCollector;
+- (void)getSelectedText:(void (^)(NSString *selectedTextString))completionHandler;
+- (void)selectFindMatch:(id <NSTextFinderAsynchronousDocumentFindMatch>)findMatch completionHandler:(void (^)(void))completionHandler;
+@end
+#endif
+

@@ -75,8 +75,16 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		editMenu.submenu?.addItem(MenuItem("Copy", "copy:", "c", [.CommandKeyMask]))
 		editMenu.submenu?.addItem(MenuItem("Paste", "paste:", "v", [.CommandKeyMask]))
 		editMenu.submenu?.addItem(MenuItem("Select All", "selectAll:", "a", [.CommandKeyMask]))
-		//WKWebView._findString(str, options: _WKFindOptions, maxCount: 1)
-		// https://github.com/WebKit/webkit/blob/d82b804eac88bb7e2c96fb87fb56845ae4dd8f7f/Source/WebKit2/UIProcess/API/Cocoa/WKWebView.mm#L2049
+		editMenu.submenu?.addItem(NSMenuItem.separatorItem())
+		let findMenu = MenuItem("Find")
+		findMenu.submenu = NSMenu()
+		findMenu.submenu?.title = "Find"
+		findMenu.submenu?.addItem(MenuItem("Find...", "performTextFinderAction:", "f", [.CommandKeyMask], tag: NSTextFinderAction.ShowFindInterface.rawValue)) //wvc
+		findMenu.submenu?.addItem(MenuItem("Find Next", "performTextFinderAction:", tag: NSTextFinderAction.NextMatch.rawValue)) //wvc
+		findMenu.submenu?.addItem(MenuItem("Find Previous", "performTextFinderAction:", tag: NSTextFinderAction.PreviousMatch.rawValue)) //wvc
+		findMenu.submenu?.addItem(MenuItem("Find and Replace...", "performTextFinderAction:", tag: NSTextFinderAction.ShowReplaceInterface.rawValue)) //wvc
+		findMenu.submenu?.addItem(MenuItem("Search within Selection", "performTextFinderAction:", tag: NSTextFinderAction.SelectAllInSelection.rawValue)) //wvc
+		editMenu.submenu?.addItem(findMenu)
 		app!.mainMenu?.addItem(editMenu)
 
 		let tabMenu = NSMenuItem() //WebViewController and WKWebView funcs
@@ -86,6 +94,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Zoom Out", "zoomOut", "-", [.CommandKeyMask])) //wvc
 		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", "zoomOut", nil, [.CommandKeyMask]))
 		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", "toggleTransparency")) //wvc
+		tabMenu.submenu?.addItem(NSMenuItem.separatorItem())
 		//tabMenu.submenu?.addItem(MenuItem("Web Inspector", "showConsole:", "i", [.CommandKeyMask, .AlternateKeyMask]) //need impl of WKInspectorShow
 		//	^ https://bugs.webkit.org/show_bug.cgi?id=137612
 		tabMenu.submenu?.addItem(MenuItem("Reload", "reload:", "r", [.CommandKeyMask])) //webview
@@ -93,6 +102,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Go Back", "goBack:", "[", [.CommandKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Go Forward", "goForward:", "]", [.CommandKeyMask]))	//webview
 		tabMenu.submenu?.addItem(MenuItem("Stop Loading", "stopLoading:", ".", [.CommandKeyMask])) //webview
+		tabMenu.submenu?.addItem(NSMenuItem.separatorItem())
 		tabMenu.submenu?.addItem(MenuItem("Print Page...", "printWebView:", "p", [.CommandKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Save Web Archive...", "saveWebArchive", "s", [.CommandKeyMask, .ShiftKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Save Page...", "savePage", "s", [.CommandKeyMask])) //webview
