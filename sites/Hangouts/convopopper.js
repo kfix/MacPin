@@ -11,6 +11,10 @@ if ((window.name == 'preld') || ~window.name.indexOf('gtn_')) { //frame-id ^gtn_
 			//btn.click();
 			// goog.testing.events.fireClickSequence()
 			// https://google.github.io/closure-library/api/source/closure/goog/testing/events/events.js.src.html#l165
+			// https://github.com/google/closure-library/blob/master/closure/goog/testing/events/events.js#L165
+			// https://github.com/google/closure-library/blob/master/closure/goog/events/browserevent.js
+			// https://developers.google.com/closure/library/docs/introduction#evs
+			// https://developers.google.com/closure/library/docs/closurebuilder
 			btn[Object.keys(btn)[0]].$.click[0].proxy(); // btn.closure_lm_54596 ...
 		}
 

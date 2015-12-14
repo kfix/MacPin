@@ -23,6 +23,7 @@ if (window == top) {
 		delete all the junk nodes in between these
 	<script>window.jstiming.load.tick('streamEnd');</script>*/
 
+	//function gotoConversations() { document.querySelector('div[data-tooltip="Conversations"]') ;}  //need to do a goog.closure.events.CLICK
 	function getRoster() { return document.getElementById('gtn-roster-iframe-id-b'); }
 	function xssRoster() { /* ([func1, arg1, arg2], [func2, arg1, arg2])*/
 		// make arg[0] == iframe.id ?

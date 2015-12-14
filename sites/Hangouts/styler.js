@@ -122,7 +122,7 @@ if ((window.name == 'preld') || ~window.name.indexOf('gtn_')) { //frame-id ^gtn_
 	
 			// enable keyboard to quickly take/reject phone calls
 			if (btn = document.querySelector('button[title="Answer call"]')) { //answer button
-				var from = document.QuerySelector('div[googlevoice]').innerText;
+				var from = document.querySelector('div[googlevoice]').innerText;
 				console.log(Date() + " [Incoming phone call from:] " + from);
 				document.removeEventListener('DOMSubtreeModified', this, false);
 				btn.autofocus = true //hafta apply this before .onload
