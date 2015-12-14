@@ -14,19 +14,30 @@ RefPtr<WebKit::WebPreferences> _preferences;
 @end
 */
 
+typedef NS_ENUM(NSInteger, _WKStorageBlockingPolicy) {
+    _WKStorageBlockingPolicyAllowAll,
+    _WKStorageBlockingPolicyBlockThirdParty,
+    _WKStorageBlockingPolicyBlockAll,
+} WK_ENUM_AVAILABLE(10_10, 8_0);
+
+typedef NS_OPTIONS(NSUInteger, _WKDebugOverlayRegions) {
+    _WKNonFastScrollableRegion = 1 << 0,
+    _WKWheelEventHandlerRegion = 1 << 1
+} WK_ENUM_AVAILABLE(10_11, 9_0);
+
+typedef NS_OPTIONS(NSUInteger, _WKJavaScriptRuntimeFlags) {
+    _WKJavaScriptRuntimeFlagsAllEnabled = 0
+} WK_ENUM_AVAILABLE(10_11, 9_0);
+
 @interface WKPreferences (Privates)
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKPreferencesPrivate.h
 @property (nonatomic, setter=_setDeveloperExtrasEnabled:) BOOL _developerExtrasEnabled;
-@property (nonatomic, setter=_setFullScreenEnabled:) BOOL _fullScreenIsEnabled;
-@property (nonatomic, setter=_setDiagnosticLoggingEnabled:) BOOL _diagnosticLoggingEnabled;
+@property (nonatomic, setter=_setFullScreenEnabled:) BOOL _fullScreenIsEnabled WK_AVAILABLE(10_11, 9_0);
+@property (nonatomic, setter=_setDiagnosticLoggingEnabled:) BOOL _diagnosticLoggingEnabled  WK_AVAILABLE(10_11, 9_0);
 @property (nonatomic, setter=_setStandalone:, getter=_isStandalone) BOOL _standalone;
-
-// need to be able to compile an ObjC++ to C-API bridge
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/C/WKPreferencesRefPrivate.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/C/WKPreferences.cpp
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
-//@property (nonatomic, setter=_setFileAccessFromFileURLsAllowed:) BOOL _fileAccessFromFileURLsAllowed;
-//@property (nonatomic, setter=_setUniversalAccessFromFileURLsAllowed:) BOOL _universalAccessFromFileURLsAllowed;
-//@property (nonatomic, setter=_setForceFTPDDirectoryListings:) BOOL _forceFTPDDirectoryListings;
-
+@property (nonatomic, setter=_setVisibleDebugOverlayRegions:) _WKDebugOverlayRegions _visibleDebugOverlayRegions WK_AVAILABLE(10_11, 9_0);
+@property (nonatomic, setter=_setSimpleLineLayoutDebugBordersEnabled:) BOOL _simpleLineLayoutDebugBordersEnabled WK_AVAILABLE(10_11, 9_0);
+@property (nonatomic, setter=_setLogsPageMessagesToSystemConsoleEnabled:) BOOL _logsPageMessagesToSystemConsoleEnabled WK_AVAILABLE(10_11, 9_0);
+@property (nonatomic, setter=_setAllowFileAccessFromFileURLs:) BOOL _allowFileAccessFromFileURLs WK_AVAILABLE(10_11, 9_0);
+@property (nonatomic, setter=_setJavaScriptRuntimeFlags:) _WKJavaScriptRuntimeFlags _javaScriptRuntimeFlags WK_AVAILABLE(10_11, 9_0);
 @end

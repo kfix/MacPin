@@ -360,6 +360,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 */
 
 	var tabs: [MPWebView] {
+		// FIXME: .count broken?
 		get { return childViewControllers.filter({ $0 is WebViewControllerOSX }).map({ ($0 as! WebViewControllerOSX).webview }) } // returns mutable *copy*, which is why .push() can't work
 			// ^ put an observer on childViewController to update a weak stored array of WebViews, or do that as part of add/removeChildVC()
 			// then you have a stable reference that you can have JS do .push()s on

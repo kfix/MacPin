@@ -160,8 +160,6 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: "handleGetURLEvent:replyEvent:", forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url scehems
 	}
 
-	//func application(theApplication: NSApplication, openFile filename: String) -> Bool {}
-
     func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
 		AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
 		AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
@@ -172,13 +170,9 @@ extension AppDelegateOSX: NSApplicationDelegate {
 			browserController.tabSelected = MPWebView(url: default_html)
 		}
 
-		if browserController.tabs.count < 1 { browserController.newTabPrompt() } //don't allow a tabless state
-
 		if let userNotification = notification.userInfo?["NSApplicationLaunchUserNotificationKey"] as? NSUserNotification {
 			userNotificationCenter(NSUserNotificationCenter.defaultUserNotificationCenter(), didActivateNotification: userNotification)
 		}
-
-		//warn("focus is on `\(windowController.window?.firstResponder)`")
 
 		for (idx, arg) in Process.arguments.enumerate() {
 			switch (arg) {
@@ -210,10 +204,13 @@ extension AppDelegateOSX: NSApplicationDelegate {
 					// ooh, pretty: https://github.com/Naituw/WBWebViewConsole
 					// https://github.com/Naituw/WBWebViewConsole/blob/master/WBWebViewConsole/Views/WBWebViewConsoleInputView.m
 				default:
-					if arg != Process.arguments[0] && !arg.hasPrefix("-psn_0_") { // Process Serial Number from LaunchServices open()
+					if arg != Process.arguments[0] && !arg.hasPrefix("-psn_0_") && !application(NSApp, openFile: arg) { // Process Serial Number from LaunchServices open()
 						warn("unrecognized argv[]: `\(arg)`")
 					}
 			}
+
+			if browserController.tabs.count < 1 { browserController.newTabPrompt() } //don't allow a tabless state
+			//warn("focus is on `\(windowController.window?.firstResponder)`")
 		}
     }
 
@@ -263,7 +260,6 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		if let ftype = try? NSWorkspace.sharedWorkspace().typeOfFile(filename) {
 			switch ftype {
 				//case "public.data":
-				//case "public.html":
 				//case "public.folder":
 				case "com.apple.web-internet-location": //.webloc http://stackoverflow.com/questions/146575/crafting-webloc-file
 					if let webloc = NSDictionary(contentsOfFile: filename), urlstr = webloc.valueForKey("URL") as? String {
@@ -275,7 +271,10 @@ extension AppDelegateOSX: NSApplicationDelegate {
 						}
 					}
 					return false
-
+				case "public.html":
+					warn(filename)
+					browserController.tabSelected = MPWebView(url: NSURL(string:"file://\(filename)")!)
+					return true
 				case "com.netscape.javascript-source": //.js
 					warn(filename)
 					AppScriptRuntime.shared.loadAppScript("file://\(filename)")
@@ -293,6 +292,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 			browserController.tabSelected = MPWebView(url: url)
 			return true
 		}
+		warn("not opening: \(filename)")
 		return false // will generate modal error popup
 	}
 }
@@ -336,6 +336,8 @@ extension AppDelegateOSX {
 		saveDialog.nameFieldStringValue = filename
 		//if let app = NSApplication.sharedApplication().delegate as? AppDelegateOSX, let window = app.windowController.window {
 			//saveDialog.beginSheetModalForWindow(window, completionHandler: { (choice: Int) } // _download can't wait for this async block to report back after the sheet is closed!
+			// FIXME: put it in a Async.background and wait on it?
+			//   or window.beginSheet(sheet, completionHandler:(response: NSModalResponse)->{ if result == .Ok {path == NSWindow.sheetParent.txt.value}})
 			let result = saveDialog.runModal()
 			if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
 				warn(path)

@@ -77,9 +77,17 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? {
 	// https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 	if urlstr.isEmpty { return nil }
-	if let urlp = NSURLComponents(string: urlstr) where !urlstr.characters.contains(" ") && !urlstr.hasPrefix("?") {
-		if urlstr.hasPrefix("/") || urlstr.hasPrefix("~/") { urlp.scheme = "file" } // FIXME: check if bare filepath points to actual file/dir
-		if !((urlp.path ?? "").isEmpty) && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
+	if let urlp = NSURLComponents(string: urlstr) where !urlstr.hasPrefix("?") {
+		// FIXME: ^ urlp doesn't handle unescaped spaces in filenames
+		if urlp.scheme == "file" || urlstr.hasPrefix("/") || urlstr.hasPrefix("~/") {
+			urlp.scheme = "file"
+			guard let path: NSString = urlp.path else { warn("no filepath!"); return nil }
+			guard NSFileManager.defaultManager().fileExistsAtPath(path.stringByExpandingTildeInPath) else { warn("\(path) not found"); return nil }
+			urlp.path = path.stringByExpandingTildeInPath
+			return urlp.URL
+		}
+
+		if !urlstr.characters.contains(" ") && !((urlp.path ?? "").isEmpty) && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
 			urlp.scheme = "http"
 			urlp.host = urlp.path
 			urlp.path = nil
@@ -94,7 +102,7 @@ func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? 
 		}
 	}
 
-	if let url = fallback?(urlstr) { return url } // caller provided a failure mode which returned the url
+	if let url = fallback?(urlstr) { return url } // caller provided a failure handler which derived a url
 	else if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // compat with generic JS handler method
 	else {
 		// maybe its a search query? check if blank and reformat it

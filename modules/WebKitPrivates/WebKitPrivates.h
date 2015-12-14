@@ -1,6 +1,7 @@
 #import "TargetConditionals.h"
 #import "WKFoundation.h"
 #import "WKPreferences+Privates.h"
+#import "_WKDiagnosticLoggingDelegate.h"
 #import "WKWebView+Privates.h"
 #import "WKView+Privates.h"
 #import "_WKProcessPoolConfiguration.h"

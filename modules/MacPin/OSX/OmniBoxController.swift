@@ -133,7 +133,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr, self.webview ?? false) { return nil } // app.js did its own thing FIXME: it should be able to return URL<->NSURL
 			return nil
 		}){
-			if let wv = webview { //would be cool if I could just kick up gotoURL to nextResponder as NSResponder
+			if let wv = webview { // FIXME: Selector(gotoURL:) to nextResponder
 				view.window?.makeFirstResponder(wv) // no effect if this vc was brought up as a modal sheet
 				warn(url.description)
 				wv.gotoURL(url)

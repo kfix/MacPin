@@ -3,6 +3,7 @@
 /// Interlocute WebViews to general app UI
 
 import WebKit
+import WebKitPrivates
 import JavaScriptCore
 
 @objc protocol WebViewControllerScriptExports: JSExport { // $.browser.tabs[N]
@@ -25,6 +26,9 @@ import JavaScriptCore
 		self.init(nibName: nil, bundle: nil) // calls init!() http://stackoverflow.com/a/26516534/3878712
 		webview.UIDelegate = self //alert(), window.open(): see <platform>/WebViewDelegates
 		webview.navigationDelegate = self // allows/denies navigation actions: see WebViewDelegates
+#if WK2LOG
+		webview._diagnosticLoggingDelegate = self
+#endif
 		self.webview = webview
 		representedObject = webview	// FIXME use NSProxy instead for both OSX and IOS
 		view = webview
@@ -35,6 +39,9 @@ import JavaScriptCore
 		super.init(nibName: nil, bundle: nil)
 		webview.UIDelegate = self //alert(), window.open(): see <platform>/WebViewDelegates
 		webview.navigationDelegate = self // allows/denies navigation actions: see WebViewDelegates
+#if DEBUG
+		webview._diagnosticLoggingDelegate = self
+#endif
 		self.webview = webview
 		view = webview
 	}
@@ -60,4 +67,10 @@ import JavaScriptCore
 
 	// sugar for opening a new tab in parent browser VC
 	func popup(webview: MPWebView) { parentViewController?.addChildViewController(self.dynamicType.init(webview: webview)) }
+}
+
+extension WebViewController: _WKDiagnosticLoggingDelegate {
+	func _webView(webView: WKWebView, logDiagnosticMessage message: String, description: String) { warn("\(message) || \(description)") }
+	func _webView(webView: WKWebView, logDiagnosticMessageWithResult message: String, description: String, result: _WKDiagnosticLoggingResultType) { warn("\(message) || \(description) >> \(String(result))") }
+	func _webView(webView: WKWebView, logDiagnosticMessageWithValue message: String, description: String, value: String) { warn("\(message) || \(description) == \(value)") }
 }

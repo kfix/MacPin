@@ -90,11 +90,13 @@ import UTIKit
 		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
 #endif
-		//prefs._isStandalone = true // window.navigator.standalone = true to mimic MobileSafari's springboard-link shell mode
+		prefs._allowFileAccessFromFileURLs = true // file://s can xHr other file://s
+		//prefs._isStandalone = true // `window.navigator.standalone == true` mimicing MobileSafari's springboard-link shell mode
 		//prefs.minimumFontSize = 14 //for blindies
 		prefs.javaScriptCanOpenWindowsAutomatically = true;
 #if WK2LOG
-		//prefs._diagnosticLoggingEnabled = true // not in 10.10.3 yet
+		prefs._diagnosticLoggingEnabled = true
+		//prefs._logsPageMessagesToSystemConsoleEnabled = true // dumps to ASL
 #endif
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
@@ -213,13 +215,14 @@ import UTIKit
 	func close() { removeFromSuperview() } // signal VC too?
 
 	func gotoURL(url: NSURL) {
-		//if #available(OSX 10.11, *) && url.scheme == "file" {
-		//	// need to allow loads from file:// to inject CSS files as src= from Resources/
-		//	loadFileURL(url, allowingReadAccessToURL: url.URLByDeletingLastPathComponent!) //load file and allow link access to its parent dir
-		//	loadFileURL(url, allowingReadAccessToURL: NSBundle.mainBundle().resourcePath) 
-		//} else {
-			loadRequest(NSURLRequest(URL: url))
-		//}
+		guard #available(OSX 10.11, iOS 9.1, *) else { loadRequest(NSURLRequest(URL: url)); return }
+		guard url.scheme == "file" else { loadRequest(NSURLRequest(URL: url)); return }
+		if let readURL = url.URLByDeletingLastPathComponent {
+		//if let readURL = url.baseURL {
+		//if let readURL = url.URLByDeletingPathExtension {
+			warn("Bypassing CORS: \(readURL)")
+			loadFileURL(url, allowingReadAccessToURL: readURL)
+		}
 	}
 
 	func loadURL(urlstr: String) -> Bool {
