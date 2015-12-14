@@ -251,7 +251,8 @@ uninstall: $(wildcard $(appnames:%=$(installdir)/%))
 
 test:
 	#-defaults delete $(macpin)
-	($< http://browsingtest.appspot.com)
+	#($< -i http://browsingtest.appspot.com)
+	($< -i $(PWD)/sites/MacPin/repl.html)
 
 apirepl: ; ($< -i)
 tabrepl: ; ($< -t)
