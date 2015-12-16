@@ -79,12 +79,21 @@ func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? 
 	if urlstr.isEmpty { return nil }
 	if let urlp = NSURLComponents(string: urlstr) where !urlstr.hasPrefix("?") {
 		// FIXME: ^ urlp doesn't handle unescaped spaces in filenames
-		if urlp.scheme == "file" || urlstr.hasPrefix("/") || urlstr.hasPrefix("~/") {
+		if urlp.scheme == "file" || urlstr.hasPrefix("/") || urlstr.hasPrefix("~/") || urlstr.hasPrefix("./") {
 			urlp.scheme = "file"
-			guard let path: NSString = urlp.path else { warn("no filepath!"); return nil }
-			guard NSFileManager.defaultManager().fileExistsAtPath(path.stringByExpandingTildeInPath) else { warn("\(path) not found"); return nil }
-			urlp.path = path.stringByExpandingTildeInPath
-			return urlp.URL
+			guard var path = urlp.path else { warn("no filepath!"); return nil }
+			if path.hasPrefix("./") { // consider this == Resources/
+				path.replaceRange(path.startIndex..<path.startIndex.advancedBy(1),
+					with: NSBundle.mainBundle().resourcePath ?? String() )
+				urlp.path = path
+			}
+
+			if let url = urlp.URL?.URLByStandardizingPath where NSFileManager.defaultManager().fileExistsAtPath(url.path ?? String()) {
+				return url
+			} else {
+				warn("\(path) not found")
+				return nil
+			}
 		}
 
 		if !urlstr.characters.contains(" ") && !((urlp.path ?? "").isEmpty) && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
