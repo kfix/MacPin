@@ -1,4 +1,5 @@
 /*eslint-env applescript*/
+/*eslint-env es6*/
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
 
@@ -39,15 +40,18 @@ delegate.launchURL = function(url) {
 };
 
 //this.decideNavigationForURL <- [https://accounts.google.com/ServiceLogin?service=wise&passive=1209600&continue=https://drive.google.com/drive/u/1/&followup=https://drive.google.com/drive/u/1/&emr=1&authuser=1]
-delegate.decideNavigationForURL = function(url) {
+delegate.decideNavigationForURL = function(url, tab) {
 	var comps = url.split(':'),
 		scheme = comps.shift(),
 		addr = comps.shift();
 	switch (scheme) {
 		case "http":
 		case "https":
-			if (!~addr.indexOf("//drive.google.com") &&
-				!~addr.indexOf("//accounts.google.com") &&
+			if (addr.startsWith("//drive.google.com") && tab.allowAnyRedir) {
+				tab.allowAnyRedir = false; // we are back home
+			} else if (tab.allowAnyRedir || unescape(unescape(addr)).match("//accounts.google.com/")) {
+				tab.allowAnyRedir = true; // might be attempting an external domain for a Google Apps SSO-integrated corporate login
+			} else if (!~addr.indexOf("//drive.google.com") &&
 				!~addr.indexOf("//docs.google.com") &&
 				!~addr.indexOf(".docs.google.com") &&
 				!~addr.indexOf("//clients6.google.com") &&
@@ -75,8 +79,7 @@ delegate.decideNavigationForURL = function(url) {
 				!~addr.indexOf("//6.talkgadget.google.com") &&
 				!~addr.indexOf("//content.googleapis.com") &&
 				!~addr.indexOf("//www.youtube.com") && // yt vids are usually embedded players
-				!~addr.indexOf("//www.google.com/a/") &&
-				!unescape(unescape(addr)).match("//accounts.google.com/")
+				!~addr.indexOf("//www.google.com/a/")
 			) {
 				$.app.openURL(url); //pop all external links to system browser
 				console.log("opened "+url+" externally!");
