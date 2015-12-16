@@ -1,4 +1,5 @@
 /* eslint-env browser */
+/* eslint-env es6 */
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 
 if (window == top)
@@ -27,16 +28,16 @@ if (window == top)
 			var css = document.createElement("style");
 			css.type = 'text/css';
 			css.id = 'MacPinUnclutter';
-		    css.innerHTML = "\
-			    body { overflow: hidden; background-color: transparent !important; font-family: -apple-system-font !important; }\
-			    #gb, #gba { display: none; }\
-				#hangout-landing-chat { left: 60px; top: 0px; width: 250px; }\
-				div[aria-label='Open background photo'] > div { background-image: none !important; background: none !important; }\
-				img:nth-of-type(2) { display: none; }\
-				#hangout-landing-chat + div { background-color: transparent !important; }\
-				#hangout-landing-chat + div > div > div { display: none !important; }\
-				#hangout-landing-chat + div + div[jsaction] { display: none !important; }\
-			";
+		    css.innerHTML = `
+			    body { overflow: hidden; background-color: transparent !important; font-family: -apple-system-font !important; }
+			    #gb, #gba { display: none; }
+				#hangout-landing-chat { left: 60px; top: 0px; width: 250px; }
+				div[aria-label='Open background photo'] > div { background-image: none !important; background: none !important; }
+				img:nth-of-type(2) { display: none; }
+				#hangout-landing-chat + div { background-color: transparent !important; }
+				#hangout-landing-chat + div > div > div { display: none !important; }
+				#hangout-landing-chat + div + div[jsaction] { display: none !important; }
+			`;
 			document.head.appendChild(css);
 			//document.head.insertBefore(css,document.head.childNodes[0]); //prepend
 		}
@@ -53,11 +54,10 @@ if (window.name == 'gtn-roster-iframe-id-b') { // roster
 				var css = document.createElement("style");
 				css.type = 'text/css';
 				css.id = 'MacPinDeFuglify'
-			    css.innerHTML = "\
-			    	body, div, li, input { font-family: -apple-system-font !important; }\
-			    	button, div, li, input { font-size: 9pt !important; }\
-				\
-				";
+			    css.innerHTML = `
+			    	body, div, li, input { font-family: -apple-system-font !important; }
+			    	button, div, li, input { font-size: 9pt !important; }
+				`;
 				document.head.appendChild(css);
 			}
 		}
@@ -91,60 +91,66 @@ if ((window.name == 'preld') || ~window.name.indexOf('gtn_')) { //frame-id ^gtn_
 			var css = document.createElement("style");
 			css.type = 'text/css';
 			css.id = 'appleEmoji'
-		    css.innerHTML = "\
-		    	body, div, input { font-family: -apple-system-font !important; }\
-				span[data-emo] span { opacity: 1.0 !important; width: auto !important; font-size: 12pt; } \
-				span[data-emo] div { display: none !important; } \
-			\
-			";
+		    css.innerHTML = `
+		    	body, div, input { font-family: -apple-system-font !important; }
+				span[data-emo] span { opacity: 1.0 !important; width: auto !important; font-size: 12pt; }
+				span[data-emo] div { display: none !important; } 
+			`;
 			document.head.appendChild(css);
 		}
 	}
 	document.addEventListener('DOMSubtreeModified', injectCSS, false); //mutation events are deprecated
 
-		/*		
-		function autoPop() {
-			// auto-tab all opened chats (via window.open)
-			if (btn = document.querySelector('button[title="Pop-out"]')) {
-				console.log("got a pop-out button!");
-				console.log(btn);
-				document.removeEventListener('DOMSubtreeModified', autoPop, false);
-				setTimeout(function(){
-					btn.click();
-					webkit.messageHandlers.SwitchToNewestTab.postMessage([]);
-				}, 5000); //need a little lag so closure can associate window.open() to the button
-			}
+	/*		
+	function autoPop() {
+		// auto-tab all opened chats (via window.open)
+		if (btn = document.querySelector('button[title="Pop-out"]')) {
+			console.log("got a pop-out button!");
+			console.log(btn);
+			document.removeEventListener('DOMSubtreeModified', autoPop, false);
+			setTimeout(function(){
+				btn.click();
+				webkit.messageHandlers.SwitchToNewestTab.postMessage([]);
+			}, 5000); //need a little lag so closure can associate window.open() to the button
 		}
-		document.addEventListener('DOMSubtreeModified', autoPop, false); 
-		*/
+	}
+	document.addEventListener('DOMSubtreeModified', autoPop, false); 
+	*/
 
-		document.addEventListener('DOMSubtreeModified', function(e){
-	
-			// enable keyboard to quickly take/reject phone calls
-			if (btn = document.querySelector('button[title="Answer call"]')) { //answer button
-				var from = document.querySelector('div[googlevoice]').innerText;
-				console.log(Date() + " [Incoming phone call from:] " + from);
-				document.removeEventListener('DOMSubtreeModified', this, false);
-				btn.autofocus = true //hafta apply this before .onload
-				window.addEventListener("keypress", function (e) {
-					switch (e.which) {
-						case 13: //Enter
-						case 32: //Space
-							document.querySelector('button[title="Answer call"]').click();
-							document.removeEventListener('keypress', this, false);
-							break;
-						case 27: //Esc
-						case 9: //Tab
-						case 8: //Bksp
-							document.querySelector('button[title="Decline call"]').click();
-							document.removeEventListener('keypress', this, false);
-							break;
-						default:
-					}
-				});
-				webkit.messageHandlers.unhideApp.postMessage([]); //get the app in the user's face right now!!
+	var callWatcher;
+	function watchForIncomingCalls(chat) {
+		// if a new button node is added, see if it's an Answer Call and steal focus to the app
+		var cfg = { childList: true, subtree: true };
+		var watch = new MutationObserver(function(muts) {
+			for (var mut of muts) {
+				if (mut.type === 'childList')
+					if (btn = mut.target.querySelector('button[title="Answer call"]')) { 
+						console.log(Date() + " [Incoming phone call]");
+						btn.autofocus = true; //hafta apply this before .onload
+						window.addEventListener("keypress", function (e) {
+							switch (e.which) {
+								case 13: //Enter
+								case 32: //Space
+									document.querySelector('button[title="Answer call"]').click();
+									document.removeEventListener('keypress', this, false);
+									break;
+								case 27: //Esc
+								case 9: //Tab
+								case 8: //Bksp
+									document.querySelector('button[title="Decline call"]').click();
+									document.removeEventListener('keypress', this, false);
+									break;
+								default:
+							}
+						});
+						webkit.messageHandlers.unhideApp.postMessage([]); //get the app in the user's face right now!!
+						window.callWatcher.disconnect(); // can stop observing now
+					}					
 			}
 		});
-	//})(); //IIFE
+		watch.observe(chat, cfg);
+		return watch;
+	}
+	callWatcher = window.watchForIncomingCalls(document);
 
 };
