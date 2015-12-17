@@ -77,7 +77,6 @@ import UTIKit
 #elseif os(iOS)
 	var transparent = false // no overlaying MacPin apps upon other apps in iOS, so make it a no-op
 	var allowsMagnification = true // not exposed on iOS WebKit, make it no-op
-	var allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
 #endif
 
 	let favicon: FavIcon = FavIcon()
@@ -124,6 +123,7 @@ import UTIKit
 		allowsMagnification = true
 		_applicationNameForUserAgent = "Version/8.0.5 Safari/600.5.17"
 #elseif os(iOS)
+		allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
 		_applicationNameForUserAgent = "Version/8.0 Mobile/12F70 Safari/600.1.4"
 #endif
 		if let agent = agent { if !agent.isEmpty { _customUserAgent = agent } }
