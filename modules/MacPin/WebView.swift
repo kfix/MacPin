@@ -119,11 +119,11 @@ import UTIKit
 		//_editable = true // https://github.com/WebKit/webkit/tree/master/Tools/WebEditingTester
 
 		allowsBackForwardNavigationGestures = true
+		allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
 #if os(OSX)
 		allowsMagnification = true
 		_applicationNameForUserAgent = "Version/8.0.5 Safari/600.5.17"
 #elseif os(iOS)
-		allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
 		_applicationNameForUserAgent = "Version/8.0 Mobile/12F70 Safari/600.1.4"
 #endif
 		if let agent = agent { if !agent.isEmpty { _customUserAgent = agent } }
