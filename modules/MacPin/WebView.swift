@@ -77,7 +77,6 @@ import UTIKit
 #elseif os(iOS)
 	var transparent = false // no overlaying MacPin apps upon other apps in iOS, so make it a no-op
 	var allowsMagnification = true // not exposed on iOS WebKit, make it no-op
-	var allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
 #endif
 
 	let favicon: FavIcon = FavIcon()
@@ -124,6 +123,7 @@ import UTIKit
 		//_editable = true // https://github.com/WebKit/webkit/tree/master/Tools/WebEditingTester
 
 		allowsBackForwardNavigationGestures = true
+		allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
 #if os(OSX)
 		allowsMagnification = true
 		_applicationNameForUserAgent = "Version/8.0.5 Safari/600.5.17"
