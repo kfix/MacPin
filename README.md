@@ -141,7 +141,7 @@ Otherwise `$EDITOR` and `make` are your fork and knife.
 vim execs/MacPin.swift
 vim modules/MacPin/*.swift
 make test.app
-make SIM_ONLY=1 test.ios
+make only=sim test.ios
 ```
 
 Web Inspector can be accessed for any tab by right clicking in the page and selecting "Inspect Element" from the context menu.  
