@@ -90,6 +90,10 @@ import UTIKit
 		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
 #endif
+		if let privacy = privacy where privacy {
+			//prevent HTML5 application cache and asset/page caching by WebKit, MacPin never saves any history itself
+			prefs._storageBlockingPolicy = .BlockAll
+		}
 		prefs._allowFileAccessFromFileURLs = true // file://s can xHr other file://s
 		//prefs._isStandalone = true // `window.navigator.standalone == true` mimicing MobileSafari's springboard-link shell mode
 		//prefs.minimumFontSize = 14 //for blindies
@@ -161,8 +165,8 @@ import UTIKit
 		if let url = url { gotoURL(url) } else { return nil }
 	}
 
-	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false) {
-		self.init(config: nil, agent: agent, isolated: isolated)
+	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
+		self.init(config: nil, agent: agent, isolated: isolated, privacy: privacy)
 		gotoURL(url)
 	}
 

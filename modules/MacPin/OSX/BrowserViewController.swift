@@ -529,6 +529,11 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 		revealOmniBox()
 	}
 
+	func newPrivateTabPrompt() {
+		tabSelected = MPWebView(url: NSURL(string: "about:blank")!, agent: nil, isolated: true, privacy: true)
+		revealOmniBox()
+	}
+
 	func revealOmniBox() {
 		if omnibox.view.window != nil {
 			// if omnibox is already visible somewhere in the window, move key focus there
