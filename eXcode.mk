@@ -32,16 +32,25 @@ target_ver_iOS		?= 9.1
 target_iOS			?= apple-ios$(target_ver_iOS)
 target				?= $(target_OSX)
 
-ifneq ($(SIM_ONLY),)
+ifeq (sim,$(only))
+$(info Only building for iOS Simlator)
 sdk := iphonesimulator
 platform := iOS
 target := $(target_iOS)
-else ifneq ($(A9_ONLY),)
+else ifeq (a7,$(only))
+$(info Only building for iphone5s+, ipad Air, ipad Mini Retina)
 sdk := iphoneos
 platform := iOS
 target := $(target_iOS)
 arch := arm64
 archs_iphoneos := arm64
+else ifeq (a6,$(only))
+$(info Only building for iphone5, ipad4)
+sdk := iphoneos
+platform := iOS
+target := $(target_iOS)
+arch := armv7
+archs_iphoneos := armv7
 endif
 
 outdir				:= $(builddir)/$(sdk)-$(arch)-$(target_$(platform))
