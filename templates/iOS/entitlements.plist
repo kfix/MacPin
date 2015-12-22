@@ -1,33 +1,19 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
 <dict>
-	<!-- https://developer.apple.com/library/ios/technotes/tn2415/_index.html  -->
-	<!-- security cms -D -i  ~/Library/MobileDevice/Provisioning\ Profiles/3e2919d7-4ca2-480c-899a-b410633162f9.mobileprovision -->
 	<key>com.apple.security.application-groups</key>
-	<array />
+	<array>
+	</array>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>${PROV_ID}.*</string>
 	</array>
-	<key>com.apple.security.get-task-allow</key>
+	<key>get-task-allow</key>
 	<true/>
 	<key>application-identifier</key>
 	<string>${PROV_ID}.${BUNDLE_ID}</string>
 	<key>com.apple.developer.team-identifier</key>
 	<string>${PROV_ID}</string>
-	<!--
-		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Configurations/WebContent-iOS.entitlements
-	 	https://github.com/WebKit/webkit/blob/master/Tools/MiniBrowser/MiniBrowser.entitlements
-	-->
-	<!--
-		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Resources/SandboxProfiles/ios/com.apple.WebKit.WebContent.sb
-		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/com.apple.WebProcess.sb.in
-	-->
-	<!--
-	<key>seatbelt-profiles</key>
-	<array>
-	</array>
-	-->
 </dict>
 </plist>

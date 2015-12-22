@@ -113,7 +113,7 @@ $(xcassets)/%.xcassets: templates/xcassets/%/*.png
 #Render plist template w/shell vars
 define gen_plist_template
 	install -d $(dir $@)
-	EXECUTABLE_NAME=$* BUNDLE_ID=$(template_bundle_id).$* PROV_ID=$(mobileprov_team_id) eval "echo \"$$(cat $<)\"" > $@
+	EXECUTABLE_NAME=$* BUNDLE_ID=$(template_bundle_id).$* PROV_ID=$(mobileprov_team_id) PLAT_VER=$(target_ver_$(platform)) eval "echo \"$$(cat $<)\"" > $@
 endef
 
 # https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
@@ -158,8 +158,8 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/Contents
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist
 	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
-	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
-	-codesign --display -r- --verbose=4 --entitlements :- $@
+	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@ $@/Contents/SwiftSupport/*.dylib
+	-codesign --display -r- --verbose=4 --deep --entitlements :- $@
 	-spctl -vvvv --raw --assess --type execute $@
 	-asctl container acl list -file $@
 	@touch $@
@@ -188,8 +188,8 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.
 	[ ! -n "$(wildcard $(outdir)/Frameworks/*.dylib)" ] || cp -a $(outdir)/Frameworks $@/
 	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/
 	rsync -av --exclude='Library/' $(macpin_sites)/$*/ $@
-	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
-	-codesign --display -r- --verbose=4 --entitlements :- $@
+	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@ $@/SwiftSupport/*.dylib
+	-codesign --display -r- --verbose=4 --deep --entitlements :- $@
 	-spctl -vvvv --raw --assess --type execute $@
 	-asctl container acl list -file $@
 	@touch $@
@@ -270,9 +270,10 @@ test.app: $(appdir)/$(macpin).app
 # make cross test.ios
 # .crash: https://developer.apple.com/library/ios/technotes/tn2151/_index.html
 # & https://developer.apple.com/library/ios/qa/qa1747/_index.html
+# https://github.com/rpetrich/deviceconsole 
 /usr/local/bin/ios-sim: ; npm -g install ios-sim
 /usr/local/bin/ios-deploy: ; npm -g install ios-deploy
-ifeq ($(sdk)-$(arch),iphonesimulator-x86_64)
+ifeq ($(sdk),iphonesimulator)
 test.ios: $(appdir)/$(macpin).app
 	plutil -convert binary1 $</Info.plist
 	open -a "/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app"
@@ -283,12 +284,12 @@ test.ios: $(appdir)/$(macpin).app
 	-xcrun simctl install booted $<; xcrun simctl launch booted $(template_bundle_id).$(macpin) true
 	-tail -n100 ~/Library/Logs/CoreSimulator/$(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)/system.log
 	-@for i in ~/Library/Logs/DiagnosticReports/$(macpin)_$(shell date +%Y-%m-%d-%H%M)*_$(shell scutil --get LocalHostName).crash; do [ -f $$i ] && cat $$i && echo $$i; break; done
-else ifeq ($(sdk)-$(arch),iphoneos-arm64)
+else ifeq ($(sdk),iphoneos)
 test.ios: $(appdir)/$(macpin).app /usr/local/bin/ios-deploy
 	ios-deploy -d -b $<
 else
 test.ios: ;
-# make SIM_ONLY=1 test.ios
+# make only=sim test.ios
 endif
 
 # need to gen static html with https://github.com/realm/jazzy
@@ -337,6 +338,6 @@ release:
 	@exit 1
 endif
 
-.PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib
+.PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(outdir)/%.entitlements.plist
 .PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release wknightly doc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics
 .SUFFIXES:

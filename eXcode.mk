@@ -23,7 +23,7 @@ sdk					?= macosx
 
 archs_macosx		?= i386 x86_64
 archs_iphonesimulator	?= $(archs_macosx)
-archs_iphoneos		?= armv7 armv7s arm64
+archs_iphoneos		?= armv7 arm64
 arch				?= $(shell uname -m)
 
 target_ver_OSX		?= 10.11
