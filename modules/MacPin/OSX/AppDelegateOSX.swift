@@ -258,6 +258,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 
 	// handles drag-to-dock-badge, /usr/bin/open and argv[1] requests specifiying urls & local pathnames
 	func application(theApplication: NSApplication, openFile filename: String) -> Bool {
+		warn(filename)
 		if let ftype = try? NSWorkspace.sharedWorkspace().typeOfFile(filename) {
 			switch ftype {
 				//case "public.data":

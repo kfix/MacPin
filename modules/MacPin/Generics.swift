@@ -75,23 +75,23 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 }
 
 func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? {
-	// https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
+	// apply fuzzy logic like WK1: https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 	if urlstr.isEmpty { return nil }
 	if let urlp = NSURLComponents(string: urlstr) where !urlstr.hasPrefix("?") {
 		// FIXME: ^ urlp doesn't handle unescaped spaces in filenames
 		if urlp.scheme == "file" || urlstr.hasPrefix("/") || urlstr.hasPrefix("~/") || urlstr.hasPrefix("./") {
 			urlp.scheme = "file"
 			guard var path = urlp.path else { warn("no filepath!"); return nil }
-			if path.hasPrefix("./") { // consider this == Resources/
+			if path.hasPrefix("./") { // consider this == Resources/, then == CWD/
 				path.replaceRange(path.startIndex..<path.startIndex.advancedBy(1),
-					with: NSBundle.mainBundle().resourcePath ?? String() )
+					with: NSBundle.mainBundle().resourcePath ?? NSFileManager().currentDirectoryPath)
 				urlp.path = path
 			}
 
 			if let url = urlp.URL?.URLByStandardizingPath where NSFileManager.defaultManager().fileExistsAtPath(url.path ?? String()) {
 				return url
 			} else {
-				warn("\(path) not found")
+				warn("\(path) not found - request was for \(urlstr)")
 				return nil
 			}
 		}
