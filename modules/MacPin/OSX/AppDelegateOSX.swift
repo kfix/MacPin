@@ -4,7 +4,7 @@ import WebKitPrivates
 import Darwin
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
-class AppDelegateOSX: AppDelegate{
+class AppDelegateOSX: AppDelegate {
 
 	var effectController = EffectViewController()
 	var browserController = BrowserViewController()

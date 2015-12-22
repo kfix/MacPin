@@ -383,7 +383,7 @@
 	<key>NSSupportsSuddenTermination</key>
 	<true/>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.11.1</string>
+	<string>${PLAT_VER}</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
