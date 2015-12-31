@@ -1,4 +1,5 @@
-/*eslint-env applescript*/
+/*eslint-env: applescript*/
+/*eslint-env: es6*/
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
 
@@ -12,6 +13,8 @@ var mapsTab, maps = {
 };
 if ($.app.platform == "OSX") maps.subscribeTo.push("MacPinPollStates", "getGeolocation", "watchGeolocation", "deactivateGeolocation");
 var mapsAlt = Object.assign({}, maps, {url: "https://www.google.com/maps/?authuser=1"});
+var mapsLite = Object.assign({}, maps, {url: "https://www.google.com/maps/?force=lite"});
+var mapsGL = Object.assign({}, maps, {url: "https://www.google.com/maps/preview/?force=webgl"});
 
 // need to map pinchIn to scrollUp, pinchOut to scrollDown
 // rotate?
@@ -20,9 +23,8 @@ var mapsAlt = Object.assign({}, maps, {url: "https://www.google.com/maps/?authus
 
 mapsTab = $.browser.tabSelected = new $.WebView(maps);
 
-function search(query) {
+function search(query, mapper) {
 	// https://developers.google.com/maps/documentation/ios/urlscheme#search
-	var mapper = (~$.browser.tabSelected.url.indexOf('//www.google.com/maps/')) ? $.browser.tabSelected : mapsTab;
 	mapper.evalJS( // hook app.js to perform search
 		"document.getElementById('searchboxinput').value = '" + query + "';" + 
 		 "document.getElementById('searchbox_form').submit();"
@@ -77,9 +79,10 @@ delegate.decideNavigationForURL = function(url) {
 	}
 };
 
-delegate.handleUserInputtedInvalidURL = function(query) {
+delegate.handleUserInputtedInvalidURL = function(query, tab) {
 	// assuming the invalid url is a search request
-	search(query);
+	var mapper = (~tab.url.indexOf('//www.google.com/maps/')) ? tab : mapsTab;
+	search(query, tab);
 	return true; // tell MacPin to stop validating the URL
 };
 
@@ -112,6 +115,8 @@ delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('gmaps');
 	//$.app.registerURLScheme('googlemaps'); //IOS?
 	$.browser.addShortcut('Google Maps', maps);
+	$.browser.addShortcut('Google Maps Lite', mapsLite);
+	$.browser.addShortcut('Google Maps +WebGL', mapsGL);
 	$.browser.addShortcut('Google Maps (using secondary account)', mapsAlt);
 	$.browser.addShortcut('Google Maps Dev Team blog', "http://google-latlong.blogspot.com");
 	$.browser.addShortcut('Classic gMaps', "http://gokml.net/maps");
