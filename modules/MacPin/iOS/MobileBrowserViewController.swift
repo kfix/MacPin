@@ -41,9 +41,14 @@ extension UIView {
 	var selectedViewControllerIndex: Int { get set }
 	func pushTab(webview: AnyObject) // JSExport does not seem to like signatures with custom types
 	func newTabPrompt()
+	func newIsolatedTabPrompt()
+	func newPrivateTabPrompt()
 	func addShortcut(title: String, _ obj: AnyObject?)
 	func switchToPreviousTab()
 	func switchToNextTab()
+	func focusOnBrowser()
+	func unhideApp()
+	func bounceDock()
 }
 
 @objc class MobileBrowserViewController: UIViewController, MobileBrowserScriptExports {
@@ -125,6 +130,8 @@ extension UIView {
 		view.backgroundColor = nil // transparent base view
 		view.autoresizingMask = [.FlexibleHeight, .FlexibleWidth] //resize base view to match superview size (if any)
 		view.autoresizesSubviews = true // resize tabbed subviews based on their autoresizingMasks
+
+		// FIXME: sites should be able to override these gesture recognizers
 		let swipeLeft = UISwipeGestureRecognizer(target: self, action: Selector("switchToNextTab"))
 		swipeLeft.direction = UISwipeGestureRecognizerDirection.Left
 		view.addGestureRecognizer(swipeLeft)
@@ -362,11 +369,17 @@ extension MobileBrowserViewController {
 		tabSelected = MPWebView(url: NSURL(string: "about:blank")!)
 		navBox.becomeFirstResponder() //pop-up keyboard
 	}
+	func newIsolatedTabPrompt() {}
+	func newPrivateTabPrompt() {}
 
 	func pushTab(webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerIOS(webview: webview)) } }
 
 	func addShortcut(title: String, _ obj: AnyObject?) {} // FIXME: populate bottom section of tabList with App shortcuts
 	// + Force Touch AppIcon menu?
+
+	func focusOnBrowser() {}
+	func unhideApp() {}
+	func bounceDock() {}
 
 	func switchToPreviousTab() { selectedViewControllerIndex -= 1 }
 	func switchToNextTab() { selectedViewControllerIndex += 1 }

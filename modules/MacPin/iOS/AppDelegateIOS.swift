@@ -36,7 +36,6 @@ extension AppDelegateIOS: UIApplicationDelegate { //UIResponder
 		// airplay to an external screen on a mac or appletv
 		//	https://developer.apple.com/library/ios/documentation/WindowsViews/Conceptual/WindowAndScreenGuide/UsingExternalDisplay/UsingExternalDisplay.html#//apple_ref/doc/uid/TP40012555-CH3-SW1
 
-
 		for (idx, arg) in Process.arguments.enumerate() {
 			switch (arg) {
 				case "-i":
@@ -63,7 +62,7 @@ extension AppDelegateIOS: UIApplicationDelegate { //UIResponder
 		}
 
 		return true //FIXME
-    }
+  }
 
 	func applicationDidBecomeActive(application: UIApplication) { // UI presented
 		//if application?.orderedDocuments?.count < 1 { showApplication(self) }
@@ -79,7 +78,6 @@ extension AppDelegateIOS: UIApplicationDelegate { //UIResponder
 		}
 
 		if browserController.tabs.count < 1 { browserController.newTabPrompt() } //don't allow a tabless state
-
 	}
 
 	// need https://github.com/kemenaran/ios-presentError
