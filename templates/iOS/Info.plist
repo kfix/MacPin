@@ -56,5 +56,9 @@
 		<key>NSThirdPartyExceptionRequiresForwardSecrecy</key>
 		<false/>
 	</dict>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>com.google.Chrome</string>
+	</array>
 </dict>
 </plist>
