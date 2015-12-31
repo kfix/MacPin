@@ -225,11 +225,10 @@ install:
 	cp -R $(filter %.app,$^) $(installdir)
 endif
 
-clean:
-	-cd $(appdir) && for i in $(filter %.app,$^); do \
-		/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -u $$i; \
-		rm -rf $$i; \
-	done
+unregister:
+	-/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -u $(builddir)/*/apps/*.app
+
+clean: unregister
 	-rm -rf $(outdir) $(xcassets)
 
 reset:
