@@ -4,7 +4,7 @@ import WebKitPrivates
 import Darwin
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
-class AppDelegateOSX: AppDelegate {
+public class AppDelegateOSX: AppDelegate {
 
 	var effectController = EffectViewController()
 	var browserController = BrowserViewController()
@@ -33,16 +33,16 @@ class AppDelegateOSX: AppDelegate {
 
 extension AppDelegateOSX: NSApplicationDelegate {
 
-	func applicationDockMenu(sender: NSApplication) -> NSMenu? { return browserController.tabMenu }
+	public func applicationDockMenu(sender: NSApplication) -> NSMenu? { return browserController.tabMenu }
 
-	func applicationShouldOpenUntitledFile(app: NSApplication) -> Bool { return false }
+	public func applicationShouldOpenUntitledFile(app: NSApplication) -> Bool { return false }
 
 	//func application(sender: AnyObject, openFileWithoutUI filename: String) -> Bool {} // app terminates on return!
 	//func application(theApplication: NSApplication, printFile filename: String) -> Bool () //app terminates on return
 
 	//public finishLaunching() { super.finishLaunching() } // app activates, NSOpen files opened
 
-	func applicationWillFinishLaunching(notification: NSNotification) { // dock icon bounces, also before self.openFile(foo.bar) is called
+	public func applicationWillFinishLaunching(notification: NSNotification) { // dock icon bounces, also before self.openFile(foo.bar) is called
 		NSUserNotificationCenter.defaultUserNotificationCenter().delegate = self
 		let app = notification.object as? NSApplication
 		//let appname = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleName") ?? NSProcessInfo.processInfo().processName
@@ -161,7 +161,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: "handleGetURLEvent:replyEvent:", forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url scehems
 	}
 
-    func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
+    public func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
 		AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
 		AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
 		AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
@@ -215,11 +215,11 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		}
     }
 
-	func applicationDidBecomeActive(notification: NSNotification) {
+	public func applicationDidBecomeActive(notification: NSNotification) {
 		//if application?.orderedDocuments?.count < 1 { showApplication(self) }
 	}
 
-	func application(application: NSApplication, willPresentError error: NSError) -> NSError {
+	public func application(application: NSApplication, willPresentError error: NSError) -> NSError {
 		// not in iOS: http://stackoverflow.com/a/13083203/3878712
 		// NOPE, this can cause loops warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 		if error.domain == NSURLErrorDomain {
@@ -236,7 +236,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		return error
 	}
 
-	func applicationShouldTerminate(sender: NSApplication) -> NSApplicationTerminateReply {
+	public func applicationShouldTerminate(sender: NSApplication) -> NSApplicationTerminateReply {
 		warn()
 //#if arch(x86_64) || arch(i386)
 //		if prompter != nil { return .TerminateLater }
@@ -244,7 +244,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 		return .TerminateNow
 	}
 
-	func applicationWillTerminate(notification: NSNotification) {
+	public func applicationWillTerminate(notification: NSNotification) {
 		warn()
 		NSUserDefaults.standardUserDefaults().synchronize()
 #if arch(x86_64) || arch(i386)
@@ -254,10 +254,10 @@ extension AppDelegateOSX: NSApplicationDelegate {
 #endif
 	}
 
-	func applicationShouldTerminateAfterLastWindowClosed(app: NSApplication) -> Bool { return true }
+	public func applicationShouldTerminateAfterLastWindowClosed(app: NSApplication) -> Bool { return true }
 
 	// handles drag-to-dock-badge, /usr/bin/open and argv[1] requests specifiying urls & local pathnames
-	func application(theApplication: NSApplication, openFile filename: String) -> Bool {
+	public func application(theApplication: NSApplication, openFile filename: String) -> Bool {
 		if let ftype = try? NSWorkspace.sharedWorkspace().typeOfFile(filename) {
 			switch ftype {
 				//case "public.data":
@@ -300,7 +300,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 
 extension AppDelegateOSX: NSUserNotificationCenterDelegate {
 	//didDeliverNotification
-	func userNotificationCenter(center: NSUserNotificationCenter, didActivateNotification notification: NSUserNotification) {
+	public func userNotificationCenter(center: NSUserNotificationCenter, didActivateNotification notification: NSUserNotification) {
 		warn("user clicked notification")
 
 		if AppScriptRuntime.shared.jsdelegate.tryFunc("handleClickedNotification", notification.title ?? "", notification.subtitle ?? "", notification.informativeText ?? "", notification.identifier ?? "") {
@@ -310,12 +310,12 @@ extension AppDelegateOSX: NSUserNotificationCenterDelegate {
 	}
 
 	// always display notifcations, even if app is active in foreground (for alert sounds)
-	func userNotificationCenter(center: NSUserNotificationCenter, shouldPresentNotification notification: NSUserNotification) -> Bool { return true }
+	public func userNotificationCenter(center: NSUserNotificationCenter, shouldPresentNotification notification: NSUserNotification) -> Bool { return true }
 }
 
 extension AppDelegateOSX: NSWindowRestoration {
 	// https://developer.apple.com/library/mac/documentation/General/Conceptual/MOSXAppProgrammingGuide/CoreAppDesign/CoreAppDesign.html#//apple_ref/doc/uid/TP40010543-CH3-SW35
-	class func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow?,NSError?) -> Void)) {
+	public static func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow?,NSError?) -> Void)) {
 		if let app = NSApplication.sharedApplication().delegate as? AppDelegateOSX, let window = app.windowController.window where identifier == "browser" {
 			completionHandler(window, nil)
 			//WKWebView._restoreFromSessionStateData ...
@@ -329,7 +329,7 @@ extension AppDelegateOSX: NSWindowRestoration {
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
 // https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
 extension AppDelegateOSX {
-	override func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
+	override public func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
 		warn(download.description)
 		//pop open a save Panel to dump data into file
 		let saveDialog = NSSavePanel();

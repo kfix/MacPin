@@ -30,6 +30,7 @@ struct WeakThing<T: AnyObject> {
 	func switchToPreviousTab()
 	func newTabPrompt()
 	func newIsolatedTabPrompt()
+	func newPrivateTabPrompt()
 	func focusOnBrowser()
 	func unhideApp()
 	func bounceDock()
@@ -74,6 +75,8 @@ struct WeakThing<T: AnyObject> {
 
 	var cornerRadius = CGFloat(0.0) // increment above 0.0 to put nice corners on the window FIXME userDefaults
 
+	func close() { NSApplication.sharedApplication().terminate(self) }
+
 	override func insertTabViewItem(tab: NSTabViewItem, atIndex: Int) {
 		if let view = tab.view {
 			tab.initialFirstResponder = view
@@ -114,7 +117,7 @@ struct WeakThing<T: AnyObject> {
 
 	override func tabViewDidChangeNumberOfTabViewItems(tabView: NSTabView) {
 		warn("@\(tabView.tabViewItems.count)")
-		if tabView.tabViewItems.count == 0 { view.window?.performClose(nil) }
+		if tabView.tabViewItems.count == 0 { close() }
 	}
 
 	override func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [String] {
@@ -401,6 +404,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 					tabView.selectTabViewItem(tabViewItemForViewController(vc))
 				case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
 					self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
+				//case let js as JSValue: guard let wv = js.toObjectOfClass(MPWebView.self) { self.tabSelected = wv } //custom bridging coercion
 				default:
 					warn("invalid object")
 			}
@@ -511,7 +515,6 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 
 	//MARK: menu & shortcut selectors
 
-	func close() { view.window?.performClose(nil) }
 	func switchToPreviousTab() { tabView.selectPreviousTabViewItem(self) }
 	func switchToNextTab() { tabView.selectNextTabViewItem(self) }
 
