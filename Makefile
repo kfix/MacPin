@@ -120,6 +120,12 @@ endef
 # https://developer.apple.com/library/ios/qa/qa1686/_index.html
 $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/Info.plist: templates/$(platform)/Info.plist
 	$(gen_plist_template)
+
+# https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/SystemExtensionKeys.html#//apple_ref/doc/uid/TP40014212-SW17
+$(appdir)/%/Contents/PlugIns/ActionExtension.appex/Contents/Info.plist $(appdir)/%.appex/Info.plist: templates/appex/$(platform)/Info.plist
+		$(gen_plist_template)
+
+# https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html
 $(outdir)/%.entitlements.plist: templates/$(platform)/entitlements.plist
 	$(gen_plist_template)
 
@@ -144,7 +150,7 @@ $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/
 # OSX apps
 # https://developer.apple.com/library/mac/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html#//apple_ref/doc/uid/10000123i-CH101-SW1
 # https://developer.apple.com/library/mac/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
-# https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html
+
 $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/
 	@install -d $@ $@/Contents/MacOS $@/Contents/Resources
 	$(patsubst %,cp % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
@@ -195,27 +201,15 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.
 	@touch $@
 endif
 
-$(appdir)/%.share.appex: $(icons)/%.icns $(macpin_sites)/$*/appex.share.plist $(macpin_sites)/$*./appex.share.js icons/Resources
-	python2.7 -m bundlebuilder \
-	--name=$* \
-	--bundle-id=$(template_bundle_id).$(macpin).$* \
-	--outdir=$(appdir) \
-	$(addprefix --executable=,$(filter $(outdir)/exec/%,$^)) \
-	--iconfile=icons/$*.icns \
-	--file=$(macpin_sites)/$*:Contents/Resources \
-	--file=icons/Resources:Contents/Resources \
-	$(addprefix --lib=,$(filter %.dylib,$^)) \
-	$(addprefix --lib=,$(wildcard $(outdir)/Frameworks/*.dylib)) \
-	build
-	plutil -replace CFBundleShortVersionString -string "$(VERSION)" $@/Contents/Info.plist
-	plutil -replace CFBundleVersion -string "1" $@/Contents/Info.plist
-	plutil -replace CFBundlePackageType -string "XPC!" $@/Contents/Info.plist
-	plutil -replace NSExtension -json "{}" $@/Contents/Info.plist
-	/usr/libexec/PlistBuddy -c 'merge $(macpin_sites)/$*/appex.share.plist :NSExtension' -c save $@/Contents/Info.plist
-	-codesign -s - -f --entitlements entitlements.plist $@ && codesign -dv $@
-	-asctl container acl list -file $@
+# http://www.appcoda.com/ios-8-action-extensions-tutorial/
+$(appdir)/%/PlugIns/ActionExtension.appex: $(appdir)/%/PlugIns/ActionExtension.appex/Info.plist $(icons)/%.icns $(macpin_sites)/%/appex.js
+	# ld -e _NSExtensionMain -fapplicationextension -o execs/MacPin.appex obj/ActionExtension.o
+	#  http://bazel.io/docs/be/objective-c.html#ios_extension
+	#/usr/libexec/PlistBuddy -c 'merge $(macpin_sites)/$*/appex.share.plist :NSExtension' -c save $@/Contents/Info.plist
+	#-codesign -s - -f --entitlements entitlements.plist $@ && codesign -dv $@
+	#-asctl container acl list -file $@
 
-ifeq ($(sdk)-$(arch),iphonesimulator-x86_64)
+ifeq ($(sdk),iphonesimulator)
 install:
 	open -a "/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app"
 	xcrun simctl getenv booted foobar || sleep 5
@@ -223,12 +217,12 @@ install:
 	# pre-A7 devices (ipad mini 2, ipad air, iphone 5s) cannot run x86_64 builds
 	# if app closes without showing launch screen, try changing the simulated device to A7 or later
 	for i in $(filter %.app,$^); do xcrun simctl install booted $$i; done
-else ifeq ($(sdk)-$(arch),iphoneos-arm64)
+else ifeq ($(sdk),iphoneos)
 install: /usr/local/bin/ios-deploy
 	for i in $(filter %.app,$^); do ios-deploy -b $$i; done
 else
 install:
-	cp -R $(filter %.app,$^) ~/Applications
+	cp -R $(filter %.app,$^) $(installdir)
 endif
 
 clean:
@@ -270,7 +264,7 @@ test.app: $(appdir)/$(macpin).app
 # make cross test.ios
 # .crash: https://developer.apple.com/library/ios/technotes/tn2151/_index.html
 # & https://developer.apple.com/library/ios/qa/qa1747/_index.html
-# https://github.com/rpetrich/deviceconsole 
+# https://github.com/rpetrich/deviceconsole
 /usr/local/bin/ios-sim: ; npm -g install ios-sim
 /usr/local/bin/ios-deploy: ; npm -g install ios-deploy
 ifeq ($(sdk),iphonesimulator)
