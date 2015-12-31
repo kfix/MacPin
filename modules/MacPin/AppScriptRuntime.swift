@@ -105,23 +105,42 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
     override init() {
 		context.name = "AppScriptRuntime"
-		context.evaluateScript("$ = {};") //default global for our exports
-		jsdelegate = context.evaluateScript("{};")! //default property-less delegate obj // FIXME: #11 make an App() from ES6 class
-		context.objectForKeyedSubscript("$").setObject("", forKeyedSubscript: "launchedWithURL") // FIXME: use context.currentArguments ?
+		jsdelegate = JSValue(newObjectInContext: context) //default property-less delegate obj // FIXME: #11 make an App() from ES6 class
+#if SAFARIDBG
+		// https://github.com/WebKit/webkit/commit/e9f4a5ef360d47b719f7391fe02d28ff1e63fc7://github.com/WebKit/webkit/commit/e9f4a5ef360d47b719f7391fe02d28ff1e63fc7e
+		// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSContextPrivate.h
+		context._remoteInspectionEnabled = true
+		//context.logToSystemConsole = true
+#else
+		context._remoteInspectionEnabled = false
+		//context.logToSystemConsole = false
+#endif
+		//context._debuggerRunLoop = CFRunLoopRef // FIXME: make a new thread for REPL and Web Inspector console eval()s
+
+		let exports = JSValue(newObjectInContext: context)
+		exports.setObject("", forKeyedSubscript: "launchedWithURL") // FIXME: use context.currentArguments ?
 		//context.objectForKeyedSubscript("$").setObject(GlobalUserScripts, forKeyedSubscript: "globalUserScripts")
 		// FIXME: make .extend methods for all MacPin classes that want to export constructors?
-		context.objectForKeyedSubscript("$").setObject(MPWebView.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebView]
-		context.objectForKeyedSubscript("$").setObject(SSKeychain.self, forKeyedSubscript: "keychain")
-		// context.globalObject.setObject
+		exports.setObject(MPWebView.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebView]
+		exports.setObject(SSKeychain.self, forKeyedSubscript: "keychain")
 		XMLHttpRequest().extend(context) // allows `new XMLHTTPRequest` for doing xHr's
 
 		// set console.log to NSBlock that will call warn()
 		let logger: @convention(block) String -> Void = { msg in warn(msg) }
-		//let dumper: @convention(block) AnyObject -> Void = { obj in dump(obj) }
-		context.evaluateScript("console = {};") // console global
-		context.objectForKeyedSubscript("console").setObject(unsafeBitCast(logger, AnyObject.self), forKeyedSubscript: "log")
-		//context.objectForKeyedSubscript("console").setObject(unsafeBitCast(dump, AnyObject.self), forKeyedSubscript: "dump")
+		let console = JSValue(newObjectInContext: context)
+		console.setObject(unsafeBitCast(logger, AnyObject.self), forKeyedSubscript: "log")
+		context.globalObject.setObject(console, forKeyedSubscript: "console") // overrides JSC's built-in
 
+		// FIXME: imitate JSConsole or JSConsoleClient to intercept built-in console.* support instead of shimming blocks
+		// https://github.com/WebKit/webkit/commits/master/Source/JavaScriptCore/runtime/ConsoleTypes.h
+		// context.globalObject.consoleClient = bluh
+		// let console: JSObject = context.globalObject.objectForKeyedSubscript("console")
+		// console.invokeMethod("log", withArguments: ["hello console.log"])
+		// console.objectForKeyedSubscript("log") == JSFunction
+
+
+
+		context.globalObject.setObject(exports, forKeyedSubscript: "$") // FIXME: ever heard of jQuery?
 		super.init()
 	}
 
@@ -158,7 +177,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 					NSURLErrorKey: context.name,
 					NSLocalizedDescriptionKey: "\(context.name) `\(exception)`"
 				])
-				displayError(error) // would be nicer to pop up an inspector pane or tab to interactively debug this
+				displayError(error) // FIXME: would be nicer to pop up an inspector pane or tab to interactively debug this
 				context.exception = exception //default in JSContext.mm
 				return // gets returned to evaluateScript()?
 			}
@@ -172,6 +191,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		}
 	}
 
+	// FIXME: ES6 modules? context.evaluateScript("import ...") or "System.load()";
 	func loadAppScript(urlstr: String) -> JSValue? {
 		if let scriptURL = NSURL(string: urlstr), script = try? NSString(contentsOfURL: scriptURL, encoding: NSUTF8StringEncoding) {
 			// FIXME: script code could be loaded from anywhere, exploitable?
@@ -206,6 +226,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				// need to make a throwaway dupe of it
 				warn("bad syntax: \(scriptURL)")
 				if exception.isObject { warn("got errObj") }
+				// delegate.tryFunc("scriptLoadErrorHandler", JSValue(newErrorFromMessage: "exception", inContext: context))
 				if exception.isString { warn(exception.toString()) }
 				/*
 				var errMessageJSC = JSValueToStringCopy(context.JSGlobalContextRef, exception.JSValueRef, UnsafeMutablePointer(nil))
@@ -438,7 +459,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		let osa = OSAScript(source: script, language: OSALanguage(forName: "JavaScript"))
 		if let output: NSAppleEventDescriptor = osa.executeHandlerWithName("run", arguments: args, error: &error) {
 			// does this interpreter persist? http://lists.apple.com/archives/applescript-users/2015/Jan/msg00164.html
-			warn(output.description)
+			warn(output.description) // FIXME: use https://bitbucket.org/hhas/swiftae to introspect?
 		} else if (error != nil) {
 			warn("error: \(error)")
 		}
