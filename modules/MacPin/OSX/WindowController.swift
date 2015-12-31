@@ -10,7 +10,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 		
 		let appearance = NSUserDefaults.standardUserDefaults().stringForKey("AppleInterfaceStyle") ?? "Light"
 		if let window = window {
-			window.collectionBehavior = [NSWindowCollectionBehavior.FullScreenPrimary, NSWindowCollectionBehavior.ParticipatesInCycle, NSWindowCollectionBehavior.Managed, NSWindowCollectionBehavior.CanJoinAllSpaces]
+			window.collectionBehavior = [.FullScreenPrimary, .ParticipatesInCycle, .Managed]
 			window.styleMask |= NSUnifiedTitleAndToolbarWindowMask
 			window.movableByWindowBackground = true
 			window.backgroundColor = NSColor.whiteColor()
@@ -41,8 +41,14 @@ class WindowController: NSWindowController, NSWindowDelegate {
 	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
 
 	func window(window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplicationPresentationOptions) -> NSApplicationPresentationOptions {
-		return [NSApplicationPresentationOptions.AutoHideToolbar, NSApplicationPresentationOptions.AutoHideMenuBar, NSApplicationPresentationOptions.FullScreen, proposedOptions]
+		return [.AutoHideToolbar, .AutoHideMenuBar, .FullScreen, proposedOptions]
 	}
+
+	//class func restorableStateKeyPaths() -> [String] { return [] }
+	//override func encodeRestorableStateWithCoder(coder: NSCoder) { super(coder) }
+	//override func restoreStateWithCoder(coder: NSCoder) { super(coder) }
+	//func window(window: NSWindow, willEncodeRestorableState state: NSCoder) {}
+	//func window(window: NSWindow, didDecodeRestorableState state: NSCoder) {}
 
 	func toggleTitlebar() {
 		if let window = window,
