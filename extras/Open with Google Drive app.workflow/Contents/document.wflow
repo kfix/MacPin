@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AMApplicationBuild</key>
+	<string>419</string>
+	<key>AMApplicationVersion</key>
+	<string>2.6</string>
+	<key>AMDocumentVersion</key>
+	<string>2</string>
+	<key>actions</key>
+	<array>
+		<dict>
+			<key>action</key>
+			<dict>
+				<key>AMAccepts</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Optional</key>
+					<false/>
+					<key>Types</key>
+					<array>
+						<string>com.apple.cocoa.url</string>
+					</array>
+				</dict>
+				<key>AMActionVersion</key>
+				<string>2.0.2</string>
+				<key>AMApplication</key>
+				<array>
+					<string>Safari</string>
+				</array>
+				<key>AMParameterProperties</key>
+				<dict>
+					<key>predicate</key>
+					<dict/>
+				</dict>
+				<key>AMProvides</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Types</key>
+					<array>
+						<string>com.apple.cocoa.url</string>
+					</array>
+				</dict>
+				<key>AMRequiredResources</key>
+				<array/>
+				<key>ActionBundlePath</key>
+				<string>/System/Library/Automator/Filter URLs 2.action</string>
+				<key>ActionName</key>
+				<string>Filter URLs</string>
+				<key>ActionParameters</key>
+				<dict>
+					<key>predicate</key>
+					<data>
+					YnBsaXN0MDDUAQIDBAUGYWJYJHZlcnNpb25Y
+					JG9iamVjdHNZJGFyY2hpdmVyVCR0b3ASAAGG
+					oK8QFgcIDxQcJicpMDQ5Oj1BRUpLTlRYXF5V
+					JG51bGzTCQoLDA0OXxAXTlNDb21wb3VuZFBy
+					ZWRpY2F0ZVR5cGVfEA9OU1N1YnByZWRpY2F0
+					ZXNWJGNsYXNzEAGAAoAV0hALERNaTlMub2Jq
+					ZWN0c6ESgAOAFNQLFRYXGBkaG18QEU5TUmln
+					aHRFeHByZXNzaW9uXxAQTlNMZWZ0RXhwcmVz
+					c2lvbl8QE05TUHJlZGljYXRlT3BlcmF0b3KA
+					E4AOgASAEdUdHh8gCyEiIyQlWU5TT3BlcmFu
+					ZF5OU1NlbGVjdG9yTmFtZV8QEE5TRXhwcmVz
+					c2lvblR5cGVbTlNBcmd1bWVudHOABoAFEAOA
+					CIANXHZhbHVlRm9yS2V5OtIfCwwogAfSKiss
+					LVokY2xhc3NuYW1lWCRjbGFzc2VzXxAQTlNT
+					ZWxmRXhwcmVzc2lvbqMsLi9cTlNFeHByZXNz
+					aW9uWE5TT2JqZWN00hALMTOhMoAJgAzTCx81
+					Njc4WU5TS2V5UGF0aIALEAqAClRob3N00ior
+					OzxfEBxOU0tleVBhdGhTcGVjaWZpZXJFeHBy
+					ZXNzaW9uozsuL9IqKz4/Xk5TTXV0YWJsZUFy
+					cmF5oz5AL1dOU0FycmF50iorQkNfEBNOU0tl
+					eVBhdGhFeHByZXNzaW9upEJELi9fEBROU0Z1
+					bmN0aW9uRXhwcmVzc2lvbtNGHwtHSElfEA9O
+					U0NvbnN0YW50VmFsdWWADxAAgBBfEBBkcml2
+					ZS5nb29nbGUuY29t0iorTE1fEBlOU0NvbnN0
+					YW50VmFsdWVFeHByZXNzaW9uo0wuL9QLT1BR
+					UkgjU1pOU01vZGlmaWVyV05TRmxhZ3NeTlNP
+					cGVyYXRvclR5cGWAEhBj0iorVVZfEBVOU0lu
+					UHJlZGljYXRlT3BlcmF0b3KjVVcvXxATTlNQ
+					cmVkaWNhdGVPcGVyYXRvctIqK1laXxAVTlND
+					b21wYXJpc29uUHJlZGljYXRlo1lbL1tOU1By
+					ZWRpY2F0ZdIqK0BdokAv0iorX2BfEBNOU0Nv
+					bXBvdW5kUHJlZGljYXRlo19bL18QD05TS2V5
+					ZWRBcmNoaXZlctFjZFRyb290gAEACAARABoA
+					IwAtADIANwBQAFYAXQB3AIkAkACSAJQAlgCb
+					AKYAqACqAKwAtQDJANwA8gD0APYA+AD6AQUB
+					DwEeATEBPQE/AUEBQwFFAUcBVAFZAVsBYAFr
+					AXQBhwGLAZgBoQGmAagBqgGsAbMBvQG/AcEB
+					wwHIAc0B7AHwAfUCBAIIAhACFQIrAjACRwJO
+					AmACYgJkAmYCeQJ+ApoCngKnArICugLJAssC
+					zQLSAuoC7gMEAwkDIQMlAzEDNgM5Az4DVANY
+					A2oDbQNyAAAAAAAAAgEAAAAAAAAAZQAAAAAA
+					AAAAAAAAAAAAA3Q=
+					</data>
+				</dict>
+				<key>BundleIdentifier</key>
+				<string>com.apple.Automator.Filter_URLs_2</string>
+				<key>CFBundleVersion</key>
+				<string>2.0.2</string>
+				<key>CanShowSelectedItemsWhenRun</key>
+				<false/>
+				<key>CanShowWhenRun</key>
+				<true/>
+				<key>Category</key>
+				<array>
+					<string>AMCategoryInternet</string>
+				</array>
+				<key>Class Name</key>
+				<string>Filter_URLs_2</string>
+				<key>InputUUID</key>
+				<string>E3F706F6-EE8F-471F-B2B8-9BB6FAF9B08B</string>
+				<key>Keywords</key>
+				<array/>
+				<key>OutputUUID</key>
+				<string>8DAD0FED-84B8-41CD-92E7-33A99016E5EE</string>
+				<key>UUID</key>
+				<string>785316D8-98BC-4703-98CF-84B4CA642A05</string>
+				<key>UnlocalizedApplications</key>
+				<array>
+					<string>Safari</string>
+				</array>
+				<key>arguments</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>default value</key>
+						<data>
+						</data>
+						<key>name</key>
+						<string>predicate</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>0</string>
+					</dict>
+				</dict>
+				<key>conversionLabel</key>
+				<integer>0</integer>
+				<key>isViewVisible</key>
+				<true/>
+				<key>location</key>
+				<string>301.500000:408.000000</string>
+				<key>nibPath</key>
+				<string>/System/Library/Automator/Filter URLs 2.action/Contents/Resources/Base.lproj/main.nib</string>
+			</dict>
+			<key>isViewVisible</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>action</key>
+			<dict>
+				<key>AMAccepts</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Optional</key>
+					<true/>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>AMActionVersion</key>
+				<string>1.0</string>
+				<key>AMApplication</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>AMParameterProperties</key>
+				<dict>
+					<key>source</key>
+					<dict/>
+				</dict>
+				<key>AMProvides</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>ActionBundlePath</key>
+				<string>/System/Library/Automator/Run JavaScript.action</string>
+				<key>ActionName</key>
+				<string>Run JavaScript</string>
+				<key>ActionParameters</key>
+				<dict>
+					<key>source</key>
+					<string>var drive = Application("Google_Drive");drive.includeStandardAdditions = true;function run(input, parameters) {	outs = []	for (url of input) {		drive.openLocation(url);		outs.push(url);	}	return outs;}</string>
+				</dict>
+				<key>BundleIdentifier</key>
+				<string>com.apple.Automator.RunJavaScript</string>
+				<key>CFBundleVersion</key>
+				<string>1.0</string>
+				<key>CanShowSelectedItemsWhenRun</key>
+				<false/>
+				<key>CanShowWhenRun</key>
+				<true/>
+				<key>Category</key>
+				<array>
+					<string>AMCategoryUtilities</string>
+				</array>
+				<key>Class Name</key>
+				<string>RunJavaScriptAction</string>
+				<key>InputUUID</key>
+				<string>2D036305-C02B-44DE-BAB4-C437E280CBA9</string>
+				<key>Keywords</key>
+				<array>
+					<string>Run</string>
+					<string>JavaScript</string>
+				</array>
+				<key>OutputUUID</key>
+				<string>84B42B01-090B-4C1C-A759-EEC5D09E7549</string>
+				<key>UUID</key>
+				<string>EC9A8A86-43C9-4A03-9A62-0DC3BDE9DC45</string>
+				<key>UnlocalizedApplications</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>arguments</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>default value</key>
+						<string>function run(input, parameters) {
+	
+	// Your script goes here
+
+	return input;
+}</string>
+						<key>name</key>
+						<string>source</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>0</string>
+					</dict>
+				</dict>
+				<key>conversionLabel</key>
+				<integer>0</integer>
+				<key>isViewVisible</key>
+				<true/>
+				<key>location</key>
+				<string>301.500000:654.000000</string>
+				<key>nibPath</key>
+				<string>/System/Library/Automator/Run JavaScript.action/Contents/Resources/Base.lproj/main.nib</string>
+			</dict>
+			<key>isViewVisible</key>
+			<true/>
+		</dict>
+	</array>
+	<key>connectors</key>
+	<dict>
+		<key>3CC9BE7B-CE75-430E-A93D-D9120CEBB3C2</key>
+		<dict>
+			<key>from</key>
+			<string>785316D8-98BC-4703-98CF-84B4CA642A05 - 785316D8-98BC-4703-98CF-84B4CA642A05</string>
+			<key>to</key>
+			<string>EC9A8A86-43C9-4A03-9A62-0DC3BDE9DC45 - EC9A8A86-43C9-4A03-9A62-0DC3BDE9DC45</string>
+		</dict>
+	</dict>
+	<key>workflowMetaData</key>
+	<dict>
+		<key>serviceInputTypeIdentifier</key>
+		<string>com.apple.Automator.text.url</string>
+		<key>serviceOutputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>serviceProcessesInput</key>
+		<integer>1</integer>
+		<key>workflowTypeIdentifier</key>
+		<string>com.apple.Automator.servicesMenu</string>
+	</dict>
+</dict>
+</plist>

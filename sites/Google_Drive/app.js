@@ -36,10 +36,10 @@ delegate.launchURL = function(url) {
 			search(decodeURI(addr));
 			break;
 		default:
+			$.browser.tabSelected = new $.WebView({url: url});
 	}
 };
 
-//this.decideNavigationForURL <- [https://accounts.google.com/ServiceLogin?service=wise&passive=1209600&continue=https://drive.google.com/drive/u/1/&followup=https://drive.google.com/drive/u/1/&emr=1&authuser=1]
 delegate.decideNavigationForURL = function(url, tab) {
 	var comps = url.split(':'),
 		scheme = comps.shift(),
@@ -47,7 +47,7 @@ delegate.decideNavigationForURL = function(url, tab) {
 	switch (scheme) {
 		case "http":
 		case "https":
-			if (addr.startsWith("//drive.google.com") && tab.allowAnyRedir) {
+			if (addr.startsWith("//drive.google.com/") && tab.allowAnyRedir) {
 				tab.allowAnyRedir = false; // we are back home
 			} else if (tab.allowAnyRedir || unescape(unescape(addr)).match("//accounts.google.com/")) {
 				tab.allowAnyRedir = true; // might be attempting an external domain for a Google Apps SSO-integrated corporate login
@@ -119,6 +119,7 @@ delegate.AppFinishedLaunching = function() {
 	//$.app.registerURLScheme('googledrive'); //iOS
 	$.browser.addShortcut('Google Drive', drive);
 	$.browser.addShortcut('Google Drive (using secondary account)', driveAlt);
+	$.browser.addShortcut("Install 'Open in Google Drive app' service", `http://github.com/kfix/MacPin/tree/master/extras/${escape('Open in Google Drive app.workflow')}`);
 
 	if ($.launchedWithURL != '') { // app was launched with a search query
 		driveTab.asyncEvalJS( // need to wait for app.js to load and render DOM
