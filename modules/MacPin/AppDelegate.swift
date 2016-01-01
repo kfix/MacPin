@@ -11,7 +11,8 @@ import WebKitPrivates
 import Darwin
 
 // common AppDelegate code sharable between OSX and iOS (not much)
-public class AppDelegate: NSObject, _WKDownloadDelegate {
+public class MacPinAppDelegate: NSObject, _WKDownloadDelegate {
+	var window: Window? = nil // don't assign up here, first value is persistently used for rotation size calculations!
 
 	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
 		let config = _WKProcessPoolConfiguration()
@@ -19,7 +20,7 @@ public class AppDelegate: NSObject, _WKDownloadDelegate {
 		return config
 	}
 	//let webProcessPool = WKProcessPool() // all wkwebviews should share this
-	let webProcessPool = WKProcessPool()._initWithConfiguration(AppDelegate.WebProcessConfiguration()) // all wkwebviews should share this
+	let webProcessPool = WKProcessPool()._initWithConfiguration(MacPinAppDelegate.WebProcessConfiguration()) // all wkwebviews should share this
 	//let browserController =
 
 	override init() {

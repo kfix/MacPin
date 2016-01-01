@@ -27,7 +27,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
 			window.delegate = self
 			window.restorable = true
-			window.restorationClass = AppDelegate.self
+			window.restorationClass = MacPinAppDelegate.self
 			window.sharingType = .ReadWrite
 			NSApplication.sharedApplication().windowsMenu = NSMenu()
 			NSApplication.sharedApplication().addWindowsItem(window, title: window.title, filename: false)

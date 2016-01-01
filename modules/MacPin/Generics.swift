@@ -63,10 +63,10 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 			])
 		}
 		/*
-		if let window = NSApplication.sharedApplication().mainWindow { // FIXMEios UIKit.UIApplication.sharedApplication()
-			window.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
+		if let window = MacPinApp.sharedApplication().appDelegate?.window {
+			window.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil) // FIXME: iOS
 		} else {
-			NSApplication.sharedApplication().presentError(error)
+			MacPinApp.sharedApplication().presentError(error)
 		}
 		*/
 		return false

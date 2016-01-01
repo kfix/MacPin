@@ -3,14 +3,13 @@ import ObjectiveC
 import WebKitPrivates
 import Darwin
 
-@UIApplicationMain
-class AppDelegateIOS: AppDelegate {
-	var window: UIWindow? = nil // don't assign up here, first value is persistently used for rotation size calculations!
+//UIApplicationMain
+class MacPinAppDelegateIOS: MacPinAppDelegate {
 	var browserController = MobileBrowserViewController() //frame: UIScreen.mainScreen().applicationFrame)
 	override init() { super.init() }
 }
 
-extension AppDelegateIOS: UIApplicationDelegate { //UIResponder
+extension MacPinAppDelegateIOS: ApplicationDelegate { //UIResponder
 	func application(application: UIApplication, openURL url: NSURL, sourceApplication: String?, annotation: AnyObject) -> Bool {
 		warn("`\(url)` -> AppScriptRuntime.shared.jsdelegate.launchURL()")
 		AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(url.description, forKeyedSubscript: "launchedWithURL")
@@ -27,7 +26,7 @@ extension AppDelegateIOS: UIApplicationDelegate { //UIResponder
 	func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject : AnyObject]?) -> Bool { //state restored, but UI not presented yet
 		// launchOptions: http://nshipster.com/launch-options/
 
-		window = UIWindow(frame: UIScreen.mainScreen().bounds) // total pixels w/ rotation
+		window = Window(frame: UIScreen.mainScreen().bounds) // total pixels w/ rotation
 		UIApplication.sharedApplication().statusBarStyle = .LightContent
 		window?.backgroundColor = UIColor.whiteColor() // visible behind status bar area when unobscured by page content
 		window?.rootViewController = browserController //adds the browserView to window.subviews

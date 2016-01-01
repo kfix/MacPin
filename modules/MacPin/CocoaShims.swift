@@ -22,6 +22,8 @@ typealias ViewController = NSViewController
 typealias Image = NSImage
 typealias Window = NSWindow
 typealias Application = NSApplication
+typealias ApplicationDelegate = NSApplicationDelegate
+typealias MacPinAppDelegatePlatform = MacPinAppDelegateOSX
 
 #elseif os(iOS)
 
@@ -39,5 +41,7 @@ class Window: UIWindow {
 }
 
 typealias Application = UIApplication
+typealias ApplicationDelegate = UIApplicationDelegate
+typealias MacPinAppDelegatePlatform = MacPinAppDelegateIOS
 
 #endif

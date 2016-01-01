@@ -99,12 +99,13 @@ import UTIKit
 		prefs.javaScriptCanOpenWindowsAutomatically = true;
 #if WK2LOG
 		prefs._diagnosticLoggingEnabled = true
-		//prefs._logsPageMessagesToSystemConsoleEnabled = true // dumps to ASL
+		prefs._logsPageMessagesToSystemConsoleEnabled = true // dumps to ASL
+		//prefs._javaScriptRuntimeFlags = 0 // ??
 #endif
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
 		//if let privacy = privacy { if privacy { configuration.websiteDataStore = WKWebsiteDataStore.nonPersistentDataStore() } }
-		if let app = Application.sharedApplication().delegate as? AppDelegate, isolated = isolated {
+		if let app = MacPinApp.sharedApplication().appDelegate, let isolated = isolated {
 			if isolated {
 				configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
 			} else {

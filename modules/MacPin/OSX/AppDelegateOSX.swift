@@ -4,19 +4,28 @@ import WebKitPrivates
 import Darwin
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
-public class AppDelegateOSX: AppDelegate {
+public class MacPinAppDelegateOSX: MacPinAppDelegate {
 
 	var effectController = EffectViewController()
 	var browserController = BrowserViewController()
 	var windowController: WindowController
 
 	override init() {
+		// gotta set these before MacPin()->NSWindow()
+		NSUserDefaults.standardUserDefaults().setBool(true, forKey: "NSQuitAlwaysKeepsWindows") // insist on Window-to-Space/fullscreen persistence between launches
+		NSUserDefaults.standardUserDefaults().setInteger(1, forKey: "NSInitialToolTipDelay") // get TTs in 1ms instead of 3s
+		NSUserDefaults.standardUserDefaults().setFloat(12.0, forKey: "NSInitialToolTipFontSize")
+		NSUserDefaults.standardUserDefaults().setInteger(0, forKey: "__WebInspectorPageGroupLevel1__.WebKit2InspectorStartsAttached")
+		// ^ inline inspectors are flickery: https://github.com/kfix/MacPin/issues/13
+
 		browserController.title = nil
 		browserController.canPropagateSelectedChildViewControllerTitle = true
-		windowController = WindowController(window: NSWindow(contentViewController: effectController))
+		let win = NSWindow(contentViewController: effectController)
+		windowController = WindowController(window: win)
 		effectController.view.addSubview(browserController.view)
 		browserController.view.frame = effectController.view.bounds
 		super.init()
+		window = win
 	}
 
 	// handle URLs passed by open
@@ -31,7 +40,7 @@ public class AppDelegateOSX: AppDelegate {
 	}
 }
 
-extension AppDelegateOSX: NSApplicationDelegate {
+extension MacPinAppDelegateOSX: ApplicationDelegate {
 
 	public func applicationDockMenu(sender: NSApplication) -> NSMenu? { return browserController.tabMenu }
 
@@ -299,7 +308,7 @@ extension AppDelegateOSX: NSApplicationDelegate {
 	}
 }
 
-extension AppDelegateOSX: NSUserNotificationCenterDelegate {
+extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 	//didDeliverNotification
 	public func userNotificationCenter(center: NSUserNotificationCenter, didActivateNotification notification: NSUserNotification) {
 		warn("user clicked notification")
@@ -314,10 +323,10 @@ extension AppDelegateOSX: NSUserNotificationCenterDelegate {
 	public func userNotificationCenter(center: NSUserNotificationCenter, shouldPresentNotification notification: NSUserNotification) -> Bool { return true }
 }
 
-extension AppDelegateOSX: NSWindowRestoration {
+extension MacPinAppDelegateOSX: NSWindowRestoration {
 	// https://developer.apple.com/library/mac/documentation/General/Conceptual/MOSXAppProgrammingGuide/CoreAppDesign/CoreAppDesign.html#//apple_ref/doc/uid/TP40010543-CH3-SW35
 	public static func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow?,NSError?) -> Void)) {
-		if let app = NSApplication.sharedApplication().delegate as? AppDelegateOSX, let window = app.windowController.window where identifier == "browser" {
+		if let app = MacPinApp.sharedApplication().appDelegate, let window = app.window where identifier == "browser" {
 			completionHandler(window, nil)
 			//WKWebView._restoreFromSessionStateData ...
 		} else {
@@ -329,14 +338,14 @@ extension AppDelegateOSX: NSWindowRestoration {
 // modules/WebKitPrivates/_WKDownloadDelegate.h
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
 // https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
-extension AppDelegateOSX {
+extension MacPinAppDelegateOSX {
 	override public func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
 		warn(download.description)
 		//pop open a save Panel to dump data into file
 		let saveDialog = NSSavePanel();
 		saveDialog.canCreateDirectories = true
 		saveDialog.nameFieldStringValue = filename
-		//if let app = NSApplication.sharedApplication().delegate as? AppDelegateOSX, let window = app.windowController.window {
+		//if let app = MacPinApp.sharedApplication().appDelegate, let window = app.window {
 			//saveDialog.beginSheetModalForWindow(window, completionHandler: { (choice: Int) } // _download can't wait for this async block to report back after the sheet is closed!
 			// FIXME: put it in a Async.background and wait on it?
 			//   or window.beginSheet(sheet, completionHandler:(response: NSModalResponse)->{ if result == .Ok {path == NSWindow.sheetParent.txt.value}})
