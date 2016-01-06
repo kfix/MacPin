@@ -47,7 +47,7 @@ delegate.decideNavigationForURL = function(url, tab) {
 	switch (scheme) {
 		case "http":
 		case "https":
-			if (addr.startsWith("//drive.google.com/") && tab.allowAnyRedir) {
+			if ((addr.startsWith("//drive.google.com/") || addr.startsWith("//docs.google.com/")) && tab.allowAnyRedir) {
 				tab.allowAnyRedir = false; // we are back home
 			} else if (tab.allowAnyRedir || unescape(unescape(addr)).match("//accounts.google.com/")) {
 				tab.allowAnyRedir = true; // might be attempting an external domain for a Google Apps SSO-integrated corporate login
