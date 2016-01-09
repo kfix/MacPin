@@ -8,8 +8,8 @@ var slackTab, slack = {
 	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
 	preinject: ['shim_html5_notifications']
 };
-// FIXME: use LocalStorage to save slackTab's team-domain after sign-in, and restore that on every start up
-// FIXME add themes: https://github.com/fishman/slack
+$.browser.tabSelected = slackTab = new $.WebView(slack);
+
 var delegate = {}; // our delegate to receive events from the webview app
 
 delegate.receivedHTML5DesktopNotification = function(tab, note) {
@@ -20,7 +20,6 @@ delegate.receivedHTML5DesktopNotification = function(tab, note) {
 
 delegate.handleClickedNotification = function(title, subtitle, msg, id) {
 	console.log("JS: opening notification for: "+ [title, subtitle, msg, id]);
-	//<time class="_497p _2lpt" data-reactid=".0.1.$1.0.1.$0.0.0.0.0.0.0.2.$db=2mid=11434908822690=2d3b8b216631a1b8625"><span class="_3oh-" data-reactid=".0.1.$1.0.1.$0.0.0.0.0.0.0.2.$db=2mid=11434908822690=2d3b8b216631a1b8625.0">10:47am</span></time>
 	$.browser.tabSelected = slackTab;
 	//slackTab.evalJS();
 	return true;
@@ -64,6 +63,7 @@ delegate.decideNavigationForURL = function(url) {
 
 delegate.AppFinishedLaunching = function() {
 	//$.browser.addShortcut('Slack', slack);
-	$.browser.tabSelected = slackTab = new $.WebView(slack);
+	// FIXME: use LocalStorage to save slackTab's team-domain after sign-in, and restore that on every start up
+	// FIXME add themes: https://github.com/fishman/slack
 };
 delegate; //return this to macpin
