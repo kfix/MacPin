@@ -594,7 +594,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
             //case is [String]: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: obj))
             case let str as String: mi = MenuItem(title, "gotoShortcut:", target: self, represents: str)
             case let dict as [String:AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: dict)
-            case is [String]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: obj)
+            case is [AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: obj)
 			default:
 				warn("invalid shortcut object type!")
 				return
@@ -609,7 +609,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 				case let urlstr as String: AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr)
 				// or fire event in jsdelegate if string, NSURLs do launchURL
 				case let dict as [String:AnyObject]: tabSelected = MPWebView(object: dict)
-                case let arr as [String] where arr.count > 0: AppScriptRuntime.shared.jsdelegate.tryFunc(arr.first!, argv: Array(arr.dropFirst())) // FIXME: only handles Lists of String, not ints & bools too
+                case let arr as [AnyObject] where arr.count > 0 && arr.first is String: AppScriptRuntime.shared.jsdelegate.tryFunc((arr.first as! String), argv: Array(arr.dropFirst()))
 				default: warn("invalid shortcut object type!")
 			}
 		}

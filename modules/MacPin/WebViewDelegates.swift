@@ -106,8 +106,20 @@ extension WebViewController: WKNavigationDelegate {
 
 				// FIXME: allow JS to hook all of these
 				case .FormSubmitted: fallthrough
-				case .FormResubmitted: fallthrough
-					// FIXME: dump form headers
+				case .FormResubmitted:
+					if let method = navigationAction.request.HTTPMethod, headers = navigationAction.request.allHTTPHeaderFields where method == "POST" { warn("POSTing headers: \(headers)") }
+					if let post = navigationAction.request.HTTPBody { warn("POSTing body: \(post)") }
+					if let postStream = navigationAction.request.HTTPBodyStream {
+						var buffer = [UInt8](count: 500, repeatedValue: 0)
+						//while postStream.hasBytesAvailable {
+							// err, don't want to loop this with big files.....
+							if postStream.read(&buffer, maxLength: buffer.count) > 0 {
+								let post = String(bytes: buffer, encoding: NSUTF8StringEncoding)
+								warn("POSTing body: \(post)")
+							}
+						//]
+					}
+					fallthrough
 				case .BackForward: fallthrough
 				case .Reload: fallthrough
 					// FIXME: check if user is forcing Download
@@ -157,10 +169,7 @@ extension WebViewController: WKNavigationDelegate {
 			//if let cd = hdr.objectForKey("Content-Disposition") as? String where cd.hasPrefix("attachment") { warn("got attachment! \(cd) \(fn)") }
 			if let headers = httpResponse.allHeaderFields as? [String: String], url = httpResponse.URL {
 				let cookies = NSHTTPCookie.cookiesWithResponseHeaderFields(headers, forURL: url)
-				for cookie in cookies {
-					//warn("Recv'd cookie[\(cookie.name)]: \(cookie.value)")
-					warn(cookie.description)
-				}
+				for cookie in cookies { jsdelegate.tryFunc("receivedCookie", webView, cookie.name, cookie.value) }
 
 				if let cd = headers["Content-Disposition"] where cd.hasPrefix("attachment") {
 					// JS hook?

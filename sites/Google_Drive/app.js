@@ -5,7 +5,7 @@
 
 var delegate = {}; // our delegate to receive events from the webview app
 var driveTab, drive = {
-	transparent:false,
+	transparent: false,
 	url: "https://drive.google.com",
 	postinject: [],
 	preinject: ['shim_html5_notifications'],
@@ -13,6 +13,8 @@ var driveTab, drive = {
 };
 var driveAlt = Object.assign({}, drive, {url: "https://drive.google.com/drive/u/1"});
 driveTab = $.browser.tabSelected = new $.WebView(drive);
+
+// dark mode: https://userstyles.org/styles/105045/google-drive-dark
 
 function search(query) {
 	driveTab.evalJS( // hook app.js to perform search
@@ -40,6 +42,9 @@ delegate.launchURL = function(url) {
 	}
 };
 
+var alwaysAllowRedir = false;
+delegate.toggleRedirection = function(state) { alwaysAllowRedir = (state) ? true : false; };
+
 delegate.decideNavigationForURL = function(url, tab) {
 	var comps = url.split(':'),
 		scheme = comps.shift(),
@@ -47,6 +52,7 @@ delegate.decideNavigationForURL = function(url, tab) {
 	switch (scheme) {
 		case "http":
 		case "https":
+			if (alwaysAllowRedir) break; //user override
 			if ((addr.startsWith("//drive.google.com/") || addr.startsWith("//docs.google.com/")) && tab.allowAnyRedir) {
 				tab.allowAnyRedir = false; // we are back home
 			} else if (tab.allowAnyRedir || unescape(unescape(addr)).match("//accounts.google.com/")) {
@@ -120,6 +126,8 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('Google Drive', drive);
 	$.browser.addShortcut('Google Drive (using secondary account)', driveAlt);
 	$.browser.addShortcut("Install 'Open in Google Drive app' service", `http://github.com/kfix/MacPin/tree/master/extras/${escape('Open in Google Drive app.workflow')}`);
+	$.browser.addShortcut('Enable Redirection', ['toggleRedirection', true]);
+	$.browser.addShortcut('Disable Redirection (default)', ['toggleRedirection', false]);
 
 	if ($.launchedWithURL != '') { // app was launched with a search query
 		driveTab.asyncEvalJS( // need to wait for app.js to load and render DOM
