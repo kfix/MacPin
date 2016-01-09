@@ -17,6 +17,7 @@ public class MacPinAppDelegate: NSObject, _WKDownloadDelegate {
 	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
 		let config = _WKProcessPoolConfiguration()
 		//config.injectedBundleURL = NSbundle.mainBundle().URLForAuxillaryExecutable("contentfilter.wkbundle")
+		// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundle.cpp
 		return config
 	}
 	//let webProcessPool = WKProcessPool() // all wkwebviews should share this
