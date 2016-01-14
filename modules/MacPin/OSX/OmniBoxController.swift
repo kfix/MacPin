@@ -156,6 +156,12 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	deinit { webview = nil; representedObject = nil }
 }
 
+extension OmniBoxController { //NSControl
+	//func controlTextDidBeginEditing(_ obj: NSNotification)
+	//func controlTextDidChange(_ obj: NSNotification)
+	//func controlTextDidEndEditing(_ obj: NSNotification)
+}
+
 extension OmniBoxController: NSTextFieldDelegate {
 	//func textShouldBeginEditing(textObject: NSText) -> Bool { return true } //allow editing
 		//replace textvalue with URL value, should normally be bound to title
@@ -167,6 +173,19 @@ extension OmniBoxController: NSTextFieldDelegate {
 		return false //NSBeep()s, keeps focus
 	}
 	//func textDidEndEditing(aNotification: NSNotification) {	}
+}
+
+extension OmniBoxController: NSControlTextEditingDelegate {
+//func control(_ control: NSControl, isValidObject obj: AnyObject) -> Bool
+//func control(_ control: NSControl, didFailToFormatString string: String, errorDescription error: String?) -> Bool
+//func control(_ control: NSControl, textShouldBeginEditing fieldEditor: NSText) -> Bool
+//func control(_ control: NSControl, textShouldEndEditing fieldEditor: NSText) -> Bool
+//func control(_ control: NSControl, textView textView: NSTextView, completions words: [String], forPartialWordRange charRange: NSRange, indexOfSelectedItem index: UnsafeMutablePointer<Int>) -> [String]
+//func control(_ control: NSControl, textView textView: NSTextView, doCommandBySelector commandSelector: Selector) -> Bool
+// capture Selector("insertNewline:") & Selector("insertTab:") to respond to Enter and Tab presses specially
+//   & NSApplication.sharedApplication().currentEvent.modifierFlags =& NSCommandKeyMask  // create and select new tab, reassign the typed URL over the re-bound textfield value
+//   & NSApplication.sharedApplication().currentEvent.modifierFlags =& NSShiftKeyMask  // gotoURL privately (Safari opens new window with Shift)
+//   & NSApplication.sharedApplication().currentEvent.modifierFlags =& NSAltKeyMask  // gotoURL w/ new session privately (Safari downloads with Alt 
 }
 
 extension OmniBoxController: NSPopoverDelegate {	
