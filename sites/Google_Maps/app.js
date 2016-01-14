@@ -25,6 +25,7 @@ mapsTab = $.browser.tabSelected = new $.WebView(maps);
 
 function search(query, mapper) {
 	// https://developers.google.com/maps/documentation/ios/urlscheme#search
+	if (!mapper) mapper = $.browser.tabSelected;
 	mapper.evalJS( // hook app.js to perform search
 		"document.getElementById('searchboxinput').value = '" + query + "';" + 
 		 "document.getElementById('searchbox_form').submit();"
@@ -82,7 +83,7 @@ delegate.decideNavigationForURL = function(url) {
 delegate.handleUserInputtedInvalidURL = function(query, tab) {
 	// assuming the invalid url is a search request
 	var mapper = (~tab.url.indexOf('//www.google.com/maps/')) ? tab : mapsTab;
-	search(query, tab);
+	search(query, mapper);
 	return true; // tell MacPin to stop validating the URL
 };
 
