@@ -11,8 +11,18 @@ import WebKitPrivates
 import Darwin
 
 // common AppDelegate code sharable between OSX and iOS (not much)
+// FIXME: protocol instead?
+protocol MacPinAppDelegate: ApplicationDelegate, _WKDownloadDelegate {
+	var window: Window? { get }
+	var browserController: BrowserViewController { get }
+	var webProcessPool: WKProcessPool! { get }
+	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration
+}
+
+/*
 public class MacPinAppDelegate: NSObject, _WKDownloadDelegate {
 	var window: Window? = nil // don't assign up here, first value is persistently used for rotation size calculations!
+	var browserController: BrowserViewController
 
 	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
 		let config = _WKProcessPoolConfiguration()
@@ -41,3 +51,4 @@ public class MacPinAppDelegate: NSObject, _WKDownloadDelegate {
 	public func _download(download: _WKDownload!, didFailWithError error: NSError!) { warn(error.description) }
 	public func _downloadDidCancel(download: _WKDownload!) { warn(download.request.description) }
 }
+*/

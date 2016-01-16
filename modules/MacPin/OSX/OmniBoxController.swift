@@ -73,7 +73,12 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	required init?(coder: NSCoder) { super.init(coder: coder) }
 	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView() 
 	override func loadView() { view = urlbox } // NIBless
- 
+
+	func popup(webview: MPWebView?) {
+		guard let webview = webview else { return } 
+		MacPinApp.sharedApplication().appDelegate?.browserController.tabSelected = webview
+	}
+
 	/*
 	convenience init(webViewController: WebViewController?) {
 		self.init()
@@ -181,11 +186,24 @@ extension OmniBoxController: NSControlTextEditingDelegate {
 //func control(_ control: NSControl, textShouldBeginEditing fieldEditor: NSText) -> Bool
 //func control(_ control: NSControl, textShouldEndEditing fieldEditor: NSText) -> Bool
 //func control(_ control: NSControl, textView textView: NSTextView, completions words: [String], forPartialWordRange charRange: NSRange, indexOfSelectedItem index: UnsafeMutablePointer<Int>) -> [String]
-//func control(_ control: NSControl, textView textView: NSTextView, doCommandBySelector commandSelector: Selector) -> Bool
-// capture Selector("insertNewline:") & Selector("insertTab:") to respond to Enter and Tab presses specially
-//   & NSApplication.sharedApplication().currentEvent.modifierFlags =& NSCommandKeyMask  // create and select new tab, reassign the typed URL over the re-bound textfield value
-//   & NSApplication.sharedApplication().currentEvent.modifierFlags =& NSShiftKeyMask  // gotoURL privately (Safari opens new window with Shift)
-//   & NSApplication.sharedApplication().currentEvent.modifierFlags =& NSAltKeyMask  // gotoURL w/ new session privately (Safari downloads with Alt 
+
+	func control(control: NSControl, textView: NSTextView, doCommandBySelector commandSelector: Selector) -> Bool {
+		warn(commandSelector.description)
+		switch commandSelector {
+			case "noop:":
+				if let event = NSApplication.sharedApplication().currentEvent where event.modifierFlags.contains(.CommandKeyMask) {
+					guard let url = validateURL(control.stringValue) else { return false }
+					popup(webview?.clone(url)) // cmd-enter pops open a new tab
+				}
+				fallthrough
+			//case "insertLineBreak:":
+			//   .ShiftKeyMask gotoURL privately (Safari opens new window with Shift)
+			//   .AltKeyMask  // gotoURL w/ new session privately (Safari downloads with Alt 
+
+			// when Selector("insertTab:"):
+			default: return false
+		}
+	}
 }
 
 extension OmniBoxController: NSPopoverDelegate {	

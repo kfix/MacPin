@@ -4,11 +4,21 @@ import WebKitPrivates
 import Darwin
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
-public class MacPinAppDelegateOSX: MacPinAppDelegate {
+public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 	var effectController = EffectViewController()
-	var browserController = BrowserViewController()
+	var browserController: BrowserViewController = BrowserViewControllerOSX()
 	var windowController: WindowController
+	var window: Window?
+
+	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
+		let config = _WKProcessPoolConfiguration()
+		//config.injectedBundleURL = NSbundle.mainBundle().URLForAuxillaryExecutable("contentfilter.wkbundle")
+		// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundle.cpp
+		return config
+	}
+	//let webProcessPool = WKProcessPool() // all wkwebviews should share this
+	let webProcessPool = WKProcessPool()._initWithConfiguration(MacPinAppDelegateOSX.WebProcessConfiguration()) // all wkwebviews should share this
 
 	override init() {
 		// gotta set these before MacPin()->NSWindow()
@@ -18,14 +28,14 @@ public class MacPinAppDelegateOSX: MacPinAppDelegate {
 		NSUserDefaults.standardUserDefaults().setInteger(0, forKey: "__WebInspectorPageGroupLevel1__.WebKit2InspectorStartsAttached")
 		// ^ inline inspectors are flickery: https://github.com/kfix/MacPin/issues/13
 
-		browserController.title = nil
-		browserController.canPropagateSelectedChildViewControllerTitle = true
+		//browserController.title = nil
+		//browserController.canPropagateSelectedChildViewControllerTitle = true
 		let win = NSWindow(contentViewController: effectController)
 		windowController = WindowController(window: win)
 		effectController.view.addSubview(browserController.view)
 		browserController.view.frame = effectController.view.bounds
 		super.init()
-		window = win
+		self.window = win
 	}
 
 	// handle URLs passed by open
@@ -139,6 +149,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		tabListMenu.submenu?.title = "Tabs"
 		app!.mainMenu?.addItem(tabListMenu)
 
+		// Tuck these under the app menu?
 		let shortcutsMenu = NSMenuItem(title: "Shortcuts", action: nil, keyEquivalent: "")
 		shortcutsMenu.hidden = true // not shown until $.browser.addShortcut(foo, url) is called
 		shortcutsMenu.submenu = browserController.shortcutsMenu
@@ -338,8 +349,8 @@ extension MacPinAppDelegateOSX: NSWindowRestoration {
 // modules/WebKitPrivates/_WKDownloadDelegate.h
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
 // https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
-extension MacPinAppDelegateOSX {
-	override public func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
+extension MacPinAppDelegateOSX: _WKDownloadDelegate {
+	public func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
 		warn(download.description)
 		//pop open a save Panel to dump data into file
 		let saveDialog = NSSavePanel();
