@@ -6,19 +6,11 @@ import Darwin
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
 public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
-	var effectController = EffectViewController()
 	var browserController: BrowserViewController = BrowserViewControllerOSX()
-	var windowController: WindowController
 	var window: Window?
 
-	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
-		let config = _WKProcessPoolConfiguration()
-		//config.injectedBundleURL = NSbundle.mainBundle().URLForAuxillaryExecutable("contentfilter.wkbundle")
-		// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundle.cpp
-		return config
-	}
-	//let webProcessPool = WKProcessPool() // all wkwebviews should share this
-	let webProcessPool = WKProcessPool()._initWithConfiguration(MacPinAppDelegateOSX.WebProcessConfiguration()) // all wkwebviews should share this
+	var effectController = EffectViewController()
+	var windowController: WindowController
 
 	override init() {
 		// gotta set these before MacPin()->NSWindow()
@@ -34,8 +26,9 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		windowController = WindowController(window: win)
 		effectController.view.addSubview(browserController.view)
 		browserController.view.frame = effectController.view.bounds
-		super.init()
 		self.window = win
+
+		super.init()
 	}
 
 	// handle URLs passed by open
@@ -56,10 +49,10 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 
 	public func applicationShouldOpenUntitledFile(app: NSApplication) -> Bool { return false }
 
-	//func application(sender: AnyObject, openFileWithoutUI filename: String) -> Bool {} // app terminates on return!
-	//func application(theApplication: NSApplication, printFile filename: String) -> Bool () //app terminates on return
+	//public func application(sender: AnyObject, openFileWithoutUI filename: String) -> Bool {} // app terminates on return!
+	//public func application(theApplication: NSApplication, printFile filename: String) -> Bool {} // app terminates on return
 
-	//public finishLaunching() { super.finishLaunching() } // app activates, NSOpen files opened
+	//public func finishLaunching() { super.finishLaunching() } // app activates, NSOpen files opened
 
 	public func applicationWillFinishLaunching(notification: NSNotification) { // dock icon bounces, also before self.openFile(foo.bar) is called
 		NSUserNotificationCenter.defaultUserNotificationCenter().delegate = self
@@ -343,30 +336,5 @@ extension MacPinAppDelegateOSX: NSWindowRestoration {
 		} else {
 			completionHandler(nil, nil)
 		}
-	}
-}
-
-// modules/WebKitPrivates/_WKDownloadDelegate.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
-// https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
-extension MacPinAppDelegateOSX: _WKDownloadDelegate {
-	public func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
-		warn(download.description)
-		//pop open a save Panel to dump data into file
-		let saveDialog = NSSavePanel();
-		saveDialog.canCreateDirectories = true
-		saveDialog.nameFieldStringValue = filename
-		//if let app = MacPinApp.sharedApplication().appDelegate, let window = app.window {
-			//saveDialog.beginSheetModalForWindow(window, completionHandler: { (choice: Int) } // _download can't wait for this async block to report back after the sheet is closed!
-			// FIXME: put it in a Async.background and wait on it?
-			//   or window.beginSheet(sheet, completionHandler:(response: NSModalResponse)->{ if result == .Ok {path == NSWindow.sheetParent.txt.value}})
-			let result = saveDialog.runModal()
-			if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
-				warn(path)
-				return path
-			}
-		//}
-		download.cancel()
-		return ""
 	}
 }

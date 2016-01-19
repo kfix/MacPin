@@ -1,8 +1,6 @@
 /// MacPin FavIcon
 ///
-/// Asyncronously grabs and stores an [NS|UI]Image from a URL and accepts KVO bindings to them
-
-// https://code.google.com/p/cocoalicious/source/browse/trunk/cocoalicious/Utilities/SFHFFaviconCache.m
+/// Asyncronously grabs and stores a KVO-able Image from an icon's URL
 
 #if os(OSX)
 
@@ -20,6 +18,7 @@ let NSImageNameApplicationIcon = "icon"
 @objc class FavIcon: NSObject {
 	dynamic unowned var icon = IconImage(named: NSImageNameApplicationIcon)!
 #if os(OSX)
+	//need 24 & 36px**2 representations of the NSImage for bigger grid views
 	dynamic unowned var icon16 = IconImage(named: NSImageNameStatusNone)! {
 		willSet {
 			newValue.size = NSSize(width: 16, height: 16)
@@ -28,12 +27,6 @@ let NSImageNameApplicationIcon = "icon"
 #endif
 
 	var data: NSData? = nil
-		//need 24 & 36px**2 representations for the NSImage for bigger grid views
-		// https://developer.apple.com/library/ios/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html
-		// just C, no Cocoa API yet: WKIconDatabaseCopyIconURLForPageURL(icodb, url) WKIconDatabaseCopyIconDataForPageURL(icodb, url)
-		// also https://github.com/WebKit/webkit/commit/660d1e55c2d1ee19ece4a7565d8df8cab2e15125
-		// OSX has libxml2 built-in https://developer.apple.com/library/mac/samplecode/LinkedImageFetcher/Listings/Read_Me_About_LinkedImageFetcher_txt.html
-
 	var url: NSURL? = nil {
 		didSet {
 			if let url = url {

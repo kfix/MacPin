@@ -3,6 +3,8 @@
 /// Handle modal & interactive webview prompts and errors using OSX widgets
 
 import WebKit
+import WebKitPrivates
+import Async
 
 extension WebViewControllerOSX {
 
@@ -41,6 +43,8 @@ extension WebViewControllerOSX {
 
 	func _webView(webView: WKWebView, printFrame: WKFrameInfo) { 
 		warn("JS: `window.print();`")
+		// webView._printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo())
+
 		let printer = NSPrintOperation(view: webView, printInfo: NSPrintInfo.sharedPrintInfo())
 		// seems to work very early on in the first loaded page, then just becomes blank pages
 		// PDF = This view requires setWantsLayer:YES when blendingMode == NSVisualEffectBlendingModeWithinWindow
@@ -109,5 +113,37 @@ extension WebViewControllerOSX {
 				webView.stopLoading()
 			}
  		}
+	}
+}
+
+// modules/WebKitPrivates/_WKDownloadDelegate.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
+// https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
+extension WebViewControllerOSX {
+	override func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
+		warn(download.description)
+		//pop open a save Panel to dump data into file
+		let saveDialog = NSSavePanel()
+		saveDialog.canCreateDirectories = true
+		saveDialog.nameFieldStringValue = filename
+		if let webview = download.originatingWebView, window = webview.window {
+			// var result = 0
+			// saveDialog.beginSheetModalForWindow(window, completionHandler: { (choice: Int) -> Void in result = choice })
+			// _download can't wait for this async block to report back after the sheet is closed and grab the path!
+			//   WKDownloader works on main thread already: https://github.com/WebKit/webkit/blob/master/Source/WebKit2/NetworkProcess/Downloads/mac/DownloadMac.mm
+			// so lets fake a sheet-ish popup
+			saveDialog.floatingPanel = true
+			saveDialog.styleMask = NSDocModalWindowMask // no title bar or pos/size controls
+			window.addChildWindow(saveDialog, ordered: .Above) // lock the floating dialog position relative to the browser window
+			saveDialog.setFrameOrigin(NSPoint(x: saveDialog.frame.origin.x, y: window.frame.origin.y)) // stick to top
+			let result = saveDialog.runModal()
+			window.removeChildWindow(saveDialog)
+			if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
+				warn(path)
+				return path
+			}
+		}
+		download.cancel()
+		return ""
 	}
 }

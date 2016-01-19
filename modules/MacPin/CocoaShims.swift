@@ -18,6 +18,7 @@ import AppKit
 	//  also, must assign .view from loadView() override: `override func loadView() { view = withFoo }`
 //}
 
+typealias View = NSView
 typealias ViewController = NSViewController
 typealias Image = NSImage
 typealias Window = NSWindow
@@ -32,6 +33,7 @@ typealias MacPinAppDelegatePlatform = MacPinAppDelegateOSX
 
 import UIKit
 
+typealias View = UIView
 typealias ViewController = UIViewController
 
 typealias Image = UIImage

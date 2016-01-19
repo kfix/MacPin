@@ -153,10 +153,6 @@ extension WebViewControllerOSX: NSMenuDelegate {
 
 extension WebViewControllerOSX { // AppGUI funcs
 
-	/*
-	func print(sender: AnyObject?) { warn(""); webview.print(sender) }
-	*/
-
 	func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }
 
 	//FIXME: support new scaling https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
