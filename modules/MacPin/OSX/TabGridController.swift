@@ -6,6 +6,9 @@ import AppKit
 // http://www.extelligentcocoa.org/embedding-a-nscollectionview-in-a-separate-view/
 // https://developer.apple.com/library/mac/samplecode/GridMenu/Listings/ReadMe_txt.html#//apple_ref/doc/uid/DTS40010559-ReadMe_txt-DontLinkElementID_14
 
+// https://github.com/klaas/CollectionViewElCapitan
+// https://developer.apple.com/videos/play/wwdc2015-225/
+
 class TabGridIcon: NSCollectionViewItem {
 	required init?(coder: NSCoder) { super.init(coder: coder) } // conform to NSCoding
 	override init?(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView() 

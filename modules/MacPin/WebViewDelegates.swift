@@ -249,7 +249,7 @@ extension WebViewController: WKNavigationDelegate {
 
 		warn("<\(srcurl)>: window.open(\(openurl), \(tgt))")
 		if jsdelegate.tryFunc("decideWindowOpenForURL", openurl.description, webView) { return nil }
-		let wv = webView.clone()
+		let wv = MPWebView(config: configuration, agent: webView._customUserAgent)
 		popup(wv)
 #if os(OSX)
 		if (windowFeatures.allowsResizing ?? 0) == 1 {

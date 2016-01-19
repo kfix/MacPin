@@ -15,28 +15,6 @@ struct WeakThing<T: AnyObject> {
   }
 }
 
-@objc protocol BrowserScriptExports : JSExport { // '$.browser' in app.js
-	var defaultUserAgent: String? { get set } // full UA used for any new tab without explicit UA specified
-	var isFullscreen: Bool { get set }
-	var isToolbarShown: Bool { get set }
-	//var tabs: [AnyObject] { get } // alias to childViewControllers
-	var tabs: [MPWebView] { get set }
-	var childViewControllers: [NSViewController] { get set } // .push() doesn't work nor trigger property observer
-	var tabSelected: AnyObject? { get set }
-    //var matchedAddressOptions: [String:String] { get set }
-	func pushTab(webview: AnyObject) // JSExport does not seem to like signatures with custom types
-	func close()
-	func switchToNextTab()
-	func switchToPreviousTab()
-	func newTabPrompt()
-	func newIsolatedTabPrompt()
-	func newPrivateTabPrompt()
-	func focusOnBrowser()
-	func unhideApp()
-	func bounceDock()
-	func addShortcut(title: String, _ obj: AnyObject?)
-}
-
 @objc class TabViewController: NSTabViewController {
 	required init?(coder: NSCoder) { super.init(coder: coder) } // required by NSCoder
 	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
@@ -308,7 +286,7 @@ struct WeakThing<T: AnyObject> {
 	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
 }
 
-class BrowserViewController: TabViewController, BrowserScriptExports {
+class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	convenience init() {
 		self.init(nibName: nil, bundle: nil)
@@ -616,7 +594,7 @@ class BrowserViewController: TabViewController, BrowserScriptExports {
 	}
 }
 
-extension BrowserViewController: NSMenuDelegate {
+extension BrowserViewControllerOSX: NSMenuDelegate {
 	func menuNeedsUpdate(menu: NSMenu) {
 		//switch menu.tag {
 		//case 1: //historyMenu

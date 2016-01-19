@@ -4,10 +4,12 @@ import WebKitPrivates
 import Darwin
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
-public class MacPinAppDelegateOSX: MacPinAppDelegate {
+public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
+
+	var browserController: BrowserViewController = BrowserViewControllerOSX()
+	var window: Window?
 
 	var effectController = EffectViewController()
-	var browserController = BrowserViewController()
 	var windowController: WindowController
 
 	override init() {
@@ -18,14 +20,15 @@ public class MacPinAppDelegateOSX: MacPinAppDelegate {
 		NSUserDefaults.standardUserDefaults().setInteger(0, forKey: "__WebInspectorPageGroupLevel1__.WebKit2InspectorStartsAttached")
 		// ^ inline inspectors are flickery: https://github.com/kfix/MacPin/issues/13
 
-		browserController.title = nil
-		browserController.canPropagateSelectedChildViewControllerTitle = true
+		//browserController.title = nil
+		//browserController.canPropagateSelectedChildViewControllerTitle = true
 		let win = NSWindow(contentViewController: effectController)
 		windowController = WindowController(window: win)
 		effectController.view.addSubview(browserController.view)
 		browserController.view.frame = effectController.view.bounds
+		self.window = win
+
 		super.init()
-		window = win
 	}
 
 	// handle URLs passed by open
@@ -46,10 +49,10 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 
 	public func applicationShouldOpenUntitledFile(app: NSApplication) -> Bool { return false }
 
-	//func application(sender: AnyObject, openFileWithoutUI filename: String) -> Bool {} // app terminates on return!
-	//func application(theApplication: NSApplication, printFile filename: String) -> Bool () //app terminates on return
+	//public func application(sender: AnyObject, openFileWithoutUI filename: String) -> Bool {} // app terminates on return!
+	//public func application(theApplication: NSApplication, printFile filename: String) -> Bool {} // app terminates on return
 
-	//public finishLaunching() { super.finishLaunching() } // app activates, NSOpen files opened
+	//public func finishLaunching() { super.finishLaunching() } // app activates, NSOpen files opened
 
 	public func applicationWillFinishLaunching(notification: NSNotification) { // dock icon bounces, also before self.openFile(foo.bar) is called
 		NSUserNotificationCenter.defaultUserNotificationCenter().delegate = self
@@ -139,6 +142,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		tabListMenu.submenu?.title = "Tabs"
 		app!.mainMenu?.addItem(tabListMenu)
 
+		// Tuck these under the app menu?
 		let shortcutsMenu = NSMenuItem(title: "Shortcuts", action: nil, keyEquivalent: "")
 		shortcutsMenu.hidden = true // not shown until $.browser.addShortcut(foo, url) is called
 		shortcutsMenu.submenu = browserController.shortcutsMenu
@@ -332,30 +336,5 @@ extension MacPinAppDelegateOSX: NSWindowRestoration {
 		} else {
 			completionHandler(nil, nil)
 		}
-	}
-}
-
-// modules/WebKitPrivates/_WKDownloadDelegate.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
-// https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
-extension MacPinAppDelegateOSX {
-	override public func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
-		warn(download.description)
-		//pop open a save Panel to dump data into file
-		let saveDialog = NSSavePanel();
-		saveDialog.canCreateDirectories = true
-		saveDialog.nameFieldStringValue = filename
-		//if let app = MacPinApp.sharedApplication().appDelegate, let window = app.window {
-			//saveDialog.beginSheetModalForWindow(window, completionHandler: { (choice: Int) } // _download can't wait for this async block to report back after the sheet is closed!
-			// FIXME: put it in a Async.background and wait on it?
-			//   or window.beginSheet(sheet, completionHandler:(response: NSModalResponse)->{ if result == .Ok {path == NSWindow.sheetParent.txt.value}})
-			let result = saveDialog.runModal()
-			if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
-				warn(path)
-				return path
-			}
-		//}
-		download.cancel()
-		return ""
 	}
 }

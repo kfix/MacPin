@@ -4,9 +4,17 @@ import WebKitPrivates
 import Darwin
 
 //UIApplicationMain
-class MacPinAppDelegateIOS: MacPinAppDelegate {
+class MacPinAppDelegateIOS: NSObject, MacPinAppDelegate {
 	var browserController = MobileBrowserViewController() //frame: UIScreen.mainScreen().applicationFrame)
-	override init() { super.init() }
+
+	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
+		let config = _WKProcessPoolConfiguration()
+		//config.injectedBundleURL = NSbundle.mainBundle().URLForAuxillaryExecutable("contentfilter.wkbundle")
+		// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundle.cpp
+		return config
+	}
+	//let webProcessPool = WKProcessPool() // all wkwebviews should share this
+	let webProcessPool = WKProcessPool()._initWithConfiguration(MacPinAppDelegateIOS.WebProcessConfiguration()) // all wkwebviews should share this
 }
 
 extension MacPinAppDelegateIOS: ApplicationDelegate { //UIResponder

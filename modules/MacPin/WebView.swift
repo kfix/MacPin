@@ -44,6 +44,14 @@ import UTIKit
 @objc class MPWebView: WKWebView, WebViewScriptExports {
 	static var MatchedAddressOptions: [String:String] = [:] // cvar singleton
 
+	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
+		let config = _WKProcessPoolConfiguration()
+		//config.injectedBundleURL = NSbundle.mainBundle().URLForAuxillaryExecutable("contentfilter.wkbundle")
+		// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundle.cpp
+		return config
+	}
+	static var sharedWebProcessPool = WKProcessPool()._initWithConfiguration(MPWebView.WebProcessConfiguration()) // cvar singleton
+
 	var injected: [String] = [] //list of script-names already loaded
 
 	var jsdelegate = AppScriptRuntime.shared.jsdelegate
@@ -105,15 +113,12 @@ import UTIKit
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
 		//if let privacy = privacy { if privacy { configuration.websiteDataStore = WKWebsiteDataStore.nonPersistentDataStore() } }
-		if let app = MacPinApp.sharedApplication().appDelegate, let isolated = isolated {
+		if let isolated = isolated {
 			if isolated {
 				configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
 			} else {
-				configuration.processPool = config?.processPool ?? app.webProcessPool
+				configuration.processPool = config?.processPool ?? MPWebView.self.sharedWebProcessPool
 			}
-#if os(OSX)
-			configuration.processPool._downloadDelegate = app
-#endif
 		}
 		self.init(frame: CGRectZero, configuration: configuration)
 #if SAFARIDBG

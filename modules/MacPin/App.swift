@@ -1,3 +1,6 @@
+import Foundation
+
+@objc(MacPinApp)
 class MacPinApp: Application {
 	override static func sharedApplication() -> MacPinApp {
 		let app = super.sharedApplication()

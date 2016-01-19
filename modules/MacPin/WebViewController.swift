@@ -29,6 +29,7 @@ import JavaScriptCore
 #if WK2LOG
 		webview._diagnosticLoggingDelegate = self
 #endif
+		webview.configuration.processPool._downloadDelegate = self
 		self.webview = webview
 		representedObject = webview	// FIXME use NSProxy instead for both OSX and IOS
 		view = webview
@@ -42,6 +43,7 @@ import JavaScriptCore
 #if DEBUG
 		webview._diagnosticLoggingDelegate = self
 #endif
+		webview.configuration.processPool._downloadDelegate = self
 		self.webview = webview
 		view = webview
 	}
@@ -73,4 +75,18 @@ extension WebViewController: _WKDiagnosticLoggingDelegate {
 	func _webView(webView: WKWebView, logDiagnosticMessage message: String, description: String) { warn("\(message) || \(description)") }
 	func _webView(webView: WKWebView, logDiagnosticMessageWithResult message: String, description: String, result: _WKDiagnosticLoggingResultType) { warn("\(message) || \(description) >> \(String(result))") }
 	func _webView(webView: WKWebView, logDiagnosticMessageWithValue message: String, description: String, value: String) { warn("\(message) || \(description) == \(value)") }
+}
+
+extension WebViewController: _WKDownloadDelegate {
+    func _downloadDidStart(download: _WKDownload!) { warn(download.request.description) }
+	func _download(download: _WKDownload!, didRecieveResponse response: NSURLResponse!) { warn(response.description) }
+	func _download(download: _WKDownload!, didRecieveData length: UInt64) { warn(length.description) }
+	func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
+		warn("NOIMPL: " + download.request.description)
+		download.cancel()
+		return ""
+	}
+	func _downloadDidFinish(download: _WKDownload!) { warn(download.request.description) }
+	func _download(download: _WKDownload!, didFailWithError error: NSError!) { warn(error.description) }
+	func _downloadDidCancel(download: _WKDownload!) { warn(download.request.description) }
 }

@@ -33,6 +33,7 @@ extension UIView {
 }
 
 // need to freeze this
+/*
 @objc protocol MobileBrowserScriptExports : JSExport { // '$.browser' in app.js
 	var defaultUserAgent: String? { get set } // full UA used for any new tab without explicit UA specified
 	var tabs: [MPWebView] { get }
@@ -50,8 +51,9 @@ extension UIView {
 	func unhideApp()
 	func bounceDock()
 }
+*/
 
-@objc class MobileBrowserViewController: UIViewController, MobileBrowserScriptExports {
+@objc class MobileBrowserViewController: UIViewController, BrowserViewController {
 	//var frame: CGRect = UIScreen.mainScreen().applicationFrame
 
 	var kvoCtx = "kvo"
