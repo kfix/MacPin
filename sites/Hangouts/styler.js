@@ -36,7 +36,7 @@ if (window == top)
 				img:nth-of-type(2) { display: none; }
 				#hangout-landing-chat + div { background-color: transparent !important; }
 				#hangout-landing-chat + div > div > div { display: none !important; }
-				#hangout-landing-chat + div + div[jsaction] { display: none !important; }
+				#hangout-landing-chat + div + div { display: none !important; }
 			`;
 			document.head.appendChild(css);
 			//document.head.insertBefore(css,document.head.childNodes[0]); //prepend
