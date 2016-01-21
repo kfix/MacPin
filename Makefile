@@ -28,7 +28,7 @@ else
 icontypes			+= appiconset
 endif
 
-installdir			:= ~/Applications
+installdir			:= ~/Applications/MacPin.localized
 
 #appsig				?= kfix@github.com
 # http://www.objc.io/issue-17/inside-code-signing.html
@@ -121,6 +121,9 @@ endef
 $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/Info.plist: templates/$(platform)/Info.plist
 	$(gen_plist_template)
 
+$(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings: templates/$(platform)/InfoPlist.strings
+	$(gen_plist_template)
+
 # https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/SystemExtensionKeys.html#//apple_ref/doc/uid/TP40014212-SW17
 $(appdir)/%/Contents/PlugIns/ActionExtension.appex/Contents/Info.plist $(appdir)/%.appex/Info.plist: templates/appex/$(platform)/Info.plist
 		$(gen_plist_template)
@@ -151,7 +154,7 @@ $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/
 # https://developer.apple.com/library/mac/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html#//apple_ref/doc/uid/10000123i-CH101-SW1
 # https://developer.apple.com/library/mac/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
 
-$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/
+$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings
 	@install -d $@ $@/Contents/MacOS $@/Contents/Resources
 	$(patsubst %,cp % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
 	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/Contents/MacOS/$*.dSYM;,$(filter $(outdir)/exec/%.dSYM,$^))
@@ -184,7 +187,7 @@ $(appdir)/%.app/LaunchScreen.nib: templates/$(platform)/LaunchScreen.xib
 	@install -d $(dir $@)
 	ibtool --compile $@ $<
 
-$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.plist $(appdir)/%.app/Info.plist templates/$(platform)/LaunchScreen.xib $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Assets.car templates/Resources templates/Resources/*
+$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.plist $(appdir)/%.app/Info.plist templates/$(platform)/LaunchScreen.xib $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Assets.car templates/Resources templates/Resources/* $(appdir)/%.app/en.lproj/InfoPlist.strings
 	@install -d $@ $@/Frameworks
 	@install -d $@ $@/SwiftSupport
 	$(patsubst %,cp % $@/$*;,$(filter $(outdir)/exec/%,$^))
@@ -222,6 +225,7 @@ install: /usr/local/bin/ios-deploy
 	for i in $(filter %.app,$^); do ios-deploy -b $$i; done
 else
 install:
+	install -d $(installdir)
 	cp -R $(filter %.app,$^) $(installdir)
 endif
 
@@ -331,6 +335,6 @@ release:
 	@exit 1
 endif
 
-.PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(outdir)/%.entitlements.plist
+.PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist
 .PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release wknightly doc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics
 .SUFFIXES:
