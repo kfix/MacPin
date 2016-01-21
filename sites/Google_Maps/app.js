@@ -15,11 +15,12 @@ if ($.app.platform == "OSX") maps.subscribeTo.push("MacPinPollStates", "getGeolo
 var mapsAlt = Object.assign({}, maps, {url: "https://www.google.com/maps/?authuser=1"});
 var mapsLite = Object.assign({}, maps, {url: "https://www.google.com/maps/?force=lite"});
 var mapsGL = Object.assign({}, maps, {url: "https://www.google.com/maps/preview/?force=webgl"});
+var myMaps = Object.assign({}, maps, {url: "https://www.google.com/maps/d/u/0"});
 
 // need to map pinchIn to scrollUp, pinchOut to scrollDown
 // rotate?
 // two-finger slide for tilt?
-// https://github.com/ekryski/caress-client
+// templates/Resources/shim_touchpad_gestures.js
 
 mapsTab = $.browser.tabSelected = new $.WebView(maps);
 
@@ -64,6 +65,7 @@ delegate.decideNavigationForURL = function(url) {
 				!~addr.indexOf("//www.google.com/a/") &&
 				!~addr.indexOf("//places.google.com") &&
 				!~addr.indexOf("//plus.google.com") &&
+				!addr.startsWith("//docs.google.com/picker?") &&
 				!~addr.indexOf("//www.google.com/maps/") &&
 				!~addr.indexOf("//google-latlong.blogspot.com") &&
 				!~addr.indexOf("//gokml.net") &&
@@ -116,10 +118,12 @@ delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('gmaps');
 	//$.app.registerURLScheme('googlemaps'); //IOS?
 	$.browser.addShortcut('Google Maps', maps);
+	$.browser.addShortcut('Google My Maps Editor', myMaps);
 	$.browser.addShortcut('Google Maps Lite', mapsLite);
 	$.browser.addShortcut('Google Maps +WebGL', mapsGL);
 	$.browser.addShortcut('Google Maps (using secondary account)', mapsAlt);
 	$.browser.addShortcut('Google Maps Dev Team blog', "http://google-latlong.blogspot.com");
+	$.browser.addShortcut('Google Maps API Team blog', "http://googlegeodevelopers.blogspot.com");
 	$.browser.addShortcut('Classic gMaps', "http://gokml.net/maps");
 	$.browser.addShortcut("Install 'Show Address in Google Maps app' service", `http://github.com/kfix/MacPin/tree/master/extras/${escape('Show Address in Google Maps app.workflow')}`);
 

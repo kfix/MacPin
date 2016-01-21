@@ -7,6 +7,15 @@
 // Apple is way ahead of me:
 //    https://developer.mozilla.org/en-US/docs/Web/API/GestureEvent
 //    https://developer.apple.com/library/iad/documentation/UserExperience/Reference/GestureEventClassReference/index.html
+//    https://developer.apple.com/library/safari/documentation/UserExperience/Reference/GestureEventClassReference/index.html
+//      ^^ has special key modifiers
+//    https://developer.apple.com/library/ios/documentation/AppleApplications/Reference/SafariWebContent/HandlingEvents/HandlingEvents.html#//apple_ref/doc/uid/TP40006511-SW23
+//    https://developer.apple.com/library/safari/documentation/UserExperience/Reference/GestureEventClassReference/index.html#//apple_ref/javascript/instm/GestureEvent/initGestureEvent
+//      .scale to get pinch factor
+//      .rotation
+//      could use .screenX and .screenY to detect two-finger swipes?
+//         https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/mac/ViewGestureControllerMac.mm
+//         https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/mac/ViewGestureControllerMac.mm#L140 only Magnification events are passed to WebCore
 //    https://github.com/taye/interact.js
 //    https://github.com/WebKit/webkit/commit/10f11d2d8227a7665c410c642ebb6cb9d482bfa8 Web Gesture events for Mac
 //    https://github.com/WebKit/webkit/commit/d4d57e4697410ebaf006f3c62b04038a1915ca7f enable Web Gestures on Mac
