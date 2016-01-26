@@ -102,7 +102,7 @@ $EDITOR sites/MySite/app.js
 # find a large & square .png for the app, like an App Store image.
 cp ~/Pictures/MySite.png sites/MySite/icon.png
 
-make MySite.app
+make sites/MySite/
 open builds/macosx-x86*/apps/MySite.app
 # test, tweak, lather, repeat
 
