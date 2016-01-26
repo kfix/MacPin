@@ -95,8 +95,8 @@ func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? 
 				return nil
 			}
 		}
-
-		if !urlstr.characters.contains(" ") && !((urlp.path ?? "").isEmpty) && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
+		barehttp: if let path = urlp.path where !path.isEmpty && !urlstr.characters.contains(" ") && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
+			if let _ = Int(path) { break barehttp; } //FIXME: ensure not all numbers. RFC952 & 1123 differ on this, but inet_ does weird stuff regardless
 			urlp.scheme = "http"
 			urlp.host = urlp.path
 			urlp.path = nil
@@ -118,7 +118,7 @@ func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? 
 		// FIXME: this should get refactored to a browserController/OmniBoxController closure thats passed as fallback?
 		if !urlstr.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
 		let query = urlstr.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding),
-		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") {
+		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") { // FIXME: JS setter
 			return search
 		}
 		// as a fallback, could forcibly change OmniBox stringValue to raw search terms
