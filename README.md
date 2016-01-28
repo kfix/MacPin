@@ -1,4 +1,3 @@
-[![Join the chat at https://gitter.im/kfix/MacPin](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kfix/MacPin?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 # MacPin
 <center>
 MacPin creates OSX & [iOS](#iOS) apps for websites & webapps, configured with JavaScript.  
@@ -85,7 +84,6 @@ Hooked URLs:
 * [`devdocs:`](devdocs:someFuncName)
 
 ## Creating an App
-
 Some call these Apps [Site-specific Browsers](https://en.wikipedia.org/wiki/Site-specific_browser) or Hybrid apps.  
 They are configured with an imperative JavaScript which you need to copy-paste and customize.  
 
@@ -131,10 +129,8 @@ delegate; //return this to macpin
 ```
 
 ## Hacking MacPin
-
-
 Its written in Swift using WKWebView and NSTabViewController with a fully programmatic NIB-less UI layout.  
-You need Xcode installed on OSX Yosemite to get the Swift compiler and Cocoa headers.  
+You need Xcode installed on OSX to get the Swift compiler and Cocoa headers.  
 Otherwise `$EDITOR` and `make` are your fork and knife.
 
 ```
@@ -147,14 +143,18 @@ make only=sim test.ios
 Web Inspector can be accessed for any tab by right clicking in the page and selecting "Inspect Element" from the context menu.  
 Debug builds (`make test|test.app|repl`) can be remotely inspected from Safari->Develop-><ComputerName>
 
-The JavaScript API for app construction is undocumented and non-final.  
+The JavaScript API for app construction is undocumented and [non-final](issues/11).  
 If you want to play with it, run any MacPin app with the `-i` argument in Terminal to get a JS console (or `make repl`).  
 Safari can also remotely inspect the `JSContext` of debug builds.
 
 Some browser functionality is currently unimplementable in WKWebKit:
 * File Picker for upload via HTML4 `<input type="file">` buttons
   * Workaround: drag files onto the buttons, it works!
+* Status Bar
+  * Drag any link some distance to see a URL preview. Force Touch previewing should also work.
+  * a JS emulation should be possible to preview any hovered links
 * Printing
+  * Coming soon-ish (10.11.4?)
   * Workaround: Tab->Save Web Archive, open in Safari and then Print.
 
 And some things I just haven't had need to write:
