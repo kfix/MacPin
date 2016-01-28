@@ -29,6 +29,9 @@ typedef const struct OpaqueWKFrame* WKFrameRef; //no Cocoa bridge for this at al
 //@property (readonly) NSColor *_pageExtendedBackgroundColor;
 //@property (copy, nonatomic) NSColor *underlayColor;
 
+// https://github.com/WebKit/webkit/commit/eea322e40e200c93030702aa0a6524d249e9795f
+@property (strong, nonatomic, setter=_setInspectorAttachmentView:) NSView *_inspectorAttachmentView WK_AVAILABLE(10_11, NA);
+
 - (void)updateLayer;
 
 // https://github.com/WebKit/webkit/blob/72b18a0525ffb78247aa1951efc17129f8390f37/Source/WebKit2/UIProcess/API/mac/WKView.mm#L2312

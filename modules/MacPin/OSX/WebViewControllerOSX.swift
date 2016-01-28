@@ -16,7 +16,7 @@ import WebKitPrivates
 		@objc(isFindBarVisible) get { return _findBarVisible }
 		set(vis) {
 			_findBarVisible = vis
-			if let findview = findBarView { 
+			if let findview = findBarView {
 				vis ? view.addSubview(findview) : findview.removeFromSuperview()
 			}
 			layout()
@@ -28,15 +28,6 @@ import WebKitPrivates
 		//view.wantsLayer = true //use CALayer to coalesce views
 		//^ default=true:  https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3641
 		view.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable]
-
-/*
-		if let wkview = view.subviews.first as? WKView {
-			//wkview.setValue(false, forKey: "shouldExpandToViewHeightForAutoLayout") //KVO
-			//wkview.shouldExpandToViewHeightForAutoLayout = false
-			//wkview.postsFrameChangedNotifications = false //FIXME stop webinspector flicker?
-			//view.postsBoundsChangedNotifications = false //FIXME stop webinspector flicker?
-		}
-*/
 
 		//view.setContentHuggingPriority(NSLayoutPriorityDefaultLow, forOrientation:  NSLayoutConstraintOrientation.Vertical) // prevent autolayout-flapping when web inspector is docked to tab
 		view.setContentHuggingPriority(250.0, forOrientation:  NSLayoutConstraintOrientation.Vertical) // prevent autolayout-flapping when web inspector is docked to tab
@@ -99,30 +90,7 @@ import WebKitPrivates
 	}
 
 	override func viewWillLayout() {
-#if WK2LOG
-		//warn("WKWebView \(view.frame)")
-		//warn("WKWebView subviews #\(view.subviews.count)")
-		//warn("WKWebView autoResizes subviews \(view.autoresizesSubviews)")i
-
-		// https://github.com/WebKit/webkit/blob/aefe74816c3a4db1b389893469e2d9475bbc0fd9/Source/WebKit2/UIProcess/mac/WebInspectorProxyMac.mm#L809
-		// inspectedViewFrameDidChange is looping itself
-		// ignoreNextInspectedViewFrameDidChange is supposed to prevent this
-		// fixed? https://bugs.webkit.org/show_bug.cgi?id=142892 https://github.com/WebKit/webkit/commit/eea322e40e200c93030702aa0a6524d249e9795f
-		// moar feex http://trac.webkit.org/changeset/181927 http://trac.webkit.org/changeset/181972
-
-		webview.resizeSubviewsWithOldSize(CGSizeZero)
-		if let wkview = view.subviews.first as? NSView {
-			if wkview.tag == 1000 { //WKInspectorViewTag
-				// wkview.autoresizingMask == .ViewWidthSizable | .ViewMaxYMargin {
-				warn("webinpector layout \(wkview.frame)") //probably a webinspector (WKWebInspectorWKWebView)
-				if let pageView = view.subviews.last as? NSView { // tag=-1 should be the page content
-					warn("page layout \(pageView.frame)")
-					//pageView.autoresizingMask = .ViewWidthSizable
-					//pageView.autoresizingMask = .ViewNotSizable
-				}
-			}
-		}
-#endif
+		if let wkview = view.subviews.first as? WKView { wkview._inspectorAttachmentView = view }
 		super.viewWillLayout()
 	}
 

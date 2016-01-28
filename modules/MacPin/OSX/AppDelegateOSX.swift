@@ -17,8 +17,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		NSUserDefaults.standardUserDefaults().setBool(true, forKey: "NSQuitAlwaysKeepsWindows") // insist on Window-to-Space/fullscreen persistence between launches
 		NSUserDefaults.standardUserDefaults().setInteger(1, forKey: "NSInitialToolTipDelay") // get TTs in 1ms instead of 3s
 		NSUserDefaults.standardUserDefaults().setFloat(12.0, forKey: "NSInitialToolTipFontSize")
-		NSUserDefaults.standardUserDefaults().setInteger(0, forKey: "__WebInspectorPageGroupLevel1__.WebKit2InspectorStartsAttached")
-		// ^ inline inspectors are flickery: https://github.com/kfix/MacPin/issues/13
+		NSUserDefaults.standardUserDefaults().removeObjectForKey("__WebInspectorPageGroupLevel1__.WebKit2InspectorStartsAttached") // #13 fixed
 
 		//browserController.title = nil
 		//browserController.canPropagateSelectedChildViewControllerTitle = true
