@@ -186,6 +186,7 @@ import UTIKit
 				// (result: WebKit::WebSerializedScriptValue*, exception: WebKit::CallbackBase::Error)
 				//withCallback.callWithArguments([result, exception]) // crashes, need to translate exception into something javascripty
 				warn("callback() ~> \(result),\(exception)")
+				// FIXME: check if exception is WKErrorCode.JavaScriptExceptionOccurred,.JavaScriptResultTypeIsUnsupported
 				if let result = result {
 					callback.callWithArguments([result, true]) // unowning withCallback causes a crash and weaking it muffs the call
 				} else {
@@ -199,6 +200,7 @@ import UTIKit
 		evaluateJavaScript(js, completionHandler: nil)
 	}
 
+	// cuz JSC doesn't come with setTimeout()
 	func asyncEvalJS(js: String, _ withDelay: Double, _ withCallback: JSValue? = nil) {
 		let backgroundQueue = dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0)
 		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * withDelay))
@@ -273,7 +275,7 @@ import UTIKit
 		return false
 	}
 	func addHandler(handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) } //FIXME kill
-	func subscribeTo(handler: String) { 
+	func subscribeTo(handler: String) {
 		configuration.userContentController.removeScriptMessageHandlerForName(handler)
 		configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler)
 	}

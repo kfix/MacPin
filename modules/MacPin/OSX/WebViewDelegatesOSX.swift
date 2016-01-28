@@ -41,7 +41,7 @@ extension WebViewControllerOSX {
 		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler(input.stringValue) }
 	}
 
-	func _webView(webView: WKWebView, printFrame: WKFrameInfo) { 
+	func _webView(webView: WKWebView, printFrame: WKFrameInfo) {
 		warn("JS: `window.print();`")
 		// webView._printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo())
 
@@ -58,7 +58,6 @@ extension WebViewControllerOSX {
 		printer.showsPrintPanel = true
 		printer.runOperation()
 	}
-
 }
 
 extension WebViewControllerOSX {
@@ -70,7 +69,7 @@ extension WebViewControllerOSX {
 			completionHandler(.PerformDefaultHandling, nil)
 			return
 		}
-		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.URL ?? String())]")	
+		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.URL ?? String())]")
 
 		let alert = NSAlert()
 		alert.messageText = webView.title ?? ""
