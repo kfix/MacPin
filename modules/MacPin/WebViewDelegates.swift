@@ -48,7 +48,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 						"window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(webView.transparent)}})); ",
 						completionHandler: nil)
 				default:
-					true // no-op	
+					true // no-op
 			}
 
 			if jsdelegate.hasProperty(message.name) {
@@ -247,7 +247,7 @@ extension WebViewController: WKNavigationDelegate {
 		// otherwise == nil
 		// RDAR? would like the tgt string to be passed here
 
-		warn("<\(srcurl)>: window.open(\(openurl), \(tgt))")
+		warn("JS <\(srcurl)>: `window.open(\(openurl), \(tgt));`")
 		if jsdelegate.tryFunc("decideWindowOpenForURL", openurl.description, webView) { return nil }
 		let wv = MPWebView(config: configuration, agent: webView._customUserAgent)
 		popup(wv)
@@ -274,10 +274,13 @@ extension WebViewController: WKNavigationDelegate {
 		//return nil //window.open() -> undefined
 	}
 
+	func webViewDidClose(webView: WKWebView) {
+		warn("JS <\(webView.URL)>: `window.close();`")
+		closeTab() // FIXME: need to ensure webView was window.open()'d by a JS script
+	}
+
 	func _webViewWebProcessDidCrash(webView: WKWebView) {
 	    warn("reloading page")
 		webView.reload()
 	}
 }
-
-
