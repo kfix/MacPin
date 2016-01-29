@@ -1,5 +1,6 @@
 @import WebKit;
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKWebViewPrivate.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/WebViewImpl.h
 
 typedef NS_ENUM(NSInteger, _WKPaginationMode) {
     _WKPaginationModeUnpaginated,

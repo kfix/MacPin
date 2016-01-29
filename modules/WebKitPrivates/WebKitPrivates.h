@@ -3,6 +3,7 @@
 #import "WKPreferences+Privates.h"
 #import "_WKDiagnosticLoggingDelegate.h"
 #import "WKWebView+Privates.h"
+#import "_WKThumbnailView.h"
 #import "WKView+Privates.h"
 #import "_WKProcessPoolConfiguration.h"
 #import "_WKDownload.h"
