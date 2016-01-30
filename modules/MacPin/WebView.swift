@@ -67,6 +67,13 @@ import UTIKit
 		set(agent) { if !agent.isEmpty { _customUserAgent = agent } }
 	}
 
+	var topFrame: WKView? {
+		get {
+			guard let wkview = subviews.first as? WKView else { return nil }
+			return wkview
+		}
+	}
+
 #if os(OSX)
 	var transparent: Bool {
 		get { return _drawsTransparentBackground }

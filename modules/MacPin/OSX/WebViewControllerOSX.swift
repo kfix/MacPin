@@ -29,9 +29,6 @@ import WebKitPrivates
 		//^ default=true:  https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3641
 		view.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable]
 
-		//view.setContentHuggingPriority(NSLayoutPriorityDefaultLow, forOrientation:  NSLayoutConstraintOrientation.Vertical) // prevent autolayout-flapping when web inspector is docked to tab
-		view.setContentHuggingPriority(250.0, forOrientation:  NSLayoutConstraintOrientation.Vertical) // prevent autolayout-flapping when web inspector is docked to tab
-
 		bind(NSTitleBinding, toObject: webview, withKeyPath: "title", options: nil)
 		//backMenu.delegate = self
 		//forwardMenu.delegate = self
@@ -90,7 +87,10 @@ import WebKitPrivates
 	}
 
 	override func viewWillLayout() {
-		if let wkview = view.subviews.first as? WKView { wkview._inspectorAttachmentView = view }
+		webview.resizeSubviewsWithOldSize(CGSizeZero)
+		webview.topFrame?._inspectorAttachmentView = webview // works pretty good, but "bottom" docking actually docks to top?!
+		//webview.topFrame?._inspectorAttachmentView = MacPinApp.sharedApplication().appDelegate?.browserController.view // doesn't work at all
+		//webview.topFrame?._inspectorAttachmentView = cview // docks properly but persists through tab changes
 		super.viewWillLayout()
 	}
 

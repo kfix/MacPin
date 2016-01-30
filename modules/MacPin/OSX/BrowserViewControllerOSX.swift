@@ -311,17 +311,13 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		set(bool) { if bool != isToolbarShown { view.window!.toggleToolbarShown(nil) } }
 	}
 
-/*
 	// really needs to be a NSHashTable or weaked swift Set
 	// http://stackoverflow.com/questions/24127587/how-do-i-declare-an-array-of-weak-references-in-swift
-	//var tabs: [MPWebView] = [] {
-	var tabs: WeakThing<MPWebView>[] = [] {
+	var tabs: [MPWebView] = [] {
 		willSet { // allow `$.browser.tabs = $.browser.tabs.slice(0)` to work by diffing newValue against childViewControllers
 			warn()
-			// crashes if you pass in a non [MPWebView] array from JS
 			for webview in tabs { //removals
-				//if !contains(newValue, webview) { // crashes
-				if (find(newValue, webview) ?? -1) < 0 {
+				if !newValue.contains(webview) {
 					if let wvc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === webview }).first as? WebViewControllerOSX {
 						wvc.removeFromParentViewController()
 					}
@@ -331,33 +327,8 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		didSet {
 			warn()
 			for webview in tabs { //additions
-				//if !contains(tabs, webview) { // crashes
-				if (find(oldValue, webview) ?? -1) < 0 {
-					addChildViewController(WebViewControllerOSX(webview: webview))
-				}
-			}
-		}
-	}
-*/
-
-	var tabs: [MPWebView] {
-		// FIXME: .count broken?
-		get { return childViewControllers.filter({ $0 is WebViewControllerOSX }).map({ ($0 as! WebViewControllerOSX).webview }) } // returns mutable *copy*, which is why .push() can't work
-			// ^ put an observer on childViewController to update a weak stored array of WebViews, or do that as part of add/removeChildVC()
-			// then you have a stable reference that you can have JS do .push()s on
-
-		set { // allow `$.browser.tabs = $.browser.tabs.slice(0)` to work by diffing newValue against childViewControllers
-			// crashes if you pass in a non [MPWebView] array from JS
-			for webview in tabs { //removals
-				if newValue.contains(webview) {
-					if let wvc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === webview }).first as? WebViewControllerOSX {
-						wvc.removeFromParentViewController()
-					}
-				}
-			}
-			for webview in newValue { //additions
-				if !tabs.contains(webview) {
-					addChildViewController(WebViewControllerOSX(webview: webview))
+				if !oldValue.contains(webview) {
+					childViewControllers.append(WebViewControllerOSX(webview: webview))
 				}
 			}
 		}
@@ -365,10 +336,10 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
  	//override var childViewControllers: [AnyObject] { didSet { warn(childViewControllers.count.description); warn(childViewControllers.description) } } //no workie
 
-	var tabSelected: AnyObject? {
+	var tabSelected: AnyObject? { // FIXME: make protocol
 		get {
 			if selectedTabViewItemIndex == -1 { return nil } // no tabs? bupkiss!
-			let vc = childViewControllers[selectedTabViewItemIndex] 
+			let vc = childViewControllers[selectedTabViewItemIndex]
 			if let obj: AnyObject = vc.representedObject { return obj } // try returning an actual model first
 			return vc
 		}
@@ -381,7 +352,9 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 					if tabViewItemForViewController(vc) == nil { childViewControllers.append(vc) } // add the given vc as a child if it isn't already
 					tabView.selectTabViewItem(tabViewItemForViewController(vc))
 				case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
-					self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
+					//self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
+					self.tabs.append(wv)
+					self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX
 				//case let js as JSValue: guard let wv = js.toObjectOfClass(MPWebView.self) { self.tabSelected = wv } //custom bridging coercion
 				default:
 					warn("invalid object")
