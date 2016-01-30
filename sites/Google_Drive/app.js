@@ -12,6 +12,35 @@ var driveTab, drive = {
 	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"]
 };
 var driveAlt = Object.assign({}, drive, {url: "https://drive.google.com/drive/u/1"});
+var sheets = Object.assign({}, drive, {url: "https://docs.google.com/spreadsheets/"});
+var docs = Object.assign({}, drive, {url: "https://docs.google.com/document/"});
+var presentation = Object.assign({}, drive, {url: "https://docs.google.com/presentation/"});
+
+/*
+// ?authuser=N always overrides /u/N/ in the url!
+// authuser= can also be a gmail or google apps email address
+
+func gotoAlternateGoogleAccount(tab, acct) {
+    // https://support.google.com/drive/answer/2405894?hl=en
+	tab = tab || $.browser.tabSelected
+	acct = acct || 1
+	url.query['authuser'] = acct
+	if (tab.url.test(//)) {
+		tab.url = `${tab.url}/u/${acct}/`
+	}
+}
+func gotoNextGoogleAccount(tab) {
+    // https://support.google.com/drive/answer/2405894?hl=en
+	tab = tab || $.browser.tabSelected
+	acct = tab.uri.query["authuser"]  || 0
+	url.query['authuser'] = acct + 1
+	}
+}
+
+// do these with JS:gapi.auth2.*?
+// https://github.com/google/google-api-javascript-client/issues/13
+*/
+
 driveTab = $.browser.tabSelected = new $.WebView(drive);
 
 // dark mode: https://userstyles.org/styles/105045/google-drive-dark
@@ -56,7 +85,9 @@ delegate.decideNavigationForURL = function(url, tab) {
 			if ((addr.startsWith("//drive.google.com/") || addr.startsWith("//docs.google.com/")) && tab.allowAnyRedir) {
 				tab.allowAnyRedir = false; // we are back home
 			} else if (tab.allowAnyRedir || unescape(unescape(addr)).match("//accounts.google.com/")) {
-				tab.allowAnyRedir = true; // might be attempting an external domain for a Google Apps SSO-integrated corporate login
+				// we might be redirected to an external domain for a SSO-integrated Google Apps login
+				// https://support.google.com/a/answer/60224#userSSO
+				tab.allowAnyRedir = true;
 			} else if (!~addr.indexOf("//drive.google.com") &&
 				!~addr.indexOf("//docs.google.com") &&
 				!~addr.indexOf(".docs.google.com") &&
@@ -85,7 +116,9 @@ delegate.decideNavigationForURL = function(url, tab) {
 				!~addr.indexOf("//6.talkgadget.google.com") &&
 				!~addr.indexOf("//content.googleapis.com") &&
 				!~addr.indexOf("//www.youtube.com") && // yt vids are usually embedded players
-				!~addr.indexOf("//www.google.com/a/")
+				!~addr.indexOf("//www.google.com/a/") &&
+				!addr.startsWith("//myaccount.google.com") &&
+				!addr.startsWith("//www.google.com/settings")
 			) {
 				$.app.openURL(url); //pop all external links to system browser
 				console.log("opened "+url+" externally!");
@@ -124,9 +157,10 @@ delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('gdrive');
 	//$.app.registerURLScheme('googledrive'); //iOS
 	$.browser.addShortcut('Google Drive', drive);
+	$.browser.addShortcut("Add a Google log-in", 'https://accounts.google.com/AddSession');
 	$.browser.addShortcut('Google Drive (using secondary account)', driveAlt);
 	$.browser.addShortcut("Install 'Open in Google Drive app' service", `http://github.com/kfix/MacPin/tree/master/extras/${escape('Open in Google Drive app.workflow')}`);
-	$.browser.addShortcut('Enable Redirection', ['toggleRedirection', true]);
+	$.browser.addShortcut('Enable Redirection to external domains', ['toggleRedirection', true]);
 	$.browser.addShortcut('Disable Redirection (default)', ['toggleRedirection', false]);
 
 	if ($.launchedWithURL != '') { // app was launched with a search query
