@@ -165,6 +165,8 @@ delegate.HangoutsRosterReady = function(tab) { // notifier.js will call this whe
 		$.launchedWithURL = '';
 	}
 /*
+	// this is your UID for G+: https://developers.google.com/apis-explorer/#p/plus/v1/plus.people.get?userId=me&_h=6&
+	// GET https://www.googleapis.com/plus/v1/people/me?key={YOUR_API_KEY}
 	tab.evalJS('myGAIA();', function(res, err) {
 		if (res != '') {
 			var gaia = res;

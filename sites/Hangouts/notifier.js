@@ -35,7 +35,6 @@ if (window == top) {
 	 }
 
 	function myGAIA(){ return document.querySelector('a[aria-label^=Profile]').getAttribute('href').split('/').pop(); }
-	// this is your UID for G+: https://developers.google.com/apis-explorer/#p/plus/v1/plus.people.get?userId=me&_h=6&
 
 	function rosterClickOn(sel) { xssRoster(['clickOn', sel]); }
 
