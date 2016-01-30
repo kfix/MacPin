@@ -237,10 +237,10 @@ clean: unregister
 
 reset:
 	-defaults delete $(macpin)
-	-rm -rf ~/Library/Caches/$(template_bundle_id).* ~/Library/WebKit/$(macpin)
-	-rm -rf ~/Library/Saved\ Application\ State/$(template_bundle_id).*
-	-rm -rf ~/Library/Preferences/$(template_bundle_id).*
-	-defaults read com.apple.spaces app-bindings | grep $(template_bundle_id).
+	-rm -rfv ~/Library/Caches/$(template_bundle_id).$(APP)* ~/Library/WebKit/$(macpin)
+	-rm -rfv ~/Library/Saved\ Application\ State/$(template_bundle_id).$(APP)*
+	-rm -rfv ~/Library/Preferences/$(template_bundle_id).$(APP)*
+	-defaults read com.apple.spaces app-bindings | grep $(template_bundle_id).$(APP)
 	# open ~/Library/Preferences/com.apple.spaces.plist
 
 uninstall: $(wildcard $(appnames:%=$(installdir)/%))
@@ -248,8 +248,7 @@ uninstall: $(wildcard $(appnames:%=$(installdir)/%))
 
 test:
 	#-defaults delete $(macpin)
-	#($< -i http://browsingtest.appspot.com)
-	($< -i $(PWD)/sites/MacPin/repl.html)
+	($< -i http://browsingtest.appspot.com)
 
 apirepl: ; ($< -i)
 tabrepl: ; ($< -t)
