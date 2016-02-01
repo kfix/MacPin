@@ -122,53 +122,6 @@ extension NSPasteboard {
 	}
 }
 
-extension WKView {
-	//override func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
-
-	/* overide func _registerForDraggedTypes() {
-		// https://github.com/WebKit/webkit/blob/f72e25e3ba9d3d25d1c3a4276e8dffffa4fec4ae/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3653
-		self.registerForDraggedTypes([ // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Shared/mac/PasteboardTypes.mm [types]
-			// < forEditing
-			WebArchivePboardType, NSHTMLPboardType, NSFilenamesPboardType, NSTIFFPboardType, NSPDFPboardType,
-		    NSURLPboardType, NSRTFDPboardType, NSRTFPboardType, NSStringPboardType, NSColorPboardType, kUTTypePNG,
-			// < forURL
-			WebURLsWithTitlesPboardType, //webkit proprietary
-			NSURLPboardType, // single url from older apps and Chromium -> text/uri-list
-			WebURLPboardType (kUTTypeURL), //webkit proprietary: public.url
-			WebURLNamePboardType (kUTTypeURLName), //webkit proprietary: public.url-name
-			NSStringPboardType, // public.utf8-plain-text -> WKJS: text/plain
-			NSFilenamesPboardType, // Finder -> text/uri-list & Files
-		])
-	} */
-
-	// http://stackoverflow.com/a/25114813/3878712
-
-	// try to accept DnD'd links from other browsers more gracefully than default WebKit behavior
-	// this mess ain't funny: https://hsivonen.fi/kesakoodi/clipboard/
-	func shimmedPerformDragOperation(sender: NSDraggingInfo) -> Bool {
-		if sender.draggingSource() == nil { //dragged from external application
-			let pboard = sender.draggingPasteboard()
-
-			if let file = pboard.stringForType(kUTTypeFileURL as String) { //drops from Finder
-				warn("DnD: file from Finder: \(file)")
-			} else {
-				pboard.dump()
-				pboard.normalizeURLDrag()
-				pboard.dump()
-			}
-
-			if let urls = pboard.readObjectsForClasses([NSURL.self], options: nil) {
-				if AppScriptRuntime.shared.jsdelegate.tryFunc("handleDragAndDroppedURLs", urls.map({$0.description})) {
-			 		return true  // app.js indicated it handled drag itself
-				}
-			}
-		} // -from external app
-
-		return self.shimmedPerformDragOperation(sender) //return pre-swizzled method from WKWebView ..
-		// if current page doesn't have HTML5 DnD event observers, webview will just navigate to URL dropped in
-	}
-}
-
 // show an NSError to the user, attaching it to any given view
 func displayError(error: NSError, _ vc: NSViewController? = nil) {
 	warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")

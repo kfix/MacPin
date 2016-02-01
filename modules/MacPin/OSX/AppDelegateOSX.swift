@@ -162,10 +162,6 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 #endif
 		app!.mainMenu?.addItem(dbgMenu)
 
-		let origDnD = class_getInstanceMethod(WKView.self, "performDragOperation:")
-		let newDnD = class_getInstanceMethod(WKView.self, "shimmedPerformDragOperation:")
-		method_exchangeImplementations(origDnD, newDnD) //swizzle that shizzle to enable logging of DnD's
-
 		windowController.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
 		windowController.window?.bind(NSTitleBinding, toObject: browserController, withKeyPath: "title", options: nil)
 		windowController.window?.makeKeyAndOrderFront(self)
@@ -235,7 +231,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		// not in iOS: http://stackoverflow.com/a/13083203/3878712
 		// NOPE, this can cause loops warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 		if error.domain == NSURLErrorDomain {
-			let uI = error.userInfo 
+			let uI = error.userInfo
 			if let errstr = uI[NSLocalizedDescriptionKey] as? String {
 				if let url = uI[NSURLErrorFailingURLStringErrorKey] as? String {
 					var newUserInfo = uI
