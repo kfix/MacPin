@@ -57,7 +57,9 @@ delegate.launchURL = function(url) {
 		addr = comps.shift();
 	switch (scheme + ':') {
 		case 'file':
-			// prompt to do upload
+			// check to see if its a JSON-ic .gdoc|gsheet|gslides from the Google Drive sync app
+			//    if so, extract the link and pop the doc open
+			// else, prompt to do upload
 			driveTab.evalJS('confirm("Upload '+addr+'?");');
 			break;
 		case 'googledrive:':
