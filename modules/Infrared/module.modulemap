@@ -1,0 +1,4 @@
+module Infrared {
+	umbrella header "Infrared.h"
+	export *
+}

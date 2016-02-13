@@ -180,6 +180,7 @@ extension WebViewController: WKNavigationDelegate {
 			//if let cd = hdr.objectForKey("Content-Disposition") as? String where cd.hasPrefix("attachment") { warn("got attachment! \(cd) \(fn)") }
 			if let headers = httpResponse.allHeaderFields as? [String: String], url = httpResponse.URL {
 				let cookies = NSHTTPCookie.cookiesWithResponseHeaderFields(headers, forURL: url)
+				//let cookies = NSHTTPCookie._parsedCookiesWithResponseHeaderFields(headers, forURL: url) //ElCap
 				for cookie in cookies { jsdelegate.tryFunc("receivedCookie", webView, cookie.name, cookie.value) }
 
 				if let cd = headers["Content-Disposition"] where cd.hasPrefix("attachment") {
