@@ -158,9 +158,13 @@ delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(ur
 delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('gdrive');
 	//$.app.registerURLScheme('googledrive'); //iOS
-	$.browser.addShortcut('Google Drive', drive);
+	$.browser.addShortcut('Drive', drive);
+	$.browser.addShortcut('Drive (using secondary account)', driveAlt);
+	$.browser.addShortcut('Sheets', sheets);
+	$.browser.addShortcut('Docs', docs);
+	$.browser.addShortcut('Presentations', presentation);
 	$.browser.addShortcut("Add a Google log-in", 'https://accounts.google.com/AddSession');
-	$.browser.addShortcut('Google Drive (using secondary account)', driveAlt);
+	$.browser.addShortcut('Use next Google log-in', ['gotoNextGoogleAccount']);
 	$.browser.addShortcut("Install 'Open in Google Drive app' service", `http://github.com/kfix/MacPin/tree/master/extras/${escape('Open in Google Drive app.workflow')}`);
 	$.browser.addShortcut('Enable Redirection to external domains', ['toggleRedirection', true]);
 	$.browser.addShortcut('Disable Redirection (default)', ['toggleRedirection', false]);
