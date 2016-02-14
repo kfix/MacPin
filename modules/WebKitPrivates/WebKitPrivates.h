@@ -14,7 +14,6 @@
 #import "_WKFormInputSession.h"
 #import "WKProcessPoolPrivate.h"
 #import "JSContext+Privates.h"
-#import "WebInspector.h"
 #import "WKPage.h"
 
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR || TARGET_OS_SIMULATOR
