@@ -106,8 +106,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", "zoomOut", nil, [.CommandKeyMask]))
 		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", "toggleTransparency")) //wvc
 		tabMenu.submenu?.addItem(NSMenuItem.separatorItem())
-		//tabMenu.submenu?.addItem(MenuItem("Web Inspector", "showConsole:", "i", [.CommandKeyMask, .AlternateKeyMask]) //need impl of WKInspectorShow
-		//	^ https://bugs.webkit.org/show_bug.cgi?id=137612
+		tabMenu.submenu?.addItem(MenuItem("Show JS Console", "console", "c", [.AlternateKeyMask, .CommandKeyMask])) //wv
 		tabMenu.submenu?.addItem(MenuItem("Reload", "reload:", "r", [.CommandKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Uncache & Reload", "reloadFromOrigin:", "R", [.CommandKeyMask, .ShiftKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Go Back", "goBack:", "[", [.CommandKeyMask])) //webview
@@ -170,7 +169,8 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 	}
 
     public func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
-		AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
+		//AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
+		browserController.extend(AppScriptRuntime.shared.context.objectForKeyedSubscript("$"))
 		AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
 		AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
 

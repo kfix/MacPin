@@ -344,11 +344,12 @@ import UTIKit
 		switch (anItem.action().description) {
 			//case "askToOpenCurrentURL": return true
 			case "copyAsPDF": fallthrough
+			case "console": fallthrough
 			case "saveWebArchive": fallthrough
-			case _WKMenuItemIdentifierInspectElement: fallthrough
 			case "savePage": return true
 			//case "printWebView:": return true // _printOperation not avail in 10.11.2's WebKit
 			default:
+				warn(anItem.action().description)
 				return super.validateUserInterfaceItem(anItem)
 		}
 
@@ -401,7 +402,6 @@ import UTIKit
 		// if current page doesn't have HTML5 DnD event observers, webview will just navigate to URL dropped in
 	}
 
-
 /*
 	// allow controlling drags out of a MacPin window
 	override func beginDraggingSessionWithItems(items: [AnyObject], event: NSEvent, source: NSDraggingSource) -> NSDraggingSession {
@@ -422,6 +422,13 @@ import UTIKit
 	}
 
 	func printWebView(sender: AnyObject?) { _printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo()) }
+
+	func console() {
+		if let wkview = topFrame {
+			let inspector = WKPageGetInspector(wkview.pageRef)
+			WKInspectorShowConsole(inspector); // ShowConsole, Hide, Close, IsAttatched, Attach, Detach
+		}
+	}
 
 #endif
 }
