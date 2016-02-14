@@ -5,7 +5,7 @@
 
 var macpinIsTransparent;
 
-window.addEventListener("load", function(event) { 
+window.addEventListener("load", function(event) {
 	webkit.messageHandlers.MacPinPollStates.postMessage(["transparent"]);
 }, false);
 
@@ -41,7 +41,7 @@ var customizeBG = function(el) {
 
 	if (darkMode) css.innerHTML += "\
 		body { -webkit-filter:invert(100%); }\
-		input,img,.window-cover,.list-card-cover,.attachment-thumbnail-preview,.js-open-board,.board-background-select { -webkit-filter:invert(100%); }\
+		input,img,video,.window-cover,.list-card-cover,.attachment-thumbnail-preview,.js-open-board,.board-background-select { -webkit-filter:invert(100%); }\
 		span { color: black; }";
 
 	if (darkMode && !macpinIsTransparent && document.body.style.backgroundColor == "") document.body.style.backgroundColor = "black";
