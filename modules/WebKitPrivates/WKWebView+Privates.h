@@ -9,8 +9,20 @@ typedef NS_ENUM(NSInteger, _WKPaginationMode) {
     _WKPaginationModeRightToLeft,
     _WKPaginationModeTopToBottom,
     _WKPaginationModeBottomToTop,
-}; 
+};
 
+typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
+    _WKImmediateActionNone,
+    _WKImmediateActionLinkPreview,
+    _WKImmediateActionDataDetectedItem,
+    _WKImmediateActionLookupText,
+    _WKImmediateActionMailtoLink,
+    _WKImmediateActionTelLink
+};
+
+@protocol _WKFindDelegate;
+@protocol _WKDiagnosticLoggingDelegate;
+//@protocol _WKInputDelegate;
 @interface WKWebView (Privates)
 
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
@@ -19,6 +31,7 @@ typedef NS_ENUM(NSInteger, _WKPaginationMode) {
 @property (nonatomic, setter=_setBackgroundExtendsBeyondPage:) BOOL _backgroundExtendsBeyondPage;
 - (UIView *)_viewForFindUI;
 @property (nonatomic, readonly) CGFloat _viewportMetaTagWidth; // negative if tag undefined
+@property (nonatomic, readonly) _WKWebViewPrintFormatter *_webViewPrintFormatter;
 #else
 @property (readonly) NSColor *_pageExtendedBackgroundColor;
 @property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground;
@@ -29,6 +42,7 @@ typedef NS_ENUM(NSInteger, _WKPaginationMode) {
 @property (nonatomic, getter=_isEditable, setter=_setEditable:) BOOL _editable WK_AVAILABLE(10_11, 9_0);
 @property (nonatomic, setter=_setAddsVisitedLinks:) BOOL _addsVisitedLinks;
 @property (nonatomic, setter=_setAllowsRemoteInspection:) BOOL _allowsRemoteInspection;
+@property (nonatomic, copy, setter=_setRemoteInspectionNameOverride:) NSString *_remoteInspectionNameOverride WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 @property (copy, setter=_setCustomUserAgent:) NSString *_customUserAgent;
 @property (copy, setter=_setApplicationNameForUserAgent:) NSString *_applicationNameForUserAgent;
 @property (nonatomic, readonly) NSString *_userAgent;
@@ -49,6 +63,12 @@ typedef NS_ENUM(NSInteger, _WKPaginationMode) {
 @property (nonatomic, weak, setter=_setDiagnosticLoggingDelegate:) id <_WKDiagnosticLoggingDelegate> _diagnosticLoggingDelegate WK_AVAILABLE(10_11, 9_0);
 //https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKFormDelegate.h
 //@property (nonatomic, weak, setter=_setFormDelegate:) id <_WKFormDelegate> _formDelegate;
+//@property (nonatomic, weak, setter=_setInputDelegate:) id <_WKInputDelegate> _inputDelegate WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+
+@property (nonatomic, weak, setter=_setFindDelegate:) id <_WKFindDelegate> _findDelegate;
+- (void)_findString:(NSString *)string options:(_WKFindOptions)options maxCount:(NSUInteger)maxCount;
+- (void)_countStringMatches:(NSString *)string options:(_WKFindOptions)options maxCount:(NSUInteger)maxCount;
+- (void)_hideFindUI;
 
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 // https://github.com/WebKit/webkit/commit/0dfc67a174b79a8a401cf6f60c02150ba27334e5
@@ -80,4 +100,3 @@ typedef enum : NSUInteger {
 - (void)selectFindMatch:(id <NSTextFinderAsynchronousDocumentFindMatch>)findMatch completionHandler:(void (^)(void))completionHandler;
 @end
 #endif
-

@@ -106,8 +106,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", "zoomOut", nil, [.CommandKeyMask]))
 		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", "toggleTransparency")) //wvc
 		tabMenu.submenu?.addItem(NSMenuItem.separatorItem())
-		//tabMenu.submenu?.addItem(MenuItem("Web Inspector", "showConsole:", "i", [.CommandKeyMask, .AlternateKeyMask]) //need impl of WKInspectorShow
-		//	^ https://bugs.webkit.org/show_bug.cgi?id=137612
+		tabMenu.submenu?.addItem(MenuItem("Show JS Console", "console", "c", [.AlternateKeyMask, .CommandKeyMask])) //wv
 		tabMenu.submenu?.addItem(MenuItem("Reload", "reload:", "r", [.CommandKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Uncache & Reload", "reloadFromOrigin:", "R", [.CommandKeyMask, .ShiftKeyMask])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Go Back", "goBack:", "[", [.CommandKeyMask])) //webview
@@ -162,10 +161,6 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 #endif
 		app!.mainMenu?.addItem(dbgMenu)
 
-		let origDnD = class_getInstanceMethod(WKView.self, "performDragOperation:")
-		let newDnD = class_getInstanceMethod(WKView.self, "shimmedPerformDragOperation:")
-		method_exchangeImplementations(origDnD, newDnD) //swizzle that shizzle to enable logging of DnD's
-
 		windowController.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
 		windowController.window?.bind(NSTitleBinding, toObject: browserController, withKeyPath: "title", options: nil)
 		windowController.window?.makeKeyAndOrderFront(self)
@@ -175,6 +170,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 
     public func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
 		AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
+		//browserController.extend(AppScriptRuntime.shared.context.objectForKeyedSubscript("$"))
 		AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
 		AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
 
@@ -235,7 +231,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		// not in iOS: http://stackoverflow.com/a/13083203/3878712
 		// NOPE, this can cause loops warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 		if error.domain == NSURLErrorDomain {
-			let uI = error.userInfo 
+			let uI = error.userInfo
 			if let errstr = uI[NSLocalizedDescriptionKey] as? String {
 				if let url = uI[NSURLErrorFailingURLStringErrorKey] as? String {
 					var newUserInfo = uI

@@ -55,7 +55,9 @@ ifeq (,$(filter $(arch),$(archs_macosx)))
 # only intel platforms have libedit so only those execs can have terminal CLIs
 $(execs): $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics))
 $(info $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics)))
+$(execs): $(statics)
 else
+# use static libs, not dylibs to build all executable modules
 $(execs): $(statics)
 endif
 
@@ -63,7 +65,7 @@ ifeq ($(platform),OSX)
 endif
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly $(gen_apps): $(execs)
-test apirepl tabrepl test.app test.ios: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
+test apirepl tabrepl test.app test.ios: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
 test apirepl tabrepl test.app test.ios: | $(execs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))

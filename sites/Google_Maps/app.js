@@ -61,6 +61,8 @@ delegate.decideNavigationForURL = function(url) {
 		case "http":
 		case "https":
 			if (!~addr.indexOf("//maps.google.com") &&
+				!~addr.indexOf("//www.google.com/maps/") &&
+				!~addr.indexOf("//google.com/maps/") &&
 				!~addr.indexOf("//accounts.google.com") &&
 				!~addr.indexOf("//www.google.com/a/") &&
 				!~addr.indexOf("//places.google.com") &&

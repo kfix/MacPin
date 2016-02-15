@@ -2,10 +2,12 @@
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKViewPrivate.h
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKViewInternal.h
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm
+
 @import WebKit;
+#import "WKBase.h"
 
 //https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Shared/API/c/WKBase.h
-typedef const struct OpaqueWKFrame* WKFrameRef; //no Cocoa bridge for this at all, expecting `WKFrame`
+//typedef const struct OpaqueWKFrame* WKFrameRef; //no Cocoa bridge for this at all, expecting `WKFrame`
 
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
 @interface WKView : UIView {
@@ -18,6 +20,7 @@ typedef const struct OpaqueWKFrame* WKFrameRef; //no Cocoa bridge for this at al
 @end
 
 @interface WKView (Private)
+@property (readonly) WKPageRef pageRef;
 @property (readwrite) CGFloat minimumLayoutWidth;
 @property (readwrite) CGFloat minimumWidthForAutoLayout;
 //@property (readwrite) NSSize minimumSizeForAutoLayout;
@@ -47,4 +50,3 @@ typedef const struct OpaqueWKFrame* WKFrameRef; //no Cocoa bridge for this at al
 - (BOOL)performDragOperation:(id <NSDraggingInfo>)draggingInfo;
 #endif
 @end
-

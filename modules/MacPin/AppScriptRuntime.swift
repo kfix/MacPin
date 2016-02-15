@@ -55,13 +55,14 @@ extension JSValue {
 	var platformVersion: String { get }
 	func registerURLScheme(scheme: String)
 	func changeAppIcon(iconpath: String)
-	func postNotification(title: String?, _ subtitle: String?, _ msg: String?, _ id: String?)
+	@objc(postNotification::::) func postNotification(title: String?, subtitle: String?, msg: String?, id: String?)
 	func postHTML5Notification(object: [String:AnyObject])
 	func openURL(urlstr: String, _ app: String?)
 	func sleep(secs: Double)
 	func doesAppExist(appstr: String) -> Bool
 	func pathExists(path: String) -> Bool
 	func loadAppScript(urlstr: String) -> JSValue?
+	// static func // exported as global JS func
 #if DEBUG
 	func evalJXA(script: String)
 	func callJXALibrary(library: String, _ call: String, _ args: [AnyObject])
@@ -313,7 +314,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
-	func postNotification(title: String? = nil, _ subtitle: String? = nil, _ msg: String?, _ id: String? = nil) {
+	@objc(postNotification::::) func postNotification(title: String?, subtitle: String?, msg: String?, id: String?) {
 #if os(OSX)
 		let note = NSUserNotification()
 		note.title = title ?? ""

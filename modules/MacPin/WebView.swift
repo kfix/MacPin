@@ -26,8 +26,8 @@ import UTIKit
 	var injected: [String] { get }
 	static var MatchedAddressOptions: [String:String] { get set }
 	func close()
-	func evalJS(js: String, _ withCallback: JSValue?)
-	func asyncEvalJS(js: String, _ withDelay: Double, _ withCallback: JSValue?)
+	@objc(evalJS::) func evalJS(js: String, callback: JSValue?)
+	@objc(asyncEvalJS:::) func asyncEvalJS(js: String, delay: Double, callback: JSValue?)
 	func loadURL(urlstr: String) -> Bool
 	func loadIcon(icon: String) -> Bool
 	func preinject(script: String) -> Bool
@@ -186,9 +186,9 @@ import UTIKit
 	override var description: String { return "<\(self.dynamicType)> `\(title ?? String())` [\(URL ?? String())]" }
 	deinit { warn(description) }
 
-	func evalJS(js: String, _ withCallback: JSValue? = nil) {
-		if let callback = withCallback where callback.isObject { //is a function or a {}
-			warn("callback: \(withCallback)")
+	@objc(evalJS::) func evalJS(js: String, callback: JSValue? = nil) {
+		if let callback = callback where callback.isObject { //is a function or a {}
+			warn("callback: \(callback)")
 			evaluateJavaScript(js, completionHandler:{ (result: AnyObject?, exception: NSError?) -> Void in
 				// (result: WebKit::WebSerializedScriptValue*, exception: WebKit::CallbackBase::Error)
 				//withCallback.callWithArguments([result, exception]) // crashes, need to translate exception into something javascripty
@@ -208,12 +208,12 @@ import UTIKit
 	}
 
 	// cuz JSC doesn't come with setTimeout()
-	func asyncEvalJS(js: String, _ withDelay: Double, _ withCallback: JSValue? = nil) {
+	@objc(asyncEvalJS:::) func asyncEvalJS(js: String, delay: Double, callback: JSValue?) {
 		let backgroundQueue = dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0)
-		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * withDelay))
+		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * delay))
 		dispatch_after(delayTime, backgroundQueue) {
-			if let callback = withCallback where callback.isObject { //is a function or a {}
-				warn("callback: \(withCallback)")
+			if let callback = callback where callback.isObject { //is a function or a {}
+				warn("callback: \(callback)")
 				self.evaluateJavaScript(js, completionHandler:{ (result: AnyObject?, exception: NSError?) -> Void in
 					// (result: WebKit::WebSerializedScriptValue*, exception: WebKit::CallbackBase::Error)
 					//withCallback.callWithArguments([result, exception]) // crashes, need to translate exception into something javascripty
@@ -327,7 +327,7 @@ import UTIKit
 			//pop open a save Panel to dump data into file
 			let saveDialog = NSSavePanel();
 			saveDialog.canCreateDirectories = true
-			if let mime = self._MIMEType, uti = UTI(MIMEType: mime) { 
+			if let mime = self._MIMEType, uti = UTI(MIMEType: mime) {
 				saveDialog.allowedFileTypes = [uti.UTIString]
 			}
 			if let window = self.window {
@@ -344,27 +344,71 @@ import UTIKit
 		switch (anItem.action().description) {
 			//case "askToOpenCurrentURL": return true
 			case "copyAsPDF": fallthrough
-			case "saveWebArchive": return true
+			case "console": fallthrough
+			case "saveWebArchive": fallthrough
 			case "savePage": return true
 			//case "printWebView:": return true // _printOperation not avail in 10.11.2's WebKit
 			default:
+				warn(anItem.action().description)
 				return super.validateUserInterfaceItem(anItem)
 		}
 
 	}
 
+	/* overide func _registerForDraggedTypes() {
+		// https://github.com/WebKit/webkit/blob/f72e25e3ba9d3d25d1c3a4276e8dffffa4fec4ae/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3653
+		self.registerForDraggedTypes([ // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Shared/mac/PasteboardTypes.mm [types]
+			// < forEditing
+			WebArchivePboardType, NSHTMLPboardType, NSFilenamesPboardType, NSTIFFPboardType, NSPDFPboardType,
+		    NSURLPboardType, NSRTFDPboardType, NSRTFPboardType, NSStringPboardType, NSColorPboardType, kUTTypePNG,
+			// < forURL
+			WebURLsWithTitlesPboardType, //webkit proprietary
+			NSURLPboardType, // single url from older apps and Chromium -> text/uri-list
+			WebURLPboardType (kUTTypeURL), //webkit proprietary: public.url
+			WebURLNamePboardType (kUTTypeURLName), //webkit proprietary: public.url-name
+			NSStringPboardType, // public.utf8-plain-text -> WKJS: text/plain
+			NSFilenamesPboardType, // Finder -> text/uri-list & Files
+		])
+	} */
+
+	// TODO: give some feedback when a url is being dragged in to indicate what will happen
+	//  (-[WKWebView draggingEntered:]):
+	//  (-[WKWebView draggingUpdated:]):
+	//  (-[WKWebView draggingExited:]):
+	//  (-[WKWebView prepareForDragOperation:]):
+
+	// try to accept DnD'd links from other browsers more gracefully than default WebKit behavior
+	// this mess ain't funny: https://hsivonen.fi/kesakoodi/clipboard/
+	override func performDragOperation(sender: NSDraggingInfo) -> Bool {
+		if sender.draggingSource() == nil { //dragged from external application
+			let pboard = sender.draggingPasteboard()
+
+			if let file = pboard.stringForType(kUTTypeFileURL as String) { //drops from Finder
+				warn("DnD: file from Finder: \(file)")
+			} else {
+				pboard.dump()
+				pboard.normalizeURLDrag() // *cough* Trello! *cough*
+				pboard.dump()
+			}
+
+			if let urls = pboard.readObjectsForClasses([NSURL.self], options: nil) {
+				if jsdelegate.tryFunc("handleDragAndDroppedURLs", urls.map({$0.description})) {
+			 		return true  // app.js indicated it handled drag itself
+				}
+			}
+		} // -from external app
+
+		return super.performDragOperation(sender)
+		// if current page doesn't have HTML5 DnD event observers, webview will just navigate to URL dropped in
+	}
+
 /*
+	// allow controlling drags out of a MacPin window
 	override func beginDraggingSessionWithItems(items: [AnyObject], event: NSEvent, source: NSDraggingSource) -> NSDraggingSession {
+		// API didn't land in 10.11.3 ... https://bugs.webkit.org/show_bug.cgi?id=143618
 		warn()
 		return super.beginDraggingSessionWithItems(items, event: event, source: source)
-		// allow controlling drags out of a MacPin window
-		//  API didn't land in 10.11.1 ... https://bugs.webkit.org/show_bug.cgi?id=143618
 		//  (-[WKWebView _setDragImage:at:linkDrag:]):
-		//  (-[WKWebView draggingEntered:]):
-		//  (-[WKWebView draggingUpdated:]):
-		//  (-[WKWebView draggingExited:]):
-		//  (-[WKWebView prepareForDragOperation:]):
-		//  (-[WKWebView performDragOperation:]):
 		// https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/DragandDrop/Concepts/dragsource.html#//apple_ref/doc/uid/20000976-CJBFBADF
 		// https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSView_Class/index.html#//apple_ref/occ/instm/NSView/beginDraggingSessionWithItems:event:source:
 	}
@@ -378,6 +422,13 @@ import UTIKit
 	}
 
 	func printWebView(sender: AnyObject?) { _printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo()) }
+
+	func console() {
+		if let wkview = topFrame {
+			let inspector = WKPageGetInspector(wkview.pageRef)
+			WKInspectorShowConsole(inspector); // ShowConsole, Hide, Close, IsAttatched, Attach, Detach
+		}
+	}
 
 #endif
 }
