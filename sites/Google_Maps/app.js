@@ -129,6 +129,10 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('Classic gMaps', "http://gokml.net/maps");
 	$.browser.addShortcut("Install 'Show Address in Google Maps app' service", `http://github.com/kfix/MacPin/tree/master/extras/${escape('Show Address in Google Maps app.workflow')}`);
 
+	// TODO: add "Open in Apple Maps", send it http://maps.apple.com lat & long
+	// https://developer.apple.com/library/ios/featuredarticles/iPhoneURLScheme_Reference/MapLinks/MapLinks.html
+	// GET "http://maps.apple.com/?q=test" User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3)" will 302 to maps://maps.apple.com/q=?test, other UA's to http://maps.google.com/?q=test
+
 	if ($.launchedWithURL != '') { // app was launched with a search query
 		mapsTab.asyncEvalJS( // need to wait for app.js to load and render DOM
 			"true;",
