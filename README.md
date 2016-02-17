@@ -143,7 +143,7 @@ make only=sim test.ios
 Web Inspector can be accessed for any tab by right clicking in the page and selecting "Inspect Element" from the context menu.  
 Debug builds (`make test|test.app|repl`) can be remotely inspected from Safari->Develop-><ComputerName>
 
-The JavaScript API for app construction is undocumented and [non-final](issues/11).  
+The JavaScript API for app construction is undocumented and [non-final](https://github.com/kfix/MacPin/issues/11).  
 If you want to play with it, run any MacPin app with the `-i` argument in Terminal to get a JS console (or `make repl`).  
 Safari can also remotely inspect the `JSContext` of debug builds.
 
