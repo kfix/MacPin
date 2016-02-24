@@ -15,6 +15,7 @@
 #import "WKProcessPoolPrivate.h"
 #import "JSContext+Privates.h"
 #import "WKPage.h"
+#import "WKInspectorPrivateMac.h"
 
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR || TARGET_OS_SIMULATOR
 // no DnD on iOS
