@@ -121,6 +121,11 @@ extension WebViewControllerOSX: NSMenuDelegate {
 
 extension WebViewControllerOSX { // AppGUI funcs
 
+	override func closeTab() {
+		webview.topFrame?._inspectorAttachmentView = nil
+		super.closeTab()
+	}
+
 	func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }
 
 	//FIXME: support new scaling https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
