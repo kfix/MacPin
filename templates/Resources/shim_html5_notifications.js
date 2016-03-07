@@ -37,9 +37,11 @@ var NotificationShim = function() {
 
 window.Notification = NotificationShim;
 
-//null out the deprecated pre-W3C API
-// delete window.webkitNotifications;
-window.webkitNotifications.checkPermission = null; // function(){return true;}
-window.webkitNotifications.requestPermission = null; // true
-window.webkitNotifications.createNotifcation = null; // function(icon, title, text){ webkit.messageHandlers.receivedHTML5DesktopNotification.postMessage({title: title, icon: icon, text: text}); };
-
+// handle the deprecated pre-W3C API too
+var wkNotificationShim = {
+	checkPermission: function() { return 0; }, // PERMISSION_ALLOWED
+	requestPermission: function(cb) { window.Notification.requestPermission(cb); },
+	createNotification: function(icon, title, text){ webkit.messageHandlers.receivedHTML5DesktopNotification.postMessage({title: title, icon: icon, text: text}); }
+}
+window.webkitNotifications.__proto__ = wkNotificationShim;
+//window.webkitNotifications.__proto__ = null;
