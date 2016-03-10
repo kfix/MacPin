@@ -169,8 +169,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 	}
 
     public func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
-		AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
-		//browserController.extend(AppScriptRuntime.shared.context.objectForKeyedSubscript("$"))
+		browserController.extend(AppScriptRuntime.shared.context.objectForKeyedSubscript("$"))
 		AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
 		AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
 

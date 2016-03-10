@@ -414,7 +414,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		NSProcessInfo.processInfo().disableAutomaticTermination("REPL")
 #endif
 		termiosREPL(
-			{ [unowned self] (line: String) -> Void in 
+			{ [unowned self] (line: String) -> Void in
 				let val = self.context.evaluateScript(line)
 				if self.jsdelegate.isObject && self.jsdelegate.hasProperty("REPLprint") { // app.js will customize output
 					if let ret = self.jsdelegate.invokeMethod("REPLprint", withArguments: [val]).toString() {
@@ -436,7 +436,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			}
 		)
 	}
-	
+
 	func evalJXA(script: String) {
 #if os(OSX)
 		var error: NSDictionary?
@@ -467,4 +467,19 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
+}
+
+extension JSValue {
+	func thisEval(code: String, exception: JSValue = JSValue()) -> JSValue? {
+		/*guard*/ let jsval = JSEvaluateScript(
+			/*ctx:*/ context.JSGlobalContextRef,
+			/*script:*/ JSStringCreateWithCFString(code as CFString),
+			/*thisObject:*/ JSValueRef,
+			/*sourceURL:*/ nil,
+			/*startingLineNumber:*/ Int32(1),
+			/*exception:*/ UnsafeMutablePointer(exception.JSValueRef)
+		) /*else { return nil }*/
+		if jsval != nil { return JSValue(JSValueRef: jsval, inContext: context) }
+		return nil
+	}
 }

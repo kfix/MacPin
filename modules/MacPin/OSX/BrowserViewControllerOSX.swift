@@ -273,7 +273,7 @@ struct WeakThing<T: AnyObject> {
 				!NSProcessInfo().isOperatingSystemAtLeastVersion(NSOperatingSystemVersion(majorVersion: 10, minorVersion: 11, patchVersion: 2)) {
 					// fixed in 10.11.2 final https://forums.developer.apple.com/thread/14237#88260
 			} else {
-				toolbar.delegate = self 
+				toolbar.delegate = self
 			}
 			toolbar.allowsUserCustomization = true
 			toolbar.displayMode = .IconOnly
@@ -295,6 +295,21 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	deinit { warn(description) }
 	override var description: String { return "<\(self.dynamicType))> `\(title ?? String())`" }
 
+	func extend(mountObj: JSValue) {
+		mountObj.setObject(self, forKeyedSubscript: "browser")
+
+		// eval some helper code in mountObj's JSContext to smooth out some rough edges & wrinkles in the JSExported API
+		let helpers =
+			"this.__proto__.pushTab = function(tab) { this.tabs = this.tabs.concat(tab); } ;" +
+			"this.__proto__.popTab = function(tab) { this.tabs = this.tabs.slice(this.tabs.indexOf(tab)); };"
+		//mountObj.thisEval(helpers)
+
+		//mountObj.objectForKeyedSubscript("browser").defineProperty("tabs", descriptor: [JSPropertyDescriptorEnumerableKey, JSPropertyDescriptorConfigurableKey]) //generic
+		//mountObj.objectForKeyedSubscript("browser").defineProperty("tabs", descriptor: [JSPropertyDescriptorGetKey, JSPropertyDescriptorSetKey]) // accessor prop
+		//mountObj.objectForKeyedSubscript("browser").defineProperty("tabs", descriptor: [JSPropertyDescriptorValueKey, JSPropertyDescriptorWritableKey]) //data prop
+		//mountObj.objectForKeyedSubscript("browser").setValue(tabs, forProperty: "tabs")
+	}
+
 	var defaultUserAgent: String? = nil // {
 	//	get { }
 	//	set(ua) { NSUserDefaults.standardUserDefaults().setString(ua, forKey: "UserAgent") } //only works on IOS
@@ -313,6 +328,10 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	// really needs to be a NSHashTable or weaked swift Set
 	// http://stackoverflow.com/questions/24127587/how-do-i-declare-an-array-of-weak-references-in-swift
+	// https://lists.swift.org/pipermail/swift-evolution/Week-of-Mon-20151207/001581.html
+	//var tabs: [WeakThing<MPWebView>] = [] {
+
+/*
 	var tabs: [MPWebView] = [] {
 		willSet { // allow `$.browser.tabs = $.browser.tabs.slice(0)` to work by diffing newValue against childViewControllers
 			warn()
@@ -320,6 +339,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 				if !newValue.contains(webview) {
 					if let wvc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === webview }).first as? WebViewControllerOSX {
 						wvc.removeFromParentViewController()
+						// FIXME: not deiniting
 					}
 				}
 			}
@@ -333,8 +353,37 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			}
 		}
 	}
+*/
+	var tabs: [MPWebView] {
+		// FIXME: .count broken?
+		// objc computed properties get added to JSContext as, not getter/setters
+		get {
+			return childViewControllers.flatMap({ $0.view as? MPWebView })
+			// returns mutable *copy*, which is why .push() can't work: https://opensource.apple.com/source/JavaScriptCore/JavaScriptCore-7537.77.1/API/JSValue.mm
+		}
 
- 	//override var childViewControllers: [AnyObject] { didSet { warn(childViewControllers.count.description); warn(childViewControllers.description) } } //no workie
+		set {
+			// allow `$.browser.tabs = $.browser.tabs.slice(0)` to work by diffing newValue against childViewControllers
+			// FIXME: crashes if you pass in a non [MPWebView] array from JS
+			for webview in tabs { //removals
+				if !newValue.contains(webview) {
+					if let wvc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === webview }).first as? WebViewControllerOSX {
+						// ^ webview doesn't have a backref to its controller
+						dispatch_async(dispatch_get_main_queue(), {
+							wvc.removeFromParentViewController()
+						})
+					}
+				}
+			}
+			for webview in newValue { //additions
+				if !tabs.contains(webview) {
+					dispatch_async(dispatch_get_main_queue(), {
+						self.addChildViewController(WebViewControllerOSX(webview: webview))
+					})
+				}
+			}
+		}
+	}
 
 	var tabSelected: AnyObject? { // FIXME: make protocol
 		get {
@@ -352,9 +401,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 					if tabViewItemForViewController(vc) == nil { childViewControllers.append(vc) } // add the given vc as a child if it isn't already
 					tabView.selectTabViewItem(tabViewItemForViewController(vc))
 				case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
-					//self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
-					self.tabs.append(wv)
-					self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX
+					self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
 				//case let js as JSValue: guard let wv = js.toObjectOfClass(MPWebView.self) { self.tabSelected = wv } //custom bridging coercion
 				default:
 					warn("invalid object")
@@ -374,7 +421,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			mi.bind(NSTitleBinding, toObject: wvc.webview, withKeyPath: "title", options:nil)
 			mi.bind(NSImageBinding, toObject: wvc.webview, withKeyPath: "favicon.icon16", options: nil)
 			//mi.image?.size = NSSize(width: 16, height: 16) //FIXME: not limiting the size
-			mi.representedObject = wvc // FIXME: anti-retain needed?
+			mi.representedObject = wvc
 			mi.target = self
 			tabMenu.addItem(mi)
 
@@ -414,17 +461,13 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 */
 	override func removeChildViewControllerAtIndex(index: Int) {
 		warn("#\(index)")
-		if let wvc = childViewControllers[index] as? WebViewController {
-			//if let tabIdx = find(tabs, wvc.webview) { tabs.removeAtIndex(tabIdx) }
-
-			if let mitem = tabMenu.itemAtIndex(tabMenu.indexOfItemWithRepresentedObject(wvc)) {
-				mitem.unbind(NSTitleBinding)
-				mitem.unbind(NSImageBinding)
-				mitem.target = nil
-				mitem.representedObject = nil
-				tabMenu.removeItem(mitem)
-			}
-
+		guard let wvc = childViewControllers[index] as? WebViewController else { warn("generic vc"); super.removeChildViewControllerAtIndex(index); return }
+		if let mitem = tabMenu.itemAtIndex(tabMenu.indexOfItemWithRepresentedObject(wvc)) {
+			mitem.unbind(NSTitleBinding)
+			mitem.unbind(NSImageBinding)
+			mitem.target = nil
+			mitem.representedObject = nil
+			tabMenu.removeItem(mitem)
 		}
 		super.removeChildViewControllerAtIndex(index)
 	}
