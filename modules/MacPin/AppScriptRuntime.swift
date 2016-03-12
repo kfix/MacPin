@@ -323,9 +323,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	func registerUTI(uti: String) {
 #if os(OSX)
-		LSSetDefaultRoleHandlerForContentType(utistr, .All,  NSBundle.mainBundle().bundleIdentifier!) //kLSRolesNone|Viewer|Editor|Shell|All
+		LSSetDefaultRoleHandlerForContentType(uti, .All,  NSBundle.mainBundle().bundleIdentifier!) //kLSRolesNone|Viewer|Editor|Shell|All
 		warn("registered UTI handler in OSX: \(uti)")
-#end
+#endif
 	}
 
 	@objc(postNotification::::) func postNotification(title: String?, subtitle: String?, msg: String?, id: String?) {
