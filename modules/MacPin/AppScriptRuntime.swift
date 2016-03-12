@@ -54,6 +54,8 @@ extension JSValue {
 	var platform: String { get }
 	var platformVersion: String { get }
 	func registerURLScheme(scheme: String)
+	//func registerMIMEType(scheme: String)
+	func registerUTI(scheme: String)
 	func changeAppIcon(iconpath: String)
 	@objc(postNotification::::) func postNotification(title: String?, subtitle: String?, msg: String?, id: String?)
 	func postHTML5Notification(object: [String:AnyObject])
@@ -314,6 +316,18 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
+	//func registerExtension(ext: String) {
+		// FIXME: there is an algo for deriving the dyn.* UTI from any given '.ext' .....
+		//registerUTI(uti)
+	//}
+
+	func registerUTI(uti: String) {
+#if os(OSX)
+		LSSetDefaultRoleHandlerForContentType(utistr, .All,  NSBundle.mainBundle().bundleIdentifier!) //kLSRolesNone|Viewer|Editor|Shell|All
+		warn("registered UTI handler in OSX: \(uti)")
+#end
+	}
+
 	@objc(postNotification::::) func postNotification(title: String?, subtitle: String?, msg: String?, id: String?) {
 #if os(OSX)
 		let note = NSUserNotification()
@@ -436,7 +450,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			}
 		)
 	}
-	
+
 	func evalJXA(script: String) {
 #if os(OSX)
 		var error: NSDictionary?
