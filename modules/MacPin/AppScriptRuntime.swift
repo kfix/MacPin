@@ -38,6 +38,22 @@ extension JSValue {
 	func tryFunc (method: String, _ args: AnyObject...) -> Bool { //variadic overload
 		return self.tryFunc(method, argv: args)
 	}
+
+	func thisEval(code: String, sourceURL: String? = nil, exception: JSValue = JSValue()) -> JSValue? {
+		let source: JSStringRef?
+		if let urlstr = sourceURL { source = JSStringCreateWithCFString(urlstr as CFString) } else { source = nil }
+		/*guard*/ let jsval = JSEvaluateScript(
+			/*ctx:*/ context.JSGlobalContextRef,
+			/*script:*/ JSStringCreateWithCFString(code as CFString),
+			/*thisObject:*/ JSValueRef,
+			/*sourceURL:*/ source ?? nil,
+			/*startingLineNumber:*/ Int32(1),
+			/*exception:*/ UnsafeMutablePointer(exception.JSValueRef)
+		) /*else { return nil }*/
+		if jsval != nil { return JSValue(JSValueRef: jsval, inContext: context) }
+		return nil
+	}
+
 }
 
 @objc protocol AppScriptExports : JSExport { // '$.app'
@@ -72,10 +88,11 @@ extension JSValue {
 }
 
 class AppScriptRuntime: NSObject, AppScriptExports  {
-	static let shared = AppScriptRuntime() // create & export the singleton
+	static let shared = AppScriptRuntime(global: "$") // create & export the singleton
 
 	var context = JSContext(virtualMachine: JSVirtualMachine())
 	var jsdelegate: JSValue
+	let exports: JSValue
 
 	var arguments: [AnyObject] { return NSProcessInfo.processInfo().arguments }
 	var environment: [NSObject:AnyObject] { return NSProcessInfo.processInfo().environment }
@@ -106,7 +123,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	let architecture = "arm64"
 #endif
 
-    override init() {
+	init(global: String = "$") { // FIXME: ever heard of jQuery?
 		context.name = "AppScriptRuntime"
 		jsdelegate = JSValue(newObjectInContext: context) //default property-less delegate obj // FIXME: #11 make an App() from ES6 class
 #if SAFARIDBG
@@ -120,9 +137,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 		//context._debuggerRunLoop = CFRunLoopRef // FIXME: make a new thread for REPL and Web Inspector console eval()s
 
-		let exports = JSValue(newObjectInContext: context)
+		exports = JSValue(newObjectInContext: context)
 		exports.setObject("", forKeyedSubscript: "launchedWithURL") // FIXME: use context.currentArguments ?
-		//context.objectForKeyedSubscript("$").setObject(GlobalUserScripts, forKeyedSubscript: "globalUserScripts")
+		//exports.setObject(GlobalUserScripts, forKeyedSubscript: "globalUserScripts")
 		// FIXME: make .extend methods for all MacPin classes that want to export constructors?
 		exports.setObject(MPWebView.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebView]
 		exports.setObject(SSKeychain.self, forKeyedSubscript: "keychain")
@@ -141,9 +158,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		// console.invokeMethod("log", withArguments: ["hello console.log"])
 		// console.objectForKeyedSubscript("log") == JSFunction
 
-
-
-		context.globalObject.setObject(exports, forKeyedSubscript: "$") // FIXME: ever heard of jQuery?
+		context.globalObject.setObject(exports, forKeyedSubscript: global)
 		super.init()
 	}
 
@@ -162,7 +177,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				DISPATCH_TIME_NOW,
 				Int64(delay * Double(NSEC_PER_SEC))
 			),
- 		dispatch_get_main_queue(), closure)
+		dispatch_get_main_queue(), closure)
 	}
 */
 
@@ -176,9 +191,14 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			// FIXME: doesn't print actual text of throwing code
 			// Safari Web Inspector <-> JSContext seems to get an actual source-map
 			context.exceptionHandler = { context, exception in
+				let line = exception.valueForProperty("line").toNumber()
+				let column = exception.valueForProperty("column").toNumber()
+				let stack = exception.valueForProperty("stack").toString()
+				let message = exception.valueForProperty("message").toString()
 				let error = NSError(domain: "MacPin", code: 4, userInfo: [
 					NSURLErrorKey: context.name,
-					NSLocalizedDescriptionKey: "\(context.name) `\(exception)`"
+					NSLocalizedDescriptionKey: "JS Exception @ \(line):\(column): \(message)\n\(stack)"
+					// exception seems to be Error.toString(). I want .message|line|column|stack too
 				])
 				displayError(error) // FIXME: would be nicer to pop up an inspector pane or tab to interactively debug this
 				context.exception = exception //default in JSContext.mm
@@ -188,7 +208,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			if let jsval = loadAppScript(app_js.description) {
 				if jsval.isObject { // FIXME: #11 - if JSValueIsInstanceOfConstructor(context.JSGlobalContextRef, jsval.JSValueRef, context.objectForKeyedSubscript("App").JSValueRef, nil)
 					warn("\(app_js) loaded as AppScriptRuntime.shared.jsdelegate")
-					jsdelegate = jsval
+					jsdelegate = jsval // TODO: issue #11 - make `this` the delegate in app scripts, not the return
+
 				}
 			}
 		}
@@ -223,7 +244,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #else
 				context.evaluateScript("eval = null;") // Saaaaaaafe Plaaaaace
 #endif
-			 	return context.evaluateScript(script as String, withSourceURL: scriptURL) // returns JSValue!
+				//return jsdelegate.thisEval(script as String, sourceURL: scriptURL) // TODO: issue #11 - make `this` the delegate in app scripts, not the return
+				return context.evaluateScript(script as String, withSourceURL: scriptURL)
 			} else {
 				// hmm, using self.context for the syntax check seems to evaluate the contents anyways
 				// need to make a throwaway dupe of it
@@ -481,19 +503,4 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
-}
-
-extension JSValue {
-	func thisEval(code: String, exception: JSValue = JSValue()) -> JSValue? {
-		/*guard*/ let jsval = JSEvaluateScript(
-			/*ctx:*/ context.JSGlobalContextRef,
-			/*script:*/ JSStringCreateWithCFString(code as CFString),
-			/*thisObject:*/ JSValueRef,
-			/*sourceURL:*/ nil,
-			/*startingLineNumber:*/ Int32(1),
-			/*exception:*/ UnsafeMutablePointer(exception.JSValueRef)
-		) /*else { return nil }*/
-		if jsval != nil { return JSValue(JSValueRef: jsval, inContext: context) }
-		return nil
-	}
 }

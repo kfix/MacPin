@@ -296,18 +296,14 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	override var description: String { return "<\(self.dynamicType))> `\(title ?? String())`" }
 
 	func extend(mountObj: JSValue) {
-		mountObj.setObject(self, forKeyedSubscript: "browser")
-
-		// eval some helper code in mountObj's JSContext to smooth out some rough edges & wrinkles in the JSExported API
-		let helpers =
-			"this.__proto__.pushTab = function(tab) { this.tabs = this.tabs.concat(tab); } ;" +
-			"this.__proto__.popTab = function(tab) { this.tabs = this.tabs.slice(this.tabs.indexOf(tab)); };"
-		//mountObj.thisEval(helpers)
-
-		//mountObj.objectForKeyedSubscript("browser").defineProperty("tabs", descriptor: [JSPropertyDescriptorEnumerableKey, JSPropertyDescriptorConfigurableKey]) //generic
-		//mountObj.objectForKeyedSubscript("browser").defineProperty("tabs", descriptor: [JSPropertyDescriptorGetKey, JSPropertyDescriptorSetKey]) // accessor prop
-		//mountObj.objectForKeyedSubscript("browser").defineProperty("tabs", descriptor: [JSPropertyDescriptorValueKey, JSPropertyDescriptorWritableKey]) //data prop
-		//mountObj.objectForKeyedSubscript("browser").setValue(tabs, forProperty: "tabs")
+		let browser = JSValue(object: self, inContext: mountObj.context)
+		let helpers = // some helper code to smooth out some rough edges & wrinkles in the JSExported API
+			"Object.assign(this, {" +
+				"pushTab: function(tab) { this.tabs = this.tabs.concat(tab); }," +
+				"popTab: function(tab) { if (this.tabs.indexOf(tab) != -1) this.tabs = this.tabs.splice(this.tabs.indexOf(tab), 1)}" +
+			"})"
+		browser.thisEval(helpers)
+		mountObj.setValue(browser, forProperty: "browser")
 	}
 
 	var defaultUserAgent: String? = nil // {
@@ -402,6 +398,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 					tabView.selectTabViewItem(tabViewItemForViewController(vc))
 				case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
 					self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
+					//FIXME: a backref in the wv to wvc would be helpful
 				//case let js as JSValue: guard let wv = js.toObjectOfClass(MPWebView.self) { self.tabSelected = wv } //custom bridging coercion
 				default:
 					warn("invalid object")
@@ -600,9 +597,9 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	func gotoShortcut(sender: AnyObject?) {
 		if let shortcut = sender as? NSMenuItem {
 			switch (shortcut.representedObject) {
-				case let urlstr as String: AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr)
+				case let urlstr as String: AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr) // FIXME: send tabSelected too?
 				// or fire event in jsdelegate if string, NSURLs do launchURL
-				case let dict as [String:AnyObject]: tabSelected = MPWebView(object: dict)
+				case let dict as [String:AnyObject]: tabSelected = MPWebView(object: dict) // FIXME: do a try here
                 case let arr as [AnyObject] where arr.count > 0 && arr.first is String: AppScriptRuntime.shared.jsdelegate.tryFunc((arr.first as! String), argv: Array(arr.dropFirst()))
 				default: warn("invalid shortcut object type!")
 			}

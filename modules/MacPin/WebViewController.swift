@@ -6,16 +6,7 @@ import WebKit
 import WebKitPrivates
 import JavaScriptCore
 
-@objc protocol WebViewControllerScriptExports: JSExport { // $.browser.tabs[N]
-#if os(OSX)
-	var view: NSView { get }
-#elseif os(iOS)
-	var view: UIView! { get }
-#endif
-	var webview: MPWebView! { get }
-}
-
-@objc class WebViewController: ViewController, WebViewControllerScriptExports {
+@objc class WebViewController: ViewController { //, WebViewControllerScriptExports {
 	var jsdelegate = AppScriptRuntime.shared.jsdelegate // FIXME: use webview.jsdelegate instead ??
 	dynamic var webview: MPWebView! = nil
 
@@ -26,7 +17,7 @@ import JavaScriptCore
 		self.init(nibName: nil, bundle: nil) // calls init!() http://stackoverflow.com/a/26516534/3878712
 		webview.UIDelegate = self //alert(), window.open(): see <platform>/WebViewDelegates
 		webview.navigationDelegate = self // allows/denies navigation actions: see WebViewDelegates
-#if WK2LOG
+#if DEBUG
 		webview._diagnosticLoggingDelegate = self
 #endif
 		webview.configuration.processPool._downloadDelegate = self
@@ -64,11 +55,11 @@ import JavaScriptCore
 		super.viewDidLoad()
 	}
 
-	func closeTab() { removeFromParentViewController() }
+	func closeTab() { removeFromParentViewController(); webview = nil }
 	func askToOpenCurrentURL() { askToOpenURL(webview.URL!) }
 
-	// sugar for opening a new tab in parent browser VC
-	func popup(webview: MPWebView) { MacPinApp.sharedApplication().appDelegate?.browserController.tabs.append(webview) }
+	// sugar for delgates' opening a new tab in parent browser VC
+	func popup(webview: MPWebView) { parentViewController?.addChildViewController(self.dynamicType.init(webview: webview)) }
 }
 
 extension WebViewController: _WKDiagnosticLoggingDelegate {

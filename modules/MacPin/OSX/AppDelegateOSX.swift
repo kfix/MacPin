@@ -34,7 +34,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	func handleGetURLEvent(event: NSAppleEventDescriptor!, replyEvent: NSAppleEventDescriptor?) {
 		if let urlstr = event.paramDescriptorForKeyword(AEKeyword(keyDirectObject))!.stringValue {
 			warn("`\(urlstr)` -> AppScriptRuntime.shared.jsdelegate.launchURL()")
-			AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(urlstr, forKeyedSubscript: "launchedWithURL")
+			AppScriptRuntime.shared.exports.setObject(urlstr, forKeyedSubscript: "launchedWithURL")
 			AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr)
 			//replyEvent == ??
 		}
@@ -169,7 +169,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 	}
 
     public func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
-		browserController.extend(AppScriptRuntime.shared.context.objectForKeyedSubscript("$"))
+		browserController.extend(AppScriptRuntime.shared.exports)
 		AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
 		AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
 
