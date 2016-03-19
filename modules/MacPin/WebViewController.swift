@@ -13,6 +13,7 @@ import JavaScriptCore
 #if os(OSX)
 	required init?(coder: NSCoder) { super.init(coder: coder) } // required by NSCoding protocol
 	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } //calls loadView
+	override func loadView() { view = NSView() } // NIBless
 	convenience required init(webview: MPWebView) {
 		self.init(nibName: nil, bundle: nil) // calls init!() http://stackoverflow.com/a/26516534/3878712
 		webview.UIDelegate = self //alert(), window.open(): see <platform>/WebViewDelegates
@@ -23,7 +24,8 @@ import JavaScriptCore
 		webview.configuration.processPool._downloadDelegate = self
 		self.webview = webview
 		representedObject = webview	// FIXME use NSProxy instead for both OSX and IOS
-		view = webview
+
+		view.addSubview(webview, positioned: .Below, relativeTo: nil)
 	}
 #elseif os(iOS)
 	required init?(coder aDecoder: NSCoder) { super.init(coder: aDecoder) }

@@ -27,7 +27,9 @@ import WebKitPrivates
 		super.viewDidLoad()
 		//view.wantsLayer = true //use CALayer to coalesce views
 		//^ default=true:  https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3641
+		view.autoresizesSubviews = true
 		view.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable]
+		webview.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable]
 
 		bind(NSTitleBinding, toObject: webview, withKeyPath: "title", options: nil)
 		//backMenu.delegate = self
@@ -87,10 +89,8 @@ import WebKitPrivates
 	}
 
 	override func viewWillLayout() {
-		webview.resizeSubviewsWithOldSize(CGSizeZero)
-		webview.topFrame?._inspectorAttachmentView = webview // works pretty good, but "bottom" docking actually docks to top?!
-		//webview.topFrame?._inspectorAttachmentView = MacPinApp.sharedApplication().appDelegate?.browserController.view // doesn't work at all
-		//webview.topFrame?._inspectorAttachmentView = cview // docks properly but persists through tab changes
+		//webview.resizeSubviewsWithOldSize(CGSizeZero)
+		webview.topFrame?._inspectorAttachmentView = webview // https://github.com/WebKit/webkit/blob/8c504b60d07b2a5c5f7c32b51730d3f6f6daa540/Source/WebKit2/UIProcess/mac/WebInspectorProxyMac.mm#L679
 		super.viewWillLayout()
 	}
 
