@@ -58,9 +58,11 @@ struct WeakThing<T: AnyObject> {
 	override func insertTabViewItem(tab: NSTabViewItem, atIndex: Int) {
 		if let view = tab.view {
 			tab.initialFirstResponder = view
-			tab.bind(NSLabelBinding, toObject: view, withKeyPath: "title", options: nil)
-			tab.bind(NSToolTipBinding, toObject: view, withKeyPath: "title", options: nil)
-			if let wvc = tab.viewController as? WebViewController { tab.bind(NSImageBinding, toObject: wvc.webview.favicon, withKeyPath: "icon", options: nil) }
+			if let wvc = tab.viewController as? WebViewController {
+				tab.bind(NSLabelBinding, toObject: wvc.webview, withKeyPath: "title", options: nil)
+				tab.bind(NSToolTipBinding, toObject: wvc.webview, withKeyPath: "title", options: nil)
+				tab.bind(NSImageBinding, toObject: wvc.webview.favicon, withKeyPath: "icon", options: nil)
+			}
 		}
 		super.insertTabViewItem(tab, atIndex: atIndex)
 	}
@@ -68,9 +70,11 @@ struct WeakThing<T: AnyObject> {
 	override func removeTabViewItem(tab: NSTabViewItem) {
 		if let _ = tab.view {
 			tab.initialFirstResponder = nil
-			tab.unbind(NSLabelBinding)
-			tab.unbind(NSToolTipBinding)
-			if let _ = tab.viewController as? WebViewController { tab.unbind(NSImageBinding) }
+			if let _ = tab.viewController as? WebViewController {
+				tab.unbind(NSLabelBinding)
+				tab.unbind(NSToolTipBinding)
+				tab.unbind(NSImageBinding)
+			}
 			tab.label = ""
 			tab.toolTip = nil
 			tab.image = nil
