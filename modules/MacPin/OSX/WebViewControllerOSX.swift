@@ -35,7 +35,7 @@ import WebKitPrivates
 		//backMenu.delegate = self
 		//forwardMenu.delegate = self
 
-		webview._editable = true
+		//webview._editable = true //makes about:blank editable by default
 		textFinder.client = webview
 		textFinder.findBarContainer = self
 		textFinder.incrementalSearchingEnabled = true
