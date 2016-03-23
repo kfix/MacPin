@@ -165,7 +165,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		windowController.window?.bind(NSTitleBinding, toObject: browserController, withKeyPath: "title", options: nil)
 		windowController.window?.makeKeyAndOrderFront(self)
 
-		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: "handleGetURLEvent:replyEvent:", forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url scehems
+		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: "handleGetURLEvent:replyEvent:", forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url schemes
 	}
 
     public func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
@@ -182,11 +182,14 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 			userNotificationCenter(NSUserNotificationCenter.defaultUserNotificationCenter(), didActivateNotification: userNotification)
 		}
 
-		for (idx, arg) in Process.arguments.enumerate() {
+		let launched = Process.arguments.dropFirst().first?.hasPrefix("-psn_0_") ?? false // Process Serial Number from LaunchServices open()
+		warn(Process.arguments.description)
+		for (idx, arg) in Process.arguments.dropFirst().enumerate() {
 			switch (arg) {
-				case "-i":
+				case "-i" where isatty(1) == 1:
+					 //open a JS console on the terminal, if present
 					if let repl_js = NSBundle.mainBundle().URLForResource("app_repl", withExtension: "js") { AppScriptRuntime.shared.loadAppScript(repl_js.description); }
-					if isatty(1) == 1 { AppScriptRuntime.shared.REPL() } //open a JS console on the terminal, if present
+					AppScriptRuntime.shared.REPL()
 					// would like to natively implement a simple remote console for webkit-using osx apps, Valence only targets IOS-usbmuxd based stuff.
 					// https://www.webkit.org/blog/1875/announcing-remote-debugging-protocol-v1-0/
 					// https://bugs.webkit.org/show_bug.cgi?id=124613
@@ -196,30 +199,36 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 					// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/inspector/remote/RemoteInspector.mm
 					// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/inspector/remote/RemoteInspectorConstants.h
 					// https://github.com/siuying/IGJavaScriptConsole
-				case "-t":
-					if isatty(1) == 1 {
-						if idx + 1 >= Process.arguments.count { // no arg after this one
-							browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
-							break
-						}
+				case "-t" where isatty(1) == 1:
+					if idx + 1 >= Process.arguments.count { // no arg after this one
+						browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
+						break
+					}
 
-						if let tabnum = Int(Process.arguments[idx + 1]) where browserController.tabs.count >= tabnum { // next argv should be tab number
-							browserController.tabs[tabnum].REPL() // open a JS Console on the requested tab number
-						} else {
-							browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
-						}
+					if let tabnum = Int(Process.arguments[idx + 1]) where browserController.tabs.count >= tabnum { // next argv should be tab number
+						browserController.tabs[tabnum].REPL() // open a JS Console on the requested tab number
+						// FIXME skip one more arg
+					} else {
+						browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
 					}
 					// ooh, pretty: https://github.com/Naituw/WBWebViewConsole
 					// https://github.com/Naituw/WBWebViewConsole/blob/master/WBWebViewConsole/Views/WBWebViewConsoleInputView.m
+				case let isurl where !launched && (arg.hasPrefix("http:") || arg.hasPrefix("https:")):
+					warn("launched: \(launched) -> \(arg)")
+					application(NSApp, openFile: arg) // LS will openFile AND argv.append() fully qualified URLs
 				default:
-					if arg != Process.arguments[0] && !arg.hasPrefix("-psn_0_") && !application(NSApp, openFile: arg) { // Process Serial Number from LaunchServices open()
-						warn("unrecognized argv[]: `\(arg)`")
-					}
+					// FIXME unqualified URL from cmdline get openFile()d for some reason
+					warn("unrecognized argv[\(idx)]: `\(arg)`")
 			}
-
-			if browserController.tabs.count < 1 { browserController.newTabPrompt() } //don't allow a tabless state
-			//warn("focus is on `\(windowController.window?.firstResponder)`")
 		}
+
+		//dispatch_sync(dispatch_get_main_queue(), {
+		//dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), {
+			// JS tab additions are done on background queue -- wait for them to flush out
+			//if self.browserController.tabs.count < 1 { self.browserController.newTabPrompt() } //don't allow a tabless state
+		//})
+
+		//warn("focus is on `\(windowController.window?.firstResponder)`")
     }
 
 	public func applicationDidBecomeActive(notification: NSNotification) {
@@ -245,9 +254,13 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 
 	public func applicationShouldTerminate(sender: NSApplication) -> NSApplicationTerminateReply {
 		warn()
-//#if arch(x86_64) || arch(i386)
-//		if prompter != nil { return .TerminateLater }
-//#endif
+#if arch(x86_64) || arch(i386)
+		if prompter != nil {
+			windowController.close() // kill the window
+			// unfocus app?
+			return .TerminateLater
+		}
+#endif
 		return .TerminateNow
 	}
 
@@ -256,14 +269,14 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		NSUserDefaults.standardUserDefaults().synchronize()
 #if arch(x86_64) || arch(i386)
 		if let prompter = prompter {
-			prompter.wait()	// let prompt cleanup the TTY
+			prompter.wait()	// let prompter deinit and cleanup the TTY
 		}
 #endif
 	}
 
 	public func applicationShouldTerminateAfterLastWindowClosed(app: NSApplication) -> Bool { return true }
 
-	// handles drag-to-dock-badge, /usr/bin/open and argv[1] requests specifiying urls & local pathnames
+	// handles drag-to-dock-badge, /usr/bin/open and argv[1:] requests specifiying urls & local pathnames
 	public func application(theApplication: NSApplication, openFile filename: String) -> Bool {
 		warn(filename)
 		if let ftype = try? NSWorkspace.sharedWorkspace().typeOfFile(filename) {
