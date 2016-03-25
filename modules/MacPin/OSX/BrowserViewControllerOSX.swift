@@ -85,9 +85,7 @@ struct WeakThing<T: AnyObject> {
 
 	override func tabView(tabView: NSTabView, willSelectTabViewItem tabViewItem: NSTabViewItem?) {
 		super.tabView(tabView, willSelectTabViewItem: tabViewItem)
-		if let view = tabViewItem?.view, let wv = view as? MPWebView {
-			omnibox.webview = wv
-		}
+		omnibox.webview = tabViewItem?.view?.subviews.first as? MPWebView
 	}
 
 	override func tabView(tabView: NSTabView, didSelectTabViewItem tabViewItem: NSTabViewItem?) {
@@ -367,19 +365,26 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			// FIXME: crashes if you pass in a non [MPWebView] array from JS
 			for webview in tabs { //removals
 				if !newValue.contains(webview) {
-					if let wvc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === webview }).first as? WebViewControllerOSX {
+					if let wvc = childViewControllers.flatMap({ $0 as? WebViewControllerOSX }).filter({ $0.webview === webview }).first {
+						wvc.removeFromParentViewController()
 						// ^ webview doesn't have a backref to its controller
-						dispatch_async(dispatch_get_main_queue(), {
+						//childViewControllers.remove(wvc)
+						/*
+						dispatch_sync(dispatch_get_main_queue(), {
 							wvc.removeFromParentViewController()
 						})
+						*/
 					}
 				}
 			}
 			for webview in newValue { //additions
 				if !tabs.contains(webview) {
-					dispatch_async(dispatch_get_main_queue(), {
-						self.addChildViewController(WebViewControllerOSX(webview: webview))
+					childViewControllers.append(WebViewControllerOSX(webview: webview))
+					/*
+					dispatch_sync(dispatch_get_main_queue(), {
+						//self.addChildViewController(WebViewControllerOSX(webview: webview))
 					})
+					*/
 				}
 			}
 		}
