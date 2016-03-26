@@ -26,6 +26,15 @@ func warn(msg: String = String(), function: StaticString = __FUNCTION__, file: S
 	NSLog("<\(file):\(line):\(column)> [\(function)] \(msg)")
 	//FIXME timestamp?
 #endif
+	// https://developer.apple.com/library/mac/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/LoggingErrorsAndWarnings.html
+#if ASL
+	// FIXME: we want to output to Console.app, preferrably toggled from GUI/NSUserDefaults/argv
+	// https://gist.github.com/kristopherjohnson/0ded6cd153f61c627226
+	// https://github.com/emaloney/CleanroomASL
+#endif
+#if SYSLOG
+	// http://stackoverflow.com/questions/33194791/how-can-i-use-syslog-in-swift
+#endif
 }
 
 /*
@@ -148,6 +157,7 @@ func termiosREPL(eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2
 			// L: command dispatched, restart loop
 		}
 		// prompt loop killed, dealloc'd?
+		NSApp.replyToApplicationShouldTerminate(true) // now close App if this was deferring a terminate()
 	}
 #else
 	print("Prompt() not available on this device.")
