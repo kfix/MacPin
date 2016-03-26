@@ -57,8 +57,9 @@ delegate.launchURL = function(url) {
 		addr = comps.shift();
 	switch (scheme + ':') {
 		case 'file':
-			// check to see if its a JSON-ic .gdoc|gsheet|gslides from the Google Drive sync app
-			//    if so, extract the link and pop the doc open
+			// check to see if its a JSONP .gdoc|gsheet|gslides|gsite|gtable|gmap|glink|gnote|gdraw|gform|gscript from the Google Drive sync app
+			//    open{"url": "https://docs.google.com/open?id=HASH", "doc_id": "HASH", "email": "joey@example.com", "resource_id": "spreadsheet:HASH"}
+			//        if so, extract the link and pop the doc 
 			// else, prompt to do upload
 			driveTab.evalJS('confirm("Upload '+addr+'?");');
 			break;
@@ -158,6 +159,9 @@ delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(ur
 delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('gdrive');
 	//$.app.registerURLScheme('googledrive'); //iOS
+	$.app.registerUTI('dyn.ah62d4rv4ge80s65kqzw1k'); // `mdls ~/Google Drive/*.gsheet`
+	$.app.registerUTI('dyn.ah62d4rv4ge80s3dtqq'); // *.gdoc
+	$.app.registerUTI('dyn.ah62d4rv4ge80s65qrfwgn62'); // *.gslides
 	$.browser.addShortcut('Drive', drive);
 	$.browser.addShortcut('Drive (using secondary account)', driveAlt);
 	$.browser.addShortcut('Sheets', sheets);
