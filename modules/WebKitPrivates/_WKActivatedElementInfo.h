@@ -1,6 +1,5 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKDownload.h
-@import WebKit;
 /*
+ * https://github.com/WebKit/webkit/blob/21a4dcb584f205c2b5ecc326be846f0db7a7ecac/Source/WebKit2/UIProcess/API/Cocoa/_WKActivatedElementInfo.h
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,25 +24,35 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import <WebKit/WKFoundation.h>
+
 #if WK_API_ENABLED
 
-@class WKWebView;
+#if TARGET_OS_IPHONE
+@class UIImage;
+#else
+@class NSImage;
+#endif
+
+typedef NS_ENUM(NSInteger, _WKActivatedElementType) {
+    _WKActivatedElementTypeLink,
+    _WKActivatedElementTypeImage,
+    _WKActivatedElementTypeAttachment WK_ENUM_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA),
+} WK_ENUM_AVAILABLE(10_10, 8_0);
 
 WK_CLASS_AVAILABLE(10_10, 8_0)
-@interface _WKDownload : NSObject
+@interface _WKActivatedElementInfo : NSObject
 
-- (void)cancel;
-
-@property (nonatomic, readonly) NSURLRequest *request;
-@property (nonatomic, readonly, weak) WKWebView *originatingWebView;
+@property (nonatomic, readonly) NSURL *URL;
+@property (nonatomic, readonly) NSString *title;
+@property (nonatomic, readonly) _WKActivatedElementType type;
+@property (nonatomic, readonly) CGRect boundingRect;
+#if TARGET_OS_IPHONE
+@property (nonatomic, readonly, copy) UIImage *image;
+#else
+@property (nonatomic, readonly, copy) NSImage *image;
+#endif
 
 @end
-
-/*
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKNavigationDelegatePrivate.h
-static const WKNavigationActionPolicy WKNavigationActionPolicyDownload = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 1);
-static const WKNavigationActionPolicy WK_AVAILABLE(10_11, 9_0) WKNavigationActionPolicyAllowWithoutTryingAppLink = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 2);
-static const WKNavigationResponsePolicy WKNavigationResponsePolicyBecomeDownload = (WKNavigationResponsePolicy)(WKNavigationResponsePolicyAllow + 1);
-*/
 
 #endif // WK_API_ENABLED

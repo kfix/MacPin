@@ -11,6 +11,9 @@ typedef NS_ENUM(NSInteger, _WKPaginationMode) {
     _WKPaginationModeBottomToTop,
 };
 
+#import "WKBrowsingContextHandle.h"
+@class WKBrowsingContextHandle;
+
 typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
     _WKImmediateActionNone,
     _WKImmediateActionLinkPreview,
@@ -24,7 +27,7 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
 @protocol _WKDiagnosticLoggingDelegate;
 //@protocol _WKInputDelegate;
 @interface WKWebView (Privates)
-
+@property (nonatomic, readonly) WKBrowsingContextHandle *_handle;
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
 //@property (nonatomic, readonly) _WKWebViewPrintFormatter *_webViewPrintFormatter;
 //@property (nonatomic, getter=_allowsLinkPreview, setter=_setAllowsLinkPreview:) BOOL _allowsLinkPreview
@@ -39,6 +42,7 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
 @property (nonatomic, setter=_setAutomaticallyAdjustsContentInsets:) BOOL _automaticallyAdjustsContentInsets;
 #endif
 
+@property (nonatomic, readonly) BOOL _networkRequestsInProgress;
 @property (nonatomic, getter=_isEditable, setter=_setEditable:) BOOL _editable WK_AVAILABLE(10_11, 9_0);
 @property (nonatomic, setter=_setAddsVisitedLinks:) BOOL _addsVisitedLinks;
 @property (nonatomic, setter=_setAllowsRemoteInspection:) BOOL _allowsRemoteInspection;

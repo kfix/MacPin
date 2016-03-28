@@ -1,7 +1,6 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKDownload.h
-@import WebKit;
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Shared/API/c/WKType.h
+ * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,25 +24,22 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if WK_API_ENABLED
+#ifndef WKType_h
+#define WKType_h
 
-@class WKWebView;
+#include <WebKit/WKBase.h>
 
-WK_CLASS_AVAILABLE(10_10, 8_0)
-@interface _WKDownload : NSObject
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-- (void)cancel;
+WK_EXPORT WKTypeID WKGetTypeID(WKTypeRef type);
 
-@property (nonatomic, readonly) NSURLRequest *request;
-@property (nonatomic, readonly, weak) WKWebView *originatingWebView;
+WK_EXPORT WKTypeRef WKRetain(WKTypeRef type);
+WK_EXPORT void WKRelease(WKTypeRef type);
 
-@end
+#ifdef __cplusplus
+}
+#endif
 
-/*
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKNavigationDelegatePrivate.h
-static const WKNavigationActionPolicy WKNavigationActionPolicyDownload = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 1);
-static const WKNavigationActionPolicy WK_AVAILABLE(10_11, 9_0) WKNavigationActionPolicyAllowWithoutTryingAppLink = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 2);
-static const WKNavigationResponsePolicy WKNavigationResponsePolicyBecomeDownload = (WKNavigationResponsePolicy)(WKNavigationResponsePolicyAllow + 1);
-*/
-
-#endif // WK_API_ENABLED
+#endif /* WKType_h */

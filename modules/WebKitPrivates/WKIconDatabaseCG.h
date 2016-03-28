@@ -1,7 +1,6 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKDownload.h
-@import WebKit;
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/C/cg/WKIconDatabaseCG.h
+ * Copyright (C) 2011 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,25 +24,23 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if WK_API_ENABLED
+#ifndef WKIconDatabaseCG_h
+#define WKIconDatabaseCG_h
 
-@class WKWebView;
+#include <CoreFoundation/CFArray.h>
+#include <CoreGraphics/CGImage.h>
+#include "WKBase.h"
+#include "WKGeometry.h"
 
-WK_CLASS_AVAILABLE(10_10, 8_0)
-@interface _WKDownload : NSObject
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-- (void)cancel;
+WK_EXPORT CGImageRef WKIconDatabaseTryGetCGImageForURL(WKIconDatabaseRef iconDatabase, WKURLRef url, WKSize size);
+WK_EXPORT CFArrayRef WKIconDatabaseTryCopyCGImageArrayForURL(WKIconDatabaseRef iconDatabase, WKURLRef url) CF_RETURNS_RETAINED;
 
-@property (nonatomic, readonly) NSURLRequest *request;
-@property (nonatomic, readonly, weak) WKWebView *originatingWebView;
+#ifdef __cplusplus
+}
+#endif
 
-@end
-
-/*
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKNavigationDelegatePrivate.h
-static const WKNavigationActionPolicy WKNavigationActionPolicyDownload = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 1);
-static const WKNavigationActionPolicy WK_AVAILABLE(10_11, 9_0) WKNavigationActionPolicyAllowWithoutTryingAppLink = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 2);
-static const WKNavigationResponsePolicy WKNavigationResponsePolicyBecomeDownload = (WKNavigationResponsePolicy)(WKNavigationResponsePolicyAllow + 1);
-*/
-
-#endif // WK_API_ENABLED
+#endif /* WKIconDatabaseCG_h */

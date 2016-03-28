@@ -1,7 +1,6 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKDownload.h
-@import WebKit;
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * https://github.com/WebKit/webkit/blob/67985c34ffc405f69995e8a35f9c38618625c403/Source/WebKit2/Shared/API/c/WKURL.h
+ * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,25 +24,30 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if WK_API_ENABLED
+#ifndef WKURL_h
+#define WKURL_h
 
-@class WKWebView;
+#include "WKBase.h"
 
-WK_CLASS_AVAILABLE(10_10, 8_0)
-@interface _WKDownload : NSObject
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-- (void)cancel;
+WK_EXPORT WKTypeID WKURLGetTypeID();
 
-@property (nonatomic, readonly) NSURLRequest *request;
-@property (nonatomic, readonly, weak) WKWebView *originatingWebView;
+WK_EXPORT WKURLRef WKURLCreateWithUTF8CString(const char* string);
+WK_EXPORT WKURLRef WKURLCreateWithBaseURL(WKURLRef baseURL, const char* relative);
 
-@end
+WK_EXPORT WKStringRef WKURLCopyString(WKURLRef url);
+WK_EXPORT WKStringRef WKURLCopyHostName(WKURLRef url);
+WK_EXPORT WKStringRef WKURLCopyScheme(WKURLRef url);
+WK_EXPORT WKStringRef WKURLCopyPath(WKURLRef url);
+WK_EXPORT WKStringRef WKURLCopyLastPathComponent(WKURLRef url);
 
-/*
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKNavigationDelegatePrivate.h
-static const WKNavigationActionPolicy WKNavigationActionPolicyDownload = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 1);
-static const WKNavigationActionPolicy WK_AVAILABLE(10_11, 9_0) WKNavigationActionPolicyAllowWithoutTryingAppLink = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 2);
-static const WKNavigationResponsePolicy WKNavigationResponsePolicyBecomeDownload = (WKNavigationResponsePolicy)(WKNavigationResponsePolicyAllow + 1);
-*/
+WK_EXPORT bool WKURLIsEqual(WKURLRef a, WKURLRef b);
 
-#endif // WK_API_ENABLED
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* WKURL_h */

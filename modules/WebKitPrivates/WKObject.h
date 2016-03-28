@@ -1,7 +1,6 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKDownload.h
-@import WebKit;
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * https://github.com/WebKit/webkit/blob/67985c34ffc405f69995e8a35f9c38618625c403/Source/WebKit2/Shared/Cocoa/WKObject.h
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,25 +24,39 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import "WKFoundation.h"
+
 #if WK_API_ENABLED
 
-@class WKWebView;
+#import <type_traits>
 
-WK_CLASS_AVAILABLE(10_10, 8_0)
-@interface _WKDownload : NSObject
+namespace API {
+class Object;
 
-- (void)cancel;
+template<typename T>
+struct ObjectStorage {
+    T* get() { return reinterpret_cast<T*>(&data); }
+    T& operator*() { return *reinterpret_cast<T*>(&data); }
+    T* operator->() { return reinterpret_cast<T*>(&data); }
 
-@property (nonatomic, readonly) NSURLRequest *request;
-@property (nonatomic, readonly, weak) WKWebView *originatingWebView;
+    typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type data;
+};
+
+API::Object* unwrap(void*);
+void* wrap(API::Object*);
+
+}
+
+@protocol WKObject <NSObject>
+
+@property (readonly) API::Object& _apiObject;
 
 @end
 
-/*
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKNavigationDelegatePrivate.h
-static const WKNavigationActionPolicy WKNavigationActionPolicyDownload = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 1);
-static const WKNavigationActionPolicy WK_AVAILABLE(10_11, 9_0) WKNavigationActionPolicyAllowWithoutTryingAppLink = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 2);
-static const WKNavigationResponsePolicy WKNavigationResponsePolicyBecomeDownload = (WKNavigationResponsePolicy)(WKNavigationResponsePolicyAllow + 1);
-*/
+@interface WKObject : NSObject <WKObject>
+
+- (NSObject *)_web_createTarget NS_RETURNS_RETAINED;
+
+@end
 
 #endif // WK_API_ENABLED

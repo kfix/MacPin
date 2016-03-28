@@ -1,0 +1,8 @@
+// /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/System/Library/Frameworks/WebKit.framework/module.map
+// http://clang.llvm.org/docs/Modules.html#private-module-map-files
+
+explicit module WebKit {
+	//umbrella header "WebKitPrivates.h"
+	umbrella "WebKit"
+	export *
+}

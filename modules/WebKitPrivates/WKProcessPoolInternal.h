@@ -1,6 +1,5 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKDownload.h
-@import WebKit;
 /*
+ * https://github.com/WebKit/webkit/blob/67985c34ffc405f69995e8a35f9c38618625c403/Source/WebKit2/UIProcess/API/Cocoa/WKProcessPoolInternal.h
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,25 +24,35 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import "WKProcessPoolPrivate.h"
+
 #if WK_API_ENABLED
 
-@class WKWebView;
+#import "WKObject.h"
+#import "WebProcessPool.h"
 
-WK_CLASS_AVAILABLE(10_10, 8_0)
-@interface _WKDownload : NSObject
+#if TARGET_OS_IPHONE
+@class WKGeolocationProviderIOS;
+#endif
 
-- (void)cancel;
+namespace WebKit {
 
-@property (nonatomic, readonly) NSURLRequest *request;
-@property (nonatomic, readonly, weak) WKWebView *originatingWebView;
+inline WKProcessPool *wrapper(WebProcessPool& processPool)
+{
+    ASSERT([processPool.wrapper() isKindOfClass:[WKProcessPool class]]);
+    return (WKProcessPool *)processPool.wrapper();
+}
 
+}
+
+@interface WKProcessPool () <WKObject> {
+@package
+    API::ObjectStorage<WebKit::WebProcessPool> _processPool;
+}
+
+#if TARGET_OS_IPHONE
+@property(readonly) WKGeolocationProviderIOS *_geolocationProvider;
+#endif
 @end
-
-/*
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKNavigationDelegatePrivate.h
-static const WKNavigationActionPolicy WKNavigationActionPolicyDownload = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 1);
-static const WKNavigationActionPolicy WK_AVAILABLE(10_11, 9_0) WKNavigationActionPolicyAllowWithoutTryingAppLink = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 2);
-static const WKNavigationResponsePolicy WKNavigationResponsePolicyBecomeDownload = (WKNavigationResponsePolicy)(WKNavigationResponsePolicyAllow + 1);
-*/
 
 #endif // WK_API_ENABLED
