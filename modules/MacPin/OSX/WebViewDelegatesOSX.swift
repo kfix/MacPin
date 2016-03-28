@@ -203,23 +203,9 @@ extension WebViewControllerOSX {
 		saveDialog.canCreateDirectories = true
 		saveDialog.nameFieldStringValue = filename
 		if let webview = download.originatingWebView, window = webview.window {
-			// var result = 0
-			// saveDialog.beginSheetModalForWindow(window, completionHandler: { (choice: Int) -> Void in result = choice })
-			// _download can't wait for this async block to report back after the sheet is closed and grab the path!
-			//   WKDownloader works on main thread already: https://github.com/WebKit/webkit/blob/master/Source/WebKit2/NetworkProcess/Downloads/mac/DownloadMac.mm
-			// so lets fake a sheet-ish popup
-			saveDialog.floatingPanel = true
-			saveDialog.styleMask = NSDocModalWindowMask // no title bar or pos/size controls
-			window.addChildWindow(saveDialog, ordered: .Above) // lock the floating dialog position relative to the browser window
-			saveDialog.setFrameOrigin(NSPoint(x: saveDialog.frame.origin.x, y: window.frame.origin.y)) // stick to top
-			saveDialog.makeKeyAndOrderFront(self)
 			NSApplication.sharedApplication().requestUserAttention(.InformationalRequest)
-			let result = saveDialog.runModal()
-			window.removeChildWindow(saveDialog)
-			if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
-				warn(path)
-				return path
-			}
+			saveDialog.beginSheetModalForWindow(window, completionHandler: { (choice: Int) -> Void in NSApp.stopModalWithCode(choice) })
+			if NSApp.runModalForWindow(window) != NSModalResponseAbort { if let url = saveDialog.URL, path = url.path { return path } }
 		}
 		download.cancel()
 		return ""
