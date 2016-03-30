@@ -2,6 +2,10 @@
 /*eslint-env es6*/
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
+/* TODO
+ *  a .mailbundle to convert links of gdocs to gdrive:// urls: https://github.com/robertklep/quotefixformac
+ *
+ */
 
 var delegate = {}; // our delegate to receive events from the webview app
 var driveTab, drive = {
@@ -159,9 +163,9 @@ delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(ur
 delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('gdrive');
 	//$.app.registerURLScheme('googledrive'); //iOS
-	$.app.registerUTI('dyn.ah62d4rv4ge80s65kqzw1k'); // `mdls ~/Google Drive/*.gsheet`
-	$.app.registerUTI('dyn.ah62d4rv4ge80s3dtqq'); // *.gdoc
-	$.app.registerUTI('dyn.ah62d4rv4ge80s65qrfwgn62'); // *.gslides
+	//$.app.registerUTI('dyn.ah62d4rv4ge80s65kqzw1k'); // `mdls ~/Google Drive/*.gsheet`
+	//$.app.registerUTI('dyn.ah62d4rv4ge80s3dtqq'); // *.gdoc
+	//$.app.registerUTI('dyn.ah62d4rv4ge80s65qrfwgn62'); // *.gslides
 	$.browser.addShortcut('Drive', drive);
 	$.browser.addShortcut('Drive (using secondary account)', driveAlt);
 	$.browser.addShortcut('Sheets', sheets);
