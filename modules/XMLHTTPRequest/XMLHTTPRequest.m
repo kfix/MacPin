@@ -74,7 +74,7 @@
     }
     [request setHTTPMethod:_httpMethod];
 
-    __block __weak XMLHttpRequest *weakSelf = self;
+    __block XMLHttpRequest *weakSelf = self;
 
     id completionHandler = ^(NSData *receivedData, NSURLResponse *response, NSError *error) {
        // request is now complete
