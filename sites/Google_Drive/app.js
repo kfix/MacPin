@@ -95,35 +95,43 @@ delegate.decideNavigationForURL = function(url, tab) {
 				// we might be redirected to an external domain for a SSO-integrated Google Apps login
 				// https://support.google.com/a/answer/60224#userSSO
 				tab.allowAnyRedir = true;
-			} else if (!~addr.indexOf("//drive.google.com") &&
-				!~addr.indexOf("//docs.google.com") &&
-				!~addr.indexOf(".docs.google.com") &&
-				!~addr.indexOf("//clients6.google.com") &&
-				!~addr.indexOf("//clients5.google.com") &&
-				!~addr.indexOf("//clients4.google.com") &&
-				!~addr.indexOf("//clients3.google.com") &&
-				!~addr.indexOf("//clients2.google.com") &&
-				!~addr.indexOf("//clients1.google.com") &&
-				!~addr.indexOf("//clients.google.com") &&
-				!~addr.indexOf("//plus.google.com") &&
-				!~addr.indexOf("//0.client-channel.google.com") &&
-				!~addr.indexOf("//1.client-channel.google.com") &&
-				!~addr.indexOf("//2.client-channel.google.com") &&
-				!~addr.indexOf("//3.client-channel.google.com") &&
-				!~addr.indexOf("//4.client-channel.google.com") &&
-				!~addr.indexOf("//5.client-channel.google.com") &&
-				!~addr.indexOf("//6.client-channel.google.com") &&
-				!~addr.indexOf("//apis.google.com") &&
-				!~addr.indexOf("//0.talkgadget.google.com") &&
-				!~addr.indexOf("//1.talkgadget.google.com") &&
-				!~addr.indexOf("//2.talkgadget.google.com") &&
-				!~addr.indexOf("//3.talkgadget.google.com") &&
-				!~addr.indexOf("//4.talkgadget.google.com") &&
-				!~addr.indexOf("//5.talkgadget.google.com") &&
-				!~addr.indexOf("//6.talkgadget.google.com") &&
-				!~addr.indexOf("//content.googleapis.com") &&
-				!~addr.indexOf("//www.youtube.com") && // yt vids are usually embedded players
-				!~addr.indexOf("//www.google.com/a/") &&
+			} else if (!addr.startsWith("//drive.google.com") &&
+				!addr.startsWith("//docs.google.com") &&
+				!addr.startsWith(".docs.google.com") &&
+				!addr.startsWith("//clients6.google.com") &&
+				!addr.startsWith("//clients5.google.com") &&
+				!addr.startsWith("//clients4.google.com") &&
+				!addr.startsWith("//clients3.google.com") &&
+				!addr.startsWith("//clients2.google.com") &&
+				!addr.startsWith("//clients1.google.com") &&
+				!addr.startsWith("//clients.google.com") &&
+				!addr.startsWith("//plus.google.com") &&
+				!addr.startsWith("//cello.client-channel.google.com") &&
+				!addr.startsWith("//0.client-channel.google.com") &&
+				!addr.startsWith("//1.client-channel.google.com") &&
+				!addr.startsWith("//2.client-channel.google.com") &&
+				!addr.startsWith("//3.client-channel.google.com") &&
+				!addr.startsWith("//4.client-channel.google.com") &&
+				!addr.startsWith("//5.client-channel.google.com") &&
+				!addr.startsWith("//6.client-channel.google.com") &&
+				!addr.startsWith("//apis.google.com") &&
+				!addr.startsWith("//0.talkgadget.google.com") &&
+				!addr.startsWith("//1.talkgadget.google.com") &&
+				!addr.startsWith("//2.talkgadget.google.com") &&
+				!addr.startsWith("//3.talkgadget.google.com") &&
+				!addr.startsWith("//4.talkgadget.google.com") &&
+				!addr.startsWith("//5.talkgadget.google.com") &&
+				!addr.startsWith("//6.talkgadget.google.com") &&
+				!addr.startsWith("//0.docs.google.com") &&
+				!addr.startsWith("//1.docs.google.com") &&
+				!addr.startsWith("//2.docs.google.com") &&
+				!addr.startsWith("//3.docs.google.com") &&
+				!addr.startsWith("//4.docs.google.com") &&
+				!addr.startsWith("//5.docs.google.com") &&
+				!addr.startsWith("//6.docs.google.com") &&
+				!addr.startsWith("//content.googleapis.com") &&
+				!addr.startsWith("//www.youtube.com") && // yt vids are usually embedded players
+				!addr.startsWith("//www.google.com/a/") &&
 				!addr.startsWith("//myaccount.google.com") &&
 				!addr.startsWith("//www.google.com/settings")
 			) {
