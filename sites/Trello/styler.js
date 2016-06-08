@@ -14,6 +14,11 @@ window.addEventListener("MacPinWebViewChanged", function(event) {
 	customizeBG();
 }, false);
 
+// TODO: subscribe to storage events so that customizing one Trello tab will signal all others
+// http://www.w3.org/TR/webstorage/#the-storage-event
+// https://developer.apple.com/library/safari/documentation/iPhone/Conceptual/SafariJSDatabaseGuide/Name-ValueStorage/Name-ValueStorage.html#//apple_ref/doc/uid/TP40007256-CH6-SW6
+// https://developer.mozilla.org/en-US/docs/Web/Events/storage
+
 var customizeBG = function(el) {
 	var overrideStockTrelloBlue = localStorage.overrideStockTrelloBlue;
 	var darkMode = localStorage.darkMode;
@@ -40,8 +45,8 @@ var customizeBG = function(el) {
 	}
 
 	if (darkMode) css.innerHTML += "\
-		body { -webkit-filter:invert(100%); }\
-		input,img,video,.window-cover,.list-card-cover,.attachment-thumbnail-preview,.js-open-board,.board-background-select { -webkit-filter:invert(100%); }\
+		body { -webkit-filter:invert(100%) hue-rotate(180deg); }\
+		input,img,video,.window-cover,.list-card-cover,.attachment-thumbnail-preview,.js-open-board,.board-background-select { -webkit-filter:invert(100%) hue-rotate(180deg); }\
 		span { color: black; }";
 
 	if (darkMode && !macpinIsTransparent && document.body.style.backgroundColor == "") document.body.style.backgroundColor = "black";
@@ -49,5 +54,6 @@ var customizeBG = function(el) {
 	document.head.appendChild(css);
 };
 
+// need to watch for changes to body["style"] so we can re-apply any custom settings after board navigations
 var bgWatch = new MutationObserver(function(muts) { customizeBG(); });
 bgWatch.observe(document.body, { attributes: true, attributeFilter: ["style"], childList: false, characterData: false, subtree: false });
