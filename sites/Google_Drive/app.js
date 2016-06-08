@@ -36,7 +36,7 @@ func gotoAlternateGoogleAccount(tab, acct) {
 func gotoNextGoogleAccount(tab) {
     // https://support.google.com/drive/answer/2405894?hl=en
 	tab = tab || $.browser.tabSelected
-	acct = tab.uri.query["authuser"]  || 0
+	acct = tab.uri.query["authuser"] || 0
 	url.query['authuser'] = acct + 1
 	}
 }
@@ -46,6 +46,14 @@ func gotoNextGoogleAccount(tab) {
 */
 
 driveTab = $.browser.tabSelected = new $.WebView(drive);
+/* TODO
+ * bundle a local html that has uses the gapi JS client to pre-auth as a a cached authuser/user_id (prompt if no username in cache)
+ * the username should be stored in localStorage and hopefully will not be shared to other apps or Safari
+ * then redirect to drive landing
+ *  https://accounts.google.com/ServiceLoginAuth?continue=https://drive.google.com/&Email=yourname@gmail.com
+ *  http://stackoverflow.com/a/13379472/3878712
+ *  https://groups.google.com/forum/#!topic/google-api-javascript-client/4dS0xL_jb24
+ */
 
 // dark mode: https://userstyles.org/styles/105045/google-drive-dark
 
@@ -94,6 +102,7 @@ delegate.decideNavigationForURL = function(url, tab) {
 			} else if (tab.allowAnyRedir || unescape(unescape(addr)).match("//accounts.google.com/")) {
 				// we might be redirected to an external domain for a SSO-integrated Google Apps login
 				// https://support.google.com/a/answer/60224#userSSO
+				// process starts w/ https://accounts.google.com/ServiceLogin(Auth) and ends w/ /MergeSession
 				tab.allowAnyRedir = true;
 			} else if (!addr.startsWith("//drive.google.com") &&
 				!addr.startsWith("//docs.google.com") &&
@@ -106,6 +115,7 @@ delegate.decideNavigationForURL = function(url, tab) {
 				!addr.startsWith("//clients1.google.com") &&
 				!addr.startsWith("//clients.google.com") &&
 				!addr.startsWith("//plus.google.com") &&
+				!addr.startsWith("//hangouts.google.com") &&
 				!addr.startsWith("//cello.client-channel.google.com") &&
 				!addr.startsWith("//0.client-channel.google.com") &&
 				!addr.startsWith("//1.client-channel.google.com") &&
