@@ -11,6 +11,20 @@ new_navigator.vendor = "Google, Inc."
 new_navigator.javaEnabled = function(){return false;};
 navigator = new_navigator;
 
+
+/*
+var spoofUA = "ScMazilla/5.0 (Crapintosh; Intel Mak OS Z 10_10_2) ScmappleWabKat/600.3.18 (KHTML, like Gacko) Version/8.0.2 Smafari/600.2.5 Chrome/32";
+//"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.104 Safari/537.36"
+Object.assign(navigator, {
+	platform: 'MakIntel', // Win
+	userAgent: spoofUA,
+	appVersion: spoofUA,
+	vendor: "Google, Inc.",
+	javaEnabled: function(){return false;}
+});
+*/
+
+
 /*
 var __originalNavigator = navigator;
 navigator = new Object();

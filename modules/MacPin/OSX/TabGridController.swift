@@ -9,6 +9,9 @@ import AppKit
 // https://github.com/klaas/CollectionViewElCapitan
 // https://developer.apple.com/videos/play/wwdc2015-225/
 
+
+// make it a sidebar to show Preview-like thumbnail roll: https://github.com/jerrykrinock/SplitViewSidebar/blob/master/SplitViewSidebar/FixedSidebarSplitViewController.m
+
 class TabGridIcon: NSCollectionViewItem {
 	required init?(coder: NSCoder) { super.init(coder: coder) } // conform to NSCoding
 	override init?(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView() 

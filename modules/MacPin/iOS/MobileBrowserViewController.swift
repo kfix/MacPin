@@ -32,27 +32,6 @@ extension UIView {
 	}
 }
 
-// need to freeze this
-/*
-@objc protocol MobileBrowserScriptExports : JSExport { // '$.browser' in app.js
-	var defaultUserAgent: String? { get set } // full UA used for any new tab without explicit UA specified
-	var tabs: [MPWebView] { get }
-	var tabSelected: AnyObject? { get set }
-
-	var selectedViewControllerIndex: Int { get set }
-	func pushTab(webview: AnyObject) // JSExport does not seem to like signatures with custom types
-	func newTabPrompt()
-	func newIsolatedTabPrompt()
-	func newPrivateTabPrompt()
-	func addShortcut(title: String, _ obj: AnyObject?)
-	func switchToPreviousTab()
-	func switchToNextTab()
-	func focusOnBrowser()
-	func unhideApp()
-	func bounceDock()
-}
-*/
-
 @objc class MobileBrowserViewController: UIViewController, BrowserViewController {
 	//var frame: CGRect = UIScreen.mainScreen().applicationFrame
 

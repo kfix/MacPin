@@ -13,6 +13,8 @@ class MenuItem: NSMenuItem {
 		self.init(
 			title: itemName ?? "",
 			action: anAction != nil ? Selector(anAction!) : nil,
+			// FIXME: anAction should be a Selector.*: https://github.com/andyyhope/Blog_SelectorSyntaxSugar/blob/master/Blog_SelectorSyntaxSugar/ViewController.swift
+			// each OSX class can privately extend its own bundle of Selectors
 			keyEquivalent: charCode ?? ""
 		)
 

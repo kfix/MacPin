@@ -138,6 +138,7 @@ func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? 
 	}
 }
 
+// TODO: exposing a websocketREPL would also be neat: https://github.com/siuying/IGJavaScriptConsole https://github.com/zwopple/PocketSocket
 func termiosREPL(eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2: StaticString = __FUNCTION__, abort:(()->Void)? = nil) {
 #if arch(x86_64) || arch(i386)
 	prompter = Async.background {
