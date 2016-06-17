@@ -18,6 +18,9 @@ import JavaScriptCore
 		self.init(nibName: nil, bundle: nil) // calls init!() http://stackoverflow.com/a/26516534/3878712
 		webview.UIDelegate = self //alert(), window.open(): see <platform>/WebViewDelegates
 		webview.navigationDelegate = self // allows/denies navigation actions: see WebViewDelegates
+		//webview._historyDelegate = self
+		webview._formDelegate = self //FIXME: ._inputDelegate = self
+		webview._findDelegate = self
 #if DEBUG
 		webview._diagnosticLoggingDelegate = self
 #endif
@@ -25,7 +28,7 @@ import JavaScriptCore
 		self.webview = webview
 		representedObject = webview	// FIXME use NSProxy instead for both OSX and IOS
 
-		view.addSubview(webview, positioned: .Below, relativeTo: nil)
+		view.addSubview(webview, positioned: .Below, relativeTo: nil) // need an empty parent view for the inspector to attach to
 	}
 #elseif os(iOS)
 	required init?(coder aDecoder: NSCoder) { super.init(coder: aDecoder) }

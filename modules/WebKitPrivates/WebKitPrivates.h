@@ -4,13 +4,13 @@
 #import "_WKDiagnosticLoggingDelegate.h"
 #import "_WKFindDelegate.h"
 #import "_WKFindOptions.h"
-#import "WKWebView+Privates.h"
 #import "_WKThumbnailView.h"
 #import "WKView+Privates.h"
 #import "_WKProcessPoolConfiguration.h"
 #import "_WKDownload.h"
 #import "_WKDownloadDelegate.h"
 #import "_WKInputDelegate.h"
+#import "_WKFormDelegate.h"
 #import "_WKFormInputSession.h"
 #import "WKProcessPoolPrivate.h"
 #import "JSContext+Privates.h"
@@ -29,6 +29,11 @@
 #import "WKURL.h"
 #import "WKURLCF.h"
 #import "WKData.h"
+#import "WKWebView+Privates.h"
+#ifdef STP
+#import "_WKUserStyleSheet.h"
+#import "WKUserContentControllerPrivate.h"
+#endif
 
 /* things to integrate:
 	better JS errors from wkwebviews: https://github.com/WebKit/webkit/commit/984d854e5c71da16cdf85c644fc292947aea43a1

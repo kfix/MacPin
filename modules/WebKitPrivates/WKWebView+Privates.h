@@ -28,6 +28,7 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
 //@protocol _WKInputDelegate;
 @interface WKWebView (Privates)
 @property (nonatomic, readonly) WKBrowsingContextHandle *_handle;
+- (WKPageRef)_pageForTesting;
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
 //@property (nonatomic, readonly) _WKWebViewPrintFormatter *_webViewPrintFormatter;
 //@property (nonatomic, getter=_allowsLinkPreview, setter=_setAllowsLinkPreview:) BOOL _allowsLinkPreview
@@ -37,9 +38,20 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
 @property (nonatomic, readonly) _WKWebViewPrintFormatter *_webViewPrintFormatter;
 #else
 @property (readonly) NSColor *_pageExtendedBackgroundColor;
-@property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground;
 @property (nonatomic, setter=_setTopContentInset:) CGFloat _topContentInset;
 @property (nonatomic, setter=_setAutomaticallyAdjustsContentInsets:) BOOL _automaticallyAdjustsContentInsets;
+#endif
+
+#ifdef STP
+@property (nonatomic, getter=_drawsBackground, setter=_setDrawsBackground:) BOOL _drawsTransparentBackground;
+@property (nonatomic, setter=_setDrawsBackground:) BOOL _drawsBackground WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, weak, setter=_setInputDelegate:) id <_WKInputDelegate> _inputDelegate WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+// https://github.com/WebKit/webkit/commit/0dfc67a174b79a8a401cf6f60c02150ba27334e5
+- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo; // prints top frame
+//- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (strong, nonatomic, setter=_setInspectorAttachmentView:) NSView *_inspectorAttachmentView WK_AVAILABLE(10_11, NA);
+#else
+@property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground; //FIXME: going away after 10.11.4 / 9.3 ?
 #endif
 
 @property (nonatomic, readonly) BOOL _networkRequestsInProgress;
@@ -66,18 +78,14 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
 @property (nonatomic, readonly) NSString *_MIMEType;
 @property (nonatomic, weak, setter=_setDiagnosticLoggingDelegate:) id <_WKDiagnosticLoggingDelegate> _diagnosticLoggingDelegate WK_AVAILABLE(10_11, 9_0);
 //https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKFormDelegate.h
-//@property (nonatomic, weak, setter=_setFormDelegate:) id <_WKFormDelegate> _formDelegate;
-//@property (nonatomic, weak, setter=_setInputDelegate:) id <_WKInputDelegate> _inputDelegate WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, weak, setter=_setFormDelegate:) id <_WKFormDelegate> _formDelegate;
 
 @property (nonatomic, weak, setter=_setFindDelegate:) id <_WKFindDelegate> _findDelegate;
 - (void)_findString:(NSString *)string options:(_WKFindOptions)options maxCount:(NSUInteger)maxCount;
 - (void)_countStringMatches:(NSString *)string options:(_WKFindOptions)options maxCount:(NSUInteger)maxCount;
 - (void)_hideFindUI;
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
-// https://github.com/WebKit/webkit/commit/0dfc67a174b79a8a401cf6f60c02150ba27334e5
-- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo; // prints top frame
-//- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
 #endif
 @end
 

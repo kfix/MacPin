@@ -43,20 +43,11 @@ extension WebViewControllerOSX {
 
 	func _webView(webView: WKWebView, printFrame: WKFrameInfo) {
 		warn("JS: `window.print();`")
-		// webView._printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo())
-
-		let printer = NSPrintOperation(view: webView, printInfo: NSPrintInfo.sharedPrintInfo())
-		// seems to work very early on in the first loaded page, then just becomes blank pages
-		// PDF = This view requires setWantsLayer:YES when blendingMode == NSVisualEffectBlendingModeWithinWindow
-
-		//var wkview = (webView.subviews.first as WKView)
-		// https://github.com/WebKit/webkit/blob/d3e9af22a535887f7d4d82e37817ba5cfc03e957/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3848
-		//var view = WKPrintingView(printFrame, view: wkview)
-		// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/mac/WKPrintingView.mm
-		//var printer = wkview.printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo(), forFrame: printFrame) //crash on retain
-
+#if STP
+		let printer = webView._printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo())
 		printer.showsPrintPanel = true
 		printer.runOperation()
+#endif
 	}
 }
 
@@ -195,7 +186,7 @@ Global Trace Buffer (reverse chronological seconds):
 // modules/WebKitPrivates/_WKDownloadDelegate.h
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
 // https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
-extension WebViewControllerOSX {
+extension WebViewControllerOSX { // _WKDownloadDelegate
 	override func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
 		warn(download.description)
 		//pop open a save Panel to dump data into file
@@ -211,3 +202,30 @@ extension WebViewControllerOSX {
 		return ""
 	}
 }
+
+extension WebViewControllerOSX { // _WKFindDelegate
+	func _webView(webView: WKWebView!, didCountMatches matches: UInt, forString string: String!) {
+		warn()
+	}
+	func _webView(webView: WKWebView!, didFindMatches matches: UInt, forString string: String!, withMatchIndex matchIndex: Int) {
+		warn()
+	}
+	func _webView(webView: WKWebView!, didFailToFindString string: String!) {
+		warn()
+	}
+}
+
+extension WebViewController { // _WKInputDelegate
+	func _webView(webView: WKWebView!, didStartInputSession inputSession: _WKFormInputSession!) {
+		//inputSession.valid .userObject .focusedElementInfo==[.Link,.Image]
+		warn()
+	}
+
+	func _webView(webView: WKWebView!, willSubmitFormValues values: [NSObject : AnyObject]!, userObject: protocol<NSSecureCoding, NSObjectProtocol>!, submissionHandler: (() -> Void)!) {
+		warn(values.description)
+		//userObject: https://github.com/WebKit/webkit/commit/c65916009f1e95f53f329ce3cfe69bf70616cc02#diff-776c38c9a3b2252729ea3ac028367308R1201
+		submissionHandler()
+	}
+}
+
+
