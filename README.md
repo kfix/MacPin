@@ -170,6 +170,12 @@ test -d browser/SomeWebApp.com &&
 open hybrid/SomeWebApp.com.app
 ```
 
+#### Safari Technology Preview
+The future of MacPin is now!
+[Install](https://developer.apple.com/safari/download/) Safari Technology Preview first.
+use `make stp` & `make stp.app` to link and run MacPin against STP's WebKit.
+This makes up-and-coming WKWebView changes (find UI, printing) actually work!
+
 #### iOS
 
 Basic support has landed for generating iOS apps.  

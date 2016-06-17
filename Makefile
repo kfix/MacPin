@@ -64,9 +64,13 @@ endif
 ifeq ($(platform),OSX)
 endif
 allapps install: $(gen_apps)
-zip test apirepl tabrepl wknightly $(gen_apps): $(execs)
-test apirepl tabrepl test.app test.ios: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
-test apirepl tabrepl test.app test.ios: | $(execs:%=%.dSYM)
+zip test apirepl tabrepl wknightly stp $(gen_apps): $(execs)
+test apirepl tabrepl test.app test.ios stp stp.app: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
+stp stp.app: linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
+stp stp.app: debug += -D STP
+stp stp.app: clang += -DSTP
+stp stp.app: swiftc += -Xcc -DSTP
+test apirepl tabrepl test.app test.ios stp stp.app: | $(execs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))
 codesign :=
@@ -76,10 +80,9 @@ codesign := yes
 else ifeq ($(appsig),-)
 codesign := yes
 else ifneq ($(appsig),)
-test test.app release: appsig := -
+test test.app stp stp.app release: appsig := -
 endif
 
-wknightly: DYLD_FRAMEWORK_PATH=/Volumes/WebKit/WebKit.app/Contents/Frameworks/10.10
 reinstall: allapps uninstall install
 noop: ;
 #allow these targets to pull in all files in sites/*/
@@ -113,6 +116,7 @@ $(xcassets)/%.xcassets: templates/xcassets/%/*.png
 #$(appdir): ; install -d $@
 
 #Render plist template w/shell vars
+# https://developer.apple.com/library/ios/documentation/DeveloperTools/Reference/XcodeBuildSettingRef/1-Build_Setting_Reference/build_setting_ref.html
 define gen_plist_template
 	install -d $(dir $@)
 	EXECUTABLE_NAME=$* BUNDLE_ID=$(template_bundle_id).$* PROV_ID=$(mobileprov_team_id) PLAT_VER=$(target_ver_$(platform)) eval "echo \"$$(cat $<)\"" > $@
@@ -159,7 +163,7 @@ $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/
 $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings
 	@install -d $@ $@/Contents/MacOS $@/Contents/Resources
 	$(patsubst %,cp % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
-	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/Contents/MacOS/$*.dSYM;,$(filter $(outdir)/exec/%.dSYM,$^))
+	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/Contents/MacOS/$*.dSYM,$(filter $(outdir)/exec/%.dSYM,$^))
 	cp -RL templates/Resources $@/Contents
 	#git ls-files -zc $(bundle_untracked) $(macpin_sites)/$* | xargs -0 -J % install -DT % $@/Contents/Resources/
 	(($(bundle_untracked))) || git archive HEAD $(macpin_sites)/$*/ | tar -xv --strip-components 2 -C $@/Contents/Resources
@@ -237,9 +241,12 @@ unregister:
 clean: unregister
 	-rm -rf $(outdir) $(xcassets)
 
+cached:
+	-find ~/Library/Caches/$(template_bundle_id).$(APP)* ~/Library/WebKit/$(template_bundle_id).$(APP)*
+
 reset:
 	-defaults delete $(macpin)
-	-rm -rfv ~/Library/Caches/$(template_bundle_id).$(APP)* ~/Library/WebKit/$(macpin)
+	-rm -rfv ~/Library/Caches/$(template_bundle_id).$(APP)* ~/Library/WebKit/$(macpin) ~/Library/WebKit/$(template_bundle_id).$(APP)*
 	-rm -rfv ~/Library/Saved\ Application\ State/$(template_bundle_id).$(APP)*
 	-rm -rfv ~/Library/Preferences/$(template_bundle_id).$(APP)*
 	-defaults read com.apple.spaces app-bindings | grep $(template_bundle_id).$(APP)
@@ -248,14 +255,14 @@ reset:
 uninstall: $(wildcard $(appnames:%=$(installdir)/%))
 	rm -rf $(filter %.app,$^)
 
-test:
+stp test:
 	#-defaults delete $(macpin)
 	($< -i http://browsingtest.appspot.com)
 
 apirepl: ; ($< -i)
 tabrepl: ; ($< -t)
 
-test.app: $(appdir)/$(macpin).app
+stp.app test.app: $(appdir)/$(macpin).app
 	#banner ':-}' | open -a $$PWD/$^ -f
 	#-defaults delete $(template_bundle_id).$(macpin)
 	#(open $^) &
@@ -300,11 +307,6 @@ swiftrepl:
 	# sudo /usr/sbin/DevToolsSecurity --enable
 	xcrun swift $(incdirs) $(libdirs) $(linklibs) $(frameworks) -deprecated-integrated-repl
 
-wknightly:
-	-defaults delete $(macpin)
-	-rm -rf ~/Library/WebKit/$(macpin)
-	$<
-
 #.safariextz: http://developer.streak.com/2013/01/how-to-build-safari-extension-using.html
 
 #playground:
@@ -337,5 +339,5 @@ release:
 endif
 
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist
-.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release wknightly doc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics
+.PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics
 .SUFFIXES:

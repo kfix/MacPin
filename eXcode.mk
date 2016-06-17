@@ -137,6 +137,8 @@ clang				:= xcrun -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platfor
 #-fobj-arc
 
 libdirs				:= -L $(outdir)/Frameworks -L $(outdir)/obj
+incdirs				+= -I $(sdkpath)/System/Library/Frameworks
+#/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/System/Library/Frameworks
 incdirs				+= -I $(outdir)
 os_frameworks		:= -F $(sdkpath)/System/Library/Frameworks -L $(sdkpath)/System/Library/Frameworks
 frameworks			:= -F $(outdir)/Frameworks
@@ -174,7 +176,7 @@ $(outdir)/exec/%.dSYM: $(outdir)/exec/%
 #$(outdir)/exec/%: libdirs += -L $(swiftlibdir)
 $(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks $(outdir)/SwiftSupport
 	# grab the .d's of $^ and build any used modules ....
-	$(clang) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../SwiftSupport -o $@ $^
+	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../SwiftSupport $(linkopts_main) -o $@ $^
 	$(bundle_libswift)
 
 # this is for standalone utility/helper programs, use module/main.swift for Application starters
@@ -182,6 +184,7 @@ $(outdir)/exec/%: execs/$(platform)/%.swift | $(outdir)/exec
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
 		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
+		$(linkopts_exec) \
 		-module-name $*.MainExec \
 		-emit-executable -o $@ \
 		$(filter %.swift,$+)
@@ -198,7 +201,7 @@ $(outdir)/Frameworks/lib%.dylib $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: mo
 		-Xlinker -install_name -Xlinker @rpath/lib$*.dylib \
  		-emit-module -module-name $* -emit-module-path $(outdir)/$*.swiftmodule \
 		-emit-library -o $@ \
-		$(filter %.swift,$^)
+		$(filter-out %/main.swift,$(filter %.swift,$^))
 
 $(outdir)/obj/%.o $(outdir)/obj/%.d $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/$(platform)/*.swift | $(outdir)/obj
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(linklibs) $(libdirs) \
