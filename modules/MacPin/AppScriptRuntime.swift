@@ -24,6 +24,19 @@ import Prompt // https://github.com/neilpa/swift-libedit
 import UserNotificationPrivates
 import SSKeychain // https://github.com/soffes/sskeychain
 
+/*
+
+extension NSObject: JSExport {
+	static func extend2js(mountObj: JSValue, helpers: String? = nil) { // for constructors
+		let classinstance = JSValue(object: self.type, inContext: mountObj.context)
+		if let helpers = helpers { classinstance.thisEval(helpers) }
+		mountObj.setValue(classinstance, forProperty: className)
+	}
+}
+
+*/
+
+
 extension JSValue {
 	func tryFunc (method: String, argv: [AnyObject]) -> Bool {
 		if self.isObject && self.hasProperty(method) {
@@ -122,6 +135,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #elseif arch(arm64)
 	let architecture = "arm64"
 #endif
+
+	//static func(extend: mountObj) { }
 
 	init(global: String = "$") { // FIXME: ever heard of jQuery?
 		context.name = "AppScriptRuntime"
@@ -446,8 +461,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	func REPL() {
 #if os(OSX)
-		NSProcessInfo.processInfo().disableSuddenTermination()
-		NSProcessInfo.processInfo().disableAutomaticTermination("REPL")
+		//NSProcessInfo.processInfo().disableSuddenTermination()
+		//NSProcessInfo.processInfo().disableAutomaticTermination("REPL")
 #endif
 		termiosREPL(
 			{ [unowned self] (line: String) -> Void in
@@ -465,8 +480,11 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			abort: { () -> Void in
 				// EOF'd by Ctrl-D
 #if os(OSX)
+				//NSProcessInfo.processInfo().enableAutomaticTermination("REPL")
 				NSProcessInfo.processInfo().enableSuddenTermination()
-				NSProcessInfo.processInfo().enableAutomaticTermination("REPL")
+				NSApp.replyToApplicationShouldTerminate(true) // now close App if this was deferring a terminate()
+				// FIXME: make sure prompter is deinit'd
+				prompter = nil
 				NSApplication.sharedApplication().terminate(self)
 #endif
 			}

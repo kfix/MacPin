@@ -169,6 +169,16 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 	}
 
     public func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
+
+/*
+		http://stackoverflow.com/a/13621414/3878712
+    	NSSetUncaughtExceptionHandler { exception in
+		    print(exception)
+		    print(exception.callStackSymbols)
+		    prompter = nil // deinit prompter to cleanup the TTY
+		}
+*/
+
 		browserController.extend(AppScriptRuntime.shared.exports)
 		AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
 		AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
@@ -229,6 +239,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		//})
 
 		//warn("focus is on `\(windowController.window?.firstResponder)`")
+
     }
 
 	public func applicationDidBecomeActive(notification: NSNotification) {
@@ -254,12 +265,11 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 
 	public func applicationShouldTerminate(sender: NSApplication) -> NSApplicationTerminateReply {
 		warn()
+		//browserController.close() // kill the tabs
+		//windowController.close() // kill the window
+		// unfocus app?
 #if arch(x86_64) || arch(i386)
-		if prompter != nil {
-			windowController.close() // kill the window
-			// unfocus app?
-			return .TerminateLater
-		}
+		if prompter != nil { return .TerminateLater } // wait for user to EOF the Prompt
 #endif
 		return .TerminateNow
 	}
