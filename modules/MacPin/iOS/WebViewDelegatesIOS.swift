@@ -28,7 +28,7 @@ extension WebViewControllerIOS {
 		//var promptTF: UITextField?
 		alerter.addTextFieldWithConfigurationHandler { (tf) in tf.placeholder = defaultText ?? "" } //; promptTF = tf; }
 
-		let Submit = UIAlertAction(title: "Submit", style: .Default) { [unowned alerter] (_) in 
+		let Submit = UIAlertAction(title: "Submit", style: .Default) { [unowned alerter] (_) in
 			if let tf = alerter.textFields?.first { completionHandler(tf.text) }
 			//completionHandler(promptTF?.text ?? "") //doesn't retain?
 		}
@@ -41,7 +41,7 @@ extension WebViewControllerIOS {
 	}
 
 
-	func _webView(webView: WKWebView, printFrame: WKFrameInfo) { 
+	func _webView(webView: WKWebView, printFrame: WKFrameInfo) {
 		warn("JS: `window.print();`")
 		// do iOS printing here
 	}
@@ -57,11 +57,11 @@ extension WebViewControllerIOS {
 			completionHandler(.PerformDefaultHandling, nil)
 			return
 		}
-		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.URL ?? String())]")	
+		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.URL ?? String())]")
 
 		let alerter = UIAlertController(title: webView.title, message: "auth challenge", preferredStyle: .Alert)
 
-		alerter.addTextFieldWithConfigurationHandler { (tf) in 
+		alerter.addTextFieldWithConfigurationHandler { (tf) in
 			tf.placeholder = "Login"
 	 		if let cred = challenge.proposedCredential, let user = cred.user { tf.placeholder = user }
 		}
@@ -72,7 +72,7 @@ extension WebViewControllerIOS {
 			tf.secureTextEntry = true
 		}
 
-		let Login = UIAlertAction(title: "Login", style: .Default) { [unowned alerter] (_) in 
+		let Login = UIAlertAction(title: "Login", style: .Default) { [unowned alerter] (_) in
 			if let user = alerter.textFields?.first, pass = alerter.textFields?[1] {
 				completionHandler(.UseCredential, NSURLCredential(
 					user: user.text ?? "",

@@ -4,7 +4,7 @@
 
 import UIKit
 import WebKit
-	
+
 @objc class WebViewControllerIOS: WebViewController {
 	//var modalPresentationStyle = .OverFullScreen
 	//var modalTransitionStyle = .CrossDissolve // .CoverVertical | .CrossDissolve | .FlipHorizontal
@@ -15,7 +15,7 @@ import WebKit
 		//^ default=true:  https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3641
 		view.autoresizingMask = [.FlexibleHeight , .FlexibleWidth]
 	}
-	
+
 	override func viewWillAppear(animated: Bool) { // window popping up with this tab already selected & showing
 		super.viewWillAppear(animated) // or tab switching into view as current selection
 	}
@@ -23,7 +23,7 @@ import WebKit
 	//override func removeFromParentViewController() { super.removeFromParentViewController() }
 
 	deinit { warn("\(self.dynamicType)") }
-	
+
 	//override func closeTab() { dismissViewControllerAnimated(true, completion: nil); super() }
 
 /*
@@ -61,7 +61,7 @@ extension WebViewControllerIOS { // AppGUI funcs
 	}
 
 	/*
-	func print(sender: AnyObject?) { 
+	func print(sender: AnyObject?) {
 if ([UIPrintInteractionController isPrintingAvailable])
 {
     UIPrintInfo *pi = [UIPrintInfo printInfo];
