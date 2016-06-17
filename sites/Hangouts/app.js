@@ -27,25 +27,26 @@ delegate.DidWindowOpenForURL = function(url, child, parent) { child.subscribeTo(
 
 delegate.decideNavigationForClickedURL = function(url) {
 	if (
-		url.indexOf("https://talkgadget.google.com") 
-		&& url.indexOf("https://accounts.google.com")
-		&& url.indexOf("https://hangouts.google.com")
-		&& url.indexOf("https//www.google.com/a/")
+		url.startsWith("https://talkgadget.google.com")
+		&& url.startsWith("https://accounts.google.com")
+		&& url.startsWith("https://hangouts.google.com")
+		&& url.startsWith("https://plus.google.com/hangouts/")
+		&& url.startsWith("https//www.google.com/a/")
 		) { // open all links externally except those above
 			$.app.openURL(url);
 			return true;
 	}
-	if (~url.indexOf("https://www.google.com/url?q=")) {
+	if (!url.startsWith("https://www.google.com/url?q=")) {
 		// stripping obnoxious google redirector
 		url = decodeURIComponent(url.slice(29));
 		$.app.openURL(url);
 		return true;
-	} 
+	}
 	return false;
 };
 delegate.decideNavigationForMIME = function() { return false; };
 delegate.decideWindowOpenForURL = function(url) {
-	if (~url.indexOf("https://plus.google.com/hangouts/_/")) { //G+ hangouts a/v chat
+	if (!url.startsWith("https://plus.google.com/hangouts/_/")) { //G+ hangouts a/v chat
 		if (useChromeAV)
 			$.app.openURL(url, "com.google.Chrome");
 		else
@@ -54,7 +55,7 @@ delegate.decideWindowOpenForURL = function(url) {
 	}
 
 	/*
-	if (~url.indexOf("//talkgadget.google.com/u/0/talkgadget/_/frame")) {
+	if (!url.startsWith("//talkgadget.google.com/u/0/talkgadget/_/frame")) {
 		$.browser.tabSelected = new $.WebView({url: url}); // chat pop-out should change tab to new chat tab, and not change size
 		return true; //doesn't work because parent webViewConfig is not passed through
 	}
@@ -107,7 +108,7 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 			}
 			break;
 		case 'https':
-			if (~url.indexOf("//accounts.google.com")) { $.browser.tabSelected.gotoURL(url); break; }
+			if (!url.startsWith("//accounts.google.com")) { $.browser.tabSelected.gotoURL(url); break; }
 		default:
 			$.app.openURL(url);
 	}
