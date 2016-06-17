@@ -1,11 +1,5 @@
 import JavaScriptCore
 import AppKit
-/*
-@objc class JSPushableArray<T: AnyObject>: NSArray, JSExport {
-	mutating func push(T) {
-	}
-}
-*/
 
 @objc protocol BrowserViewControllerJS: JSExport { // '$.browser' in app.js
 	var defaultUserAgent: String? { get set } // full UA used for any new tab without explicit UA specified
@@ -24,10 +18,10 @@ import AppKit
 	func unhideApp()
 	func bounceDock()
 	func addShortcut(title: String, _ obj: AnyObject?)
+	func extend(mountObj: JSValue)
 }
 
 @objc protocol BrowserViewController: BrowserViewControllerJS {
-	func extend(mountObj: JSValue)
 	var view: View { get }
 	var title: String? { get set }
 #if os(OSX)
