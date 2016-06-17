@@ -3,9 +3,9 @@
 /// A tabbed contentView for OSX
 
 import WebKit // https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/ChangeLog
+import WebKitPrivates
 import Foundation
 import JavaScriptCore //  https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
-
 
 // http://stackoverflow.com/a/24128149/3878712
 struct WeakThing<T: AnyObject> {
@@ -13,6 +13,23 @@ struct WeakThing<T: AnyObject> {
   init (value: T) {
     self.value = value
   }
+}
+
+// WK C API thunks for IconDatabase
+func faviconChanged(iconDatabase: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: UnsafePointer<Void>) { // WKIconDatabaseDidChangeIconForPageURLCallback
+	warn()
+}
+func faviconsCleared(iconDatabase: WKIconDatabaseRef, clientInfo: UnsafePointer<Void>) { //WKIconDatabaseDidRemoveAllIconsCallback
+	warn()
+}
+func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: UnsafePointer<Void>) { // WKIconDatabaseIconDataReadyForPageURLCallback
+	let browser: BrowserViewControllerOSX = unsafeBitCast(clientInfo, BrowserViewControllerOSX.self) // translate pointer to browser instance
+	WKIconDatabaseRetainIconForURL(iconDB, pageURL)
+	let iconurl: NSURL = WKURLCopyCFURL(CFAllocatorGetDefault().takeUnretainedValue(), WKIconDatabaseCopyIconURLForPageURL(iconDB, pageURL))
+	warn("WKIcon! w00t! \(iconurl)")
+	let url = WKURLCopyCFURL(kCFAllocatorDefault, pageURL) as NSURL
+	for tab in browser.tabs.filter({ $0.URL == url }) { tab.favicon.url = iconurl }
+	//let iconurl = WKStringCopyCFString(CFAllocatorGetDefault().takeUnretainedValue(), WKURLCopyString(WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithUTF8CString(url)))) as NSString
 }
 
 @objc class TabViewController: NSTabViewController {
@@ -53,7 +70,17 @@ struct WeakThing<T: AnyObject> {
 
 	var cornerRadius = CGFloat(0.0) // increment above 0.0 to put nice corners on the window FIXME userDefaults
 
-	func close() { NSApplication.sharedApplication().terminate(self) }
+	func close() {
+		dispatch_sync(dispatch_get_main_queue(), {
+			self.tabViewItems.forEach {
+				$0.view?.removeFromSuperviewWithoutNeedingDisplay()
+				self.removeTabViewItem($0)
+			}
+			//self.windowController?.close()
+			//self.removeFromParentViewController()
+			//NSApplication.sharedApplication().terminate(self)
+		})
+	}
 
 	override func insertTabViewItem(tab: NSTabViewItem, atIndex: Int) {
 		if let view = tab.view {
@@ -80,7 +107,7 @@ struct WeakThing<T: AnyObject> {
 			tab.image = nil
 		}
 		super.removeTabViewItem(tab)
-		tabView.selectNextTabViewItem(self) //safari behavior
+		if tabView.tabViewItems.count != 0 { tabView.selectNextTabViewItem(self) } //safari behavior
 	}
 
 	override func tabView(tabView: NSTabView, willSelectTabViewItem tabViewItem: NSTabViewItem?) {
@@ -97,7 +124,9 @@ struct WeakThing<T: AnyObject> {
 
 	override func tabViewDidChangeNumberOfTabViewItems(tabView: NSTabView) {
 		warn("@\(tabView.tabViewItems.count)")
-		if tabView.tabViewItems.count == 0 { close() }
+		//if tabView.tabViewItems.count == 0 { view.window?.windowController?.close() } // kicks off automatic app termination
+		//if tabView.tabViewItems.count == 0 { removeFromParentViewController() }
+		if tabView.tabViewItems.count == 0 { view.removeFromSuperview() }
 	}
 
 	override func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [String] {
@@ -290,8 +319,19 @@ struct WeakThing<T: AnyObject> {
 
 class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
+	var iconClient = WKIconDatabaseClientV1(
+		base: WKIconDatabaseClientBase(),
+		didChangeIconForPageURL: faviconChanged,
+		didRemoveAllIcons: faviconsCleared,
+		iconDataReadyForPageURL: faviconReady
+	)
+
 	convenience init() {
 		self.init(nibName: nil, bundle: nil)
+
+		// send browser all iconDB callbacks so it can update the tab.image's -> FavIcons
+		// internally, webcore has a delegation model for grabbing icon URLs: https://bugs.webkit.org/show_bug.cgi?id=136059#c1
+		iconClient.base = WKIconDatabaseClientBase(version: 1, clientInfo: unsafeAddressOf(self))
 	}
 
 	deinit { warn(description) }
@@ -356,7 +396,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		// FIXME: .count broken?
 		// objc computed properties get added to JSContext as, not getter/setters
 		get {
-			return childViewControllers.flatMap({ $0.view as? MPWebView })
+			return childViewControllers.flatMap({ $0 as? WebViewControllerOSX }).flatMap({ $0.webview })
 			// returns mutable *copy*, which is why .push() can't work: https://opensource.apple.com/source/JavaScriptCore/JavaScriptCore-7537.77.1/API/JSValue.mm
 		}
 
@@ -434,6 +474,20 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			//let gridItem = tabGrid.newItemForRepresentedObject(wvc)
 			//gridItem.imageView = wv.favicon.icon
 			//gridItem.textField = wv.title
+
+			// set the browser as the new webview's iconClient
+			// FIXME: should only do this once per unique processPool, tabs.filter( { $0.configuration.processProol == wvc.webview.configuration.processPool } ) ??
+			wvc.webview.iconClient = iconClient
+			/*
+			if let iconDB = wvc.webview.iconDB, context = wvc.webview.context {
+				//https://github.com/WebKit/webkit/blob/91700b336a0d0abf1be06c627e3f41281b2728a3/Source/WebCore/loader/icon/IconDatabase.cpp#L114 must close IconDB, setClient, and reopen
+				WKIconDatabaseClose(iconDB)
+			    WKIconDatabaseSetIconDatabaseClient(iconDB, &iconClient.base)
+				WKIconDatabaseCheckIntegrityBeforeOpening(iconDB)
+				WKIconDatabaseEnableDatabaseCleanup(iconDB)
+				WKContextSetIconDatabasePath(context, WKStringCreateWithUTF8CString("icondb.sqlite".UTF8String)) //default path // should report success https://bugs.webkit.org/show_bug.cgi?id=117632
+		    }
+		    */
 		}
 	}
 

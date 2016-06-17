@@ -1,4 +1,4 @@
-/// MacPin WKWebView subclass
+// MacPin WKWebView subclass
 ///
 /// Add some porcelain to WKWebViews
 
@@ -7,6 +7,22 @@ import WebKit
 import WebKitPrivates
 import JavaScriptCore
 import UTIKit
+
+var globalIconClient = WKIconDatabaseClientV1(
+	base: WKIconDatabaseClientBase(version: 1, clientInfo: nil),
+	didChangeIconForPageURL: { (iconDatabase, pageURL, clientInfo) -> Void in
+		warn("changed thunk!")
+		return
+	},
+	didRemoveAllIcons: { (iconDatabase, clientInfo) -> Void in
+		warn("thunk!")
+		return
+	},
+	iconDataReadyForPageURL: { (iconDatabase, pageURL, clientInfo) -> Void in
+		warn("ready thunk!")
+		return
+	}
+)
 
 @objc protocol WebViewScriptExports: JSExport { // $.WebView & $.browser.tabs[WebView]
 	init?(object: [String:AnyObject]) //> new WebView({url: 'http://example.com'});
@@ -25,7 +41,6 @@ import UTIKit
 	// var userLabel // allow to be initiated with a trackable tag
 	var injected: [String] { get }
 	static var MatchedAddressOptions: [String:String] { get set }
-	func close()
 	@objc(evalJS::) func evalJS(js: String, callback: JSValue?)
 	@objc(asyncEvalJS:::) func asyncEvalJS(js: String, delay: Double, callback: JSValue?)
 	func loadURL(urlstr: String) -> Bool
@@ -34,11 +49,14 @@ import UTIKit
 	func postinject(script: String) -> Bool
 	func addHandler(handler: String) // FIXME kill
 	func subscribeTo(handler: String)
+	func console()
+	func scrapeIcon()
 	//func goBack()
 	//func goForward()
 	//func reload()
 	//func reloadFromOrigin()
 	//func stopLoading() -> WKNavigation?
+	//var snapshotURL: String { get } // gets a data:// of the WKThumbnailView
 }
 
 @objc class MPWebView: WKWebView, WebViewScriptExports {
@@ -67,14 +85,58 @@ import UTIKit
 		set(agent) { if !agent.isEmpty { _customUserAgent = agent } }
 	}
 
-	var topFrame: WKView? {
-		get {
-			guard let wkview = subviews.first as? WKView else { return nil }
-			return wkview
+#if !STP // no inner WKView in the near future: https://bugs.webkit.org/show_bug.cgi?id=150174#c0
+	var topFrame: WKView { get { return subviews.first as! WKView } }
+#endif
+	//let page = self.browsingContextController()._pageRef // https://github.com/WebKit/webkit/blob/e41847fbe7dd0bf191a8dafc2c3a5d965e96d277/Source/WebKit2/UIProcess/Cocoa/WebViewImpl.h#L368
+	//let browsingContext = WKWebProcessPlugInBrowserContextController.lookUpBrowsingContextFromHandle(_handle)
+	//let page = browsingContext._pageRef
+	//let browsingContextController = WKBrowsingContextController._browsingContextControllerForPageRef(_pageForTesting())
+		// register a custom protocol to handle X-Host: https://github.com/WebKit/webkit/blob/fa0c14782ed939dabdb52f7cffcb1fd0254d4ef0/Tools/TestWebKitAPI/cocoa/TestProtocol.mm
+		// https://github.com/WebKit/webkit/blob/49cc03e4bf77a42908478cfbda938088cf1a8567/Source/WebKit2/NetworkProcess/CustomProtocols/CustomProtocolManager.h
+		//   registerProtocolClass(NSURLSessionConfiguration) <- that could let you configure ad-hoc CFProxySupport dictionaries: http://stackoverflow.com/a/28101583/3878712
+		// NSURLSessionConfiguration ? https://www.objc.io/issues/5-ios7/from-nsurlconnection-to-nsurlsession/
+
+	var context: WKContextRef? = nil
+	var iconDB: WKIconDatabaseRef? = nil
+	var iconClient = WKIconDatabaseClientV1() {
+		didSet {
+			if let iconDB = iconDB, context = context {
+				//https://github.com/WebKit/webkit/blob/91700b336a0d0abf1be06c627e3f41281b2728a3/Source/WebCore/loader/icon/IconDatabase.cpp#L114 must close IconDB, setClient, and reopen
+				WKIconDatabaseClose(iconDB)
+			    WKIconDatabaseSetIconDatabaseClient(iconDB, &iconClient.base)
+				WKIconDatabaseCheckIntegrityBeforeOpening(iconDB)
+				WKIconDatabaseEnableDatabaseCleanup(iconDB)
+				WKContextSetIconDatabasePath(context, WKStringCreateWithUTF8CString("icondb.sqlite".UTF8String)) // is relative to CWD // should report success https://bugs.webkit.org/show_bug.cgi?id=117632
+		   }
 		}
 	}
 
+	// a long lived thumbnail viewer should construct and store thumbviews itself, this is for convenient dumping
+#if !STP
+	var thumbnail: _WKThumbnailView {
+		//get { return thumbnailView() }
+		get { return _WKThumbnailView(frame: CGRectZero, fromWKView: topFrame) }
+	}
+#endif
+
+/*
+#if STP
+	var _drawsTransparentBackground: Bool {
+		get { return _drawsBackground }
+		set { _drawsBackground = newValue }
+	}
+#endif
+*/
+
 #if os(OSX)
+#if !STP
+	// https://github.com/WebKit/webkit/blob/8c504b60d07b2a5c5f7c32b51730d3f6f6daa540/Source/WebKit2/UIProcess/mac/WebInspectorProxyMac.mm#L679
+	var _inspectorAttachmentView: NSView? {
+		get { return topFrame._inspectorAttachmentView }
+		set { topFrame._inspectorAttachmentView = newValue }
+	}
+#endif
 	var transparent: Bool {
 		get { return _drawsTransparentBackground }
 		set(transparent) {
@@ -98,9 +160,10 @@ import UTIKit
 
 	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
-		let configuration = config ?? WKWebViewConfiguration() // NSURLSessionConfiguration ? https://www.objc.io/issues/5-ios7/from-nsurlconnection-to-nsurlsession/
+		let configuration = config ?? WKWebViewConfiguration()
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
 #if os(OSX)
+		//geolocationProvider = <GeolocationProviderMock>(context)
 		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
 #endif
@@ -109,6 +172,7 @@ import UTIKit
 			prefs._storageBlockingPolicy = .BlockAll
 		}
 		prefs._allowFileAccessFromFileURLs = true // file://s can xHr other file://s
+		//prefs._allowUniversalAccessFromFileURLs = true
 		//prefs._isStandalone = true // `window.navigator.standalone == true` mimicing MobileSafari's springboard-link shell mode
 		//prefs.minimumFontSize = 14 //for blindies
 		prefs.javaScriptCanOpenWindowsAutomatically = true;
@@ -127,6 +191,7 @@ import UTIKit
 				configuration.processPool = config?.processPool ?? MPWebView.self.sharedWebProcessPool
 			}
 		}
+
 		self.init(frame: CGRectZero, configuration: configuration)
 #if SAFARIDBG
 		_allowsRemoteInspection = true // start webinspectord child
@@ -144,6 +209,11 @@ import UTIKit
 		_applicationNameForUserAgent = "Version/8.0 Mobile/12F70 Safari/600.1.4"
 #endif
 		if let agent = agent { if !agent.isEmpty { _customUserAgent = agent } }
+
+		let context = WKPageGetContext(_pageForTesting())
+		self.context = context
+	    WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString("http".UTF8String))
+		self.iconDB = WKContextGetIconDatabase(context)
 	}
 
 	convenience required init?(object: [String:AnyObject]) {
@@ -184,7 +254,13 @@ import UTIKit
 	}
 
 	override var description: String { return "<\(self.dynamicType)> `\(title ?? String())` [\(URL ?? String())]" }
-	deinit { warn(description) }
+	//func toString() -> String { return description } // $.browser.tabs[0].__proto__.toString = function(){ return this.title; }
+
+	deinit {
+		iconDB = nil
+		context = nil
+		warn(description)
+	}
 
 	@objc(evalJS::) func evalJS(js: String, callback: JSValue? = nil) {
 		if let callback = callback where callback.isObject { //is a function or a {}
@@ -231,8 +307,6 @@ import UTIKit
 		}
 	}
 
-	func close() { removeFromSuperview() } // signal VC too?
-
 	func gotoURL(url: NSURL) {
 		guard #available(OSX 10.11, iOS 9.1, *) else { loadRequest(NSURLRequest(URL: url)); return }
 		guard url.scheme == "file" else { loadRequest(NSURLRequest(URL: url)); return }
@@ -253,14 +327,43 @@ import UTIKit
 	}
 
 	func scrapeIcon() { // extract icon location from current webpage and initiate retrieval
-		evaluateJavaScript("if (icon = document.head.querySelector('link[rel$=icon]')) { icon.href };", completionHandler:{ [unowned self] (result: AnyObject?, exception: NSError?) -> Void in
-			if let href = result as? String { // got link for icon or apple-touch-icon from DOM
-				self.loadIcon(href)
-			} else if let url = self.URL, iconurlp = NSURLComponents(URL: url, resolvingAgainstBaseURL: false) where !((iconurlp.host ?? "").isEmpty) {
-				iconurlp.path = "/favicon.ico" // request a root-of-domain favicon
-				self.loadIcon(iconurlp.string!)
+		if let iconDB = iconDB { // scrape icon from WebCore's IconDatabase
+			if let wkurl = WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithCFURL(URL)) as? WKURLRef where wkurl != nil {
+				WKIconDatabaseRetainIconForURL(iconDB, wkurl)
+				favicon.url = WKURLCopyCFURL(kCFAllocatorDefault, wkurl) as NSURL
+
+/*
+				let cgicon = WKIconDatabaseTryGetCGImageForURL(iconDB, wkurl, WKSize()).takeUnretainedValue()
+#if os(OSX)
+				favicon.icon = NSImage(CGImage: cgicon, size: NSZeroSize)
+				favicon.icon16 = NSImage(CGImage: cgicon, size: NSZeroSize)
+#elseif os(iOS)
+				favicon.icon = UIImage(CGImage: cgicon, size: UIZeroSize)
+#endif
+*/
+				/*
+				if let cgicon = WKIconDatabaseTryGetCGImageForURL(iconDB, wkurl, WKSize(32, 32)) as? Image where cgicon != nil {
+					favicon.icon = Image(CGImage: cgicon)
+				} else if let cgicon16 = WKIconDatabaseTryGetCGImageForURL(iconDB, wkurl, WKSize(16, 16)) as? Image where cgicon16 != nil {
+					favicon.icon16 = Image(CGImage: cgicon16)
+				}
+				if let wkdata = WKIconDatabaseCopyIconDataForPageURL(iconDB, wkurl) as? WKDataRef where wkdata != nil {
+					let bytes = WKDataGetBytes(wkdata)
+					favicon.data = NSData(bytes, bytes.length)
+				}
+				*/
 			}
-		})
+		} else { // scrape icon from JS DOM
+			evaluateJavaScript("if (icon = document.head.querySelector('link[rel$=icon]')) { icon.href };", completionHandler:{ [unowned self] (result: AnyObject?, exception: NSError?) -> Void in
+				if let href = result as? String { // got link for icon or apple-touch-icon from DOM
+					// FIXME: very rarely this crashes if a page closes/reloads itself during the update closure
+					self.loadIcon(href)
+				} else if let url = self.URL, iconurlp = NSURLComponents(URL: url, resolvingAgainstBaseURL: false) where !((iconurlp.host ?? "").isEmpty) {
+					iconurlp.path = "/favicon.ico" // request a root-of-domain favicon
+					self.loadIcon(iconurlp.string!)
+				}
+			})
+		}
 	}
 
 	func loadIcon(icon: String) -> Bool {
@@ -346,10 +449,11 @@ import UTIKit
 			case "copyAsPDF": fallthrough
 			case "console": fallthrough
 			case "saveWebArchive": fallthrough
+			case "close": fallthrough
 			case "savePage": return true
-			//case "printWebView:": return true // _printOperation not avail in 10.11.2's WebKit
+			case "printWebView:": return true
 			default:
-				warn(anItem.action().description)
+				warn("not capturing selector but passing to super: \(anItem.action())")
 				return super.validateUserInterfaceItem(anItem)
 		}
 
@@ -415,19 +519,31 @@ import UTIKit
 */
 
 	//func dumpImage() -> NSImage { return NSImage(data: view.dataWithPDFInsideRect(view.bounds)) }
+	//var snapshotURL: String { get { NSImage(data: thumbnail.dataWithPDFInsideRect(thumbnail.bounds)) } } //data::
+	// http://gauravstomar.blogspot.com/2012/08/convert-uiimage-to-base64-and-vice-versa.html
+	// http://www.cocoabuilder.com/archive/cocoa/318060-base64-encoding-of-nsimage.html#318071
+	// http://stackoverflow.com/questions/392464/how-do-i-do-base64-encoding-on-iphone-sdk
+
 	func copyAsPDF() {
 		let pb = NSPasteboard.generalPasteboard()
 		pb.clearContents()
 		writePDFInsideRect(bounds, toPasteboard: pb)
 	}
 
-	func printWebView(sender: AnyObject?) { _printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo()) }
+	func printWebView(sender: AnyObject?) {
+#if STP
+		// _printOperation not avail in 10.11.4's WebKit
+		let printer = _printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo())
+		printer.showsPrintPanel = true
+		printer.runOperation()
+#endif
+	}
 
 	func console() {
-		if let wkview = topFrame {
-			let inspector = WKPageGetInspector(wkview.pageRef)
+		let inspector = WKPageGetInspector(_pageForTesting())
+		dispatch_async(dispatch_get_main_queue(), {
 			WKInspectorShowConsole(inspector); // ShowConsole, Hide, Close, IsAttatched, Attach, Detach
-		}
+		})
 	}
 
 #endif

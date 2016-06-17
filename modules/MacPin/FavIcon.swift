@@ -26,19 +26,22 @@ let NSImageNameApplicationIcon = "icon"
 	}
 #endif
 
-	var data: NSData? = nil
+	var data: NSData? = nil {
+		didSet {
+			if let data = data, img = IconImage(data: data) {
+				self.icon = img
+#if os(OSX)
+				self.icon16 = img
+#endif
+			}
+		}
+	}
 	var url: NSURL? = nil {
 		didSet {
 			if let url = url {
 				warn("setting favicon.icon to = \(url)")
 				FavIcon.grabFavIcon(url) { [unowned self] (data) in
 					self.data = data
-					if let img = IconImage(data: data) {
-						self.icon = img
-#if os(OSX)
-						self.icon16 = img
-#endif
-					}
 				}
 			}
 		}

@@ -64,15 +64,22 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 
 extension WebViewController: WKUIDelegate { } // javascript prompts, implemented per-platform
 
-extension WebViewController: WKNavigationDelegate {
+extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 	func webView(webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
 		if let url = webView.URL {
 			warn("'\(url)'")
 			// check url against regex'd keys of MatchedAddressOptions
 			// or just call a JS delegate to do that?
+
+			if let webview = webView as? MPWebView, iconDB = webview.iconDB { // pull icon from WebCore's IconDatabase if its already cached
+				if let wkurl = WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithCFURL(url)) as? WKURLRef where wkurl != nil {
+					WKIconDatabaseRetainIconForURL(iconDB, wkurl)
+					webview.favicon.url = WKURLCopyCFURL(kCFAllocatorDefault, wkurl) as NSURL
+				}
+			}
 		}
 #if os(iOS)
-		UIApplication.sharedApplication().networkActivityIndicatorVisible = true
+		UIApplication.sharedApplication().networkActivityIndicatorVisible = true // use webview._networkRequestsInProgress ??
 #endif
 	}
 
@@ -160,7 +167,7 @@ extension WebViewController: WKNavigationDelegate {
 
 	func webView(webView: WKWebView, didCommitNavigation navigation: WKNavigation!) {
 		//content starts arriving...I assume <body> has materialized in the DOM?
-		(webView as? MPWebView)?.scrapeIcon()
+		//(webView as? MPWebView)?.scrapeIcon()
 	}
 
 	func webView(webView: WKWebView, decidePolicyForNavigationResponse navigationResponse: WKNavigationResponse, decisionHandler: (WKNavigationResponsePolicy) -> Void) {
@@ -186,7 +193,8 @@ extension WebViewController: WKNavigationDelegate {
 				if let cd = headers["Content-Disposition"] where cd.hasPrefix("attachment") {
 					// JS hook?
 					warn("got attachment! \(cd) \(fn)")
-					decisionHandler(WKNavigationResponsePolicy(rawValue: WKNavigationResponsePolicy.Allow.rawValue + 1)!) // .BecomeDownload - offer to download
+					//decisionHandler(WKNavigationResponsePolicy(rawValue: WKNavigationResponsePolicy.Allow.rawValue + 1)!) // .BecomeDownload - offer to download
+					decisionHandler(_WKNavigationResponsePolicyBecomeDownload)
 					return
 				}
 			}
@@ -194,7 +202,7 @@ extension WebViewController: WKNavigationDelegate {
 
 		if !navigationResponse.canShowMIMEType {
 			if !jsdelegate.tryFunc("handleUnrenderableMIME", mime, url.description, fn, webView) {
-				//let uti = UTI(MIMEType: mime) 
+				//let uti = UTI(MIMEType: mime)
 				warn("cannot render requested MIME-type:\(mime) @ \(url)")
 				// if scheme is not http|https && askToOpenURL(url)
 					 // .Cancel & return if we open()'d
@@ -228,7 +236,7 @@ extension WebViewController: WKNavigationDelegate {
 		//let title = webView.title ?? String()
 		//let url = webView.URL ?? NSURL(string:"")!
 		//warn("\"\(title)\" [\(url)]")
-		//scrapeIcon(webView)
+		//(webView as? MPWebView)?.scrapeIcon()
 #if os(iOS)
 		UIApplication.sharedApplication().networkActivityIndicatorVisible = false
 #endif
@@ -285,3 +293,6 @@ extension WebViewController: WKNavigationDelegate {
 		webView.reload()
 	}
 }
+
+extension WebViewController: _WKFormDelegate { } // form input hooks, implemented per-platform
+extension WebViewController: _WKFindDelegate { } // text finder handling, implemented per-platform
