@@ -66,7 +66,6 @@ import WebKitPrivates
 			window.invalidateShadow()
 			window.toolbar?.showsBaselineSeparator = window.titlebarAppearsTransparent ? false : !webview.transparent
 		}
-
 	}
 
 	override func viewDidDisappear() {
@@ -90,7 +89,7 @@ import WebKitPrivates
 
 	override func viewWillLayout() {
 		//webview.resizeSubviewsWithOldSize(CGSizeZero)
-		webview.topFrame?._inspectorAttachmentView = webview // https://github.com/WebKit/webkit/blob/8c504b60d07b2a5c5f7c32b51730d3f6f6daa540/Source/WebKit2/UIProcess/mac/WebInspectorProxyMac.mm#L679
+		webview._inspectorAttachmentView = webview
 		super.viewWillLayout()
 	}
 
@@ -122,11 +121,11 @@ extension WebViewControllerOSX: NSMenuDelegate {
 extension WebViewControllerOSX { // AppGUI funcs
 
 	override func closeTab() {
-		webview.topFrame?._inspectorAttachmentView = nil
+		webview._inspectorAttachmentView = nil
 		super.closeTab()
 	}
 
-	func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }
+	func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }  // WKPageForceRepaint(webview.topFrame?.pageRef, 0, didForceRepaint);
 
 	//FIXME: support new scaling https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
 	func zoomIn() { webview.magnification += 0.2 }

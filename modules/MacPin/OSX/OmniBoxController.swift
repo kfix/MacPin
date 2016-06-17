@@ -16,6 +16,16 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	var isLoading: Bool = false { didSet { needsDisplay = true } }
 	var progress: Double = Double(0.0) { didSet { needsDisplay = true } }
 
+	//override init(frame frameRect: NSRect) {
+	//	self.super(frame: frameRect)
+	func viewDidLoad() {
+		let appearance = NSUserDefaults.standardUserDefaults().stringForKey("AppleInterfaceStyle") ?? "Light"
+		if appearance == "Dark" {
+			drawsBackground = false
+			textColor = NSColor.labelColor()
+		}
+	}
+
 	override func drawRect(dirtyRect: NSRect) {
 		if isLoading {
 			// draw a Safari style progress-line along edge of the text box's focus ring
@@ -57,7 +67,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 				view.nextKeyView = wv
 			}
 		}
-		willSet(newwv) { 
+		willSet(newwv) {
 			if let _ = webview {
 				nextResponder = nil
 				view.nextKeyView = nil
@@ -75,7 +85,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	override func loadView() { view = urlbox } // NIBless
 
 	func popup(webview: MPWebView?) {
-		guard let webview = webview else { return } 
+		guard let webview = webview else { return }
 		MacPinApp.sharedApplication().appDelegate?.browserController.tabSelected = webview
 	}
 
@@ -95,10 +105,13 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	override func viewDidLoad() {
 		super.viewDidLoad()
  		// prepareForReuse() {...} ?
+		let appearance = NSUserDefaults.standardUserDefaults().stringForKey("AppleInterfaceStyle") ?? "Light"
+		if appearance == "Dark" {
+			urlbox.drawsBackground = false
+			urlbox.textColor = NSColor.labelColor()
+		}
 		urlbox.wantsLayer = true
 		urlbox.bezelStyle = .RoundedBezel
-		urlbox.drawsBackground = false
-		urlbox.textColor = NSColor.labelColor() 
 		urlbox.toolTip = ""
 		//urlbox.menu = NSMenu //ctrl-click context menu
 		// search with DuckDuckGo
@@ -117,7 +130,6 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			cell.usesSingleLineMode = true
 			cell.focusRingType = .None
 			//cell.currentEditor()?.delegate = self // do live validation of input URL before Enter is pressed
-			// FIXME: handle cmd+enter for open in new tab
 		}
 
 		// should have a grid of all tabs below the urlbox, safari style. NSCollectionView?
@@ -134,7 +146,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	}
 
 	func userEnteredURL() {
-		if let tf = view as? NSTextField, url = validateURL(tf.stringValue, fallback: { [unowned self] (urlstr: String) -> NSURL? in 
+		if let tf = view as? NSTextField, url = validateURL(tf.stringValue, fallback: { [unowned self] (urlstr: String) -> NSURL? in
 			if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr, self.webview ?? false) { return nil } // app.js did its own thing FIXME: it should be able to return URL<->NSURL
 			return nil
 		}){
@@ -152,8 +164,8 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			//NSBeep()
 		}
 	}
-	
-	override func cancelOperation(sender: AnyObject?) { 
+
+	override func cancelOperation(sender: AnyObject?) {
 		view.resignFirstResponder() // relinquish key focus to webview
 		presentingViewController?.dismissViewController(self) //if a thoust art a popover, close thyself
 	}
@@ -198,15 +210,16 @@ extension OmniBoxController: NSControlTextEditingDelegate {
 				fallthrough
 			//case "insertLineBreak:":
 			//   .ShiftKeyMask gotoURL privately (Safari opens new window with Shift)
-			//   .AltKeyMask  // gotoURL w/ new session privately (Safari downloads with Alt 
+			//   .AltKeyMask  // gotoURL w/ new session privately (Safari downloads with Alt
 
 			// when Selector("insertTab:"):
+			// scrollToBeginningOfDocument: scrollToEndOfDocument:
 			default: return false
 		}
 	}
 }
 
-extension OmniBoxController: NSPopoverDelegate {	
+extension OmniBoxController: NSPopoverDelegate {
 	func popoverWillShow(notification: NSNotification) {
 		//urlbox.sizeToFit() //fixme: makes the box undersized sometimes
 	}
