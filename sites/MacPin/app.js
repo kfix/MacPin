@@ -26,7 +26,7 @@ delegate.launchURL = function(url) {
 		addr = comps.shift();
 	switch (scheme + ':') {
 		default:
-			$.browser.tabSelected = new $.WebView({url: url});
+			$.browser.tabSelected = new $.WebView({url: url}); //FIXME: retains???!
 	}
 };
 
@@ -48,6 +48,20 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 };
 
 delegate.setAgent = function(agent) { $.browser.tabSelected.userAgent = agent; };
+delegate.img2data = function(tab) {
+	if (!tab) tab = $.browser.tabSelected;
+	tab.evalJS(`
+		var img = document.images[0];
+		img.crossOrigin='Anonymous';
+		var canvas = document.createElement('canvas');
+		var ctx = canvas.getContext('2d');
+		canvas.width = img.naturalWidth;
+		canvas.height = img.naturalHeight;
+		ctx.drawImage(img,0,0);
+		window.open(canvas.toDataURL('image/jpeg'));
+	`)
+};
+
 delegate.testAS = function() { $.app.callJXALibrary('test', 'doTest', Array.prototype.slice.call(arguments)); };
 
 delegate.AppFinishedLaunching = function() {
@@ -69,7 +83,10 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('see.js console', ['injectTab', 'seeDebugger', 'see.init();']); // http://davidbau.com/archives/2013/04/19/debugging_locals_with_seejs.html
 	$.browser.addShortcut('Simulate TouchEvents', ['injectTab', 'thumbs']); // http://mwbrooks.github.io/thumbs.js/
 	$.browser.addShortcut('Log DnDs to console', ['injectTab', 'dnd']);
+	$.browser.addShortcut('pop-open 1st image as data:// URL', ['img2data']);
 	$.browser.addShortcut('test AppleScript', ['testAS', "whooo", '1']);
+
+	// a dual-mode REPL like this loaded in another browser would be nice: http://reality.hk/2014/01/12/building-a-ios-ruby-repl/
 
 	if ($.app.doesAppExist("com.google.Chrome")) $.browser.addShortcut('Open in Chrome', ['openInChrome']);
 
