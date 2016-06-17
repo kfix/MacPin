@@ -1,5 +1,16 @@
 import Foundation
 import CoreLocation
+// generates Geolocation updates as JavaScript events in response to shimmed window.geolocation's postMessages
+
+// WebKit2 has built-geolocation on iOS:
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/ios/WKGeolocationProviderIOS.mm
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebGeolocationCoreLocationProvider.mm
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKProcessGroupPrivate.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKProcessPoolInternal.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKUIDelegatePrivate.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/WebCoreSupport/WebGeolocationClient.cpp
+// https://github.com/WebKit/webkit/blob/ce24e8d887968296a2acebd96c31797d36fb08ca/Tools/TestWebKitAPI/Tests/WebKit2/Geolocation.cpp#L104
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/C/WKGeolocationPermissionRequest.h
 
 class Geolocator: NSObject  {
 	static let shared = Geolocator() // create & export the singleton
@@ -42,6 +53,7 @@ extension Geolocator: CLLocationManagerDelegate {
 			currentLocation = location
 			warn("lat: \(location.coordinate.latitude) lon:\(location.coordinate.longitude)")
 
+			// https://github.com/WebKit/webkit/blob/8c504b60d07b2a5c5f7c32b51730d3f6f6daa540/Tools/WebKitTestRunner/InjectedBundle/InjectedBundle.cpp#L457
 			AppScriptRuntime.shared.jsdelegate.tryFunc("updateGeolocation", location.coordinate.latitude, location.coordinate.longitude)
 			for subscriber in subscribers {
 				subscriber.evalJS( //for now, send an omnibus event with all varnames values
