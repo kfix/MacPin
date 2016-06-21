@@ -85,9 +85,6 @@ var globalIconClient = WKIconDatabaseClientV1(
 		set(agent) { if !agent.isEmpty { _customUserAgent = agent } }
 	}
 
-#if !STP // no inner WKView in the near future: https://bugs.webkit.org/show_bug.cgi?id=150174#c0
-	var topFrame: WKView { get { return subviews.first as! WKView } }
-#endif
 	//let page = self.browsingContextController()._pageRef // https://github.com/WebKit/webkit/blob/e41847fbe7dd0bf191a8dafc2c3a5d965e96d277/Source/WebKit2/UIProcess/Cocoa/WebViewImpl.h#L368
 	//let browsingContext = WKWebProcessPlugInBrowserContextController.lookUpBrowsingContextFromHandle(_handle)
 	//let page = browsingContext._pageRef
@@ -113,10 +110,9 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 	// a long lived thumbnail viewer should construct and store thumbviews itself, this is for convenient dumping
-#if !STP
+#if STP
 	var thumbnail: _WKThumbnailView {
-		//get { return thumbnailView() }
-		get { return _WKThumbnailView(frame: CGRectZero, fromWKView: topFrame) }
+		get { return thumbnailView() }
 	}
 #endif
 
@@ -130,13 +126,26 @@ var globalIconClient = WKIconDatabaseClientV1(
 */
 
 #if os(OSX)
-#if !STP
+
+#if !STP // no inner WKView in STP, iOS10, & Sierra: https://bugs.webkit.org/show_bug.cgi?id=150174#c0
 	// https://github.com/WebKit/webkit/blob/8c504b60d07b2a5c5f7c32b51730d3f6f6daa540/Source/WebKit2/UIProcess/mac/WebInspectorProxyMac.mm#L679
 	var _inspectorAttachmentView: NSView? {
-		get { return topFrame._inspectorAttachmentView }
-		set { topFrame._inspectorAttachmentView = newValue }
+		// when inspector is open, subviews.first is actually the inspector (WKWebInspectorWKWebView), not the WKView
+		// tabitem.view.subviews = [ WKWebInspectorView, WKView, ... ]
+		get {
+			if let topFrame = subviews.first as? WKView {
+				return topFrame._inspectorAttachmentView
+			}
+			return nil
+		}
+		set {
+			if let topFrame = subviews.first as? WKView {
+				topFrame._inspectorAttachmentView = newValue
+			}
+		}
 	}
 #endif
+
 	var transparent: Bool {
 		get { return _drawsTransparentBackground }
 		set(transparent) {
