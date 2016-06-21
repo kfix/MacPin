@@ -109,10 +109,13 @@ var globalIconClient = WKIconDatabaseClientV1(
 		}
 	}
 
-	// a long lived thumbnail viewer should construct and store thumbviews itself, this is for convenient dumping
 #if STP
+	// a long lived thumbnail viewer should construct and store thumbviews itself, this is for convenient dumping
 	var thumbnail: _WKThumbnailView {
-		get { return thumbnailView() }
+		get {
+			_thumbnailView.requestSnapshot()
+			return _thumbnailView
+		}
 	}
 #endif
 

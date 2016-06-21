@@ -25,11 +25,13 @@ func faviconsCleared(iconDatabase: WKIconDatabaseRef, clientInfo: UnsafePointer<
 func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: UnsafePointer<Void>) { // WKIconDatabaseIconDataReadyForPageURLCallback
 	let browser: BrowserViewControllerOSX = unsafeBitCast(clientInfo, BrowserViewControllerOSX.self) // translate pointer to browser instance
 	WKIconDatabaseRetainIconForURL(iconDB, pageURL)
-	let iconurl: NSURL = WKURLCopyCFURL(CFAllocatorGetDefault().takeUnretainedValue(), WKIconDatabaseCopyIconURLForPageURL(iconDB, pageURL))
-	warn("WKIcon! w00t! \(iconurl)")
 	let url = WKURLCopyCFURL(kCFAllocatorDefault, pageURL) as NSURL
-	for tab in browser.tabs.filter({ $0.URL == url }) { tab.favicon.url = iconurl }
-	//let iconurl = WKStringCopyCFString(CFAllocatorGetDefault().takeUnretainedValue(), WKURLCopyString(WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithUTF8CString(url)))) as NSString
+	for tab in browser.tabs.filter({ $0.URL == url }) {
+		//let iconurl = WKStringCopyCFString(CFAllocatorGetDefault().takeUnretainedValue(), WKURLCopyString(WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithUTF8CString(url)))) as NSString
+		let iconurl: NSURL = WKURLCopyCFURL(kCFAllocatorDefault, WKIconDatabaseCopyIconURLForPageURL(iconDB, pageURL))
+		// ^^ FIXME: EXEC_BAD_ACCS on disappeared tabs?
+		tab.favicon.url = iconurl
+	}
 }
 
 @objc class TabViewController: NSTabViewController {
@@ -58,6 +60,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 	enum BrowserButtons: String {
 		case OmniBox		= "Search or Go To URL"
 		case Share			= "Share URL"
+		case Snapshot		= "Snapshot"
 		case NewTab			= "Open New Tab"
 		case CloseTab		= "Close Tab"
 		case SelectedTab	= "Selected Tab"
@@ -70,15 +73,12 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 
 	var cornerRadius = CGFloat(0.0) // increment above 0.0 to put nice corners on the window FIXME userDefaults
 
-	func close() {
+	func close() { // close all tabs, which will close the whole browser window
 		dispatch_sync(dispatch_get_main_queue(), {
 			self.tabViewItems.forEach {
 				$0.view?.removeFromSuperviewWithoutNeedingDisplay()
 				self.removeTabViewItem($0)
 			}
-			//self.windowController?.close()
-			//self.removeFromParentViewController()
-			//NSApplication.sharedApplication().terminate(self)
 		})
 	}
 
@@ -105,6 +105,11 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 			tab.label = ""
 			tab.toolTip = nil
 			tab.image = nil
+		}
+		if tabView.tabViewItems.count == 1 {
+			// NSTabViewController throws execptions when closing the last tab
+			self.view.window?.windowController?.close() // so just close the window
+			return
 		}
 		super.removeTabViewItem(tab)
 		if tabView.tabViewItems.count != 0 { tabView.selectNextTabViewItem(self) } //safari behavior
@@ -142,6 +147,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 			NSToolbarPrintItemIdentifier,
 			BrowserButtons.OmniBox.rawValue,
 			BrowserButtons.Share.rawValue,
+			BrowserButtons.Snapshot.rawValue,
 			BrowserButtons.NewTab.rawValue,
 			BrowserButtons.CloseTab.rawValue,
 			BrowserButtons.SelectedTab.rawValue,
@@ -184,6 +190,12 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 					btn.action = Selector("shareButtonClicked:")
 					return ti
 
+					case .Snapshot:
+					btn.image = NSImage(named: NSImageNameQuickLookTemplate)
+					btn.action = Selector("snapshotButtonClicked:")
+					return ti
+
+				//case .Inspect: // NSMagnifyingGlass
 				case .NewTab:
 					btn.image = NSImage(named: NSImageNameAddTemplate)
 					btn.action = Selector("newTabPrompt")
@@ -257,9 +269,9 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 		}
 	}
 
-	// override func toolbarWillAddItem(notification: NSNotification)
+	// override func toolbarWillAddItem(notification: NSNotification) { warn() }
 	//	if let ti = notification.userInfo?["item"] as? NSToolbarItem, tb = ti.toolbar, tgt = ti.target as? TabViewController, btn = t i.view as? NSButton { warn(ti.itermIdentifier) }
-	// override func toolbarDidRemoveItem(notification: NSNotification)
+	// override func toolbarDidRemoveItem(notification: NSNotification) { warn() }
 
 	override func loadView() {
 		//tabView.autoresizesSubviews = false
@@ -463,6 +475,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		if let wvc = childViewController as? WebViewController {
 			//tabs.append(wvc.webview) // atIndex? //double-adds a controller, no way to bypass tabs' prop-observer from here
 
+			// FIXME: I reallly don't want KVO anymore: http://inessential.com/2015/05/14/how_not_to_crash_1_kvo_and_manual_bind
 			let mi = NSMenuItem(title:"", action:Selector("menuSelectedTab:"), keyEquivalent:"")
 			mi.bind(NSTitleBinding, toObject: wvc.webview, withKeyPath: "title", options:nil)
 			mi.bind(NSImageBinding, toObject: wvc.webview, withKeyPath: "favicon.icon16", options: nil)
@@ -660,10 +673,13 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	func gotoShortcut(sender: AnyObject?) {
 		if let shortcut = sender as? NSMenuItem {
 			switch (shortcut.representedObject) {
-				case let urlstr as String: AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr) // FIXME: send tabSelected too?
-				// or fire event in jsdelegate if string, NSURLs do launchURL
+				case let urlstr as String: AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr)
+				// FIXME: fire event in jsdelegate if string, only NSURLs should do launchURL
 				case let dict as [String:AnyObject]: tabSelected = MPWebView(object: dict) // FIXME: do a try here
-                case let arr as [AnyObject] where arr.count > 0 && arr.first is String: AppScriptRuntime.shared.jsdelegate.tryFunc((arr.first as! String), argv: Array(arr.dropFirst()))
+                case let arr as [AnyObject] where arr.count > 0 && arr.first is String:
+                	var args = Array(arr.dropFirst())
+                	if let wv = tabSelected as? MPWebView { args.append(wv) }
+                	AppScriptRuntime.shared.jsdelegate.tryFunc((arr.first as! String), argv: args)
 				default: warn("invalid shortcut object type!")
 			}
 		}

@@ -1,6 +1,9 @@
-/*eslint-env applescript*/
-/*eslint-env builtins*/
-/*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
+/*
+ * eslint-env applescript
+ * eslint-env builtins
+ * eslint-env es6
+ * eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0
+*/
 "use strict";
 
 var delegate = {}; // our delegate to receive events from the webview app
@@ -34,7 +37,7 @@ delegate.launchURL = function(url) {
 delegate.handleDragAndDroppedURLs = function(urls) {
 	var ret = false;
 	console.log(urls);
-	for (var url of urls) {
+	for (let url of urls) {
 		$.browser.tabSelected.evalJS("confirm('Open a new tab for: "+url+"');", function(response) {
 			if (response) {
 				var tab = new $.WebView({url: url});
@@ -47,7 +50,30 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 	return ret;
 };
 
-delegate.setAgent = function(agent) { $.browser.tabSelected.userAgent = agent; };
+delegate.enDarken = function(tab) {
+	// adapted from https://lnikki.la/articles/night-mode-css-filter/
+	tab.evalJS(`
+		var css = document.getElementById('enDarken');
+		if (css) {
+			document.head.removeChild(css); //toggle
+		} else {
+			var css = document.createElement("style");
+			css.id = "enDarken";
+			css.type = 'text/css';
+			css.innerText = \`
+				html, img, video {
+					-webkit-filter: invert(1) hue-rotate(180deg);
+					filter: invert(1) hue-rotate(180deg);
+				}
+				body { background: black; }
+			\`
+			document.head.appendChild(css);
+		}
+	`);
+};
+
+
+delegate.setAgent = function(agent, tab) { tab.userAgent = agent; };
 delegate.img2data = function(tab) {
 	if (!tab) tab = $.browser.tabSelected;
 	tab.evalJS(`
@@ -62,7 +88,7 @@ delegate.img2data = function(tab) {
 	`)
 };
 
-delegate.testAS = function() { $.app.callJXALibrary('test', 'doTest', Array.prototype.slice.call(arguments)); };
+delegate.testAS = function(tab) { $.app.callJXALibrary('test', 'doTest', Array.prototype.slice.call(arguments)); };
 
 delegate.AppFinishedLaunching = function() {
 	//$.browser.unhideApp();
@@ -84,6 +110,7 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('Simulate TouchEvents', ['injectTab', 'thumbs']); // http://mwbrooks.github.io/thumbs.js/
 	$.browser.addShortcut('Log DnDs to console', ['injectTab', 'dnd']);
 	$.browser.addShortcut('pop-open 1st image as data:// URL', ['img2data']);
+	$.browser.addShortcut('Paint It Black', ['enDarken']);
 	$.browser.addShortcut('test AppleScript', ['testAS', "whooo", '1']);
 
 	// a dual-mode REPL like this loaded in another browser would be nice: http://reality.hk/2014/01/12/building-a-ios-ruby-repl/

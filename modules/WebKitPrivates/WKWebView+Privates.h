@@ -50,6 +50,7 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
 - (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo; // prints top frame
 //- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 @property (strong, nonatomic, setter=_setInspectorAttachmentView:) NSView *_inspectorAttachmentView WK_AVAILABLE(10_11, NA);
+@property (nonatomic, setter=_setThumbnailView:) _WKThumbnailView *_thumbnailView; // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKViewInternal.h
 #else
 @property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground; //FIXME: going away after 10.11.4 / 9.3 ?
 #endif
