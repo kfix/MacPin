@@ -241,6 +241,9 @@ unregister:
 clean: unregister
 	-rm -rf $(outdir) $(xcassets)
 
+binclean:
+	rm -f $(execs) $(objs) $(statics) $(dynamics) $(outdir)/obj/*.o
+
 cached:
 	-find ~/Library/Caches/$(template_bundle_id).$(APP)* ~/Library/WebKit/$(template_bundle_id).$(APP)*
 
