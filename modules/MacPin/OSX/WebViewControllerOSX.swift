@@ -89,7 +89,9 @@ import WebKitPrivates
 
 	override func viewWillLayout() {
 		//webview.resizeSubviewsWithOldSize(CGSizeZero)
-		webview._inspectorAttachmentView = webview
+		if webview != nil { // vc's still in hierarchy can be asked to layout after view is deinit'd
+			webview._inspectorAttachmentView = webview
+		}
 		super.viewWillLayout()
 	}
 
