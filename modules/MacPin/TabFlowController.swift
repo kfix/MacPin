@@ -1,4 +1,22 @@
+import CocoaShims
+
+#if os(OSX)
 import AppKit
+typealias CollectionView = NSCollectionView
+typealias CollectionViewItem = NSCollectionViewItem
+#elseif os(iOS)
+import UIKit
+typealias CollectionView = UICollectionView
+typealias CollectionViewItem = UICollectionViewCell
+#endif
+
+/// want a nice expose/coverflow/rolodex tab-picker:
+// https://github.com/adow/WKPagesCollectionView
+// https://github.com/MikeReining/CoverFlowSwift
+// https://github.com/schwa/Coverflow
+// https://github.com/tuo/CoverFlow/blob/master/CoverFlow/CoverFlowView.m
+// https://github.com/search?l=Objective-C&o=desc&p=1&q=coverflow&ref=searchresults&s=updated&type=Repositories
+// http://stackoverflow.com/a/353611/3878712 http://www.thinkandbuild.it/introduction-to-3d-drawing-in-core-animation-part-2/
 
 // https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/CollectionViews/Introduction/Introduction.html#//apple_ref/doc/uid/TP40009030
 // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/NSCollectionViewItem_Class/index.html
@@ -9,8 +27,7 @@ import AppKit
 // https://github.com/klaas/CollectionViewElCapitan
 // https://developer.apple.com/videos/play/wwdc2015-225/
 
-
-// make it a sidebar to show Preview-like thumbnail roll: https://github.com/jerrykrinock/SplitViewSidebar/blob/master/SplitViewSidebar/FixedSidebarSplitViewController.m
+// on OSX, make it a pop-out sidebar to show Preview.app-like thumbnail roll: https://github.com/jerrykrinock/SplitViewSidebar/blob/master/SplitViewSidebar/FixedSidebarSplitViewController.m
 
 class TabGridIcon: NSCollectionViewItem {
 	required init?(coder: NSCoder) { super.init(coder: coder) } // conform to NSCoding

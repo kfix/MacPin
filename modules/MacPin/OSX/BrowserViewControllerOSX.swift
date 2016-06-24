@@ -42,9 +42,9 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 	lazy var tabPopBtn = NSPopUpButton(frame: NSRect(x:0, y:0, width:400, height:24), pullsDown: false)
 	let tabMenu = NSMenu() // list of all active web tabs
 	let shortcutsMenu = NSMenu()
-	//lazy var tabGrid = TabGridController()
+	//lazy var tabFlow = TabFlowController()
 	/*
-	lazy var tabGrid: NSCollectionView = {
+	lazy var tabFlow: NSCollectionView = {
 		var grid = NSCollectionView()
 		grid.selectable = true
 		grid.allowsMultipleSelection = false
@@ -246,7 +246,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 					ti.minSize = CGSize(width: 70, height: 24)
 					ti.maxSize = CGSize(width: 600, height: 36)
 					tabPopBtn.menu = tabMenu
-					//tabPopBtn.menu?.itemAtIndex(0).setView(tabGrid.view) // GridMenu display
+					//tabPopBtn.menu?.itemAtIndex(0).setView(tabFlow.view) // GridMenu display
 					// https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSMenu_Class/index.html#//apple_ref/occ/instm/NSMenu/popUpMenuPositioningItem:atLocation:inView:
 					ti.view = flag ? tabPopBtn : NSPopUpButton()
 					return ti
@@ -471,7 +471,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		super.insertChildViewController(childViewController, atIndex: index)
 
 		if let wvc = childViewController as? WebViewController {
-			//let gridItem = tabGrid.newItemForRepresentedObject(wvc)
+			//let gridItem = tabFlow.newItemForRepresentedObject(wvc)
 			//gridItem.imageView = wv.favicon.icon
 			//gridItem.textField = wv.title
 
@@ -499,18 +499,17 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 /*
 	func tabListButtonClicked(sender: AnyObject?) {
 		if let sender = sender? as? NSView { //OpenTab toolbar button
-			presentViewController(tabGrid, asPopoverRelativeToRect: sender.bounds, ofView: sender, preferredEdge:NSMinYEdge, behavior: .Semitransient)
+			presentViewController(tabFlow, asPopoverRelativeToRect: sender.bounds, ofView: sender, preferredEdge:NSMinYEdge, behavior: .Semitransient)
 		} else { //keyboard shortcut
-			//presentViewControllerAsSheet(tabGrid) // modal, yuck
+			//presentViewControllerAsSheet(tabFlow) // modal, yuck
 			var poprect = view.bounds
-			poprect.size.height -= tabGrid.preferredContentSize.height + 12 // make room at the top to stuff the popover
-			presentViewController(tabGrid, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSMaxYEdge, behavior: .Semitransient)
+			poprect.size.height -= tabFlow.preferredContentSize.height + 12 // make room at the top to stuff the popover
+			presentViewController(tabFlow, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSMaxYEdge, behavior: .Semitransient)
 		}
 	}
 */
 	override func removeChildViewControllerAtIndex(index: Int) {
 		warn("#\(index)")
-		guard let wvc = childViewControllers[index] as? WebViewController else { warn("generic vc"); super.removeChildViewControllerAtIndex(index); return }
 		super.removeChildViewControllerAtIndex(index)
 	}
 

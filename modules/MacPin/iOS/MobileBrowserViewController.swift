@@ -8,16 +8,6 @@
 //  -break the controlviews into subclasses & controllers
 /// http://doing-it-wrong.mikeweller.com/2013/06/ios-app-architecture-and-tdd-1.html
 
-
-/// want a nice expose/coverflow/rolodex tab-picker:
-// https://github.com/adow/WKPagesCollectionView
-// https://github.com/MikeReining/CoverFlowSwift
-// https://github.com/schwa/Coverflow
-// https://github.com/tuo/CoverFlow/blob/master/CoverFlow/CoverFlowView.m
-// https://github.com/search?l=Objective-C&o=desc&p=1&q=coverflow&ref=searchresults&s=updated&type=Repositories
-// http://stackoverflow.com/a/353611/3878712 http://www.thinkandbuild.it/introduction-to-3d-drawing-in-core-animation-part-2/
-
-
 import WebKit
 import UIKit
 import JavaScriptCore
