@@ -107,8 +107,8 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 			tab.image = nil
 		}
 		if tabView.tabViewItems.count == 1 {
-			// NSTabViewController throws execptions when closing the last tab
-			self.view.window?.windowController?.close() // so just close the window
+			// NSTabViewController throws exceptions when closing the last tab...
+			self.view.window?.windowController?.close() // ...so just close the window
 			return
 		}
 		super.removeTabViewItem(tab)
@@ -453,9 +453,6 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		set(obj) {
 			switch (obj) {
 				case let vc as NSViewController:
-					//if (find(childViewControllers, obj) ?? -1) < 0 { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
-					//if !contains(childViewControllers, vc) { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
-					//if childViewControllers.containsObject(obj) { childViewControllers.append(obj) } // add the given vc as a child if it isn't already
 					if tabViewItemForViewController(vc) == nil { childViewControllers.append(vc) } // add the given vc as a child if it isn't already
 					tabView.selectTabViewItem(tabViewItemForViewController(vc))
 				case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
@@ -474,25 +471,13 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		super.insertChildViewController(childViewController, atIndex: index)
 
 		if let wvc = childViewController as? WebViewController {
-			//tabs.append(wvc.webview) // atIndex? //double-adds a controller, no way to bypass tabs' prop-observer from here
-
 			//let gridItem = tabGrid.newItemForRepresentedObject(wvc)
 			//gridItem.imageView = wv.favicon.icon
 			//gridItem.textField = wv.title
 
 			// set the browser as the new webview's iconClient
-			// FIXME: should only do this once per unique processPool, tabs.filter( { $0.configuration.processProol == wvc.webview.configuration.processPool } ) ??
 			wvc.webview.iconClient = iconClient
-			/*
-			if let iconDB = wvc.webview.iconDB, context = wvc.webview.context {
-				//https://github.com/WebKit/webkit/blob/91700b336a0d0abf1be06c627e3f41281b2728a3/Source/WebCore/loader/icon/IconDatabase.cpp#L114 must close IconDB, setClient, and reopen
-				WKIconDatabaseClose(iconDB)
-			    WKIconDatabaseSetIconDatabaseClient(iconDB, &iconClient.base)
-				WKIconDatabaseCheckIntegrityBeforeOpening(iconDB)
-				WKIconDatabaseEnableDatabaseCleanup(iconDB)
-				WKContextSetIconDatabasePath(context, WKStringCreateWithUTF8CString("icondb.sqlite".UTF8String)) //default path // should report success https://bugs.webkit.org/show_bug.cgi?id=117632
-		    }
-		    */
+			// FIXME: should only do this once per unique processPool, tabs.filter( { $0.configuration.processProol == wvc.webview.configuration.processPool } ) ??
 		}
 	}
 
@@ -618,7 +603,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	}
 
 	func indicateTab(vc: NSViewController) {
-		// if VC has a tab, flash a popover pointed at its toolbar button to indicate its location<
+		// if VC has a tab, flash a popover pointed at its toolbar button to indicate its location
 		//if let tvi = tabViewItemForViewController(vc) { }
 	}
 
