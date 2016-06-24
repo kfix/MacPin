@@ -40,6 +40,8 @@ import WebKitPrivates
 		textFinder.findBarContainer = self
 		textFinder.incrementalSearchingEnabled = true
 		textFinder.incrementalSearchingShouldDimContentView = true
+		// FIXME: webview doesn't auto-scroll to found matches
+		//  https://github.com/WebKit/webkit/blob/112c663463807e8676765cb7a006d415c372f447/Source/WebKit2/UIProcess/mac/WKTextFinderClient.mm#L39
 	}
 
 	func contentView() -> NSView? { return webview }
