@@ -344,6 +344,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		// send browser all iconDB callbacks so it can update the tab.image's -> FavIcons
 		// internally, webcore has a delegation model for grabbing icon URLs: https://bugs.webkit.org/show_bug.cgi?id=136059#c1
 		iconClient.base = WKIconDatabaseClientBase(version: 1, clientInfo: unsafeAddressOf(self))
+		tabMenu.delegate = self
 	}
 
 	deinit { warn(description) }
@@ -475,15 +476,6 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		if let wvc = childViewController as? WebViewController {
 			//tabs.append(wvc.webview) // atIndex? //double-adds a controller, no way to bypass tabs' prop-observer from here
 
-			// FIXME: I reallly don't want KVO anymore: http://inessential.com/2015/05/14/how_not_to_crash_1_kvo_and_manual_bind
-			let mi = NSMenuItem(title:"", action:Selector("menuSelectedTab:"), keyEquivalent:"")
-			mi.bind(NSTitleBinding, toObject: wvc.webview, withKeyPath: "title", options:nil)
-			mi.bind(NSImageBinding, toObject: wvc.webview, withKeyPath: "favicon.icon16", options: nil)
-			//mi.image?.size = NSSize(width: 16, height: 16) //FIXME: not limiting the size
-			mi.representedObject = wvc
-			mi.target = self
-			tabMenu.addItem(mi)
-
 			//let gridItem = tabGrid.newItemForRepresentedObject(wvc)
 			//gridItem.imageView = wv.favicon.icon
 			//gridItem.textField = wv.title
@@ -505,8 +497,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	}
 
 	func menuSelectedTab(sender: AnyObject?) {
-		if let mi = sender as? NSMenuItem, let wvc = mi.representedObject as? WebViewController { tabSelected = wvc }
-		//if let mi = sender as? NSMenuItem, wv = mi.representedObject as? MPWebView { tabSelected = wv }
+		if let mi = sender as? NSMenuItem, let ti = mi.representedObject as? NSTabViewItem { tabView.selectTabViewItem(ti) }
 	}
 
 /*
@@ -535,13 +526,6 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	override func removeChildViewControllerAtIndex(index: Int) {
 		warn("#\(index)")
 		guard let wvc = childViewControllers[index] as? WebViewController else { warn("generic vc"); super.removeChildViewControllerAtIndex(index); return }
-		if let mitem = tabMenu.itemAtIndex(tabMenu.indexOfItemWithRepresentedObject(wvc)) {
-			mitem.unbind(NSTitleBinding)
-			mitem.unbind(NSImageBinding)
-			mitem.target = nil
-			mitem.representedObject = nil
-			tabMenu.removeItem(mitem)
-		}
 		super.removeChildViewControllerAtIndex(index)
 	}
 
@@ -552,15 +536,6 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	override func transitionFromViewController(fromViewController: NSViewController, toViewController: NSViewController,
 		options: NSViewControllerTransitionOptions, completionHandler completion: (() -> Void)?) {
-
-		var midex = tabMenu.indexOfItemWithRepresentedObject(fromViewController)
-		if midex != -1, let mitem = tabMenu.itemAtIndex(midex) { mitem.state = NSOffState }
-
-		midex = tabMenu.indexOfItemWithRepresentedObject(toViewController)
-		if midex != -1, let mitem = tabMenu.itemAtIndex(midex) { mitem.state = NSOnState }
-
-		let tabnum = tabPopBtn.indexOfItemWithRepresentedObject(toViewController)
-		if tabnum != -1 { tabPopBtn.selectItemAtIndex(tabnum) }
 
 		super.transitionFromViewController(fromViewController, toViewController: toViewController,
 			options: options, completionHandler: completion)
@@ -643,7 +618,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	}
 
 	func indicateTab(vc: NSViewController) {
-		// if VC has a tab, flash a popover pointed at its toolbar button to indicate its location<F29>
+		// if VC has a tab, flash a popover pointed at its toolbar button to indicate its location<
 		//if let tvi = tabViewItemForViewController(vc) { }
 	}
 
@@ -687,8 +662,29 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 }
 
 extension BrowserViewControllerOSX: NSMenuDelegate {
+	func menuHasKeyEquivalent(menu: NSMenu, forEvent event: NSEvent, target: AutoreleasingUnsafeMutablePointer<AnyObject?>, action: UnsafeMutablePointer<Selector>) -> Bool {
+		return false // no numeric index shortcuts for tabz (unlike Safari)
+	}
+
 	func menuNeedsUpdate(menu: NSMenu) {
-		//switch menu.tag {
-		//case 1: //historyMenu
+		switch menu.title {
+			//case "Shortcuts":
+			case "Tabs":
+				menu.removeAllItems()
+				for tab in tabViewItems {
+					let mi = NSMenuItem(title: tab.label, action:Selector("menuSelectedTab:"), keyEquivalent:"")
+					mi.image = tab.image
+					mi.image?.size = NSSize(width: 16, height: 16)
+					mi.representedObject = tab
+					mi.target = self
+					mi.state = (tab.tabState == .SelectedTab) ? NSOnState : NSOffState
+					menu.addItem(mi)
+				}
+			default: return
+		}
+	}
+
+	func menu(menu: NSMenu, willHighlightItem item: NSMenuItem?) {
+		// popup thumbnail snapshot?
 	}
 }
