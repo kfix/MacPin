@@ -8,14 +8,14 @@
 
 var delegate = {}; // our delegate to receive events from the webview app
 
-delegate.openInChrome = function() {
-	console.log($.browser.tabSelected.url);
+delegate.openInChrome = function(tab) {
+	console.log(tab.url);
 	switch ($.app.platform) {
 		case "OSX":
-			$.app.openURL($.browser.tabSelected.url, "com.google.Chrome");
+			$.app.openURL(tab.url, "com.google.Chrome");
 			break;
 		case "iOS":
-			$.app.openURL($.browser.tabSelected.url,
+			$.app.openURL(tab.url,
 				url.startsWith("https://") ? "googlechromes" : "googlechrome");
 			break;
 	}
@@ -50,29 +50,6 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 	return ret;
 };
 
-delegate.enDarken = function(tab) {
-	// adapted from https://lnikki.la/articles/night-mode-css-filter/
-	tab.evalJS(`
-		var css = document.getElementById('enDarken');
-		if (css) {
-			document.head.removeChild(css); //toggle
-		} else {
-			var css = document.createElement("style");
-			css.id = "enDarken";
-			css.type = 'text/css';
-			css.innerText = \`
-				html, img, video {
-					-webkit-filter: invert(1) hue-rotate(180deg);
-					filter: invert(1) hue-rotate(180deg);
-				}
-				body { background: black; }
-			\`
-			document.head.appendChild(css);
-		}
-	`);
-};
-
-
 delegate.setAgent = function(agent, tab) { tab.userAgent = agent; };
 delegate.img2data = function(tab) {
 	if (!tab) tab = $.browser.tabSelected;
@@ -106,9 +83,9 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('UA: Mac Firefox 23', ["setAgent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:23.0) Gecko/20100101 Firefox/23.0"]);
 	$.browser.addShortcut('UA: IE 10', ["setAgent", "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Win64; x64; Trident/6.0)"]);
 
-	$.browser.addShortcut('see.js console', ['injectTab', 'seeDebugger', 'see.init();']); // http://davidbau.com/archives/2013/04/19/debugging_locals_with_seejs.html
-	$.browser.addShortcut('Simulate TouchEvents', ['injectTab', 'thumbs']); // http://mwbrooks.github.io/thumbs.js/
-	$.browser.addShortcut('Log DnDs to console', ['injectTab', 'dnd']);
+	$.browser.addShortcut('see.js console', ['injectTab', 'seeDebugger', 'see.init();', false]); // http://davidbau.com/archives/2013/04/19/debugging_locals_with_seejs.html
+	$.browser.addShortcut('Simulate TouchEvents', ['injectTab', 'thumbs', '', false]); // http://mwbrooks.github.io/thumbs.js/
+	$.browser.addShortcut('Log DnDs to console', ['injectTab', 'dnd', '', false]);
 	$.browser.addShortcut('pop-open 1st image as data:// URL', ['img2data']);
 	$.browser.addShortcut('Paint It Black', ['enDarken']);
 	$.browser.addShortcut('test AppleScript', ['testAS', "whooo", '1']);
@@ -155,5 +132,6 @@ delegate.closeREPL = function(tab, msg) {
 
 $.app.loadAppScript(`file://${$.app.resourcePath}/app_injectTab.js`);
 $.app.loadAppScript(`file://${$.app.resourcePath}/app_repl.js`);
+$.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
 
 delegate; //return this to macpin
