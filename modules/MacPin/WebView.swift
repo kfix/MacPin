@@ -71,6 +71,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	// NSUserDefaults for NetworkProcesses: https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/WebProcessPoolCocoa.mm
 	// WebKit2HTTPProxy, WebKit2HTTPSProxy, WebKitOmitPDFSupport, all the cache directories ...
 	// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/NetworkProcess/mac/NetworkProcessMac.mm
+	// https://lists.webkit.org/pipermail/webkit-dev/2016-May/028233.html
 	static var sharedWebProcessPool = WKProcessPool()._initWithConfiguration(MPWebView.WebProcessConfiguration()) // cvar singleton
 
 	var injected: [String] = [] //list of script-names already loaded
