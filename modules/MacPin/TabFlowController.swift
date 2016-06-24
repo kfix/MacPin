@@ -1,5 +1,3 @@
-import CocoaShims
-
 #if os(OSX)
 import AppKit
 typealias CollectionView = NSCollectionView
