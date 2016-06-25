@@ -68,10 +68,6 @@ var globalIconClient = WKIconDatabaseClientV1(
 		// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundle.cpp
 		return config
 	}
-	// NSUserDefaults for NetworkProcesses: https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/WebProcessPoolCocoa.mm
-	// WebKit2HTTPProxy, WebKit2HTTPSProxy, WebKitOmitPDFSupport, all the cache directories ...
-	// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/NetworkProcess/mac/NetworkProcessMac.mm
-	// https://lists.webkit.org/pipermail/webkit-dev/2016-May/028233.html
 	static var sharedWebProcessPool = WKProcessPool()._initWithConfiguration(MPWebView.WebProcessConfiguration()) // cvar singleton
 
 	var injected: [String] = [] //list of script-names already loaded
@@ -276,6 +272,18 @@ var globalIconClient = WKIconDatabaseClientV1(
 		iconDB = nil
 		context = nil
 		warn(description)
+	}
+
+	func flushProcessPool() {
+		// reinit the NetworkProcess to change HTTP(s) proxies or write cookies to disk
+		NSUserDefaults.standardUserDefaults().synchronize()
+		if configuration.processPool == MPWebView.self.sharedWebProcessPool {
+			// replace the global pool if that's what we were using
+			MPWebView.self.sharedWebProcessPool = WKProcessPool()._initWithConfiguration(MPWebView.WebProcessConfiguration())
+			configuration.processPool = MPWebView.self.sharedWebProcessPool
+		} else { // regenerate a personal pool
+			configuration.processPool = WKProcessPool()
+		}
 	}
 
 	@objc(evalJS::) func evalJS(js: String, callback: JSValue? = nil) {

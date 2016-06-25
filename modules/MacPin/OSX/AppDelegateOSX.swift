@@ -14,9 +14,19 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 	override init() {
 		// gotta set these before MacPin()->NSWindow()
-		NSUserDefaults.standardUserDefaults().setBool(true, forKey: "NSQuitAlwaysKeepsWindows") // insist on Window-to-Space/fullscreen persistence between launches
-		NSUserDefaults.standardUserDefaults().setInteger(1, forKey: "NSInitialToolTipDelay") // get TTs in 1ms instead of 3s
-		NSUserDefaults.standardUserDefaults().setFloat(12.0, forKey: "NSInitialToolTipFontSize")
+		NSUserDefaults.standardUserDefaults().registerDefaults([
+			"NSQuitAlwaysKeepsWindows":	true, // insist on Window-to-Space/fullscreen persistence between launches
+			"NSInitialToolTipDelay": 1, // get TTs in 1ms instead of 3s
+			"NSInitialToolTipFontSize": 12.0,
+			// NSUserDefaults for NetworkProcesses:
+			//		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/WebProcessPoolCocoa.mm
+			// 		WebKit2HTTPProxy, WebKit2HTTPSProxy, WebKitOmitPDFSupport, all the cache directories ...
+			// 		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/NetworkProcess/mac/NetworkProcessMac.mm
+			// 		https://lists.webkit.org/pipermail/webkit-dev/2016-May/028233.html
+			"WebKit2HTTPProxy": "",
+			"WebKit2HTTPSProxy": ""
+		])
+
 		NSUserDefaults.standardUserDefaults().removeObjectForKey("__WebInspectorPageGroupLevel1__.WebKit2InspectorStartsAttached") // #13 fixed
 
 		//browserController.title = nil

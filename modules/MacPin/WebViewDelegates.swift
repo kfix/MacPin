@@ -159,8 +159,20 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 	func webView(webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: NSError) { //error returned by webkit when loading content
 		if let url = webView.URL {
 			warn("'\(url)' -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
-			if error.domain == NSURLErrorDomain && error.code != NSURLErrorCancelled && !webView.loading { // dont catch on stopLoading() and HTTP redirects
-				displayError(error, self)
+
+			switch (error.domain, error.code) {
+				// https://developer.apple.com/reference/cfnetwork/cfnetworkerrors
+				// https://developer.apple.com/library/mac/documentation/Networking/Reference/CFNetworkErrors/index.html#//apple_ref/c/tdef/CFNetworkErrors
+				case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.CFErrorHTTPProxyConnectionFailure.rawValue)):
+					NSUserDefaults.standardUserDefaults().removeObjectForKey("WebKit2HTTPProxy") // FIXME: should prompt first
+					fallthrough //webview.flushProcessPool()
+				case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.CFErrorHTTPSProxyConnectionFailure.rawValue)):
+					NSUserDefaults.standardUserDefaults().removeObjectForKey("WebKit2HTTPSProxy") // FIXME: should prompt first
+					fallthrough ////webview.flushProcessPool()
+				// https://developer.apple.com/reference/foundation/nsurlerror
+				case (NSURLErrorDomain, NSURLErrorCancelled) where !webView.loading: return // ignore stopLoading() and HTTP redirects
+				default:
+					displayError(error, self)
 			}
 		}
 	}
