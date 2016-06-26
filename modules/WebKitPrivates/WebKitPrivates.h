@@ -16,6 +16,7 @@
 #import "JSContext+Privates.h"
 #import "JSContextRefPrivate.h"
 #import "WKPage.h"
+#import "WKFrame.h"
 #import "WKInspectorPrivateMac.h"
 #import "WKIconDatabase.h"
 #import "WKIconDatabaseCG.h"
@@ -31,8 +32,10 @@
 #import "WKData.h"
 #import "WKWebView+Privates.h"
 #ifdef STP
+#import "WebViewImpl.h"
 #import "_WKUserStyleSheet.h"
 #import "WKUserContentControllerPrivate.h"
+//#import "SnapshottableWKWebView.h"
 #endif
 
 /* things to integrate:

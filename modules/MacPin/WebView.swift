@@ -59,6 +59,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	//var snapshotURL: String { get } // gets a data:// of the WKThumbnailView
 }
 
+//@objc class MPWebView: WKWebViewSnappable, WebViewScriptExports { // from WebKitPrivates.mm: not linkable as of STP v6, see stp_impls.txt
 @objc class MPWebView: WKWebView, WebViewScriptExports {
 	static var MatchedAddressOptions: [String:String] = [:] // cvar singleton
 
@@ -111,10 +112,11 @@ var globalIconClient = WKIconDatabaseClientV1(
 
 #if STP
 	// a long lived thumbnail viewer should construct and store thumbviews itself, this is for convenient dumping
-	var thumbnail: _WKThumbnailView {
+	var thumbnail: _WKThumbnailView? {
 		get {
-			_thumbnailView.requestSnapshot()
-			return _thumbnailView
+			let snap = self._thumbnailView
+			snap.requestSnapshot()
+			return snap
 		}
 	}
 #endif

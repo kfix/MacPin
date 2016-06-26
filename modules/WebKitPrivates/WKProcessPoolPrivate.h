@@ -12,6 +12,8 @@
 
 @interface WKProcessPool (WKPrivate)
 
++ (WKProcessPool *)_sharedProcessPool; // 10.11.4 ?
+
 @property (nonatomic, readonly) _WKProcessPoolConfiguration *_configuration;
 
 - (void)_setAllowsSpecificHTTPSCertificate:(NSArray *)certificateChain forHost:(NSString *)host;
@@ -27,8 +29,11 @@
 // https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
 // https://github.com/WebKit/webkit/search?q=_downloadDelegate&type=Code
 
+// tells where in the local filesystem any particular URL's cache file ("~/Library/WebKit/WebsiteData") is saved
 + (NSURL *)_websiteDataURLForContainerWithURL:(NSURL *)containerURL;
 + (NSURL *)_websiteDataURLForContainerWithURL:(NSURL *)containerURL bundleIdentifierIfNotInContainer:(NSString *)bundleIdentifier;
+//- (void)_automationCapabilitiesDidChange WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+//- (void)_setAutomationSession:(_WKAutomationSession *)automationSession WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 
 //- (void)_warmInitialProcess WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 

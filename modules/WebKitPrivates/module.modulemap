@@ -1,4 +1,7 @@
 module WebKitPrivates {
 	umbrella header "WebKitPrivates.h"
+	link "WebKitPrivates"
+	link "c++"
 	export *
+	 //requires plusplus11
 }

@@ -154,9 +154,10 @@ extension WebViewControllerOSX { // AppGUI funcs
 
 	func snapshotButtonClicked(sender: AnyObject?) {
 		//guard if let btn = sender as? NSView else { }
+		guard let thumb = webview.thumbnail else { return }
 		var poprect = view.bounds
 		let snap = NSViewController()
-		snap.view = webview.thumbnail
+		snap.view = thumb
 		poprect.size.height -= snap.view.frame.height + 12 // make room at the top to stuff the popover
 		presentViewController(snap, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSRectEdge.MaxY, behavior: NSPopoverBehavior.Transient)
 	}
