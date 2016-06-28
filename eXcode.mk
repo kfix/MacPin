@@ -98,7 +98,7 @@ incdirs				:= -I modules
 #incdirs += /Applications/Xcode.app/Contents/Developer//Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(sdk)/$(arch)/
 
 #find all modules with compilable source code
-build_mods			:= $(sort $(filter-out %/$(platform),$(patsubst modules/%/,%,$(dir $(wildcard modules/*/*.m modules/*/$(platform)/*.m modules/*/*.swift modules/*/$(platform)/*.swift)))))
+build_mods			:= $(sort $(filter-out %/$(platform),$(patsubst modules/%/,%,$(dir $(wildcard modules/*/*.m modules/*/$(platform)/*.m modules/*/*.swift modules/*/$(platform)/*.swift modules/*/*.mm modules/*/$(platform)/*.mm)))))
 $(info [$(eXcode)] $$(build_mods) (compilable modules): $(build_mods))
 
 #modules with compilable main() routines that can be built into executables
@@ -134,7 +134,9 @@ verbose				?=
 sdkpath				:= $(shell xcrun --show-sdk-path --sdk $(sdk))
 swiftc				:= xcrun -sdk $(sdk) swiftc -target $(arch)-$(target_$(platform)) $(verbose)
 clang				:= xcrun -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platform)) $(verbose)
+clangpp				:= xcrun -sdk $(sdk) clang++ -fmodules -fcxx-modules -std=c++11 -stdlib=libc++ -target $(arch)-$(target_$(platform)) $(verbose)
 #-fobj-arc
+#-fobjc-call-cxx-cdtors
 
 libdirs				:= -L $(outdir)/Frameworks -L $(outdir)/obj
 incdirs				+= -I $(sdkpath)/System/Library/Frameworks
@@ -223,6 +225,12 @@ $(outdir)/obj/lib%.a: modules/%/*.m | $(outdir)/obj
 		$(clang) -ObjC -c $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) $$i; \
 	done;
 	libtool -static -o $@ $(patsubst %.m,$(dir $@)lib$*/%.o,$(notdir $^))
+
+$(outdir)/obj/lib%.a: modules/%/*.mm | $(outdir)/obj
+	mkdir $(dir $@)lib$*; cd $(dir $@)lib$*; for i in $(realpath $^); do \
+		$(clangpp) -ObjC++ -c $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) $$i; \
+	done;
+	libtool -static -o $@ $(patsubst %.mm,$(dir $@)lib$*/%.o,$(notdir $^))
 
 $(outdir)/obj/lib%.a: $(outdir)/obj/%.o
 	libtool -static -o $@ $^
