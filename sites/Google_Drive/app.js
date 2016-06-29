@@ -206,5 +206,8 @@ delegate.AppFinishedLaunching = function() {
 		);
 	}
 
+	$.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
+	$.browser.addShortcut('Paint It Black', ['enDarken']);
+
 };
 delegate; //return this to macpin

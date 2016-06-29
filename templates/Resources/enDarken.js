@@ -1,5 +1,9 @@
 /* eslint-env es6 */
 delegate.enDarken = function(tab) {
+	let idx = tab.styles.indexOf('enDarken');
+	(idx >= 0) ? tab.popStyle(idx) : tab.style('enDarken');
+	return;
+
 	// adapted from https://lnikki.la/articles/night-mode-css-filter/
 	tab.evalJS(`
 		var css = document.getElementById('enDarken');

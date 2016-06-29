@@ -46,6 +46,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	@objc(asyncEvalJS:::) func asyncEvalJS(js: String, delay: Double, callback: JSValue?)
 	func loadURL(urlstr: String) -> Bool
 	func loadIcon(icon: String) -> Bool
+	func popStyle(idx: Int)
 	func style(css: String) -> Bool
 	func mainStyle(css: String) -> Bool
 	func preinject(script: String) -> Bool
@@ -403,6 +404,13 @@ var globalIconClient = WKIconDatabaseClientV1(
 			return true
 		}
 		return false
+	}
+
+	func popStyle(idx: Int) {
+		guard idx >= 0 && idx <= configuration.userContentController._userStyleSheets.count else { return }
+		let style = configuration.userContentController._userStyleSheets[idx]
+		configuration.userContentController._removeUserStyleSheet(style)
+		styles.removeAtIndex(idx)
 	}
 
 	func style(css: String) -> Bool {
