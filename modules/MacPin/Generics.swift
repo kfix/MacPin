@@ -5,6 +5,7 @@
 import Foundation
 import JavaScriptCore
 import WebKit
+import WebKitPrivates
 import Darwin
 
 #if os(OSX)
@@ -83,8 +84,39 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 	return true
 }
 
+func loadUserStyleSheetFromBundle(basename: String, webctl: WKUserContentController, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
+	if let cssUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "css") where !basename.isEmpty {
+		warn("loading stylesheet: \(cssUrl)")
+		let css = _WKUserStyleSheet(
+			source: (try? NSString(contentsOfURL: cssUrl, encoding: NSUTF8StringEncoding) as String) ?? "",
+		    forMainFrameOnly: onlyForTop
+		    //legacyWhitelist
+		    //legacyBlacklist
+		    	//baseUrl
+		    //userContentWorld
+		)
+		if webctl._userStyleSheets.filter({$0 == css}).count < 1 { // don't re-add identical sheets
+			webctl._addUserStyleSheet(css)
+		} else { warn("\(cssUrl) already loaded!"); return false }
+
+	} else {
+		let respath = NSBundle.mainBundle().resourcePath
+		warn("couldn't find stylesheet: \(respath)/\(basename).css")
+		if error != nil {
+			error?.memory = NSError(domain: "MacPin", code: 3, userInfo: [
+				NSFilePathErrorKey: basename + ".js",
+				NSLocalizedDescriptionKey: "No stylesheet could be found named:\n\n\(respath)/\(basename).css"
+			])
+		}
+		return false
+	}
+	return true
+}
+
 func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? {
 	// apply fuzzy logic like WK1: https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
+	// or firefox-ios: https://github.com/mozilla/firefox-ios/commit/6cab24f7152c2e56e864a9d75f4762b2fbdc6890
+	// FIXME: handle javascript: urls
 	if urlstr.isEmpty { return nil }
 	if let urlp = NSURLComponents(string: urlstr) where !urlstr.hasPrefix("?") {
 		// FIXME: ^ urlp doesn't handle unescaped spaces in filenames

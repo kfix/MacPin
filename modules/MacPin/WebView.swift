@@ -40,11 +40,14 @@ var globalIconClient = WKIconDatabaseClientV1(
 	//var hasOnlySecureContent: Bool { get }
 	// var userLabel // allow to be initiated with a trackable tag
 	var injected: [String] { get }
+	var styles: [String] { get }
 	static var MatchedAddressOptions: [String:String] { get set }
 	@objc(evalJS::) func evalJS(js: String, callback: JSValue?)
 	@objc(asyncEvalJS:::) func asyncEvalJS(js: String, delay: Double, callback: JSValue?)
 	func loadURL(urlstr: String) -> Bool
 	func loadIcon(icon: String) -> Bool
+	func style(css: String) -> Bool
+	func mainStyle(css: String) -> Bool
 	func preinject(script: String) -> Bool
 	func postinject(script: String) -> Bool
 	func addHandler(handler: String) // FIXME kill
@@ -72,6 +75,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	static var sharedWebProcessPool = WKProcessPool()._initWithConfiguration(MPWebView.WebProcessConfiguration()) // cvar singleton
 
 	var injected: [String] = [] //list of script-names already loaded
+	var styles: [String] = [] //list of css-names already loaded
 
 	var jsdelegate = AppScriptRuntime.shared.jsdelegate
 
@@ -253,6 +257,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 #endif
 				case let value as [String] where key == "preinject": for script in value { preinject(script) }
 				case let value as [String] where key == "postinject": for script in value { postinject(script) }
+				case let value as [String] where key == "style": for css in value { style(css) }
 				case let value as [String] where key == "handlers": for handler in value { addHandler(handler) } //FIXME kill
 				case let value as [String] where key == "subscribeTo": for handler in value { subscribeTo(handler) }
 				default: warn("unhandled param: `\(key): \(value)`")
@@ -400,13 +405,19 @@ var globalIconClient = WKIconDatabaseClientV1(
 		return false
 	}
 
+	func style(css: String) -> Bool {
+		if !styles.contains(css) && loadUserStyleSheetFromBundle(css, webctl: configuration.userContentController, onlyForTop: false) { styles.append(css); return true }
+		return false
+	}
+	func mainStyle(css: String) -> Bool {
+		if !styles.contains(css) && loadUserStyleSheetFromBundle(css, webctl: configuration.userContentController, onlyForTop: true) { styles.append(css); return true }
+		return false
+	}
 	func preinject(script: String) -> Bool {
-		//if contains(injected, script) { return true } //already loaded
 		if !injected.contains(script) && loadUserScriptFromBundle(script, webctl: configuration.userContentController, inject: .AtDocumentStart, onlyForTop: false) { injected.append(script); return true }
 		return false
 	}
 	func postinject(script: String) -> Bool {
-		//if contains(injected, script) { return true } //already loaded
 		if !injected.contains(script) && loadUserScriptFromBundle(script, webctl: configuration.userContentController, inject: .AtDocumentEnd, onlyForTop: false) { injected.append(script); return true }
 		return false
 	}
@@ -535,7 +546,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 /*
 	// allow controlling drags out of a MacPin window
 	override func beginDraggingSessionWithItems(items: [AnyObject], event: NSEvent, source: NSDraggingSource) -> NSDraggingSession {
-		// API didn't land in 10.11.3 ... https://bugs.webkit.org/show_bug.cgi?id=143618
+		// API didn't land in 10.11.4 or STP v7... https://bugs.webkit.org/show_bug.cgi?id=143618
 		warn()
 		return super.beginDraggingSessionWithItems(items, event: event, source: source)
 		//  (-[WKWebView _setDragImage:at:linkDrag:]):
