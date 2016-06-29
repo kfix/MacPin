@@ -65,11 +65,14 @@ ifeq ($(platform),OSX)
 endif
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly stp $(gen_apps): $(execs)
-test apirepl tabrepl test.app test.ios stp stp.app: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
-stp stp.app: linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
-stp stp.app: debug += -D STP
-stp stp.app: clang += -DSTP
-stp stp.app: swiftc += -Xcc -DSTP
+doc test apirepl tabrepl test.app test.ios stp stp.app: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
+stpdoc stp stp.app: linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
+stpdoc stp stp.app: debug += -D STP
+stpdoc stp stp.app: clang += -DSTP
+stpdoc stp stp.app: clangpp += -DSTP
+stpdoc stp stp.app: swiftc += -Xcc -DSTP
+stpdoc stp stp.app: swift += -Xcc -DSTP
+stpdoc stp stp.app: env += DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
 test apirepl tabrepl test.app test.ios stp stp.app: | $(execs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))
@@ -301,8 +304,8 @@ test.ios: ;
 endif
 
 # need to gen static html with https://github.com/realm/jazzy
-doc: $(execs) $(objs)
-	for i in $(build_mods) WebKit WebKitPrivates; do echo ":print_module $$i" | xcrun swift $(incdirs) -deprecated-integrated-repl; done
+doc stpdoc: $(execs) $(objs)
+	for i in $(build_mods) WebKit WebKitPrivates; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -deprecated-integrated-repl; done
 	#xcrun swift-ide-test -print-module -source-filename /dev/null -print-regular-comments -module-to-print Prompt
 	#xcrun swift-ide-test -sdk "$(sdkpath)" -source-filename=. -print-module -module-to-print="Prompt" -synthesize-sugar-on-types -module-print-submodules -print-implicit-attrs
 
@@ -342,5 +345,5 @@ release:
 endif
 
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist
-.PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics
+.PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics
 .SUFFIXES:
