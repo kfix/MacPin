@@ -67,6 +67,8 @@ allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly stp $(gen_apps): $(execs)
 doc test apirepl tabrepl test.app test.ios stp stp.app: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
 stpdoc stp stp.app: linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
+stpdoc stp stp.app: linkopts_main += -Wl,-F,"/Applications/Safari Technology Preview.app/Contents/Frameworks"
+stpdoc stp stp.app: libdirs += -L "/Applications/Safari Technology Preview.app/Contents/Frameworks"
 stpdoc stp stp.app: debug += -D STP
 stpdoc stp stp.app: clang += -DSTP
 stpdoc stp stp.app: clangpp += -DSTP
