@@ -106,13 +106,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 			tab.toolTip = nil
 			tab.image = nil
 		}
-		if tabView.tabViewItems.count == 1 {
-			// NSTabViewController throws exceptions when closing the last tab...
-			self.view.window?.windowController?.close() // ...so just close the window
-			return
-		}
 		super.removeTabViewItem(tab)
-		if tabView.tabViewItems.count != 0 { tabView.selectNextTabViewItem(self) } //safari behavior
 	}
 
 	override func tabView(tabView: NSTabView, willSelectTabViewItem tabViewItem: NSTabViewItem?) {
@@ -127,12 +121,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 		}
 	}
 
-	override func tabViewDidChangeNumberOfTabViewItems(tabView: NSTabView) {
-		warn("@\(tabView.tabViewItems.count)")
-		//if tabView.tabViewItems.count == 0 { view.window?.windowController?.close() } // kicks off automatic app termination
-		//if tabView.tabViewItems.count == 0 { removeFromParentViewController() }
-		if tabView.tabViewItems.count == 0 { view.removeFromSuperview() }
-	}
+	override func tabViewDidChangeNumberOfTabViewItems(tabView: NSTabView) { warn("@\(tabView.tabViewItems.count)") }
 
 	override func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [String] {
 		let tabs = super.toolbarAllowedItemIdentifiers(toolbar) ?? []
@@ -269,9 +258,9 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 		}
 	}
 
-	// override func toolbarWillAddItem(notification: NSNotification) { warn() }
-	//	if let ti = notification.userInfo?["item"] as? NSToolbarItem, tb = ti.toolbar, tgt = ti.target as? TabViewController, btn = t i.view as? NSButton { warn(ti.itermIdentifier) }
-	// override func toolbarDidRemoveItem(notification: NSNotification) { warn() }
+	 //override func toolbarWillAddItem(notification: NSNotification) { warn(notification.description) }
+	 //	if let ti = notification.userInfo?["item"] as? NSToolbarItem, tb = ti.toolbar, tgt = ti.target as? TabViewController, btn = t i.view as? NSButton { warn(ti.itermIdentifier) }
+	 //override func toolbarDidRemoveItem(notification: NSNotification) { warn(notification.description) }
 
 	override func loadView() {
 		//tabView.autoresizesSubviews = false
@@ -579,6 +568,20 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	func pushTab(webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerOSX(webview: webview)) } }
 
+	override func removeTabViewItem(tab: NSTabViewItem) {
+		super.removeTabViewItem(tab)
+		if tabView.tabViewItems.count != 0 {
+			tabView.selectNextTabViewItem(self) //safari behavior
+			// previous webview should be released and deinit'd now
+		} else {
+			// just closed the last item, self destruct the browser
+			omnibox.webview = nil
+			view.window?.makeFirstResponder(nil)
+			// last webview should be released and deinit'd now
+			self.view.window?.windowController?.close() // kicks off automatic app termination
+		}
+	}
+
 	func focusOnBrowser() {  // un-minimizes app, switches to its screen/space, and steals key focus to the window
 		//NSApplication.sharedApplication().activateIgnoringOtherApps(true)
 		let app = NSRunningApplication.currentApplication()
@@ -657,6 +660,7 @@ extension BrowserViewControllerOSX: NSMenuDelegate {
 				menu.removeAllItems()
 				for tab in tabViewItems {
 					let mi = NSMenuItem(title: tab.label, action:Selector("menuSelectedTab:"), keyEquivalent:"")
+					mi.toolTip = tab.toolTip
 					mi.image = tab.image
 					mi.image?.size = NSSize(width: 16, height: 16)
 					mi.representedObject = tab
