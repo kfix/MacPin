@@ -14,11 +14,10 @@ delegate.enDarken = function(tab) {
 			css.id = "enDarken";
 			css.type = 'text/css';
 			css.innerText = \`
-				html, img, video {
-					-webkit-filter: invert(1) hue-rotate(180deg);
+				:root, img, video, object, iframe, *:not(object):not(body)>embed, *[style*="background:url"]:empty, *[style*="background-image:url"]:empty, *[style*="background: url"]:empty, *[style*="background-image: url"]:empty {
 					filter: invert(1) hue-rotate(180deg);
 				}
-				body { background: black; }
+				:root { background: white; }
 			\`
 			document.head.appendChild(css);
 		}

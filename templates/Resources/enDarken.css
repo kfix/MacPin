@@ -1,5 +1,5 @@
-html, img, video {
-	-webkit-filter: invert(1) hue-rotate(180deg);
+/* https://github.com/alexanderby/darkreader/blob/master/src/config/sites_fixes.json */
+:root, img, video, object, iframe *:not(object):not(body)>embed, *[style*="background:url"]:empty, *[style*="background-image:url"]:empty, *[style*="background: url"]:empty, *[style*="background-image: url"]:empty {
 	filter: invert(1) hue-rotate(180deg);
 }
-body { background: black; }
+:root { background: white; }
