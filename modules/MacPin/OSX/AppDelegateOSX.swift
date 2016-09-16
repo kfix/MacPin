@@ -24,7 +24,8 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 			// 		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/NetworkProcess/mac/NetworkProcessMac.mm
 			// 		https://lists.webkit.org/pipermail/webkit-dev/2016-May/028233.html
 			"WebKit2HTTPProxy": "",
-			"WebKit2HTTPSProxy": ""
+			"WebKit2HTTPSProxy": "",
+			"URLParserEnabled": "" // JS: new URL()
 		])
 
 		NSUserDefaults.standardUserDefaults().removeObjectForKey("__WebInspectorPageGroupLevel1__.WebKit2InspectorStartsAttached") // #13 fixed
