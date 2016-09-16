@@ -7,11 +7,11 @@ class WindowController: NSWindowController, NSWindowDelegate {
 	override init(window: NSWindow?) {
 		// take care of awakeFromNib() & windowDidLoad() tasks, which are not called for NIBless windows
 		super.init(window: window)
-		
+
 		let appearance = NSUserDefaults.standardUserDefaults().stringForKey("AppleInterfaceStyle") ?? "Light"
 		if let window = window {
 			window.collectionBehavior = [.FullScreenPrimary, .ParticipatesInCycle, .Managed]
-			window.styleMask |= NSUnifiedTitleAndToolbarWindowMask
+			window.styleMask |= NSUnifiedTitleAndToolbarWindowMask // FIXME: toggle for borderless?
 			window.movableByWindowBackground = true
 			window.backgroundColor = NSColor.whiteColor()
 			window.opaque = true
@@ -21,7 +21,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 				window.appearance = NSAppearance(named: NSAppearanceNameVibrantDark) // match overall system dark-mode
 			} else {
 				window.appearance = NSAppearance(named: NSAppearanceNameVibrantLight) // Aqua LightContent VibrantDark VibrantLight
-			}
+			} // NSVisualEffectMaterialAppearanceBased ??
 			window.identifier = "browser"
 			//window.registerForDraggedTypes([NSPasteboardTypeString, NSURLPboardType, NSFilenamesPboardType]) //wkwebviews do this themselves
 			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
@@ -69,4 +69,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			if window.titlebarAppearsTransparent { window.toolbar?.showsBaselineSeparator = false }
 		}
 	}
+
+	// only useful in non-fullscreen mode
+	//func toggleMenuBarAutoHide() { NSApp.presentationOptions |= .AutoHideMenuBar }
 }
