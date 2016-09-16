@@ -1,3 +1,4 @@
+/* eslint-env es6 */
 //if (document.documentElement.style.backgroundColor == "") document.documentElement.style.backgroundColor = "white";
 //uggh, its so painfully bright... time for hacker mode?
 /*
@@ -30,85 +31,10 @@ var customizeBG = function() {
 	css.innerHTML += "\n.feed-item-focused.expanded .story-detail-view-container .story-title a { color: #0093cc !important; }";
 	document.head.appendChild(css);
 */
-	css.innerHTML = "\
-		body {\
-			color: rgb(204, 204, 204) !important;\
-		    background-color: #454545 !important;\
-		}\
-		.dr-label, .feeditem-read .feeditem-headline {\
-		    text-shadow: none !important;\
-		    color: #CCCCCC !important;\
-		}\
-		.feeditem-list.expanded .story-detail-view-container .story-title a, .feed-title a {\
-		    color: #0093cc !important;\
-		}\
-		.feed-title a {\
-		    border-color: #0093cc !important;\
-		}\
-		.feed-title a:hover {\
-		    border-color: #fff !important;\
-		}\
-		.feeditem-feedtitle-src, .feeditem-list .feeditem-fuzzytime a {\
-		    border-bottom: 1px dotted #212121 !important;\
-		}\
-		.feeditem-feedtitle-src:hover, .feeditem-fuzzytime a:hover {\
-		    border-bottom: 1px dotted #CCCCCC !important;\
-		}\
-		.view-region-main-container, .site-header, .col-left, .reader-nav .reader-nav-item, .view-add, .feeditem-list.expanded .story-detail-view-container {\
-			background-color: #212121 !important;\
-		}\
-		.site-header-container, .no-touch .feeditem-list:hover, .no-touch .feeditem-list.expanded, .dr-label:hover, .feed-item-focused .feeditem-feedtitle,\
-		article.expanded .feeditem-feedtitle, .feed-item-focused .feeditem-list-content,\
-		article.expanded .feeditem-list-content, .discovery-feed-item-controls .btn-add-feed {\
-		    background-color: #454545 !important;\
-		}\
-		.view-add {\
-			border: 0 !important;\
-		}\
-		#btn-view-all-items, .dr-add-btn, .feed-stream-header, .col-left, .dr-label:hover, .feeditem-list.expanded {\
-			border-color: #454545 !important;\
-		}\
-		.btn-toggle-read-state, .feeditem-list {\
-		    border-color: #777 !important;\
-		}\
-		.feeditem-list, .discovery-feed-item {\
-			border-top: 1px solid #454545 !important;\
-		}\
-		.dr-feed-selected>.dr-label, .dr-feed-selected>.dr-label:hover {\
-		    background-color: rgba(24, 24, 24, 0.901961) !important;\
-		    border-top-color: rgba(24, 24, 24, 0.901961) !important;\
-		    border-bottom-color: rgba(24, 24, 24, 0.901961) !important;\
-		}\
-		.reader-nav .reader-nav-item {\
-			border-left: 1px solid #454545 !important;\
-		}\
-		.view-add>div, .boxshadow .site-header-container {\
-		    -webkit-box-shadow: inset 0 1px 0 0 #454545 !important;\
-		    box-shadow: inset 0 1px 0 0 #454545 !important;\
-		}\
-		#site-header-logo {\
-		    background-image: none !important;\
-		}\
-		.discovery-search-form-wrap form {\
-		    background-color: #454545 !important;\
-		    border: 1px solid #212121 !important;\
-		    -webkit-box-shadow: inset 0 1px 0 0 #454545 !important;\
-		    box-shadow: inset 0 1px 0 0 #454545 !important;\
-		}\
-		input {\
-		    color: #ccc !important;\
-		}\
-		.discovery-search-header {\
-		    border-bottom: 2px solid #454545 !important;\
-		}\
-		.btn-action {\
-		    border: 1px solid #454545 !important;\
-		}\
-		.discovery-feed-item-controls .btn-add-feed:hover {\
-		    background-color: #0093cc !important;\
-		    border-color: #0093cc !important;\
-		}\
-	";
+
+	css.innerHTML = `
+		:root, body { background: none; }
+	`;
 	document.head.appendChild(css);
 };
 

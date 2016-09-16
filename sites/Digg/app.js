@@ -63,6 +63,7 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut("Digg Reader", digg);
 	$.browser.addShortcut("Get OSX service for text-selected feeds", "http://github.com/kfix/MacPin/tree/master/extras/Open Feed with Digg.workflow");
 	$.browser.addShortcut("Add current page to Digg Reader feeds", ["addCurrentPageToFeeds"]);
+	$.browser.addShortcut('Dark Mode', ['enDarken']);
 
 	$.browser.tabSelected = diggTab;
 
