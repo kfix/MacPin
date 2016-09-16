@@ -3,9 +3,12 @@
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
 
+// official Slack.app uses MacGap
+
 var slackTab, slack = {
 	url: 'https://slack.com/signin/',
 	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
+	agent: '"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Slack_SSB/2.0.3"',
 	preinject: ['shim_html5_notifications']
 };
 $.browser.tabSelected = slackTab = new $.WebView(slack);
