@@ -2,6 +2,7 @@ import AppKit
 import ObjectiveC
 import WebKitPrivates
 import Darwin
+import Bookmarks
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
 public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
@@ -21,11 +22,16 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 			// NSUserDefaults for NetworkProcesses:
 			//		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/WebProcessPoolCocoa.mm
 			// 		WebKit2HTTPProxy, WebKit2HTTPSProxy, WebKitOmitPDFSupport, all the cache directories ...
-			// 		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/NetworkProcess/mac/NetworkProcessMac.mm
 			// 		https://lists.webkit.org/pipermail/webkit-dev/2016-May/028233.html
 			"WebKit2HTTPProxy": "",
 			"WebKit2HTTPSProxy": "",
 			"URLParserEnabled": "" // JS: new URL()
+			// wish there was defaults for:
+			// 		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/NetworkProcess/mac/NetworkProcessMac.mm overrideSystemProxies()
+			// SOCKS (kCFProxyTypeSOCKS)
+			// PAC URL (kCFProxyTypeAutoConfigurationURL + kCFProxyAutoConfigurationURLKey)
+			// PAC script (kCFProxyTypeAutoConfigurationJavaScript + kCFProxyAutoConfigurationJavaScriptKey)
+			//_CFNetworkSetOverrideSystemProxySettings(CFDict)
 		])
 
 		NSUserDefaults.standardUserDefaults().removeObjectForKey("__WebInspectorPageGroupLevel1__.WebKit2InspectorStartsAttached") // #13 fixed
@@ -158,6 +164,13 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		shortcutsMenu.submenu?.title = "Shortcuts"
 		app!.mainMenu?.addItem(shortcutsMenu)
 
+		let bookMenu = NSMenuItem()
+		bookMenu.submenu = NSMenu()
+		bookMenu.submenu?.title = "Bookmarks"
+		let bookmarks = Bookmark.readFrom("~/Library/Safari/Bookmarks.plist")
+		app!.mainMenu?.addItem(bookMenu)
+		// https://github.com/peckrob/FRBButtonBar
+
 		let dbgMenu = NSMenuItem()
 		dbgMenu.submenu = NSMenu()
 		dbgMenu.submenu?.title = "Debug"
@@ -242,6 +255,8 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 					warn("unrecognized argv[\(idx)]: `\(arg)`")
 			}
 		}
+
+		//NSApp.setServicesProvider(ServiceOSX())
 
 		//dispatch_sync(dispatch_get_main_queue(), {
 		//dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), {

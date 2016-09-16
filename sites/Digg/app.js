@@ -4,7 +4,7 @@
 
 var delegate = {}; // our delegate to receive events from the osx app
 
-var digg = { postinject: ["styler"], url: "http://digg.com/reader" };
+var digg = { postinject: [""], url: "http://digg.com/reader" };
 var diggTab = new $.WebView(digg);
 
 function getAddFeedLink(url) {
@@ -78,4 +78,7 @@ delegate.AppFinishedLaunching = function() {
 		);
 	}
 };
+
+$.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
+
 delegate; //return delegate to app

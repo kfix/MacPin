@@ -129,8 +129,12 @@ endef
 
 # https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
 # https://developer.apple.com/library/ios/qa/qa1686/_index.html
+# https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/SysServices/Articles/properties.html#//apple_ref/doc/uid/20000852-CHDJDFIC
 $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/Info.plist: templates/$(platform)/Info.plist
 	$(gen_plist_template)
+ifeq ($(platform),OSX)
+	[ -f $(macpin_sites)/$*/ServicesOSX.plist ] && /usr/libexec/PlistBuddy -c 'merge $(macpin_sites)/$*/ServicesOSX.plist' -c save $@
+endif
 
 $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings: templates/$(platform)/InfoPlist.strings
 	$(gen_plist_template)
@@ -238,6 +242,7 @@ else
 install:
 	install -d $(installdir)
 	cp -R $(filter %.app,$^) $(installdir)
+	#/System/Library/CoreServices/pbs # look for new NSServices
 endif
 
 unregister:

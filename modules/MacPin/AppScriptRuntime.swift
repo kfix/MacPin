@@ -14,6 +14,7 @@ import UIKit
 import Foundation
 import JavaScriptCore // https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
 // https://developer.apple.com/library/mac/documentation/General/Reference/APIDiffsMacOSX10_10SeedDiff/modules/JavaScriptCore.html
+// https://github.com/WebKit/webkit/blob/master/Source/WebCore/bridge/objc/objc_class.mm
 
 import XMLHTTPRequest // https://github.com/Lukas-Stuehrk/XMLHTTPRequest
 

@@ -63,8 +63,8 @@ var globalIconClient = WKIconDatabaseClientV1(
 	//var snapshotURL: String { get } // gets a data:// of the WKThumbnailView
 }
 
-//@objc class MPWebView: WKWebViewSnappable, WebViewScriptExports { // from WebKitPrivates.mm: not linkable as of STP v6, see stp_impls.txt
-@objc class MPWebView: WKWebView, WebViewScriptExports {
+@objc class MPWebView: WKWebView, WebViewScriptExports { // from WebKitPrivates.mm: not linkable as of STP v12, see stp_impls.txt
+//@objc class MPWebView: WKWebView, WebViewScriptExports {
 	static var MatchedAddressOptions: [String:String] = [:] // cvar singleton
 
 	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
@@ -77,6 +77,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 
 	var injected: [String] = [] //list of script-names already loaded
 	var styles: [String] = [] //list of css-names already loaded
+	// cachedUserScripts: [UserScript] // are pushed/popped from the contentController by navigation delegates depending on URL being visited
 
 	var jsdelegate = AppScriptRuntime.shared.jsdelegate
 
@@ -406,6 +407,17 @@ var globalIconClient = WKIconDatabaseClientV1(
 		return false
 	}
 
+/*
+	func addUserScript(name: String) -> UserScript? {
+		let script = UserScript.load(basename: name, inject: .AtDocumentStart, onlyForTop: false)
+		let webctl = configuration.userContentController
+		guard webctl.userScripts.filter({$0 == script}).count < 1 else { warn("\(script) already loaded!"); return nil }
+		//if (find(webctl.userScripts, script) ?? -1) < 0 { // don't re-add identical userscripts
+		webctl.addUserScript(script)
+		return script
+	}
+*/
+
 	func popStyle(idx: Int) {
 		guard idx >= 0 && idx <= configuration.userContentController._userStyleSheets.count else { return }
 		let style = configuration.userContentController._userStyleSheets[idx]
@@ -428,7 +440,14 @@ var globalIconClient = WKIconDatabaseClientV1(
 	func postinject(script: String) -> Bool {
 		if !injected.contains(script) && loadUserScriptFromBundle(script, webctl: configuration.userContentController, inject: .AtDocumentEnd, onlyForTop: false) { injected.append(script); return true }
 		return false
+		// forcefully install a userscript fror post-page-loads
+		//guard unless !injected.contains(script) else {return false}
+		//guard let script = loadUserScript(script, inject: .AtDocumentEnd, onlyForTop: false) else { return false }
+		//addUserScript(script)
+		//injected.append(script)
+		//return true
 	}
+
 	func addHandler(handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) } //FIXME kill
 	func subscribeTo(handler: String) {
 		configuration.userContentController.removeScriptMessageHandlerForName(handler)

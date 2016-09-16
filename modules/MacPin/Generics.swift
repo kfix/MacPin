@@ -58,6 +58,16 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 		    injectionTime: inject,
 		    forMainFrameOnly: onlyForTop
 		)
+
+		// TODO: parse some of UserScript Metadata Block if present: https://wiki.greasespot.net/Metadata_Block
+		// @include, @exclude, @description, @icon, @match, @name, @namespace, @frames, @noframes, @run-at
+		// https://github.com/kzys/greasekit
+		// https://github.com/os0x/NinjaKit/blob/master/NinjaKit.safariextension/js/background.js
+		// https://github.com/Tampermonkey/tampermonkey
+		// http://www.opera.com/docs/userjs/using/#writingscripts
+		// would have to have a per-controller cachedUserScripts: [WKUserScripts] that are pushed/popped from the contentController by navigation delegates depending on URL being visited
+
+		// FIXME: break this out into its own func
 		if webctl.userScripts.filter({$0 == script}).count < 1 { // don't re-add identical userscripts
 		//if (find(webctl.userScripts, script) ?? -1) < 0 { // don't re-add identical userscripts
 			webctl.addUserScript(script)

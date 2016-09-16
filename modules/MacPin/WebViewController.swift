@@ -60,7 +60,7 @@ import JavaScriptCore
 		super.viewDidLoad()
 	}
 
-	func closeTab() { removeFromParentViewController(); webview = nil }
+	func closeTab() { webview._close(); view.removeFromSuperview(); removeFromParentViewController(); warn() }
 	func askToOpenCurrentURL() { askToOpenURL(webview.URL!) }
 
 	// sugar for delgates' opening a new tab in parent browser VC

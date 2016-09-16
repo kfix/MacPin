@@ -126,6 +126,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 
 	override func closeTab() {
 		webview._inspectorAttachmentView = nil
+		//view?.removeFromSuperviewWithoutNeedingDisplay()
 		super.closeTab()
 	}
 

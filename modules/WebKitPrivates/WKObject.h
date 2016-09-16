@@ -26,8 +26,7 @@
 
 #import "WKFoundation.h"
 
-#if WK_API_ENABLED
-
+#ifdef __cplusplus
 #import <type_traits>
 
 namespace API {
@@ -59,4 +58,4 @@ void* wrap(API::Object*);
 
 @end
 
-#endif // WK_API_ENABLED
+#endif // __cplus

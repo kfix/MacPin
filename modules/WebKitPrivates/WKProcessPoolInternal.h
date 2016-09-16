@@ -28,7 +28,6 @@
 
 #if WK_API_ENABLED
 
-//#import "WKObject.h"
 //#import "WebProcessPool.h"
 
 #if TARGET_OS_IPHONE
@@ -45,10 +44,16 @@ inline WKProcessPool *wrapper(WebProcessPool& processPool)
 
 }
 
-@interface WKProcessPool () { //<WKObject> {
-//@package
-//    API::ObjectStorage<WebKit::WebProcessPool> _processPool;
-//}
+#ifdef __cplusplus
+#import "WKObject.h"
+@interface WKProcessPool () { <WKObject> {
+@package
+    API::ObjectStorage<WebKit::WebProcessPool> _processPool;
+    // https://github.com/WebKit/webkit/blob/72068f140de6e48078749591a06a81f24a4034c4/Source/WebKit2/UIProcess/WebProcessPool.h
+    // https://github.com/WebKit/webkit/blob/72068f140de6e48078749591a06a81f24a4034c4/Source/WebKit2/UIProcess/WebProcessPool.cpp
+
+}
+#endif
 
 #if TARGET_OS_IPHONE
 @property(readonly) WKGeolocationProviderIOS *_geolocationProvider;
