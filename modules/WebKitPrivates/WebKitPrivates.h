@@ -37,6 +37,7 @@
 #import "WKUserContentControllerPrivate.h"
 //#import "SnapshottableWKWebView.h"
 #endif
+#import "WKErrorRef.h"
 
 /* things to integrate:
 	better JS errors from wkwebviews: https://github.com/WebKit/webkit/commit/984d854e5c71da16cdf85c644fc292947aea43a1
