@@ -4,7 +4,6 @@
 
 import WebKit
 import WebKitPrivates
-import Async
 
 extension WebViewControllerOSX {
 
