@@ -1,0 +1,86 @@
+/* https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99 */
+
+ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
+    background: #353535;
+}
+
+ts-message {
+    font-size: .8375rem !important;
+}
+
+#col_channels,
+#team_menu,
+#quick_switcher_btn {
+    background: #2B2B2B !important;
+}
+
+.channel_title_info,
+.channel-header .flex_header,
+.flex_header,
+#channel_header_info,
+#primary_file_button,
+#col_messages > .row-fluid,
+#client-ui,
+.client-ui,
+.channel_header_refresh #client_body:not(.onboarding):before,
+#footer,
+#messages_container,
+.day_divider,
+.tab_container,
+.panel .heading,
+#mentions_options
+ {
+    background: #000 !important;
+}
+
+.ts_icon:not(.ts_icon_presence):before, ts-icon:before,
+.panel .heading,
+.message_body,
+.timestamp,
+.initial_comment .comment,
+#im_title,
+#channel_title,
+#mentions_options {
+    color: #fff !important;
+}
+
+#quick_switcher_btn {
+    border-top: none !important;
+}
+
+.channel_header_refresh #client_body:not(.onboarding):before {
+    border-bottom: 1px solid #4C4C4C;
+}
+
+.monkey_scroll_bar,
+.monkey_scroll_handle_inner {
+    background: #333131 !important;
+}
+
+#stars_toggle.active,
+#recent_mentions_toggle.active {
+    background: #6D6D6D !important;
+}
+
+.action_hover_container .ts_icon:before,
+.action_hover_container .ts_icon:after,
+#menu_items .ts_icon:before,
+#menu_items .ts_icon:after {
+   color: #000 !important;
+}
+
+#search_container input,
+#message-input {
+    background: #000 !important;
+    color: #fff !important;
+}
+
+.special_formatting {
+    background-color: inherit !important;
+    color: #39cc2f !important;
+}
+
+.mention {
+    background: inherit !important;
+    color: #e1dc28;
+}
