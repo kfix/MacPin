@@ -228,4 +228,24 @@ extension WebViewController { // _WKInputDelegate
 	}
 }
 
+extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
+	// https://bugs.webkit.org/show_bug.cgi?id=137759
+	// https://github.com/WebKit/webkit/blob/4b7052ab44fa581810188638d1fdf074e7d754ca/Tools/MiniBrowser/mac/WK2BrowserWindowController.m#L451
+	func webView(webView: WKWebView!, runOpenPanelWithParameters parameters: WKOpenPanelParameters!, initiatedByFrame frame: WKFrameInfo!, completionHandler: (([NSURL]?) -> Void)!) {
+		warn("<input> file upload panel opening!")
+		//pop open a save Panel to dump data into file
+		let openDialog = NSOpenPanel()
+		openDialog.allowsMultipleSelection =  parameters.allowsMultipleSelection
+		if let window = webview.window {
+			NSApplication.sharedApplication().requestUserAttention(.InformationalRequest)
+			openDialog.beginSheetModalForWindow(window, completionHandler: { (choice: Int) -> Void in
+				if choice == NSFileHandlingPanelOKButton {
+					completionHandler(openDialog.URLs)
+				} else {
+					completionHandler(nil)
+				}
+			})
+		}
+	}
+}
 

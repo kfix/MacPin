@@ -31,6 +31,11 @@
 #import <WebKit/WKSecurityOrigin.h>
 #import "_WKActivatedElementInfo.h"
 
+#ifdef STP
+//#import <WebKit/WKOpenPanelParameters.h>
+#import "WKOpenPanelParameters.h"
+#endif
+
 @class UIScrollView;
 @class UIViewController;
 @class _WKContextMenuElementInfo;
@@ -81,6 +86,18 @@ struct UIEdgeInsets;
 #else
 - (NSMenu *)_webView:(WKWebView *)webView contextMenu:(NSMenu *)menu forElement:(_WKContextMenuElementInfo *)element WK_AVAILABLE(WK_MAC_TBA, NA);
 - (NSMenu *)_webView:(WKWebView *)webView contextMenu:(NSMenu *)menu forElement:(_WKContextMenuElementInfo *)element userInfo:(id <NSSecureCoding>)userInfo WK_AVAILABLE(WK_MAC_TBA, NA);
+
+/*! @abstract Displays a file upload panel.
+ @param webView The web view invoking the delegate method.
+ @param parameters Parameters describing the file upload control.
+ @param frame Information about the frame whose file upload control initiated this call.
+ @param completionHandler The completion handler to call after open panel has been dismissed. Pass the selected URLs if the user chose OK, otherwise nil.
+ If you do not implement this method, the web view will behave as if the user selected the Cancel button.
+ */
+#ifdef STP
+- (void)webView:(WKWebView *)webView runOpenPanelWithParameters:(WKOpenPanelParameters *)parameters initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(WK_ARRAY(NSURL *) * WK_NULLABLE_SPECIFIER URLs))completionHandler WK_AVAILABLE(WK_MAC_TBA, NA);
+//- (void)webView:(WKWebView *)webView runOpenPanelWithParameters:(WKOpenPanelParameters *)parameters initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(NSArray<NSURL *> * _Nullable URLs))completionHandler WK_API_AVAILABLE(macosx(10.12));
+#endif
 #endif
 
 @end
