@@ -7,6 +7,9 @@
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/Notifications/NotificationPermissionRequestManager.cpp
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/Notifications/WebNotificationManager.cpp
 // https://github.com/WebKit/webkit/commit/99a0a5c064faada93ed5c3af995e982ab751dfb0
+// https://github.com/WebKit/webkit/search?q=decidePolicyForNotificationPermissionRequest
+//   https://github.com/WebKit/webkit/blob/8e4ed211342ab489a964e980be022cdf63824a8f/Source/WebKit2/UIProcess/WebPageProxy.cpp#L5677
+//   https://github.com/WebKit/webkit/blob/2b5a967568e17a0945b9e4050c23986537643c77/Source/WebKit2/UIProcess/API/APIUIClient.h#L137
 var NotificationShim = function() {
 
 	function Notification(title, options) { // constructor
@@ -37,6 +40,7 @@ var NotificationShim = function() {
 
 window.Notification = NotificationShim;
 
+/*
 // handle the deprecated pre-W3C API too
 var wkNotificationShim = {
 	checkPermission: function() { return 0; }, // PERMISSION_ALLOWED
@@ -45,3 +49,6 @@ var wkNotificationShim = {
 }
 window.webkitNotifications.__proto__ = wkNotificationShim;
 //window.webkitNotifications.__proto__ = null;
+*/
+
+delete window.webkitNotifications; // proto is set but native "NotificationCenter" remains...
