@@ -114,11 +114,13 @@ import WebKitPrivates
 extension WebViewControllerOSX: NSMenuDelegate {
 	func menuNeedsUpdate(menu: NSMenu) {
 		//if menu.tag == 1 //backlist
+		/*
 		for histItem in webview.backForwardList.backList {
 			let mi = NSMenuItem(title:(histItem.title ?? histItem.URL.absoluteString), action:Selector("gotoHistoryMenuURL:"), keyEquivalent:"" )
 			mi.representedObject = histItem.URL
 			mi.target = self
 		}
+		*/
 	}
 }
 

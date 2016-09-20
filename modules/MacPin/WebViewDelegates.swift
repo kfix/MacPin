@@ -84,8 +84,8 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 	}
 
 	func webView(webView: WKWebView, decidePolicyForNavigationAction navigationAction: WKNavigationAction, decisionHandler: (WKNavigationActionPolicy) -> Void) {
-		if let url = navigationAction.request.URL {
-			switch url.scheme {
+		if let url = navigationAction.request.URL, scheme = url.scheme {
+			switch scheme {
 				case "data": fallthrough
 				case "file": fallthrough
 				case "about": fallthrough
@@ -104,9 +104,9 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 #if os(OSX)
 					let mousebtn = navigationAction.buttonNumber
 					let modkeys = navigationAction.modifierFlags
-					if modkeys.contains(NSEventModifierFlags.AlternateKeyMask) { NSWorkspace.sharedWorkspace().openURL(url) } //alt-click opens externally
-						else if modkeys.contains(NSEventModifierFlags.CommandKeyMask) { popup(webView.clone(url)) } // cmd-click pops open a new tab
-						else if modkeys.contains(NSEventModifierFlags.CommandKeyMask) { popup(MPWebView(url: url, agent: webView._customUserAgent)) } // shift-click pops open a new tab w/ new session state
+					if modkeys.contains(.Option) { NSWorkspace.sharedWorkspace().openURL(url) } //alt-click opens externally
+						else if modkeys.contains(.Command) { popup(webView.clone(url)) } // cmd-click pops open a new tab
+						else if modkeys.contains(.Command) { popup(MPWebView(url: url, agent: webView._customUserAgent)) } // shift-click pops open a new tab w/ new session state
 						// FIXME: same keymods should work with Enter in omnibox controller
 						else if !jsdelegate.tryFunc("decideNavigationForClickedURL", url.description, webView) { // allow override from JS
 							if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
@@ -288,7 +288,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 					width: CGFloat(windowFeatures.width ?? window.frame.size.width as NSNumber),
 					height: CGFloat(windowFeatures.height ?? window.frame.size.height as NSNumber)
 				)
-				if !webView.inFullScreenMode && (window.styleMask & NSFullScreenWindowMask == 0) {
+				if !webView.inFullScreenMode && (!window.styleMask.contains(.FullScreen)) {
 					warn("resizing window to match window.open() size parameters passed: origin,size[\(newframe)]")
 					window.setFrame(newframe, display: true)
 				}

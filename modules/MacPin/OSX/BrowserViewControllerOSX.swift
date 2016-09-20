@@ -167,42 +167,42 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 			//btnCell.controlSize = .SmallControlSize
 			btn.toolTip = itemIdentifier
 			btn.image = NSImage(named: NSImageNamePreferencesGeneral) // https://hetima.github.io/fucking_nsimage_syntax/
-			btn.bezelStyle = .RecessedBezelStyle // RoundRectBezelStyle ShadowlessSquareBezelStyle
-			btn.setButtonType(.MomentaryLightButton) //MomentaryChangeButton MomentaryPushInButton
+			btn.bezelStyle = .Recessed // RoundRectBezelStyle ShadowlessSquareBezelStyle
+			btn.setButtonType(.MomentaryLight) //MomentaryChangeButton MomentaryPushInButton
 			btn.target = nil // walk the Responder Chain
-			btn.sendActionOn(Int(NSEventMask.LeftMouseDownMask.rawValue))
+			btn.sendActionOn(.LeftMouseDown)
 			ti.view = btn
 
 			switch (btnType) {
 				case .Share:
 					btn.image = NSImage(named: NSImageNameShareTemplate)
-					btn.action = Selector("shareButtonClicked:")
+					btn.action = #selector(WebViewControllerOSX.shareButtonClicked(_:))
 					return ti
 
 					case .Snapshot:
 					btn.image = NSImage(named: NSImageNameQuickLookTemplate)
-					btn.action = Selector("snapshotButtonClicked:")
+					btn.action = #selector(WebViewControllerOSX.snapshotButtonClicked(_:))
 					return ti
 
 				//case .Inspect: // NSMagnifyingGlass
 				case .NewTab:
 					btn.image = NSImage(named: NSImageNameAddTemplate)
-					btn.action = Selector("newTabPrompt")
+					btn.action = #selector(BrowserViewControllerOSX.newTabPrompt)
 					return ti
 
 				case .CloseTab:
 					btn.image = NSImage(named: NSImageNameRemoveTemplate)
-					btn.action = Selector("closeTab")
+					btn.action = #selector(WebViewController.closeTab)
 					return ti
 
 				case .Forward:
 					btn.image = NSImage(named: NSImageNameGoRightTemplate)
-					btn.action = Selector("goForward:")
+					btn.action = #selector(WebView.goForward(_:))
 					return ti
 
 				case .Back:
 					btn.image = NSImage(named: NSImageNameGoLeftTemplate)
-					btn.action = Selector("goBack:")
+					btn.action = #selector(WebView.goBack(_:))
 					return ti
 
 				case .ForwardBack:
@@ -211,7 +211,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 					seg.segmentStyle = .Separated
 					let segCell = seg.cell as! NSSegmentedCell
 					seg.trackingMode = .Momentary
-					seg.action = Selector("goBack:")
+					seg.action = #selector(WebView.goBack(_:))
 
 					seg.setImage(NSImage(named: NSImageNameGoLeftTemplate), forSegment: 0)
 					//seg.setLabel(BackButton, forSegment: 0)
@@ -228,7 +228,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 
 				case .Refresh:
 					btn.image = NSImage(named: NSImageNameRefreshTemplate)
-					btn.action = Selector("reload:")
+					btn.action = #selector(WebView.reload)
 					return ti
 
 				case .SelectedTab:
@@ -242,7 +242,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 
 				case .TabList:
 					btn.image = NSImage(named: "ToolbarButtonTabOverviewTemplate.pdf")
-					btn.action = Selector("tabListButtonClicked:")
+					btn.action = #selector(BrowserViewControllerOSX.tabListButtonClicked(_:))
 					return ti
 
 				case .OmniBox:
@@ -659,7 +659,7 @@ extension BrowserViewControllerOSX: NSMenuDelegate {
 			case "Tabs":
 				menu.removeAllItems()
 				for tab in tabViewItems {
-					let mi = NSMenuItem(title: tab.label, action:Selector("menuSelectedTab:"), keyEquivalent:"")
+					let mi = NSMenuItem(title: tab.label, action:#selector(menuSelectedTab(_:)), keyEquivalent:"")
 					mi.toolTip = tab.toolTip
 					mi.image = tab.image
 					mi.image?.size = NSSize(width: 16, height: 16)

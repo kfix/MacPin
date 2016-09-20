@@ -462,8 +462,8 @@ var globalIconClient = WKIconDatabaseClientV1(
 				if let exception = exception { Swift.print("Error: \(exception)") }
 			})
 		},
-		ps1: __FILE__,
-		ps2: __FUNCTION__,
+		ps1: #file,
+		ps2: #function,
 		abort: { () -> Void in
 			// EOF'd by Ctrl-D
 			// self.close() // FIXME: self is still retained (by the browser?)
@@ -508,7 +508,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 	override func validateUserInterfaceItem(anItem: NSValidatedUserInterfaceItem) -> Bool {
-		switch (anItem.action().description) {
+		switch (anItem.action.description) {
 			//case "askToOpenCurrentURL": return true
 			case "copyAsPDF": fallthrough
 			case "console": fallthrough
@@ -517,7 +517,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 			case "savePage": return true
 			case "printWebView:": return true
 			default:
-				warn("not capturing selector but passing to super: \(anItem.action())")
+				warn("not capturing selector but passing to super: \(anItem.action)")
 				return super.validateUserInterfaceItem(anItem)
 		}
 

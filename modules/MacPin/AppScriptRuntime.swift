@@ -249,7 +249,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			if JSCheckScriptSyntax(
 				/*ctx:*/ context.JSGlobalContextRef,
 				/*script:*/ JSStringCreateWithCFString(script as CFString),
-				/*sourceURL:*/ JSStringCreateWithCFString(scriptURL.absoluteString as CFString),
+				/*sourceURL:*/ JSStringCreateWithCFString(scriptURL.absoluteString as! CFString),
 				/*startingLineNumber:*/ Int32(1),
 				/*exception:*/ UnsafeMutablePointer(exception.JSValueRef)
 			) {
@@ -476,8 +476,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 					print(val)
 				}
 			},
-			ps1: __FILE__,
-			ps2: __FUNCTION__,
+			ps1: #file,
+			ps2: #function,
 			abort: { () -> Void in
 				// EOF'd by Ctrl-D
 #if os(OSX)

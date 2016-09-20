@@ -20,7 +20,7 @@ import Prompt // https://github.com/neilpa/swift-libedit
 var prompter: Async? = nil
 #endif
 
-func warn(msg: String = String(), function: StaticString = __FUNCTION__, file: StaticString = __FILE__, line: UInt = __LINE__, column: UInt = __COLUMN__) {
+func warn(msg: String = String(), function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
 	// https://github.com/swisspol/XLFacility ?
 	NSFileHandle.fileHandleWithStandardError().writeData(("[\(NSDate())] <\(file):\(line):\(column)> [\(function)] \(msg)\n").dataUsingEncoding(NSUTF8StringEncoding)!)
 #if WARN2NSLOG
@@ -40,7 +40,7 @@ func warn(msg: String = String(), function: StaticString = __FUNCTION__, file: S
 
 /*
 func assert(condition: @autoclosure () -> Bool, _ message: String = "",
-	file: String = __FILE__, line: Int = __LINE__) {
+	file: String = #file, line: Int = #line) {
 		#if DEBUG
 			if !condition() {
 				println("assertion failed at \(file):\(line): \(message)")
@@ -181,7 +181,7 @@ func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? 
 }
 
 // TODO: exposing a websocketREPL would also be neat: https://github.com/siuying/IGJavaScriptConsole https://github.com/zwopple/PocketSocket
-func termiosREPL(eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2: StaticString = __FUNCTION__, abort:(()->Void)? = nil) {
+func termiosREPL(eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2: StaticString = #function, abort:(()->Void)? = nil) {
 #if arch(x86_64) || arch(i386)
 	prompter = Async.background {
 		let prompt = Prompt(argv0: Process.unsafeArgv[0], prompt: "\(ps1)[\(ps2)]:> ")

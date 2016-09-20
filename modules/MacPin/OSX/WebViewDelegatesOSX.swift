@@ -14,7 +14,7 @@ extension WebViewControllerOSX {
 		alert.addButtonWithTitle("Dismiss")
 		alert.informativeText = message
 		alert.icon = webview.favicon.icon
-		alert.alertStyle = .InformationalAlertStyle // .Warning .Critical
+		alert.alertStyle = .Informational // .Warning .Critical
 		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler() }
 	}
 

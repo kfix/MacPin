@@ -11,7 +11,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 		let appearance = NSUserDefaults.standardUserDefaults().stringForKey("AppleInterfaceStyle") ?? "Light"
 		if let window = window {
 			window.collectionBehavior = [.FullScreenPrimary, .ParticipatesInCycle, .Managed]
-			window.styleMask |= NSUnifiedTitleAndToolbarWindowMask // FIXME: toggle for borderless?
+			window.styleMask.insert(.UnifiedTitleAndToolbar) // FIXME: toggle for borderless?
 			window.movableByWindowBackground = true
 			window.backgroundColor = NSColor.whiteColor()
 			window.opaque = true
@@ -63,9 +63,9 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			min.hidden = !min.hidden
 			zoom.hidden = !zoom.hidden
 			window.titlebarAppearsTransparent = !window.titlebarAppearsTransparent
-			window.styleMask ^= NSUnifiedTitleAndToolbarWindowMask
-			window.styleMask ^= NSFullSizeContentViewWindowMask // makes contentView (browserController) extend underneath the now invisible titlebar
-			//window.styleMask ^= NSTitledWindowMask // this blows away the actual .toolbar object, making browserController crash
+			window.styleMask.formSymmetricDifference(.UnifiedTitleAndToolbar)
+			window.styleMask.formSymmetricDifference(.FullSizeContentView) // makes contentView (browserController) extend underneath the now invisible titlebar
+			//window.styleMask ^= .Titled // this blows away the actual .toolbar object, making browserController crash
 			if window.titlebarAppearsTransparent { window.toolbar?.showsBaselineSeparator = false }
 		}
 	}

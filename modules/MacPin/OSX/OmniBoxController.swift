@@ -35,10 +35,10 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			progressRect.size.width *= progress == 1.0 ? 0 : CGFloat(progress) // only draw line when downloading
 
 			NSColor(calibratedRed:0.0, green: 0.0, blue: 1.0, alpha: 0.4).set() // transparent blue line
-			NSRectFillUsingOperation(progressRect, .CompositeSourceOver)
+			NSRectFillUsingOperation(progressRect, .SourceOver)
 		} else {
-			//NSRectFillUsingOperation(bounds, .CompositeClear)
-			NSRectFillUsingOperation(bounds, .CompositeCopy)
+			//NSRectFillUsingOperation(bounds, .Clear)
+			NSRectFillUsingOperation(bounds, .Copy)
 		}
 		super.drawRect(dirtyRect)
 	}
@@ -203,7 +203,7 @@ extension OmniBoxController: NSControlTextEditingDelegate {
 		warn(commandSelector.description)
 		switch commandSelector {
 			case "noop:":
-				if let event = NSApplication.sharedApplication().currentEvent where event.modifierFlags.contains(.CommandKeyMask) {
+				if let event = NSApplication.sharedApplication().currentEvent where event.modifierFlags.contains(.Command) {
 					guard let url = validateURL(control.stringValue) else { return false }
 					popup(webview?.clone(url)) // cmd-enter pops open a new tab
 				}
