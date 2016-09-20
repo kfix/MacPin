@@ -132,7 +132,7 @@ debug				?=
 verbose				?=
 
 sdkpath				:= $(shell xcrun --show-sdk-path --sdk $(sdk))
-swiftc				:= xcrun -sdk $(sdk) swiftc -target $(arch)-$(target_$(platform)) $(verbose)
+swiftc				:= xcrun --toolchain com.apple.dt.toolchain.Swift_2_3 -sdk $(sdk) swiftc -target $(arch)-$(target_$(platform)) $(verbose)
 clang				:= xcrun -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platform)) $(verbose)
 clangpp				:= xcrun -sdk $(sdk) clang++ -fmodules -fcxx-modules -std=c++11 -stdlib=libc++ -target $(arch)-$(target_$(platform)) $(verbose)
 #-fobj-arc
