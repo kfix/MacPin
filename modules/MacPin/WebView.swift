@@ -459,7 +459,17 @@ var globalIconClient = WKIconDatabaseClientV1(
 			self.evaluateJavaScript(line, completionHandler:{ (result: AnyObject?, exception: NSError?) -> Void in
 				// FIXME: the JS execs async so these print()s don't consistently precede the REPL thread's prompt line
 				if let result = result { Swift.print(result) }
-				if let exception = exception { Swift.print("Error: \(exception)") }
+				guard let exception = exception else { return }
+				switch (exception.domain, exception.code) { // codes: https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKError.h
+					case(WKErrorDomain, Int(WKErrorCode.JavaScriptExceptionOccurred.rawValue)): fallthrough
+					case(WKErrorDomain, Int(WKErrorCode.JavaScriptResultTypeIsUnsupported.rawValue)): fallthrough
+						// info keys: https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKErrorPrivate.h
+						// _WKJavaScriptExceptionMessageErrorKey
+						// _WKJavaScriptExceptionLineNumberErrorKey
+						// _WKJavaScriptExceptionColumnNumberErrorKey
+						// _WKJavaScriptExceptionSourceURLErrorKey
+					default: Swift.print("Error: \(exception)")
+				}
 			})
 		},
 		ps1: __FILE__,
