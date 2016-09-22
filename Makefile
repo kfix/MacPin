@@ -133,7 +133,7 @@ endef
 $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/Info.plist: templates/$(platform)/Info.plist
 	$(gen_plist_template)
 ifeq ($(platform),OSX)
-	[ -f $(macpin_sites)/$*/ServicesOSX.plist ] && /usr/libexec/PlistBuddy -c 'merge $(macpin_sites)/$*/ServicesOSX.plist' -c save $@
+	[ -f $(macpin_sites)/$*/ServicesOSX.plist ] && /usr/libexec/PlistBuddy -c 'merge $(macpin_sites)/$*/ServicesOSX.plist :NSServices' -c save $@
 endif
 
 $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings: templates/$(platform)/InfoPlist.strings
