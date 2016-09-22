@@ -10,7 +10,8 @@ var slackTab, slack = {
 	url: 'https://slack.com/signin/',
 	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
 	agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Slack_SSB/2.0.3',
-	preinject: ['shim_html5_notifications']
+	preinject: ['shim_html5_notifications'],
+	postinject: ['slack_notifications']
 };
 $.browser.tabSelected = slackTab = new $.WebView(slack);
 
