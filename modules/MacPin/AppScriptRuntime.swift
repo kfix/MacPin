@@ -233,7 +233,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	// FIXME: ES6 modules? context.evaluateScript("import ...") or "System.load()";
 	func loadAppScript(urlstr: String) -> JSValue? {
-		if let scriptURL = NSURL(string: urlstr), script = try? NSString(contentsOfURL: scriptURL, encoding: NSUTF8StringEncoding) {
+		if let scriptURL = NSURL(string: urlstr), script = try? NSString(contentsOfURL: scriptURL, encoding: NSUTF8StringEncoding), sourceURL = scriptURL.absoluteString {
 			// FIXME: script code could be loaded from anywhere, exploitable?
 			warn("\(scriptURL): read")
 
@@ -249,7 +249,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			if JSCheckScriptSyntax(
 				/*ctx:*/ context.JSGlobalContextRef,
 				/*script:*/ JSStringCreateWithCFString(script as CFString),
-				/*sourceURL:*/ JSStringCreateWithCFString(scriptURL.absoluteString as! CFString),
+				/*sourceURL:*/ JSStringCreateWithCFString(sourceURL as CFString),
 				/*startingLineNumber:*/ Int32(1),
 				/*exception:*/ UnsafeMutablePointer(exception.JSValueRef)
 			) {
