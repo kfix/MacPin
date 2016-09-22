@@ -124,7 +124,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 		if let cell = urlbox.cell as? NSTextFieldCell {
 			cell.placeholderString = "Navigate to URL"
 			cell.scrollable = true
-			cell.action = Selector("userEnteredURL")
+			cell.action = #selector(OmniBoxController.userEnteredURL)
 			cell.target = self
 			cell.sendsActionOnEndEditing = false //only send action when Return is pressed
 			cell.usesSingleLineMode = true

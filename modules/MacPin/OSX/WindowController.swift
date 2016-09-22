@@ -63,8 +63,12 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			min.hidden = !min.hidden
 			zoom.hidden = !zoom.hidden
 			window.titlebarAppearsTransparent = !window.titlebarAppearsTransparent
-			window.styleMask.formSymmetricDifference(.UnifiedTitleAndToolbar)
-			window.styleMask.formSymmetricDifference(.FullSizeContentView) // makes contentView (browserController) extend underneath the now invisible titlebar
+			//window.styleMask.formSymmetricDifference(.UnifiedTitleAndToolbar) // XOR ^= in Swift3?
+			//window.styleMask.formSymmetricDifference(.FullSizeContentView)
+			window.styleMask = NSWindowStyleMask(rawValue: window.styleMask.rawValue
+				^ NSWindowStyleMask.UnifiedTitleAndToolbar.rawValue
+				^ NSWindowStyleMask.FullSizeContentView.rawValue // makes contentView (browserController) extend underneath the now invisible titlebar
+			)
 			//window.styleMask ^= .Titled // this blows away the actual .toolbar object, making browserController crash
 			if window.titlebarAppearsTransparent { window.toolbar?.showsBaselineSeparator = false }
 		}

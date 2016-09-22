@@ -242,7 +242,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 
 				case .TabList:
 					btn.image = NSImage(named: "ToolbarButtonTabOverviewTemplate.pdf")
-					btn.action = #selector(BrowserViewControllerOSX.tabListButtonClicked(_:))
+					//btn.action = #selector(BrowserViewControllerOSX.tabListButtonClicked(sender:))
 					return ti
 
 				case .OmniBox:

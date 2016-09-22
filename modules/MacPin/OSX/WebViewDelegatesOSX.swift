@@ -228,6 +228,7 @@ extension WebViewController { // _WKInputDelegate
 	}
 }
 
+@available(OSX 10.12, *)
 extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 	// https://bugs.webkit.org/show_bug.cgi?id=137759
 	// https://github.com/WebKit/webkit/blob/4b7052ab44fa581810188638d1fdf074e7d754ca/Tools/MiniBrowser/mac/WK2BrowserWindowController.m#L451
