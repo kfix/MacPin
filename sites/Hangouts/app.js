@@ -8,6 +8,7 @@ var hangouts = {
 	postinject: ["notifier"], // "convopopper"],
 	preinject: ["styler", 'shim_html5_notifications'],
 	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady', 'SwitchToThisTab'],
+	style: [ "style" ],
 	url: "https://hangouts.google.com"
 };
 var hangoutsAlt = Object.assign({}, hangouts, {url: "https://plus.google.com/u/1/hangouts"});
