@@ -3,7 +3,7 @@
 @import std;
 
 #if !TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR && !TARGET_OS_SIMULATOR
-@implementation WKWebViewSnappable
+@implementation WKWebViewSnappable: WKWebView
 std::unique_ptr<WebKit::WebViewImpl> _impl; // https://github.com/WebKit/webkit/blob/03aae442c5f9a1e32ff96abf4e2595b4a5d8a44c/Source/WebKit2/UIProcess/API/Cocoa/WKWebView.mm#L264
 
 -(_WKThumbnailView *) _thumbnailView { // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm#L859

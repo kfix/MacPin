@@ -219,6 +219,7 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.
 	@touch $@
 endif
 
+# https://developer.apple.com/library/content/documentation/NetworkingInternetWeb/Conceptual/SafariAppExtension_PG/index.html#//apple_ref/doc/uid/TP40017319
 # http://www.appcoda.com/ios-8-action-extensions-tutorial/
 $(appdir)/%/PlugIns/ActionExtension.appex: $(appdir)/%/PlugIns/ActionExtension.appex/Info.plist $(icons)/%.icns $(macpin_sites)/%/appex.js
 	# ld -e _NSExtensionMain -fapplicationextension -o execs/MacPin.appex obj/ActionExtension.o

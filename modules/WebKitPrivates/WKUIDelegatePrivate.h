@@ -32,8 +32,10 @@
 #import "_WKActivatedElementInfo.h"
 
 #ifdef STP
+#if 101100 >= __MAC_OS_X_VERSION_MAX_ALLOWED
 //#import <WebKit/WKOpenPanelParameters.h>
 #import "WKOpenPanelParameters.h"
+#endif
 #endif
 
 @class UIScrollView;
