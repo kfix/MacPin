@@ -125,7 +125,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 				// FIXME: allow JS to hook all of these
 				case .FormSubmitted: fallthrough
 				case .FormResubmitted:
-					if let method = navigationAction.request.HTTPMethod, headers = navigationAction.request.allHTTPHeaderFields where method == "POST" { warn("POSTing headers: \(headers)") }
+					if let method = navigationAction.request.HTTPMethod, headers = navigationAction.request.allHTTPHeaderFields where method == "POST" { warn("POST \(url) <- headers: \(headers)") }
 					if let post = navigationAction.request.HTTPBody { warn("POSTing body: \(post)") }
 					if let postStream = navigationAction.request.HTTPBodyStream {
 						var buffer = [UInt8](count: 500, repeatedValue: 0)
@@ -153,7 +153,9 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 	}
 
 	func webView(webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
-		if let url = webView.URL { warn("~> [\(url)]") }
+		guard let url = webView.URL else { return }
+		warn("~> [\(url)]")
+		jsdelegate.tryFunc("receivedRedirectionToURL", url.description, webView)
 	}
 
 	func webView(webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: NSError) { //error returned by webkit when loading content

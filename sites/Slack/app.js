@@ -9,7 +9,7 @@
 var slackTab, slack = {
 	url: 'https://slack.com/signin/',
 	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
-	agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Slack_SSB/2.0.3',
+	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Slack_SSB/2.0.3',
 	preinject: ['shim_html5_notifications'],
 	postinject: ['slack_notifications']
 };
@@ -30,6 +30,58 @@ delegate.handleClickedNotification = function(title, subtitle, msg, id) {
 	return true;
 };
 
+delegate.receivedRedirectionToURL = function(url, tab) {
+	var comps = url.split(':'),
+		scheme = comps.shift(),
+		addr = comps.shift();
+	switch (scheme) {
+		case "http":
+		case "https":
+			if (tab.allowAnyRedir || unescape(unescape(addr)).match("//accounts.google.com/")) {
+				// we might be redirected to an external domain for a SSO-integrated Google Apps login
+				// https://support.google.com/a/answer/60224#userSSO
+				// process starts w/ https://accounts.google.com/ServiceLogin(Auth) and ends w/ /MergeSession
+				tab.allowAnyRedir = true;
+			} else if (addr.endsWith(".slack.com//signin?ssb_success=1")) {
+				tab.allowAnyRedir = false; // we are back home
+				// if login was success, navigate to team page
+				host = addr.split('/')[2]
+				redir = `${scheme}://${host}/`
+				$.app.openURL(url); //pop all external links to system browser
+				console.log(`redirecting from ${url} to ${redir}!`);
+				tab.gotoURL(redir);
+				return true; //tell webkit that we handled this
+			}
+		case "about":
+		case "file":
+		default:
+			return false; // tell webkit that we did not handle this
+	}
+};
+
+delegate.decideNavigationForClickedURL = function(url, tab) {
+	console.log(`click-navigation-delegating ${url} ...`);
+	var comps = url.split(':'),
+		scheme = comps.shift(),
+		addr = comps.shift(),
+		subpath = addr.split('/')[1];
+	switch (scheme) {
+		case "http":
+		case "https":
+			if (addr.startsWith("//slack-redir.net/link?url=")) {
+				// stripping obnoxious redirector
+				redir = decodeURIComponent(addr.slice(27));
+				//$.app.openURL(`$(scheme):$(redir)`);
+				$.app.openURL(redir); //pop all external links to system browser
+				return true; //tell webkit to do nothing
+			} else if (!url.startsWith("https://slack.com")) {
+				$.app.openURL(url);
+				return true;
+			}
+	}
+	return false;
+};
+
 delegate.launchURL = function(url) {
 	console.log("app.js: launching " + url);
 	var comps = url.split(':'),
@@ -43,7 +95,8 @@ delegate.launchURL = function(url) {
 	}
 };
 
-delegate.decideNavigationForURL = function(url) {
+delegate.decideNavigationForURL = function(url, tab) {
+	console.log(`navigation-delegating ${url} ...`);
 	var comps = url.split(':'),
 		scheme = comps.shift(),
 		addr = comps.shift(),
@@ -51,13 +104,19 @@ delegate.decideNavigationForURL = function(url) {
 	switch (scheme) {
 		case "http":
 		case "https":
-			if (
+			if (addr.startsWith("//slack-redir.net/link?url=")) {
+				// stripping obnoxious redirector
+				redir = decodeURIComponent(addr.slice(27));
+				//$.app.openURL(`$(scheme):$(redir)`);
+				$.app.openURL(redir); //pop all external links to system browser
+				return true; //tell webkit that we handled this
+			} else if (
 				 (~addr.indexOf(".slack.com/")) &&
 				(~addr.indexOf("//slack.com/"))
 			) {
 				$.app.openURL(url); //pop all external links to system browser
 				console.log("opened "+url+" externally!");
-				return true; //tell webkit to do nothing
+				return true; //tell webkit that we handled this
 			}
 		case "about":
 		case "file":

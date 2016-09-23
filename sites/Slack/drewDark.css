@@ -1,17 +1,28 @@
 /* https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99 */
+/* https://a.slack-edge.com/4e3ef/style/rollup-client_secondary.css */
 
+/*
 ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
     background: #353535;
 }
+*/
 
 ts-message {
-    font-size: .8375rem !important;
+    font-size: 9pt !important;
+	font-family: -apple-system-font !important;
 }
+
+ts-message.active:not(.standalone):not(.multi_delete_mode):not(.highlight),
+ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
+	background: none !important;
+}
+/* ts-message.active .star, ts-message:hover .star */
 
 #col_channels,
 #team_menu,
 #quick_switcher_btn {
     background: #2B2B2B !important;
+	font-family: -apple-system-font !important;
 }
 
 .channel_title_info,
