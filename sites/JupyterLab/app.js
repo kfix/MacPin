@@ -12,6 +12,22 @@ var lab = {url: "https://joey-lxd:8888"};
 
 var delegate = {}; // our delegate to receive events from the webview app
 
+delegate.decideNavigationForClickedURL = function(url, tab) {
+	var comps = url.split(':'),
+		scheme = comps.shift(),
+		addr = comps.shift(),
+		subpath = addr.split('/')[1];
+	switch (scheme) {
+		case "http":
+		case "https":
+			if (!addr.startsWith("//joey-lxd:8888/")) {
+				$.app.openURL(url);
+				return true;
+			}
+	}
+	return false;
+};
+
 delegate.launchURL = function(url) {
 	console.log("app.js: launching " + url);
 	var comps = url.split(':'),
