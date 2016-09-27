@@ -68,7 +68,11 @@ import WebKitPrivates
 			//window.backgroundColor = webview.transparent ? NSColor.clearColor() : NSColor.whiteColor()
 			window.backgroundColor = window.backgroundColor.colorWithAlphaComponent(webview.transparent ? 0 : 1) //clearColor | fooColor
 			window.opaque = !webview.transparent
+#if STP
+			window.hasShadow = webview.transparent
+#else
 			window.hasShadow = !webview.transparent
+#endif
 			window.invalidateShadow()
 			window.toolbar?.showsBaselineSeparator = window.titlebarAppearsTransparent ? false : !webview.transparent
 		}
