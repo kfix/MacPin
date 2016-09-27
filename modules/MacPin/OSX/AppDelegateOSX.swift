@@ -120,7 +120,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		tabMenu.submenu?.title = "Tab"
 		tabMenu.submenu?.addItem(MenuItem("Zoom In", "zoomIn", "+", [.Command])) //wvc
 		tabMenu.submenu?.addItem(MenuItem("Zoom Out", "zoomOut", "-", [.Command])) //wvc
-		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", "zoomOut", nil, [.Command]))
+		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", "zoomText", nil, [.Command]))
 		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", "toggleTransparency")) //wvc
 		tabMenu.submenu?.addItem(NSMenuItem.separatorItem())
 		tabMenu.submenu?.addItem(MenuItem("Show JS Console", "console", "c", [.Option, .Command])) //wv

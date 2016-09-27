@@ -3,6 +3,10 @@
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/WebViewImpl.h
 // https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/Settings.in
 
+#ifdef STP
+#import "_WKLayoutMode.h"
+#endif
+
 typedef NS_ENUM(NSInteger, _WKPaginationMode) {
     _WKPaginationModeUnpaginated,
     _WKPaginationModeLeftToRight,
@@ -41,6 +45,9 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
 @property (nonatomic, setter=_setTopContentInset:) CGFloat _topContentInset;
 @property (nonatomic, setter=_setAutomaticallyAdjustsContentInsets:) BOOL _automaticallyAdjustsContentInsets;
 #endif
+
+@property (nonatomic, setter=_setLayoutMode:) _WKLayoutMode _layoutMode;
+@property (nonatomic, setter=_setViewScale:) CGFloat _viewScale;
 
 #ifdef STP
 @property (nonatomic, getter=_drawsBackground, setter=_setDrawsBackground:) BOOL _drawsTransparentBackground;

@@ -37,7 +37,7 @@ extension NSObject: JSExport {
 
 */
 
-
+// FIXME: AppScript needs a HandlerMethods enum instead of just tryFunc("unsafe-string")s everywhere....
 extension JSValue {
 	func tryFunc (method: String, argv: [AnyObject]) -> Bool {
 		if self.isObject && self.hasProperty(method) {

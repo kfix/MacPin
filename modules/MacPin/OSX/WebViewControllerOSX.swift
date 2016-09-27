@@ -30,6 +30,10 @@ import WebKitPrivates
 		view.autoresizesSubviews = true
 		view.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable]
 		webview.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable]
+#if STP
+		// scale-to-fit https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
+		webview._layoutMode = .DynamicSizeComputedFromViewScale
+#endif
 
 		bind(NSTitleBinding, toObject: webview, withKeyPath: "title", options: nil)
 		//backMenu.delegate = self
@@ -134,9 +138,17 @@ extension WebViewControllerOSX { // AppGUI funcs
 
 	func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }  // WKPageForceRepaint(webview.topFrame?.pageRef, 0, didForceRepaint);
 
-	//FIXME: support new scaling https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
+#if STP
+	func zoomIn() { webview._viewScale += 0.2 }
+	func zoomOut() { webview._viewScale -= 0.2 }
+#else
 	func zoomIn() { webview.magnification += 0.2 }
 	func zoomOut() { webview.magnification -= 0.2 }
+#endif
+	func zoomText() {
+		webview._textZoomFactor = webview._textZoomFactor
+		webview._pageZoomFactor = webview._pageZoomFactor
+	}
 
 	func print(sender: AnyObject?) { warn(""); webview.print(sender) }
 
