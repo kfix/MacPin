@@ -3,6 +3,9 @@ export
 #^ export all the variables
 builddir			?= build
 
+# Safari Technology Preview required
+STP 				:= 1
+
 # scan modules/ and define cross: target and vars: outdir, platform, arch, sdk, target, objs, execs, statics, incdirs, libdirs, linklibs, frameworks
 archs_macosx		?= x86_64
 # ^ supporting Yosemite+ only, so don't bother with 32-bit builds
@@ -66,15 +69,19 @@ endif
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly stp $(gen_apps): $(execs)
 doc test apirepl tabrepl test.app test.ios stp stp.app: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
-stpdoc stp stp.app: linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
-stpdoc stp stp.app: linkopts_main += -Wl,-F,"/Applications/Safari Technology Preview.app/Contents/Frameworks"
-stpdoc stp stp.app: libdirs += -L "/Applications/Safari Technology Preview.app/Contents/Frameworks"
-stpdoc stp stp.app: debug += -D STP
-stpdoc stp stp.app: clang += -DSTP
-stpdoc stp stp.app: clangpp += -DSTP
-stpdoc stp stp.app: swiftc += -Xcc -DSTP
-stpdoc stp stp.app: swift += -Xcc -DSTP
-stpdoc stp stp.app: env += DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
+
+ifeq ($(STP),1)
+linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
+linkopts_main += -Wl,-F,"/Applications/Safari Technology Preview.app/Contents/Frameworks"
+libdirs += -L "/Applications/Safari Technology Preview.app/Contents/Frameworks"
+debug += -D STP
+clang += -DSTP
+clangpp += -DSTP
+swiftc += -Xcc -DSTP
+swift += -Xcc -DSTP
+env += DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
+endif
+
 test apirepl tabrepl test.app test.ios stp stp.app: | $(execs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))

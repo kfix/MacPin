@@ -140,7 +140,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 
 #if !STP // no inner WKView in STP, iOS10, & Sierra: https://bugs.webkit.org/show_bug.cgi?id=150174#c0
 	// https://github.com/WebKit/webkit/blob/8c504b60d07b2a5c5f7c32b51730d3f6f6daa540/Source/WebKit2/UIProcess/mac/WebInspectorProxyMac.mm#L679
-	var _inspectorAttachmentView: NSView? {
+	override var _inspectorAttachmentView: NSView? {
 		// when inspector is open, subviews.first is actually the inspector (WKWebInspectorWKWebView), not the WKView
 		// tabitem.view.subviews = [ WKWebInspectorView, WKView, ... ]
 		get {

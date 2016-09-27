@@ -1,0 +1,6 @@
+.dialogNotes {
+	width: 600px !important;
+	height: 60px !important;
+	word-wrap: break-word;
+	word-break: break-word;
+}
