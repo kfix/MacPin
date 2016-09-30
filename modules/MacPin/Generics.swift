@@ -50,6 +50,7 @@ func assert(condition: @autoclosure () -> Bool, _ message: String = "",
 }
 */
 
+// https://developer.apple.com/library/content/documentation/Tools/Conceptual/SafariExtensionGuide/InjectingScripts/InjectingScripts.html#//apple_ref/doc/uid/TP40009977-CH6-SW1
 func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
 	if let scriptUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") where !basename.isEmpty {
 		warn("loading userscript: \(scriptUrl)")
@@ -61,6 +62,7 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 
 		// TODO: parse some of UserScript Metadata Block if present: https://wiki.greasespot.net/Metadata_Block
 		// @include, @exclude, @description, @icon, @match, @name, @namespace, @frames, @noframes, @run-at
+		// https://wiki.greasespot.net/Cross-browser_userscripting
 		// https://github.com/kzys/greasekit
 		// https://github.com/os0x/NinjaKit/blob/master/NinjaKit.safariextension/js/background.js
 		// https://github.com/Tampermonkey/tampermonkey
@@ -94,6 +96,8 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 	return true
 }
 
+// https://developer.apple.com/library/content/documentation/Tools/Conceptual/SafariExtensionGuide/AddingStyles/AddingStyles.html#//apple_ref/doc/uid/TP40009977-CH7-SW3
+// does WK2 support `@import: url("file://Path/To/Your/Stylesheet.css");` ??
 func loadUserStyleSheetFromBundle(basename: String, webctl: WKUserContentController, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
 	if let cssUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "css") where !basename.isEmpty {
 		warn("loading stylesheet: \(cssUrl)")
