@@ -9,9 +9,11 @@
 var slackTab, slack = {
 	url: 'https://slack.com/signin/',
 	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
+	agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/603.1.6 (KHTML, like Gecko) Slack/600.5.17",
+	// ^ having "Safari" makes Slack's JS peg the CPU...
 	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Slack_SSB/2.0.3',
 	preinject: ['shim_html5_notifications'],
-	postinject: ['slack_notifications']
+	postinject: ['slack_notifications'] //, 'styler']
 };
 $.browser.tabSelected = slackTab = new $.WebView(slack);
 
@@ -128,9 +130,16 @@ delegate.decideNavigationForURL = function(url, tab) {
 // $.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
 // ^^ uses CSS filters, CPU intensive
 delegate.enDarken = function(tab) {
-	let idx = tab.styles.indexOf('drewDark');
-	(idx >= 0) ? tab.popStyle(idx) : tab.style('drewDark');
+	let idx = tab.styles.indexOf('dark');
+	(idx >= 0) ? tab.popStyle(idx) : tab.style('dark');
 	return;
+};
+
+delegate.tabTransparencyToggled = function(transparent, tab) {
+	console.log(transparent, tab);
+	let idx = tab.styles.indexOf('transparent');
+	(!transparent && idx >= 0) ? tab.popStyle(idx) : tab.style('transparent');
+	return; // cannot affect built-in transperatizing of tab
 };
 
 delegate.AppFinishedLaunching = function() {

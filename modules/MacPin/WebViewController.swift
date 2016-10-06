@@ -7,7 +7,7 @@ import WebKitPrivates
 import JavaScriptCore
 
 @objc class WebViewController: ViewController { //, WebViewControllerScriptExports {
-	var jsdelegate = AppScriptRuntime.shared.jsdelegate // FIXME: use webview.jsdelegate instead ??
+	var jsdelegate: JSValue { get { return AppScriptRuntime.shared.jsdelegate } }
 	dynamic var webview: MPWebView! = nil
 
 #if os(OSX)

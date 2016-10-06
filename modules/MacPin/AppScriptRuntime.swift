@@ -43,6 +43,7 @@ extension JSValue {
 		if self.isObject && self.hasProperty(method) {
 			warn("this.\(method) <- \(argv)")
 			let ret = self.invokeMethod(method, withArguments: argv)
+			if ret == nil { return false }
 			if let bool = ret.toObject() as? Bool { return bool }
 		}
 		return false

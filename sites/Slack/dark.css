@@ -7,15 +7,16 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
 }
 */
 
+:root, #client-ui {
+	background: black;
+	/* if tab is made transparent, these are overriden */
+}
+
 ts-message {
     font-size: 9pt !important;
 	font-family: -apple-system-font !important;
 }
 
-ts-message.active:not(.standalone):not(.multi_delete_mode):not(.highlight),
-ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
-	background: none !important;
-}
 /* ts-message.active .star, ts-message:hover .star */
 
 #col_channels,
@@ -25,23 +26,24 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
 	font-family: -apple-system-font !important;
 }
 
+html, body,
+ts-message.active:not(.standalone):not(.multi_delete_mode):not(.highlight),
+ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
 .channel_title_info,
 .channel-header .flex_header,
 .flex_header,
 #channel_header_info,
 #primary_file_button,
 #col_messages > .row-fluid,
-#client-ui,
-.client-ui,
-.channel_header_refresh #client_body:not(.onboarding):before,
+.channel_header,
 #footer,
 #messages_container,
 .day_divider,
 .tab_container,
 .panel .heading,
-#mentions_options
- {
-    background: #000 !important;
+#mentions_options {
+    background: none !important;
+	background-color: none !important;
 }
 
 .ts_icon:not(.ts_icon_presence):before, ts-icon:before,
@@ -59,8 +61,12 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
     border-top: none !important;
 }
 
-.channel_header_refresh #client_body:not(.onboarding):before {
+#client_body:not(.onboarding):before {
+/*
     border-bottom: 1px solid #4C4C4C;
+    background: none !important;
+*/
+    content: none !important;
 }
 
 .monkey_scroll_bar,
@@ -77,19 +83,21 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
 .action_hover_container .ts_icon:after,
 #menu_items .ts_icon:before,
 #menu_items .ts_icon:after {
-   color: #000 !important;
+   color: none !important;
 }
 
 #search_container input,
 #message-input {
-    background: #000 !important;
+    background: none !important;
     color: #fff !important;
 }
 
+/*
 .special_formatting {
     background-color: inherit !important;
     color: #39cc2f !important;
 }
+*/
 
 .mention {
     background: inherit !important;

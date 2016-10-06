@@ -79,7 +79,9 @@ var globalIconClient = WKIconDatabaseClientV1(
 	var styles: [String] = [] //list of css-names already loaded
 	// cachedUserScripts: [UserScript] // are pushed/popped from the contentController by navigation delegates depending on URL being visited
 
-	var jsdelegate = AppScriptRuntime.shared.jsdelegate
+	//let jsdelegate = AppScriptRuntime.shared.jsdelegate
+	// race condition? seems to hit a phantom JSContext/JSValue that doesn't represent the delegate!?
+	var jsdelegate: JSValue { get { return AppScriptRuntime.shared.jsdelegate } }
 
 	var url: String { // accessor for JSC, which doesn't support `new URL()`
 		get { return URL?.absoluteString ?? "" }
@@ -164,6 +166,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 			//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
  			// so frobble frame size to make content reflow & re-colorize
 			setFrameSize(NSSize(width: frame.size.width, height: frame.size.height - 1)) //needed to fully redraw w/ dom-reflow or reload!
+			AppScriptRuntime.shared.jsdelegate.tryFunc("tabTransparencyToggled", transparent, self)
 			evalJS("window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(transparent)}}));" +
 				"document.head.appendChild(document.createElement('style')).remove();") //force redraw in case event didn't
 				//"window.scrollTo();")
@@ -570,7 +573,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 			}
 
 			if let urls = pboard.readObjectsForClasses([NSURL.self], options: nil) {
-				if jsdelegate.tryFunc("handleDragAndDroppedURLs", urls.map({$0.description})) {
+				if AppScriptRuntime.shared.jsdelegate.tryFunc("handleDragAndDroppedURLs", urls.map({$0.description})) {
 			 		return true  // app.js indicated it handled drag itself
 				}
 			}
