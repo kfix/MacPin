@@ -89,17 +89,23 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
 #search_container input,
 #message-input {
     background: none !important;
-    color: #fff !important;
+    color: #white !important;
 }
 
-/*
 .special_formatting {
     background-color: inherit !important;
     color: #39cc2f !important;
 }
-*/
 
 .mention {
     background: inherit !important;
     color: #e1dc28;
+}
+
+.snippet_container, .file_container, .CodeMirror-code,
+.file_container .CodeMirror .Condemirror-code>div:before,
+.file_container .CodeMirror .Condemirror-code>div pre,
+{
+	background: black !important;
+	color: lime !important;
 }
