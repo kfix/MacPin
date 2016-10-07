@@ -35,6 +35,9 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
 #channel_header_info,
 #primary_file_button,
 #col_messages > .row-fluid,
+#col_flex,
+.search_message_result,
+.search_result_with_extract,
 .channel_header,
 #footer,
 #messages_container,
@@ -44,6 +47,10 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
 #mentions_options {
     background: none !important;
 	background-color: none !important;
+}
+
+span.match {
+	background: magenta !important;
 }
 
 .ts_icon:not(.ts_icon_presence):before, ts-icon:before,
@@ -86,10 +93,15 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
    color: none !important;
 }
 
-#search_container input,
+#search_container input, .search_input,
 #message-input {
     background: none !important;
-    color: #white !important;
+    color: white !important;
+}
+
+#message-input:placeholder {
+    background: white !important;
+    color: none !important;
 }
 
 .special_formatting {
