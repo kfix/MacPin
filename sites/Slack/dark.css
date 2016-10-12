@@ -93,6 +93,10 @@ span.match {
    color: none !important;
 }
 
+ts-message .action_hover_container a {
+   background: none !important;
+}
+
 #search_container input, .search_input,
 #message-input {
     background: none !important;
@@ -114,9 +118,9 @@ span.match {
     color: #e1dc28;
 }
 
-.snippet_container, .file_container, .CodeMirror-code,
+.snippet_container, .file_container, .CodeMirror, .CodeMirror-code,
 .file_container .CodeMirror .Condemirror-code>div:before,
-.file_container .CodeMirror .Condemirror-code>div pre,
+.file_container .CodeMirror .Condemirror-code>div pre
 {
 	background: black !important;
 	color: lime !important;
