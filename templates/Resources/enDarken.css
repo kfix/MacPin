@@ -9,9 +9,8 @@
 }
 
 /* double-inversion to undarken all the image-like things in a page */
-:matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]):not(body), /* I h8 these pseudo-img div's*/
-:not(:not(body):matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]) *):matches(
-	/* image-like things except if children of pseudo-img's */
+:not(:not(body):matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]) *):matches( /* exclude child pseudo-img elements */
+	:matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]):not(html,body), /* 1st psuedo-img element in a tree */
 	img, video, iframe,
 	object, :not(object)>embed /* Flash */
 ),
