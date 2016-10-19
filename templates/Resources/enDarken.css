@@ -3,14 +3,30 @@
  * https://fullscreen.spec.whatwg.org/#user-agent-level-style-sheet-defaults
 */
 
-:root:not(:-webkit-full-screen-document), img, video, object, iframe, *:not(object):not(body)>embed, *[style*="background:url"], *[style*="background-image:url"], *[style*="background: url"], *[style*="background-image: url"], #theater-background, embed {
+/* root inversion to darken all the (usually) bright pages */
+:root:not(:-webkit-full-screen-document) {
     filter: invert(1) hue-rotate(180deg);
 }
 
+/* double-inversion to undarken all the image-like things in a page */
+img, video, object,
+*:not(object)>embed,
+*[style*="background:url"], *[style*="background-image:url"], *[style*="background: url"], *[style*="background-image: url"], /* I h8 these */
+*:not([style*="background-image:url"])>iframe, /* https://twitter.com/i/videos/ */
+#theater-background /* YouTube */
+{
+    filter: invert(1) hue-rotate(180deg);
+}
+/* FIXME: wish I could do a negation or exclusion instead of double-GPUing these elements */
+
+/* no-op all filters when in fullscreen */
 *:-webkit-full-screen * { filter: none !important; }
+/* FIXME: this does mess up some CSS-styled media controls' colors & fades */
 
 /*
  * I'd prefer to specifically target all body, div, section, main that have explicitly set white background-color: 000
  * or exclude items with explicity set black background-color:#FFF
 */
+
+/* make docroots transperanizable */
 :root:not(:-webkit-full-screen-document), body { background: none !important; }

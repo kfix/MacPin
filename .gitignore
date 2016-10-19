@@ -3,5 +3,6 @@
 icons/*/
 build/
 sites.dis/
+sites/VDMS.*
 modules.dis/
 .babel/
