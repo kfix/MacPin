@@ -9,18 +9,21 @@
 }
 
 /* double-inversion to undarken all the image-like things in a page */
-img, video, object,
-*:not(object)>embed,
-*[style*="background:url"], *[style*="background-image:url"], *[style*="background: url"], *[style*="background-image: url"], /* I h8 these */
-*:not([style*="background-image:url"])>iframe, /* https://twitter.com/i/videos/ */
-#theater-background /* YouTube */
+:matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]):not(body), /* I h8 these pseudo-img div's*/
+:not(:not(body):matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]) *):matches(
+	/* image-like things except if children of pseudo-img's */
+	img, video, iframe,
+	object, :not(object)>embed /* Flash */
+),
+.watch-stage-mode #theater-background, /* YouTube explictly blacks-out the theater bg... and we screw that up :-( */
+.player_area /* same with Vimeo */
 {
     filter: invert(1) hue-rotate(180deg);
 }
 /* FIXME: wish I could do a negation or exclusion instead of double-GPUing these elements */
 
 /* no-op all filters when in fullscreen */
-*:-webkit-full-screen * { filter: none !important; }
+:-webkit-full-screen * { filter: none !important; }
 /* FIXME: this does mess up some CSS-styled media controls' colors & fades */
 
 /*
