@@ -33,7 +33,6 @@ typedef NS_OPTIONS(NSUInteger, _WKJavaScriptRuntimeFlags) {
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKPreferencesPrivate.h
 @property (nonatomic, setter=_setStorageBlockingPolicy:) _WKStorageBlockingPolicy _storageBlockingPolicy;
 @property (nonatomic, setter=_setDeveloperExtrasEnabled:) BOOL _developerExtrasEnabled;
-@property (nonatomic, setter=_setFullScreenEnabled:) BOOL _fullScreenIsEnabled WK_AVAILABLE(10_11, 9_0);
 @property (nonatomic, setter=_setDiagnosticLoggingEnabled:) BOOL _diagnosticLoggingEnabled  WK_AVAILABLE(10_11, 9_0);
 @property (nonatomic, setter=_setStandalone:, getter=_isStandalone) BOOL _standalone;
 @property (nonatomic, setter=_setVisibleDebugOverlayRegions:) _WKDebugOverlayRegions _visibleDebugOverlayRegions WK_AVAILABLE(10_11, 9_0);
@@ -41,4 +40,7 @@ typedef NS_OPTIONS(NSUInteger, _WKJavaScriptRuntimeFlags) {
 @property (nonatomic, setter=_setLogsPageMessagesToSystemConsoleEnabled:) BOOL _logsPageMessagesToSystemConsoleEnabled WK_AVAILABLE(10_11, 9_0);
 @property (nonatomic, setter=_setAllowFileAccessFromFileURLs:) BOOL _allowFileAccessFromFileURLs WK_AVAILABLE(10_11, 9_0);
 @property (nonatomic, setter=_setJavaScriptRuntimeFlags:) _WKJavaScriptRuntimeFlags _javaScriptRuntimeFlags WK_AVAILABLE(10_11, 9_0);
+
+@property (nonatomic, setter=_setOfflineApplicationCacheIsEnabled:) BOOL _offlineApplicationCacheIsEnabled;
+@property (nonatomic, setter=_setFullScreenEnabled:) BOOL _fullScreenEnabled; //WK_API_AVAILABLE(macosx(10.11), ios(9.0));
 @end

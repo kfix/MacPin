@@ -184,11 +184,25 @@ var globalIconClient = WKIconDatabaseClientV1(
 	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
 		let configuration = config ?? WKWebViewConfiguration()
+		if config == nil {
+#if STP
+			configuration._allowUniversalAccessFromFileURLs = true
+#if os(OSX)
+			/*
+			configuration._showsURLsInToolTips = true
+			configuration._serviceControlsEnabled = true
+			configuration._imageControlsEnabled = true
+			//configuration._requiresUserActionForEditingControlsManager = true
+			*/
+#endif
+#endif
+		}
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
 #if os(OSX)
 		//geolocationProvider = <GeolocationProviderMock>(context)
 		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
+		prefs._fullScreenEnabled = true
 #endif
 		if let privacy = privacy where privacy {
 			//prevent HTML5 application cache and asset/page caching by WebKit, MacPin never saves any history itself
