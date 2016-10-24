@@ -77,8 +77,8 @@ libdirs += -L "/Applications/Safari Technology Preview.app/Contents/Frameworks"
 debug += -D STP
 clang += -DSTP
 clangpp += -DSTP
-swiftc += -Xcc -DSTP
-swift += -Xcc -DSTP
+swiftc += -D STP -Xcc -DSTP
+swift += -D STP -Xcc -DSTP
 env += DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
 endif
 

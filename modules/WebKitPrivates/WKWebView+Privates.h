@@ -50,8 +50,7 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
 @property (nonatomic, setter=_setViewScale:) CGFloat _viewScale;
 
 #ifdef STP
-@property (nonatomic, getter=_drawsBackground, setter=_setDrawsBackground:) BOOL _drawsTransparentBackground;
-@property (nonatomic, setter=_setDrawsBackground:) BOOL _drawsBackground WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, setter=_setDrawsBackground:) BOOL _drawsBackground;
 @property (nonatomic, weak, setter=_setInputDelegate:) id <_WKInputDelegate> _inputDelegate WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 // https://github.com/WebKit/webkit/commit/0dfc67a174b79a8a401cf6f60c02150ba27334e5
 - (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo; // prints top frame
@@ -63,7 +62,7 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
 - (NSString *)view:(NSView *)view stringForToolTip:(NSToolTipTag)tag point:(NSPoint)point userData:(void *)data;
 - (NSView *)documentContainerView;
 #else
-@property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground; //FIXME: going away after 10.11.4 / 9.3 ?
+@property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground; //DEPRECATED: missing from STP builds!
 #endif
 
 -(void)_close;

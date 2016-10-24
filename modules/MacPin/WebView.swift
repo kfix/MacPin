@@ -129,15 +129,6 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 #endif
 
-/*
-#if STP
-	var _drawsTransparentBackground: Bool {
-		get { return _drawsBackground }
-		set { _drawsBackground = newValue }
-	}
-#endif
-*/
-
 #if os(OSX)
 
 #if !STP // no inner WKView in STP, iOS10, & Sierra: https://bugs.webkit.org/show_bug.cgi?id=150174#c0
@@ -160,9 +151,19 @@ var globalIconClient = WKIconDatabaseClientV1(
 #endif
 
 	var transparent: Bool {
-		get { return _drawsTransparentBackground }
+		get {
+#if STP
+			return !_drawsBackground
+#else
+			return _drawsTransparentBackground
+#endif
+		}
 		set(transparent) {
+#if STP
+			_drawsBackground = !transparent
+#else
 			_drawsTransparentBackground = transparent
+#endif
 			//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
  			// so frobble frame size to make content reflow & re-colorize
 			setFrameSize(NSSize(width: frame.size.width, height: frame.size.height - 1)) //needed to fully redraw w/ dom-reflow or reload!
@@ -184,11 +185,23 @@ var globalIconClient = WKIconDatabaseClientV1(
 	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
 		let configuration = config ?? WKWebViewConfiguration()
+		if config == nil {
+#if STP
+			configuration._allowUniversalAccessFromFileURLs = true
+#if os(OSX)
+			configuration._showsURLsInToolTips = true
+			configuration._serviceControlsEnabled = true
+			configuration._imageControlsEnabled = true
+			//configuration._requiresUserActionForEditingControlsManager = true
+#endif
+#endif
+		}
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
 #if os(OSX)
 		//geolocationProvider = <GeolocationProviderMock>(context)
 		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
+		prefs._fullScreenEnabled = true
 #endif
 		if let privacy = privacy where privacy {
 			//prevent HTML5 application cache and asset/page caching by WebKit, MacPin never saves any history itself
@@ -258,7 +271,11 @@ var globalIconClient = WKIconDatabaseClientV1(
 				case let magnification as Bool where key == "allowsMagnification": allowsMagnification = magnification
 				case let transparent as Bool where key == "transparent":
 #if os(OSX)
+#if STP
+					_drawsBackground = !transparent
+#else
 					_drawsTransparentBackground = transparent
+#endif
 #endif
 				case let value as [String] where key == "preinject": for script in value { preinject(script) }
 				case let value as [String] where key == "postinject": for script in value { postinject(script) }
