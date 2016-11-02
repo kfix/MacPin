@@ -62,27 +62,30 @@ delegate.receivedRedirectionToURL = function(url, tab) {
 };
 
 delegate.decideNavigationForClickedURL = function(url, tab) {
-	console.log(`click-navigation-delegating ${url} ...`);
-	var comps = url.split(':'),
-		scheme = comps.shift(),
-		addr = comps.shift(),
-		subpath = addr.split('/')[1];
+	console.log(`(click)navigation-delegating ${url} ...`);
+	var comps = url.split('/'),
+		scheme = comps.shift();
+	comps.shift();
+	var	host = comps.shift(),
+		path = comps.shift();
 	switch (scheme) {
-		case "http":
-		case "https":
-			if (addr.startsWith("//slack-redir.net/link?url=")) {
+		case "http:":
+		case "https:":
+			if ((host == "slack-redir.net") && path.startsWith("link?url=")) {
 				// stripping obnoxious redirector
-				redir = decodeURIComponent(addr.slice(27));
+				redir = decodeURIComponent(path.slice(9));
 				//$.app.openURL(`$(scheme):$(redir)`);
 				$.app.openURL(redir); //pop all external links to system browser
 				return true; //tell webkit to do nothing
-			} else if (!url.startsWith("https://slack.com")) {
+			} else if ((host != "slack.com") && !host.endsWith('.slack.com')) {
 				$.app.openURL(url);
 				return true;
 			}
+		default:
+			return false;
 	}
-	return false;
 };
+delegate.decideNavigationForURL = delegate.decideNavigationForClickedURL;
 
 delegate.launchURL = function(url) {
 	console.log("app.js: launching " + url);
@@ -94,36 +97,6 @@ delegate.launchURL = function(url) {
 			break;
 		default:
 			$.browser.tabSelected = new $.WebView({url: url});
-	}
-};
-
-delegate.decideNavigationForURL = function(url, tab) {
-	console.log(`navigation-delegating ${url} ...`);
-	var comps = url.split(':'),
-		scheme = comps.shift(),
-		addr = comps.shift(),
-		subpath = addr.split('/')[1];
-	switch (scheme) {
-		case "http":
-		case "https":
-			if (addr.startsWith("//slack-redir.net/link?url=")) {
-				// stripping obnoxious redirector
-				redir = decodeURIComponent(addr.slice(27));
-				//$.app.openURL(`$(scheme):$(redir)`);
-				$.app.openURL(redir); //pop all external links to system browser
-				return true; //tell webkit that we handled this
-			} else if (
-				 (~addr.indexOf(".slack.com/")) &&
-				(~addr.indexOf("//slack.com/"))
-			) {
-				$.app.openURL(url); //pop all external links to system browser
-				console.log("opened "+url+" externally!");
-				return true; //tell webkit that we handled this
-			}
-		case "about":
-		case "file":
-		default:
-			return false;
 	}
 };
 
@@ -147,6 +120,7 @@ delegate.AppFinishedLaunching = function() {
 	// FIXME: use LocalStorage to save slackTab's team-domain after sign-in, and restore that on every start up
 	$.browser.addShortcut('Dark Mode', ['enDarken']);
 	// FIXME add themes: https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99
+	slackTab.asyncEvalJS(`document.location = document.querySelectorAll('.btn')[1].href ? document.querySelectorAll('.btn')[1].href : document.location;`, 3); // try logging into the first signed-in team
 };
 
 delegate; //return this to macpin
