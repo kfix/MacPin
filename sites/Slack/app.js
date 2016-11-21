@@ -77,7 +77,12 @@ delegate.decideNavigationForClickedURL = function(url, tab) {
 				//$.app.openURL(`$(scheme):$(redir)`);
 				$.app.openURL(redir); //pop all external links to system browser
 				return true; //tell webkit to do nothing
-			} else if ((host != "slack.com") && !host.endsWith('.slack.com')) {
+			} else if ((host != "slack.com")
+				&& !host.endsWith('.slack.com')
+				&& !host.endsWith('.cedexis-test.com')
+				&& !host.endsWith('.cloudfront.net')
+				&& !host.endsWith('.doubleclick.net')
+			) {
 				$.app.openURL(url);
 				return true;
 			}
