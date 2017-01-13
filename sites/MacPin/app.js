@@ -38,7 +38,7 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 	var ret = false;
 	console.log(urls);
 	for (let url of urls) {
-		$.browser.tabSelected.evalJS("confirm('Open a new tab for: "+url+"');", function(response) {
+		$.browser.tabSelected.evalJS(`confirm('Open a new tab for: ${url}');`, function(response) {
 			if (response) {
 				var tab = new $.WebView({url: url});
 				//$.browser.tabSelected = tab;
@@ -101,6 +101,9 @@ delegate.AppFinishedLaunching = function() {
 		// or CodeMirror.net
 	};
 	$.browser.addShortcut('HTML5 editor', editor);
+
+	//$.browser.addShortcut('HTML5 editor -> preview', editorPreview);
+	//editorPreview should find editor tab (passed by ref?) and render its source
 
 	var repl = {
 		transparent: true,
