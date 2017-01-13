@@ -166,22 +166,26 @@ func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? 
 		}
 	}
 
-	if let url = fallback?(urlstr) { return url } // caller provided a failure handler which derived a url
-	else if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // compat with generic JS handler method
-	else {
-		// maybe its a search query? check if blank and reformat it
-		// FIXME: this should get refactored to a browserController/OmniBoxController closure thats passed as fallback?
-		if !urlstr.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
-		let query = urlstr.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding),
+	if let fallback = fallback {
+		// caller provided a failure handler
+		return fallback(urlstr)
+	} else {
+		return nil
+	}
+}
+
+func searchForKeywords(str: String) -> NSURL? {
+	// return a URL that will search the given keyword string
+
+	// maybe its a search query? check if blank and reformat it
+	if !str.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
+		let query = str.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding),
 		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") { // FIXME: JS setter
 			return search
 		}
-		// as a fallback, could forcibly change OmniBox stringValue to raw search terms
-		// FIXME: support OpenSearch to search current site on-the-fly https://en.wikipedia.org/wiki/OpenSearch
+	// FIXME: support OpenSearch to search current site on-the-fly https://en.wikipedia.org/wiki/OpenSearch
 		// https://developer.mozilla.org/en-US/Add-ons/Creating_OpenSearch_plugins_for_Firefox
-
-		return nil
-	}
+	return nil
 }
 
 // TODO: exposing a websocketREPL would also be neat: https://github.com/siuying/IGJavaScriptConsole https://github.com/zwopple/PocketSocket
