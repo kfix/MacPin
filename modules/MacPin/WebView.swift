@@ -105,11 +105,12 @@ var globalIconClient = WKIconDatabaseClientV1(
 
 	var context: WKContextRef? = nil
 	var iconDB: WKIconDatabaseRef? = nil
-	var iconClient = WKIconDatabaseClientV1() {
+	var iconClient: WKIconDatabaseClientV1? = WKIconDatabaseClientV1() {
 		didSet {
 			if let iconDB = iconDB, context = context {
-				//https://github.com/WebKit/webkit/blob/91700b336a0d0abf1be06c627e3f41281b2728a3/Source/WebCore/loader/icon/IconDatabase.cpp#L114 must close IconDB, setClient, and reopen
 				WKIconDatabaseClose(iconDB)
+				guard var iconClient = iconClient else { return }
+				//https://github.com/WebKit/webkit/blob/91700b336a0d0abf1be06c627e3f41281b2728a3/Source/WebCore/loader/icon/IconDatabase.cpp#L114 must close IconDB, setClient, and reopen
 			    WKIconDatabaseSetIconDatabaseClient(iconDB, &iconClient.base)
 				WKIconDatabaseCheckIntegrityBeforeOpening(iconDB)
 				WKIconDatabaseEnableDatabaseCleanup(iconDB)
@@ -217,6 +218,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		prefs._logsPageMessagesToSystemConsoleEnabled = true // dumps to ASL
 		//prefs._javaScriptRuntimeFlags = 0 // ??
 #endif
+		//prefs._loadsImagesAutomatically = true // STP v20: https://github.com/WebKit/webkit/commit/326fc529da43b4a028a3a1644edb2198d23ecb68
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
 		//if let privacy = privacy { if privacy { configuration.websiteDataStore = WKWebsiteDataStore.nonPersistentDataStore() } }
@@ -235,6 +237,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		// http://stackoverflow.com/questions/11361822/debug-ios-67-mobile-safari-using-the-chrome-devtools
 #endif
 		//_editable = true // https://github.com/WebKit/webkit/tree/master/Tools/WebEditingTester
+		// 	add a toggle: https://github.com/WebKit/webkit/commit/d3a81d4cdbdf947d484987578b21fc0d1f42be5e
 
 		allowsBackForwardNavigationGestures = true
 		allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
@@ -248,9 +251,16 @@ var globalIconClient = WKIconDatabaseClientV1(
 
 		let context = WKPageGetContext(_pageForTesting())
 		self.context = context
-	    WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString("http".UTF8String))
+	    WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString("http".UTF8String)) // FIXME: makeInsecure() toggle!
+	    WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString("https".UTF8String))
 		self.iconDB = WKContextGetIconDatabase(context)
 	}
+
+	/*
+	 func reloadPlugins() {
+		WKContextRefreshPlugIns(self.context) // STP v20: https://github.com/WebKit/webkit/commit/334a90ae91c0358385c2a971ac8ee7a5b1577fa6
+	}
+	*/
 
 	convenience required init?(object: [String:AnyObject]) {
 		// check for isolated pre-init

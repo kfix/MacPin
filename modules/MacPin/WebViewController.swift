@@ -4,11 +4,14 @@
 
 import WebKit
 import WebKitPrivates
+//import WebKitPlus
 import JavaScriptCore
 
 @objc class WebViewController: ViewController { //, WebViewControllerScriptExports {
 	var jsdelegate: JSValue { get { return AppScriptRuntime.shared.jsdelegate } }
 	dynamic var webview: MPWebView! = nil
+
+	//lazy var observer: WebViewObserver = WebViewObserver(obserbee: self.webview) // https://github.com/yashigani/WebKitPlus#webviewobserver
 
 #if os(OSX)
 	required init?(coder: NSCoder) { super.init(coder: coder) } // required by NSCoding protocol
@@ -60,11 +63,13 @@ import JavaScriptCore
 		super.viewDidLoad()
 	}
 
-	func closeTab() { webview._close(); view.removeFromSuperview(); removeFromParentViewController(); warn() }
+	func dismiss() { webview._close(); view.removeFromSuperview(); removeFromParentViewController(); warn() }
 	func askToOpenCurrentURL() { askToOpenURL(webview.URL!) }
 
 	// sugar for delgates' opening a new tab in parent browser VC
 	func popup(webview: MPWebView) { parentViewController?.addChildViewController(self.dynamicType.init(webview: webview)) }
+
+	deinit { warn(description) }
 }
 
 extension WebViewController: _WKDiagnosticLoggingDelegate {
@@ -86,3 +91,5 @@ extension WebViewController: _WKDownloadDelegate {
 	func _download(download: _WKDownload!, didFailWithError error: NSError!) { warn(error.description) }
 	func _downloadDidCancel(download: _WKDownload!) { warn(download.request.description) }
 }
+
+// extensions WebViewController: WebsitePoliciesDelegate // FIXME: STP v20: per-site preferences: https://github.com/WebKit/webkit/commit/d9f6f7249630d7756e4b6ca572b29ac61d5c38d7

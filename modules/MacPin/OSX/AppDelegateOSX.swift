@@ -11,7 +11,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	var window: Window?
 
 	var effectController = EffectViewController()
-	var windowController: WindowController
+	var windowController: WindowController?
 
 	override init() {
 		// gotta set these before MacPin()->NSWindow()
@@ -57,6 +57,26 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		}
 		//replyEvent == ??
 	}
+
+	func updateProxies() {
+		let alert = NSAlert()
+		alert.messageText = "Set HTTP(s) proxy"
+		alert.addButtonWithTitle("Update")
+		alert.informativeText = "Enter the proxy URL:"
+		alert.icon = NSApplication.sharedApplication().applicationIconImage
+		let input = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
+		input.stringValue = NSUserDefaults.standardUserDefaults().stringForKey("WebKit2HTTPProxy") ?? ""
+		input.editable = true
+ 		alert.accessoryView = input
+ 		guard let window = window else { return }
+		alert.beginSheetModalForWindow(window, completionHandler: { (response:NSModalResponse) -> Void in
+			NSUserDefaults.standardUserDefaults().setObject(input.stringValue, forKey: "WebKit2HTTPProxy")
+			NSUserDefaults.standardUserDefaults().setObject(input.stringValue, forKey: "WebKit2HTTPSProxy")
+			NSUserDefaults.standardUserDefaults().synchronize()
+			// FIXME: need to serialize all tabs & reinit them for proxy change to take effect?
+		})
+	}
+
 }
 
 extension MacPinAppDelegateOSX: ApplicationDelegate {
@@ -76,6 +96,8 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		//let appname = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleName") ?? NSProcessInfo.processInfo().processName
 		let appname = NSRunningApplication.currentApplication().localizedName ?? NSProcessInfo.processInfo().processName
 
+		window?.delegate = self
+
 		app!.mainMenu = NSMenu()
 
 		let appMenu = NSMenuItem()
@@ -93,12 +115,14 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		let svcMenu = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
 		svcMenu.submenu = app!.servicesMenu!
 		appMenu.submenu?.addItem(svcMenu)
+		appMenu.submenu?.addItem(MenuItem("Preferences...", "updateProxies")) // not much for now
 		appMenu.submenu?.addItem(MenuItem("Quit \(appname)", "terminate:", "q"))
 
 		let editMenu = NSMenuItem() //NSTextArea funcs
 		// plutil -p /System/Library/Frameworks/AppKit.framework/Resources/StandardKeyBinding.dict
 		editMenu.submenu = NSMenu()
-		editMenu.submenu?.title = "Edit"
+		editMenu.submenu?.title = "Edit" // https://github.com/WebKit/webkit/commit/f53fbb8b6c206c3cdd8d010267b8d6c430a02dab
+		// & https://github.com/WebKit/webkit/commit/a580e447224c51e7cb28a1d03ca96d5ff851e6e1
 		editMenu.submenu?.addItem(MenuItem("Cut", "cut:", "x", [.Command]))
 		editMenu.submenu?.addItem(MenuItem("Copy", "copy:", "c", [.Command]))
 		editMenu.submenu?.addItem(MenuItem("Paste", "paste:", "v", [.Command]))
@@ -147,7 +171,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		winMenu.submenu?.addItem(MenuItem("New Tab", "newTabPrompt", "t", [.Command])) //bc
 		winMenu.submenu?.addItem(MenuItem("New Isolated Tab", "newIsolatedTabPrompt")) //bc
 		winMenu.submenu?.addItem(MenuItem("New Private Tab", "newPrivateTabPrompt", "t", [.Control, .Command])) //bc
-		winMenu.submenu?.addItem(MenuItem("Close Tab", "closeTab", "w", [.Command])) //wvc, bc
+		winMenu.submenu?.addItem(MenuItem("Close Tab", "closeTab:", "w", [.Command])) //bc
 		winMenu.submenu?.addItem(MenuItem("Show Next Tab", "selectNextTabViewItem:", String(format:"%c", NSTabCharacter), [.Control])) //bc
 		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", "selectPreviousTabViewItem:", String(format:"%c", NSTabCharacter), [.Control, .Shift])) //bc
 		app!.mainMenu?.addItem(winMenu)
@@ -187,9 +211,9 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 #endif
 		app!.mainMenu?.addItem(dbgMenu)
 
-		windowController.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
-		windowController.window?.bind(NSTitleBinding, toObject: browserController, withKeyPath: "title", options: nil)
-		windowController.window?.makeKeyAndOrderFront(self)
+		windowController?.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
+		windowController?.window?.bind(NSTitleBinding, toObject: browserController, withKeyPath: "title", options: nil)
+		windowController?.window?.makeKeyAndOrderFront(self)
 
 		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: #selector(MacPinAppDelegateOSX.handleGetURLEvent(_:replyEvent:)), forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url schemes
 	}
@@ -293,8 +317,12 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 
 	public func applicationShouldTerminate(sender: NSApplication) -> NSApplicationTerminateReply {
 		warn()
-		//browserController.close() // kill the tabs
-		//windowController.close() // kill the window
+		windowController?.close() // kill the window if it still exists
+		windowController?.window = nil
+		windowController = nil // deinit the wc
+		window = nil // deinit the window
+		browserController.unextend(AppScriptRuntime.shared.exports)
+		//browserController.close() // kill any zombie tabs -- causes lock-loop?
 		// unfocus app?
 #if arch(x86_64) || arch(i386)
 		if prompter != nil { return .TerminateLater } // wait for user to EOF the Prompt
@@ -315,6 +343,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 	public func applicationShouldTerminateAfterLastWindowClosed(app: NSApplication) -> Bool { return true }
 
 	// handles drag-to-dock-badge, /usr/bin/open and argv[1:] requests specifiying urls & local pathnames
+	// https://github.com/WebKit/webkit/commit/3e028543b95387e8ac73e9947a5cef4dd1ac90f2
 	public func application(theApplication: NSApplication, openFile filename: String) -> Bool {
 		warn(filename)
 		if let ftype = try? NSWorkspace.sharedWorkspace().typeOfFile(filename) {
@@ -382,4 +411,18 @@ extension MacPinAppDelegateOSX: NSWindowRestoration {
 			completionHandler(nil, nil)
 		}
 	}
+}
+extension MacPinAppDelegateOSX: NSWindowDelegate {
+	public func windowShouldClose(sender: AnyObject) -> Bool {
+		warn()
+		return true
+	}
+	public func windowWillClose(notification: NSNotification) {  // window was closed by red stoplight button
+		warn()
+	}
+	/*
+		dispatch_sync(dispatch_get_main_queue(), { // hafta let this method finish for the window to actaully close, terminate() is blocking
+			NSApplication.sharedApplication().terminate(self) // we have only one WC'd window for now, if its gone, we go away.
+		})
+	}*/
 }

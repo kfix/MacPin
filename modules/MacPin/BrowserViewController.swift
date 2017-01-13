@@ -11,6 +11,7 @@ import AppKit
 	func close()
 	func switchToNextTab()
 	func switchToPreviousTab()
+	func closeTab(tab: AnyObject?)
 	func newTabPrompt()
 	func newIsolatedTabPrompt()
 	func newPrivateTabPrompt()
@@ -19,6 +20,7 @@ import AppKit
 	func bounceDock()
 	func addShortcut(title: String, _ obj: AnyObject?)
 	func extend(mountObj: JSValue)
+	func unextend(mountObj: JSValue)
 }
 
 @objc protocol BrowserViewController: BrowserViewControllerJS {
