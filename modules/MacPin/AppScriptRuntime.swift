@@ -3,6 +3,7 @@
 /// Creates a singleton-instance of JavaScriptCore for intepreting bundled javascripts to control a MacPin app
 
 // make a Globals struct with a member for each thing to expose under `$`: browser, app, WebView, etc..
+	// ES6 mods enabled for STP v21? https://github.com/WebKit/webkit/commit/fd763768344f941863054d03968d78dd388b8d15
 
 #if os(OSX)
 import AppKit
@@ -494,6 +495,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	func evalJXA(script: String) {
+		// FIXME: force a confirmation panel with printout of script and func+args to be called.....
 #if os(OSX)
 		var error: NSDictionary?
 		let osa = OSAScript(source: script, language: OSALanguage(forName: "JavaScript"))
@@ -506,6 +508,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	func callJXALibrary(library: String, _ call: String, _ args: [AnyObject]) {
+		// FIXME: force a confirmation panel with link to library path and func+args to be called.....
 #if os(OSX)
 #if DEBUG
 		let script = "function run() { return Library('\(library)').\(call).apply(this, arguments); }"
