@@ -27,6 +27,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
 			window.delegate = self
 			window.restorable = true
+			//window.isReleasedWhenClosed = true
 			window.restorationClass = MacPinAppDelegateOSX.self
 			window.sharingType = .ReadWrite
 			NSApplication.sharedApplication().windowsMenu = NSMenu()
@@ -38,7 +39,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 
 	// these just handle drags to a tabless-background, webviews define their own
 	func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
-	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
+	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } // FIXME: should open the file:// url
 
 	func window(window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplicationPresentationOptions) -> NSApplicationPresentationOptions {
 		return [.AutoHideToolbar, .AutoHideMenuBar, .FullScreen, proposedOptions]
@@ -76,4 +77,14 @@ class WindowController: NSWindowController, NSWindowDelegate {
 
 	// only useful in non-fullscreen mode
 	//func toggleMenuBarAutoHide() { NSApp.presentationOptions |= .AutoHideMenuBar }
+
+	override func windowTitleForDocumentDisplayName(displayName: String) -> String { warn(displayName); return window?.title ?? displayName }
+
+	func windowShouldClose(sender: AnyObject) -> Bool {
+		warn()
+		return true
+	}
+	func windowWillClose(notification: NSNotification) { warn() } // window was closed by red stoplight button
+
+	deinit { warn(description) }
 }
