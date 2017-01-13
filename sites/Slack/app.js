@@ -82,6 +82,11 @@ delegate.decideNavigationForClickedURL = function(url, tab) {
 				&& !host.endsWith('.cedexis-test.com')
 				&& !host.endsWith('.cloudfront.net')
 				&& !host.endsWith('.doubleclick.net')
+				&& !host.endsWith('.perf.linkedin.com')
+				&& !host.endsWith('.youtube.com')
+				&& !host.endsWith('.giphy.com')
+				&& !host.endsWith('.imgur.com')
+				&& !host.endsWith('.vimeo.com')
 			) {
 				$.app.openURL(url);
 				return true;
