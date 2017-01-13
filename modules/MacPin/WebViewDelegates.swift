@@ -302,7 +302,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 
 	func webViewDidClose(webView: WKWebView) {
 		warn("JS <\(webView.URL)>: `window.close();`")
-		closeTab() // FIXME: need to ensure webView was window.open()'d by a JS script
+		dismiss() // FIXME: need to ensure webView was window.open()'d by a JS script
 	}
 
 	func _webViewWebProcessDidCrash(webView: WKWebView) {
