@@ -96,8 +96,6 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		//let appname = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleName") ?? NSProcessInfo.processInfo().processName
 		let appname = NSRunningApplication.currentApplication().localizedName ?? NSProcessInfo.processInfo().processName
 
-		window?.delegate = self
-
 		app!.mainMenu = NSMenu()
 
 		let appMenu = NSMenuItem()
@@ -411,18 +409,4 @@ extension MacPinAppDelegateOSX: NSWindowRestoration {
 			completionHandler(nil, nil)
 		}
 	}
-}
-extension MacPinAppDelegateOSX: NSWindowDelegate {
-	public func windowShouldClose(sender: AnyObject) -> Bool {
-		warn()
-		return true
-	}
-	public func windowWillClose(notification: NSNotification) {  // window was closed by red stoplight button
-		warn()
-	}
-	/*
-		dispatch_sync(dispatch_get_main_queue(), { // hafta let this method finish for the window to actaully close, terminate() is blocking
-			NSApplication.sharedApplication().terminate(self) // we have only one WC'd window for now, if its gone, we go away.
-		})
-	}*/
 }
