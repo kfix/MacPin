@@ -162,6 +162,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		exports.setObject(MPWebView.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebView]
 		exports.setObject(SSKeychain.self, forKeyedSubscript: "keychain")
 		XMLHttpRequest().extend(context) // allows `new XMLHTTPRequest` for doing xHr's
+		//FIXME: extend Fetch API instead: https://facebook.github.io/react-native/docs/network.html
 
 		// set console.log to NSBlock that will call warn()
 		let logger: @convention(block) String -> Void = { msg in warn(msg) }
