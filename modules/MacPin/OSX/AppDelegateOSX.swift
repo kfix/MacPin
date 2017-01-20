@@ -44,6 +44,12 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		browserController.view.frame = effectController.view.bounds
 		self.window = win
 
+		// https://gist.github.com/DaleJefferson/96f72c4081ef0765a2fb
+		// rnBridge = RCTBridge()
+		// rnBridge.executorClass = AppScriptRuntime // will init app.js 
+		// rnView = RCTRootView(withBridge: rnBridge)
+		// effectController.view.addSubview(rnView)
+
 		super.init()
 	}
 
