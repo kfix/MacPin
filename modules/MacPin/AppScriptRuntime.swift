@@ -5,6 +5,8 @@
 // make a Globals struct with a member for each thing to expose under `$`: browser, app, WebView, etc..
 	// ES6 mods enabled for STP v21? https://github.com/WebKit/webkit/commit/fd763768344f941863054d03968d78dd388b8d15
 
+// WX: https://github.com/alibaba/weex/blob/dev/ios/sdk/WeexSDK/Sources/Bridge/WXJSCoreBridge.m
+
 #if os(OSX)
 import AppKit
 import OSAKit

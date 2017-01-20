@@ -1,6 +1,8 @@
 import JavaScriptCore
 import AppKit
 
+// https://github.com/alibaba/weex/blob/dev/ios/sdk/WeexSDK/Sources/View/WXRootView.m
+
 @objc protocol BrowserViewControllerJS: JSExport { // '$.browser' in app.js
 	var defaultUserAgent: String? { get set } // full UA used for any new tab without explicit UA specified
 	var isFullscreen: Bool { get set }
