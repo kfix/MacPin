@@ -362,6 +362,9 @@ endif
 stp_symbols:
 	symbols /Applications/Safari\ Technology\ Preview.app/Contents/Frameworks/WebKit.framework/Versions/A/WebKit | less
 
+stp_jsc:
+	/Applications/Safari\ Technology\ Preview.app/Contents/Frameworks/JavaScriptCore.framework/Resources/jsc
+
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist
-.PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics stp_symbols
+.PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics stp_symbols stp_jsc
 .SUFFIXES:
