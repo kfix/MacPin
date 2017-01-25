@@ -4,6 +4,7 @@ import Foundation
 // the requests/responses are XPC'd back and forth to the NetworkProcess via CustomProtocolManagerProxy
 //  https://github.com/WebKit/webkit/commit/8ebb8c1a8ac3113b982811c75277bbd2ce49a467
 //  https://github.com/WebKit/webkit/commit/2cd97a7728493a554d8e7eff33c0efcd8011b58e
+// WebProcessPool.networkProcess().m_customProtocolManagerProxy
 
 class MPURLProtocol: NSURLProtocol {
 	// https://gist.github.com/omerlh/2617db3d4116bf46bdeb
