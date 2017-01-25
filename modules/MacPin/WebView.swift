@@ -95,11 +95,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	//let page = self.browsingContextController()._pageRef // https://github.com/WebKit/webkit/blob/e41847fbe7dd0bf191a8dafc2c3a5d965e96d277/Source/WebKit2/UIProcess/Cocoa/WebViewImpl.h#L368
 	//let browsingContext = WKWebProcessPlugInBrowserContextController.lookUpBrowsingContextFromHandle(_handle)
 	//let page = browsingContext._pageRef
-	//let browsingContextController = WKBrowsingContextController._browsingContextControllerForPageRef(_pageForTesting())
-		// register a custom protocol to handle X-Host: https://github.com/WebKit/webkit/blob/fa0c14782ed939dabdb52f7cffcb1fd0254d4ef0/Tools/TestWebKitAPI/cocoa/TestProtocol.mm
-		// https://github.com/WebKit/webkit/blob/49cc03e4bf77a42908478cfbda938088cf1a8567/Source/WebKit2/NetworkProcess/CustomProtocols/CustomProtocolManager.h
-		//   registerProtocolClass(NSURLSessionConfiguration) <- that could let you configure ad-hoc CFProxySupport dictionaries: http://stackoverflow.com/a/28101583/3878712
-		// NSURLSessionConfiguration ? https://www.objc.io/issues/5-ios7/from-nsurlconnection-to-nsurlsession/
+	let browsingContextController = WKBrowsingContextController._browsingContextControllerForPageRef(_pageForTesting())
 
 	var context: WKContextRef? = nil
 	var iconDB: WKIconDatabaseRef? = nil
@@ -234,6 +230,13 @@ var globalIconClient = WKIconDatabaseClientV1(
 		self.context = context
 	    WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString("http".UTF8String))
 		self.iconDB = WKContextGetIconDatabase(context)
+
+		// register our custom protocol to handle X-Host and ad-hoc proxies
+		// https://github.com/brave/browser-ios/issues/96#issuecomment-260365341
+		// https://github.com/WebKit/webkit/blob/fa0c14782ed939dabdb52f7cffcb1fd0254d4ef0/Tools/TestWebKitAPI/cocoa/TestProtocol.mm
+		// https://github.com/WebKit/webkit/blob/49cc03e4bf77a42908478cfbda938088cf1a8567/Source/WebKit2/NetworkProcess/CustomProtocols/CustomProtocolManager.h
+		self.browsingContextController.registerSchemeForCustomProtocol("macpin-http")
+		NSURLProtocol.registerClass(MPURLProtocol)
 	}
 
 	convenience required init?(object: [String:AnyObject]) {
