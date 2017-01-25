@@ -1,0 +1,127 @@
+/* https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99 */
+/* https://a.slack-edge.com/4e3ef/style/rollup-client_secondary.css */
+
+/*
+ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
+    background: #353535;
+}
+*/
+
+:root, #client-ui {
+	background: black;
+	/* if tab is made transparent, these are overriden */
+}
+
+ts-message {
+    font-size: 9pt !important;
+	font-family: -apple-system-font !important;
+}
+
+/* ts-message.active .star, ts-message:hover .star */
+
+#col_channels,
+#team_menu,
+#quick_switcher_btn {
+    background: #2B2B2B !important;
+	font-family: -apple-system-font !important;
+}
+
+html, body,
+ts-message.active:not(.standalone):not(.multi_delete_mode):not(.highlight),
+ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
+.channel_title_info,
+.channel-header .flex_header,
+.flex_header,
+#channel_header_info,
+#primary_file_button,
+#col_messages > .row-fluid,
+#col_flex,
+.search_message_result,
+.search_result_with_extract,
+.channel_header,
+#footer,
+#messages_container,
+.day_divider,
+.tab_container,
+.panel .heading,
+#mentions_options {
+    background: none !important;
+	background-color: none !important;
+}
+
+span.match {
+	background: magenta !important;
+}
+
+.ts_icon:not(.ts_icon_presence):before, ts-icon:before,
+.panel .heading,
+.message_body,
+.timestamp,
+.initial_comment .comment,
+#im_title,
+#channel_title,
+#mentions_options {
+    color: #fff !important;
+}
+
+#quick_switcher_btn {
+    border-top: none !important;
+}
+
+#client_body:not(.onboarding):before {
+/*
+    border-bottom: 1px solid #4C4C4C;
+    background: none !important;
+*/
+    content: none !important;
+}
+
+.monkey_scroll_bar,
+.monkey_scroll_handle_inner {
+    background: #333131 !important;
+}
+
+#stars_toggle.active,
+#recent_mentions_toggle.active {
+    background: #6D6D6D !important;
+}
+
+.action_hover_container .ts_icon:before,
+.action_hover_container .ts_icon:after,
+#menu_items .ts_icon:before,
+#menu_items .ts_icon:after {
+   color: none !important;
+}
+
+ts-message .action_hover_container a {
+   background: none !important;
+}
+
+#search_container input, .search_input,
+#message-input {
+    background: none !important;
+    color: white !important;
+}
+
+#message-input:placeholder {
+    background: white !important;
+    color: none !important;
+}
+
+.special_formatting {
+    background-color: inherit !important;
+    color: #39cc2f !important;
+}
+
+.mention {
+    background: inherit !important;
+    color: #e1dc28;
+}
+
+.snippet_container, .file_container, .CodeMirror, .CodeMirror-code,
+.file_container .CodeMirror .Condemirror-code>div:before,
+.file_container .CodeMirror .Condemirror-code>div pre
+{
+	background: black !important;
+	color: lime !important;
+}

@@ -1,7 +1,8 @@
-/*eslint-env applescript*/
+/*eslint-env es6*/
 /*eslint-env builtins*/
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
+
 // helpers to stringify JS outputs to REPL from seeDebugger.js
 // also refer to:
 //   http://stackoverflow.com/questions/34914397/why-doesnt-console-log-work-in-the-jsc-environment-but-it-works-in-safaris-deb

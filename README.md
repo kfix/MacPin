@@ -10,14 +10,13 @@ MacPin apps are shown in OSX's Dock, App Switcher, and Launchpad.
 
 Custom URL schemes can also be registered to launch a MacPin App from any other app on your Mac.  
 
-OSX 10.11 "El Capitan" or iOS 9 is required.  
+Requires OSX 10.11 "El Capitan" with Safari Technical Preview installed.  
 
 ## Included Apps in the [Release](https://github.com/kfix/MacPin/releases)
 
 #### [Hangouts.app](http://plus.google.com/hangouts): SMS/IM/Video chat client for the desktop
 
 Google Voice and Project Fi users can [make & take phone calls and SMS/MMS messages](http://fi.google.com/about/faq/#talk-and-text-4).  
-Load up can take up to 30 seconds, so be patient.
 
 New incoming messages are shown in the system's Notification Center,  
 which you can click on to reply back in the app.
@@ -39,6 +38,10 @@ Hooked URLs:
 * [`hangouts:`](hangouts:coolguy@example.com)
 
 #### [Messenger.app](https://www.messenger.com/hangouts): RIP *WhatsApp in your Facebook while you Facebook*
+
+#### [Slack.app](https://signin.slack.com): A hackable runtime for Slack (your co-workers will be thrilled)
+
+#### [Salesforce.app](https://signin.salesforce.com): _[ALWAYS BE CLOSING](https://www.youtube.com/watch?v=r6Lf8GtMe4M)_ without tying up your main browser
 
 #### [Digg.app](http://digg.com/reader): A replacement for Google Reader
 If you are surfing a blog in Safari and want to subscribe to it in your Digg Reader account:  
@@ -66,6 +69,8 @@ Hooked URLs:
 * shows a single-column stream
 * does not preload any videos
 * makes the controls mouse-friendly
+
+#### [YouTube_TV.app](http://youtube.com/tv): TV edition for the desktop.
 
 #### [Facebook.app](https://m.facebook.com/home.php): It knows who your friends are.
 
@@ -130,13 +135,14 @@ delegate; //return this to macpin
 
 ## Hacking MacPin
 Its written in Swift using WKWebView and NSTabViewController with a fully programmatic NIB-less UI layout.  
-You need Xcode installed on OSX to get the Swift compiler and Cocoa headers.  
+You need [Xcode 8](https://developer.apple.com/xcode/) installed on OSX to get the Swift compiler and Cocoa headers.  
 Otherwise `$EDITOR` and `make` are your fork and knife.
 
 ```
 vim execs/MacPin.swift
 vim modules/MacPin/*.swift
 make test.app
+# CTRL-D when finished debugging ...
 make only=sim test.ios
 ```
 
@@ -147,20 +153,15 @@ The JavaScript API for app construction is undocumented and [non-final](https://
 If you want to play with it, run any MacPin app with the `-i` argument in Terminal to get a JS console (or `make repl`).  
 Safari can also remotely inspect the `JSContext` of debug builds.
 
-Some browser functionality is currently unimplementable in WKWebKit:
-* File Picker for upload via HTML4 `<input type="file">` buttons
-  * Workaround: drag files onto the buttons, it works!
+Browser functionality currently unimplementable in WKWebKit:
 * Status Bar
   * Drag any link some distance to see a URL preview. Force Touch previewing should also work.
   * a JS emulation should be possible to preview any hovered links
-* Printing
-  * Coming soon-ish (10.11.4?)
-  * Workaround: Tab->Save Web Archive, open in Safari and then Print.
 
-And some things I just haven't had need to write:
+Some things I just haven't had need to write, but wouldn't mind having:
 
 * Global history
-* Undo/redo tabs
+* Undo/redo for Tab closings
 
 #### use MacPin to make hybrid apps from existing projects
 ```
@@ -180,8 +181,7 @@ This makes up-and-coming WKWebView changes (find UI, printing) actually work!
 
 Basic support has landed for generating iOS apps.  
 Its kinda pointless for most of `sites/*` since native apps exist for all of them.  
-But maybe you want to quickly package a React.js application for offline mobile use...
-
+But maybe you want to quickly package a React.js application for offline mobile use...  
 
 ## Other WebKit browsers:
 

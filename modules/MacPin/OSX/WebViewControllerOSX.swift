@@ -30,6 +30,10 @@ import WebKitPrivates
 		view.autoresizesSubviews = true
 		view.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable]
 		webview.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable]
+#if STP
+		// scale-to-fit https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
+		webview._layoutMode = .DynamicSizeComputedFromViewScale
+#endif
 
 		bind(NSTitleBinding, toObject: webview, withKeyPath: "title", options: nil)
 		//backMenu.delegate = self
@@ -42,6 +46,7 @@ import WebKitPrivates
 		textFinder.incrementalSearchingShouldDimContentView = true
 		// FIXME: webview doesn't auto-scroll to found matches
 		//  https://github.com/WebKit/webkit/blob/112c663463807e8676765cb7a006d415c372f447/Source/WebKit2/UIProcess/mac/WKTextFinderClient.mm#L39
+		// MiniBrowser: https://github.com/WebKit/webkit/commit/67ec9eb4a3e9f04ababc7ea6c0e5f9b5bf69ca1c
 	}
 
 	func contentView() -> NSView? { return webview }
@@ -114,27 +119,59 @@ import WebKitPrivates
 extension WebViewControllerOSX: NSMenuDelegate {
 	func menuNeedsUpdate(menu: NSMenu) {
 		//if menu.tag == 1 //backlist
+		/*
 		for histItem in webview.backForwardList.backList {
 			let mi = NSMenuItem(title:(histItem.title ?? histItem.URL.absoluteString), action:Selector("gotoHistoryMenuURL:"), keyEquivalent:"" )
 			mi.representedObject = histItem.URL
 			mi.target = self
 		}
+		*/
 	}
 }
 
 extension WebViewControllerOSX { // AppGUI funcs
 
-	override func closeTab() {
+	override func dismiss() {
 		webview._inspectorAttachmentView = nil
+		webview.iconClient = nil
 		//view?.removeFromSuperviewWithoutNeedingDisplay()
-		super.closeTab()
+		//super.dismiss()
 	}
 
 	func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }  // WKPageForceRepaint(webview.topFrame?.pageRef, 0, didForceRepaint);
 
-	//FIXME: support new scaling https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
-	func zoomIn() { webview.magnification += 0.2 }
+#if STP
+	func zoomIn() { zoom(0.2) }
+	func zoomOut() { zoom(-0.2) }
+	func zoom(factor: Double) {
+		// https://github.com/WebKit/webkit/commit/1fe5bc35da4a688b9628e2e0b0c013fd0d44b9d5
+		//webview.magnification -= factor
+		textZoom(factor)
+		return
+		let oldScale = webview._viewScale
+		let scale = oldScale + CGFloat(factor) // * page/magnification scale
+		guard let window = view.window else {return}
+		let oldFrame = window.frame
+		//let oldFrame = view.frame
+		var newFrameSize = NSMakeSize(oldFrame.size.width * (scale / oldScale), oldFrame.size.height * (scale / oldScale));
+		window.setFrame(NSMakeRect(oldFrame.origin.x, oldFrame.origin.y - (newFrameSize.height - oldFrame.size.height), newFrameSize.width, newFrameSize.height), display: true)
+		//view.frame = NSMakeRect(oldFrame.origin.x, oldFrame.origin.y - (newFrameSize.height - oldFrame.size.height), newFrameSize.width, newFrameSize.height)
+		webview._viewScale = scale
+	}
+	func textZoomIn() { textZoom(0.2) }
+	func textZoomOut() { textZoom(-0.2) }
+	func textZoom(factor: Double) {
+		webview._textZoomFactor += factor
+	}
+#else
+	func zoomIn() { webview.magnification += 0.2 } // user-adjustable "page" scale
 	func zoomOut() { webview.magnification -= 0.2 }
+#endif
+	func zoomText() {
+		webview._textZoomFactor = webview._textZoomFactor
+		webview._pageZoomFactor = webview._pageZoomFactor
+		webview._layoutMode = .DynamicSizeComputedFromViewScale
+	}
 
 	func print(sender: AnyObject?) { warn(""); webview.print(sender) }
 
@@ -155,12 +192,15 @@ extension WebViewControllerOSX { // AppGUI funcs
 
 	func snapshotButtonClicked(sender: AnyObject?) {
 		//guard if let btn = sender as? NSView else { }
+		return // WKWebViewSnappable can't link yet :-(
+		/*
 		guard let thumb = webview.thumbnail else { return }
 		var poprect = view.bounds
 		let snap = NSViewController()
 		snap.view = thumb
 		poprect.size.height -= snap.view.frame.height + 12 // make room at the top to stuff the popover
 		presentViewController(snap, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSRectEdge.MaxY, behavior: NSPopoverBehavior.Transient)
+		*/
 	}
 
 	func displayAlert(alert: NSAlert, _ completionHandler: (NSModalResponse) -> Void) {

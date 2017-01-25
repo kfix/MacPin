@@ -24,22 +24,6 @@ if (window == top)
 			vp.setAttribute("content", "initial-scale=1.0");
 			document.head.appendChild(vp);
 			//<meta name="viewport" content="initial-scale=1.0" />
-
-			var css = document.createElement("style");
-			css.type = 'text/css';
-			css.id = 'MacPinUnclutter';
-		    css.innerHTML = `
-			    body { overflow: hidden; background-color: transparent !important; font-family: -apple-system-font !important; }
-			    #gb, #gba { display: none; }
-				#hangout-landing-chat { left: 60px; top: 0px; width: 250px; }
-				div[aria-label='Open background photo'] > div { background-image: none !important; background: none !important; }
-				img:nth-of-type(2) { display: none; }
-				#hangout-landing-chat + div { background-color: transparent !important; }
-				#hangout-landing-chat + div > div > div { display: none !important; }
-				#hangout-landing-chat + div + div { display: none !important; }
-			`;
-			document.head.appendChild(css);
-			//document.head.insertBefore(css,document.head.childNodes[0]); //prepend
 		}
 	}
 	document.addEventListener('DOMSubtreeModified', injectCSS, false); //mutation events are deprecated
@@ -54,11 +38,12 @@ if (window.name == 'gtn-roster-iframe-id-b') { // roster
 				var css = document.createElement("style");
 				css.type = 'text/css';
 				css.id = 'MacPinDeFuglify'
+				//:root, img, video, object, iframe, span[data-emo] { filter: invert(1) hue-rotate(180deg); }
 			    css.innerHTML = `
 			    	body, div, li, input { font-family: -apple-system-font !important; }
 			    	button, div, li, input { font-size: 9pt !important; }
 				`;
-				document.head.appendChild(css);
+				//document.head.appendChild(css);
 			}
 		}
 		document.addEventListener('DOMSubtreeModified', injectCSS2, false); //mutation events are deprecated
@@ -73,7 +58,7 @@ if ((window.name == 'preld') || ~window.name.indexOf('gtn_')) { //frame-id ^gtn_
 		var et = e.target, lc = -1;
 		while (et && !(et instanceof HTMLAnchorElement) && (3 > lc++))
 		    et = et.parentElement;
-		if (!et || !et.href) 
+		if (!et || !et.href)
 		    return;
 		var link = et;
 	    if ((link.host === "www.google.com") && (link.pathname === '/url')) {
@@ -91,12 +76,14 @@ if ((window.name == 'preld') || ~window.name.indexOf('gtn_')) { //frame-id ^gtn_
 			var css = document.createElement("style");
 			css.type = 'text/css';
 			css.id = 'appleEmoji'
+			//:root, img, video, object, iframe, span[data-emo] { filter: invert(1) hue-rotate(180deg); }
 		    css.innerHTML = `
 		    	body, div, input { font-family: -apple-system-font !important; }
 				span[data-emo] span { opacity: 1.0 !important; width: auto !important; font-size: 12pt; }
-				span[data-emo] div { display: none !important; } 
+				span[data-emo] div { display: none !important; }
 			`;
 			document.head.appendChild(css);
+			// dang, they took away the textContent emojis, just img[data-emo] now...
 		}
 	}
 	document.addEventListener('DOMSubtreeModified', injectCSS, false); //mutation events are deprecated
@@ -145,7 +132,7 @@ if ((window.name == 'preld') || ~window.name.indexOf('gtn_')) { //frame-id ^gtn_
 						});
 						webkit.messageHandlers.unhideApp.postMessage([]); //get the app in the user's face right now!!
 						window.callWatcher.disconnect(); // can stop observing now
-					}					
+					}
 			}
 		});
 		watch.observe(chat, cfg);

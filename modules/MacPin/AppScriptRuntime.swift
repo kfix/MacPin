@@ -3,6 +3,7 @@
 /// Creates a singleton-instance of JavaScriptCore for intepreting bundled javascripts to control a MacPin app
 
 // make a Globals struct with a member for each thing to expose under `$`: browser, app, WebView, etc..
+	// ES6 mods enabled for STP v21? https://github.com/WebKit/webkit/commit/fd763768344f941863054d03968d78dd388b8d15
 
 #if os(OSX)
 import AppKit
@@ -37,12 +38,13 @@ extension NSObject: JSExport {
 
 */
 
-
+// FIXME: AppScript needs a HandlerMethods enum instead of just tryFunc("unsafe-string")s everywhere....
 extension JSValue {
 	func tryFunc (method: String, argv: [AnyObject]) -> Bool {
 		if self.isObject && self.hasProperty(method) {
 			warn("this.\(method) <- \(argv)")
 			let ret = self.invokeMethod(method, withArguments: argv)
+			if ret == nil { return false }
 			if let bool = ret.toObject() as? Bool { return bool }
 		}
 		return false
@@ -160,6 +162,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		exports.setObject(MPWebView.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebView]
 		exports.setObject(SSKeychain.self, forKeyedSubscript: "keychain")
 		XMLHttpRequest().extend(context) // allows `new XMLHTTPRequest` for doing xHr's
+		//FIXME: extend Fetch API instead: https://facebook.github.io/react-native/docs/network.html
 
 		// set console.log to NSBlock that will call warn()
 		let logger: @convention(block) String -> Void = { msg in warn(msg) }
@@ -233,7 +236,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	// FIXME: ES6 modules? context.evaluateScript("import ...") or "System.load()";
 	func loadAppScript(urlstr: String) -> JSValue? {
-		if let scriptURL = NSURL(string: urlstr), script = try? NSString(contentsOfURL: scriptURL, encoding: NSUTF8StringEncoding) {
+		if let scriptURL = NSURL(string: urlstr), script = try? NSString(contentsOfURL: scriptURL, encoding: NSUTF8StringEncoding), sourceURL = scriptURL.absoluteString {
 			// FIXME: script code could be loaded from anywhere, exploitable?
 			warn("\(scriptURL): read")
 
@@ -249,7 +252,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			if JSCheckScriptSyntax(
 				/*ctx:*/ context.JSGlobalContextRef,
 				/*script:*/ JSStringCreateWithCFString(script as CFString),
-				/*sourceURL:*/ JSStringCreateWithCFString(scriptURL.absoluteString as CFString),
+				/*sourceURL:*/ JSStringCreateWithCFString(sourceURL as CFString),
 				/*startingLineNumber:*/ Int32(1),
 				/*exception:*/ UnsafeMutablePointer(exception.JSValueRef)
 			) {
@@ -476,8 +479,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 					print(val)
 				}
 			},
-			ps1: __FILE__,
-			ps2: __FUNCTION__,
+			ps1: #file,
+			ps2: #function,
 			abort: { () -> Void in
 				// EOF'd by Ctrl-D
 #if os(OSX)
@@ -493,6 +496,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	func evalJXA(script: String) {
+		// FIXME: force a confirmation panel with printout of script and func+args to be called.....
 #if os(OSX)
 		var error: NSDictionary?
 		let osa = OSAScript(source: script, language: OSALanguage(forName: "JavaScript"))
@@ -505,6 +509,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	func callJXALibrary(library: String, _ call: String, _ args: [AnyObject]) {
+		// FIXME: force a confirmation panel with link to library path and func+args to be called.....
 #if os(OSX)
 #if DEBUG
 		let script = "function run() { return Library('\(library)').\(call).apply(this, arguments); }"

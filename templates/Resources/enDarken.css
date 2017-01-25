@@ -1,19 +1,36 @@
-/* https://github.com/alexanderby/darkreader/blob/master/src/config/sites_fixes.json */
-/* :root, img, video, object, iframe, *:not(object):not(body)>embed, *[style*="background:url"]:empty, *[style*="background-image:url"]:empty, *[style*="background: url"]:empty, *[style*="background-image: url"]:empty { */
-/* :root, img, video, object, iframe, *:not(object):not(body)>embed, *[style*="background:url"]:not(:empty), *[style*="background-image:url"]:not(:empty), *[style*="background: url"]:not(:empty), *[style*="background-image: url"]:not(:empty) { */
-:root, img, video, object, iframe, *:not(object):not(body)>embed, *[style*="background:url"], *[style*="background-image:url"], *[style*="background: url"], *[style*="background-image: url"] {
-	filter: invert(1) hue-rotate(180deg);
+/*
+ * https://github.com/alexanderby/darkreader/blob/master/src/config/sites_fixes.json
+ * https://fullscreen.spec.whatwg.org/#user-agent-level-style-sheet-defaults
+*/
+
+/* root inversion to darken all the (usually) bright pages */
+:root:not(:-webkit-full-screen-document) {
+    filter: invert(1) hue-rotate(180deg);
 }
-/* 
+
+/* double-inversion to undarken all the image-like things in a page */
+:matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]):not(body,body>div,input), /* I h8 these pseudo-img div's*/
+:not(:not(body,body>div,input):matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]) *):matches(
+	/* image-like things except if children of pseudo-img's */
+	/* FIXME: background-imgs added by CSS classes (not in HTML markup) cannot be matched! */
+	img, video, iframe,
+	object, :not(object)>embed /* Flash */
+),
+.watch-stage-mode #theater-background, /* YouTube explictly blacks-out the theater bg... and we screw that up :-( */
+.player_area /* same with Vimeo */
+{
+    filter: invert(1) hue-rotate(180deg);
+}
+/* FIXME: wish I could do a negation or exclusion instead of double-GPUing these elements */
+
+/* no-op all filters when in fullscreen */
+:-webkit-full-screen * { filter: none !important; }
+/* FIXME: this does mess up some CSS-styled media controls' colors & fades */
+
+/*
  * I'd prefer to specifically target all body, div, section, main that have explicitly set white background-color: 000
  * or exclude items with explicity set black background-color:#FFF
 */
 
-/* we dont
-::backdrop {
-	filter: none !important;
-}
-
-/
-:root, body { background-color: none !important; }
-
+/* make docroots transperanizable */
+:root:not(:-webkit-full-screen-document), body { background: none !important; }

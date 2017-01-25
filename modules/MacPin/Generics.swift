@@ -20,7 +20,7 @@ import Prompt // https://github.com/neilpa/swift-libedit
 var prompter: Async? = nil
 #endif
 
-func warn(msg: String = String(), function: StaticString = __FUNCTION__, file: StaticString = __FILE__, line: UInt = __LINE__, column: UInt = __COLUMN__) {
+func warn(msg: String = String(), function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
 	// https://github.com/swisspol/XLFacility ?
 	NSFileHandle.fileHandleWithStandardError().writeData(("[\(NSDate())] <\(file):\(line):\(column)> [\(function)] \(msg)\n").dataUsingEncoding(NSUTF8StringEncoding)!)
 #if WARN2NSLOG
@@ -40,7 +40,7 @@ func warn(msg: String = String(), function: StaticString = __FUNCTION__, file: S
 
 /*
 func assert(condition: @autoclosure () -> Bool, _ message: String = "",
-	file: String = __FILE__, line: Int = __LINE__) {
+	file: String = #file, line: Int = #line) {
 		#if DEBUG
 			if !condition() {
 				println("assertion failed at \(file):\(line): \(message)")
@@ -50,6 +50,7 @@ func assert(condition: @autoclosure () -> Bool, _ message: String = "",
 }
 */
 
+// https://developer.apple.com/library/content/documentation/Tools/Conceptual/SafariExtensionGuide/InjectingScripts/InjectingScripts.html#//apple_ref/doc/uid/TP40009977-CH6-SW1
 func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
 	if let scriptUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") where !basename.isEmpty {
 		warn("loading userscript: \(scriptUrl)")
@@ -61,6 +62,7 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 
 		// TODO: parse some of UserScript Metadata Block if present: https://wiki.greasespot.net/Metadata_Block
 		// @include, @exclude, @description, @icon, @match, @name, @namespace, @frames, @noframes, @run-at
+		// https://wiki.greasespot.net/Cross-browser_userscripting
 		// https://github.com/kzys/greasekit
 		// https://github.com/os0x/NinjaKit/blob/master/NinjaKit.safariextension/js/background.js
 		// https://github.com/Tampermonkey/tampermonkey
@@ -94,6 +96,8 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 	return true
 }
 
+// https://developer.apple.com/library/content/documentation/Tools/Conceptual/SafariExtensionGuide/AddingStyles/AddingStyles.html#//apple_ref/doc/uid/TP40009977-CH7-SW3
+// does WK2 support `@import: url("file://Path/To/Your/Stylesheet.css");` ??
 func loadUserStyleSheetFromBundle(basename: String, webctl: WKUserContentController, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
 	if let cssUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "css") where !basename.isEmpty {
 		warn("loading stylesheet: \(cssUrl)")
@@ -162,26 +166,30 @@ func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? 
 		}
 	}
 
-	if let url = fallback?(urlstr) { return url } // caller provided a failure handler which derived a url
-	else if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr) { return nil } // compat with generic JS handler method
-	else {
-		// maybe its a search query? check if blank and reformat it
-		// FIXME: this should get refactored to a browserController/OmniBoxController closure thats passed as fallback?
-		if !urlstr.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
-		let query = urlstr.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding),
-		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") { // FIXME: JS setter
-			return search
-		}
-		// as a fallback, could forcibly change OmniBox stringValue to raw search terms
-		// FIXME: support OpenSearch to search current site on-the-fly https://en.wikipedia.org/wiki/OpenSearch
-		// https://developer.mozilla.org/en-US/Add-ons/Creating_OpenSearch_plugins_for_Firefox
-
+	if let fallback = fallback {
+		// caller provided a failure handler
+		return fallback(urlstr)
+	} else {
 		return nil
 	}
 }
 
+func searchForKeywords(str: String) -> NSURL? {
+	// return a URL that will search the given keyword string
+
+	// maybe its a search query? check if blank and reformat it
+	if !str.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
+		let query = str.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding),
+		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") { // FIXME: JS setter
+			return search
+		}
+	// FIXME: support OpenSearch to search current site on-the-fly https://en.wikipedia.org/wiki/OpenSearch
+		// https://developer.mozilla.org/en-US/Add-ons/Creating_OpenSearch_plugins_for_Firefox
+	return nil
+}
+
 // TODO: exposing a websocketREPL would also be neat: https://github.com/siuying/IGJavaScriptConsole https://github.com/zwopple/PocketSocket
-func termiosREPL(eval:((String)->Void)? = nil, ps1: StaticString = __FILE__, ps2: StaticString = __FUNCTION__, abort:(()->Void)? = nil) {
+func termiosREPL(eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2: StaticString = #function, abort:(()->Void)? = nil) {
 #if arch(x86_64) || arch(i386)
 	prompter = Async.background {
 		let prompt = Prompt(argv0: Process.unsafeArgv[0], prompt: "\(ps1)[\(ps2)]:> ")

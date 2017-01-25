@@ -37,14 +37,12 @@
 #import "_WKUserStyleSheet.h"
 #import "WKUserContentControllerPrivate.h"
 //#import "SnapshottableWKWebView.h"
+#import "WKErrorPrivate.h"
 #endif
 #import "WKErrorRef.h"
 
 /* things to integrate:
-	better JS errors from wkwebviews: https://github.com/WebKit/webkit/commit/984d854e5c71da16cdf85c644fc292947aea43a1
-	white/blacklisted WKUserScripts: https://github.com/WebKit/webkit/blob/21a4dcb584f205c2b5ecc326be846f0db7a7ecac/Source/WebKit2/UIProcess/API/Cocoa/WKUserScriptPrivate.h
 	Remote debuggers for app.js: https://github.com/WebKit/webkit/commit/a06b5fecb8e69eccdc7ee2a668868740750d260c
-	WKUserStyleSheet: https://github.com/WebKit/webkit/commit/543b286f525e3e9de69d9ac60b1e64dc2ad4da2e
 */
 
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR || TARGET_OS_SIMULATOR

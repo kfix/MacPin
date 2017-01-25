@@ -38,7 +38,7 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 	var ret = false;
 	console.log(urls);
 	for (let url of urls) {
-		$.browser.tabSelected.evalJS("confirm('Open a new tab for: "+url+"');", function(response) {
+		$.browser.tabSelected.evalJS(`confirm('Open a new tab for: ${url}');`, function(response) {
 			if (response) {
 				var tab = new $.WebView({url: url});
 				//$.browser.tabSelected = tab;
@@ -71,6 +71,9 @@ delegate.AppFinishedLaunching = function() {
 	//$.browser.unhideApp();
 
 	$.browser.addShortcut('MacPin @ GitHub', 'http://github.com/kfix/MacPin');
+	$.browser.addShortcut('WebKit Feature Status', 'https://webkit.org/status/');
+	$.browser.addShortcut('WebKit Blog', 'https://webkit.org/blog/');
+	$.browser.addShortcut('Apple WebKit API reference', 'https://developer.apple.com/reference/webkit');
 	$.browser.addShortcut('Browsing Test', 'http://browsingtest.appspot.com');
 	$.browser.addShortcut('resizeMyBrowser', 'http://resizemybrowser.com');
 
@@ -101,6 +104,9 @@ delegate.AppFinishedLaunching = function() {
 		// or CodeMirror.net
 	};
 	$.browser.addShortcut('HTML5 editor', editor);
+
+	//$.browser.addShortcut('HTML5 editor -> preview', editorPreview);
+	//editorPreview should find editor tab (passed by ref?) and render its source
 
 	var repl = {
 		transparent: true,

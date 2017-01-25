@@ -1,0 +1,13 @@
+body { overflow: hidden; background-color: transparent !important; font-family: -apple-system-font !important; }
+div, li, input { font-family: -apple-system-font !important; }
+*[role="button"] { font-size: 9pt !important; }
+#gb, #gba { display: none; }
+#hangout-landing-chat { left: 60px !important; top: 0px !important; width: 275px !important; background: none !important; }
+div[aria-label='Open background photo'] > div { background-image: none !important; background: none !important; }
+#hangout-landing-chat + div { background-color: none !important; }
+#hangout-landing-chat + div > div > div { display: none !important; }
+#hangout-landing-chat + div + div { display: none !important; }
+img[aria-hidden="true"] { display: none !important; }
+body > div + div + div + div > div[jscontroller] + div { background: none !important; }
+/* img, video, object, iframe, span[data-emo] { filter: invert(1) hue-rotate(180deg); } */
+/* .talk_iframe { font-family: -apple-system-font !important; font-size: 9pt !important; } */

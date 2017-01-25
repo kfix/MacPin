@@ -2,10 +2,6 @@
 ///
 /// Handle modal & interactive webview prompts and errors
 
-// WK2 on Mac is missing a <input type="file"> picker & uploader delegate
-// iOS WK2: https://github.com/WebKit/webkit/commit/a12c1fc70fa906a39a0593aa4124f24427e232e7
-// for now, just drag files onto file-input buttons, it really works!
-
 // lookup table for NSError codes gotten while browsing
 // http://nshipster.com/nserror/#nsurlerrordomain-&-cfnetworkerrors
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/Misc/WebKitErrors.h
@@ -84,8 +80,8 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 	}
 
 	func webView(webView: WKWebView, decidePolicyForNavigationAction navigationAction: WKNavigationAction, decisionHandler: (WKNavigationActionPolicy) -> Void) {
-		if let url = navigationAction.request.URL {
-			switch url.scheme {
+		if let url = navigationAction.request.URL, scheme = url.scheme {
+			switch scheme {
 				case "data": fallthrough
 				case "file": fallthrough
 				case "about": fallthrough
@@ -104,9 +100,9 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 #if os(OSX)
 					let mousebtn = navigationAction.buttonNumber
 					let modkeys = navigationAction.modifierFlags
-					if modkeys.contains(NSEventModifierFlags.AlternateKeyMask) { NSWorkspace.sharedWorkspace().openURL(url) } //alt-click opens externally
-						else if modkeys.contains(NSEventModifierFlags.CommandKeyMask) { popup(webView.clone(url)) } // cmd-click pops open a new tab
-						else if modkeys.contains(NSEventModifierFlags.CommandKeyMask) { popup(MPWebView(url: url, agent: webView._customUserAgent)) } // shift-click pops open a new tab w/ new session state
+					if modkeys.contains(.Option) { NSWorkspace.sharedWorkspace().openURL(url) } //alt-click opens externally
+						else if modkeys.contains(.Command) { popup(webView.clone(url)) } // cmd-click pops open a new tab
+						else if modkeys.contains(.Command) { popup(MPWebView(url: url, agent: webView._customUserAgent)) } // shift-click pops open a new tab w/ new session state
 						// FIXME: same keymods should work with Enter in omnibox controller
 						else if !jsdelegate.tryFunc("decideNavigationForClickedURL", url.description, webView) { // allow override from JS
 							if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
@@ -125,7 +121,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 				// FIXME: allow JS to hook all of these
 				case .FormSubmitted: fallthrough
 				case .FormResubmitted:
-					if let method = navigationAction.request.HTTPMethod, headers = navigationAction.request.allHTTPHeaderFields where method == "POST" { warn("POSTing headers: \(headers)") }
+					if let method = navigationAction.request.HTTPMethod, headers = navigationAction.request.allHTTPHeaderFields where method == "POST" { warn("POST \(url) <- headers: \(headers)") }
 					if let post = navigationAction.request.HTTPBody { warn("POSTing body: \(post)") }
 					if let postStream = navigationAction.request.HTTPBodyStream {
 						var buffer = [UInt8](count: 500, repeatedValue: 0)
@@ -153,7 +149,9 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 	}
 
 	func webView(webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
-		if let url = webView.URL { warn("~> [\(url)]") }
+		guard let url = webView.URL else { return }
+		warn("~> [\(url)]")
+		jsdelegate.tryFunc("receivedRedirectionToURL", url.description, webView)
 	}
 
 	func webView(webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: NSError) { //error returned by webkit when loading content
@@ -288,7 +286,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 					width: CGFloat(windowFeatures.width ?? window.frame.size.width as NSNumber),
 					height: CGFloat(windowFeatures.height ?? window.frame.size.height as NSNumber)
 				)
-				if !webView.inFullScreenMode && (window.styleMask & NSFullScreenWindowMask == 0) {
+				if !webView.inFullScreenMode && (!window.styleMask.contains(.FullScreen)) {
 					warn("resizing window to match window.open() size parameters passed: origin,size[\(newframe)]")
 					window.setFrame(newframe, display: true)
 				}
@@ -304,7 +302,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 
 	func webViewDidClose(webView: WKWebView) {
 		warn("JS <\(webView.URL)>: `window.close();`")
-		closeTab() // FIXME: need to ensure webView was window.open()'d by a JS script
+		dismiss() // FIXME: need to ensure webView was window.open()'d by a JS script
 	}
 
 	func _webViewWebProcessDidCrash(webView: WKWebView) {

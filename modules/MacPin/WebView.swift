@@ -79,7 +79,9 @@ var globalIconClient = WKIconDatabaseClientV1(
 	var styles: [String] = [] //list of css-names already loaded
 	// cachedUserScripts: [UserScript] // are pushed/popped from the contentController by navigation delegates depending on URL being visited
 
-	var jsdelegate = AppScriptRuntime.shared.jsdelegate
+	//let jsdelegate = AppScriptRuntime.shared.jsdelegate
+	// race condition? seems to hit a phantom JSContext/JSValue that doesn't represent the delegate!?
+	var jsdelegate: JSValue { get { return AppScriptRuntime.shared.jsdelegate } }
 
 	var url: String { // accessor for JSC, which doesn't support `new URL()`
 		get { return URL?.absoluteString ?? "" }
@@ -99,11 +101,12 @@ var globalIconClient = WKIconDatabaseClientV1(
 
 	var context: WKContextRef? = nil
 	var iconDB: WKIconDatabaseRef? = nil
-	var iconClient = WKIconDatabaseClientV1() {
+	var iconClient: WKIconDatabaseClientV1? = WKIconDatabaseClientV1() {
 		didSet {
 			if let iconDB = iconDB, context = context {
-				//https://github.com/WebKit/webkit/blob/91700b336a0d0abf1be06c627e3f41281b2728a3/Source/WebCore/loader/icon/IconDatabase.cpp#L114 must close IconDB, setClient, and reopen
 				WKIconDatabaseClose(iconDB)
+				guard var iconClient = iconClient else { return }
+				//https://github.com/WebKit/webkit/blob/91700b336a0d0abf1be06c627e3f41281b2728a3/Source/WebCore/loader/icon/IconDatabase.cpp#L114 must close IconDB, setClient, and reopen
 			    WKIconDatabaseSetIconDatabaseClient(iconDB, &iconClient.base)
 				WKIconDatabaseCheckIntegrityBeforeOpening(iconDB)
 				WKIconDatabaseEnableDatabaseCleanup(iconDB)
@@ -123,20 +126,11 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 #endif
 
-/*
-#if STP
-	var _drawsTransparentBackground: Bool {
-		get { return _drawsBackground }
-		set { _drawsBackground = newValue }
-	}
-#endif
-*/
-
 #if os(OSX)
 
 #if !STP // no inner WKView in STP, iOS10, & Sierra: https://bugs.webkit.org/show_bug.cgi?id=150174#c0
 	// https://github.com/WebKit/webkit/blob/8c504b60d07b2a5c5f7c32b51730d3f6f6daa540/Source/WebKit2/UIProcess/mac/WebInspectorProxyMac.mm#L679
-	var _inspectorAttachmentView: NSView? {
+	override var _inspectorAttachmentView: NSView? {
 		// when inspector is open, subviews.first is actually the inspector (WKWebInspectorWKWebView), not the WKView
 		// tabitem.view.subviews = [ WKWebInspectorView, WKView, ... ]
 		get {
@@ -154,12 +148,23 @@ var globalIconClient = WKIconDatabaseClientV1(
 #endif
 
 	var transparent: Bool {
-		get { return _drawsTransparentBackground }
+		get {
+#if STP
+			return !_drawsBackground
+#else
+			return _drawsTransparentBackground
+#endif
+		}
 		set(transparent) {
+#if STP
+			_drawsBackground = !transparent
+#else
 			_drawsTransparentBackground = transparent
+#endif
 			//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
  			// so frobble frame size to make content reflow & re-colorize
 			setFrameSize(NSSize(width: frame.size.width, height: frame.size.height - 1)) //needed to fully redraw w/ dom-reflow or reload!
+			AppScriptRuntime.shared.jsdelegate.tryFunc("tabTransparencyToggled", transparent, self)
 			evalJS("window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(transparent)}}));" +
 				"document.head.appendChild(document.createElement('style')).remove();") //force redraw in case event didn't
 				//"window.scrollTo();")
@@ -177,11 +182,23 @@ var globalIconClient = WKIconDatabaseClientV1(
 	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
 		let configuration = config ?? WKWebViewConfiguration()
+		if config == nil {
+#if STP
+			configuration._allowUniversalAccessFromFileURLs = true
+#if os(OSX)
+			configuration._showsURLsInToolTips = true
+			configuration._serviceControlsEnabled = true
+			configuration._imageControlsEnabled = true
+			//configuration._requiresUserActionForEditingControlsManager = true
+#endif
+#endif
+		}
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
 #if os(OSX)
 		//geolocationProvider = <GeolocationProviderMock>(context)
 		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
+		prefs._fullScreenEnabled = true
 #endif
 		if let privacy = privacy where privacy {
 			//prevent HTML5 application cache and asset/page caching by WebKit, MacPin never saves any history itself
@@ -197,6 +214,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		prefs._logsPageMessagesToSystemConsoleEnabled = true // dumps to ASL
 		//prefs._javaScriptRuntimeFlags = 0 // ??
 #endif
+		//prefs._loadsImagesAutomatically = true // STP v20: https://github.com/WebKit/webkit/commit/326fc529da43b4a028a3a1644edb2198d23ecb68
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
 		//if let privacy = privacy { if privacy { configuration.websiteDataStore = WKWebsiteDataStore.nonPersistentDataStore() } }
@@ -215,6 +233,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		// http://stackoverflow.com/questions/11361822/debug-ios-67-mobile-safari-using-the-chrome-devtools
 #endif
 		//_editable = true // https://github.com/WebKit/webkit/tree/master/Tools/WebEditingTester
+		// 	add a toggle: https://github.com/WebKit/webkit/commit/d3a81d4cdbdf947d484987578b21fc0d1f42be5e
 
 		allowsBackForwardNavigationGestures = true
 		allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
@@ -228,7 +247,8 @@ var globalIconClient = WKIconDatabaseClientV1(
 
 		let context = WKPageGetContext(_pageForTesting())
 		self.context = context
-	    WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString("http".UTF8String))
+	    WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString("http".UTF8String)) // FIXME: makeInsecure() toggle!
+	    WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString("https".UTF8String))
 		self.iconDB = WKContextGetIconDatabase(context)
 
 		// register our custom protocol to handle X-Host and ad-hoc proxies
@@ -238,6 +258,12 @@ var globalIconClient = WKIconDatabaseClientV1(
 		self.browsingContextController.registerSchemeForCustomProtocol("macpin-http")
 		NSURLProtocol.registerClass(MPURLProtocol)
 	}
+
+	/*
+	 func reloadPlugins() {
+		WKContextRefreshPlugIns(self.context) // STP v20: https://github.com/WebKit/webkit/commit/334a90ae91c0358385c2a971ac8ee7a5b1577fa6
+	}
+	*/
 
 	convenience required init?(object: [String:AnyObject]) {
 		// check for isolated pre-init
@@ -258,7 +284,11 @@ var globalIconClient = WKIconDatabaseClientV1(
 				case let magnification as Bool where key == "allowsMagnification": allowsMagnification = magnification
 				case let transparent as Bool where key == "transparent":
 #if os(OSX)
+#if STP
+					_drawsBackground = !transparent
+#else
 					_drawsTransparentBackground = transparent
+#endif
 #endif
 				case let value as [String] where key == "preinject": for script in value { preinject(script) }
 				case let value as [String] where key == "postinject": for script in value { postinject(script) }
@@ -475,8 +505,8 @@ var globalIconClient = WKIconDatabaseClientV1(
 				}
 			})
 		},
-		ps1: __FILE__,
-		ps2: __FUNCTION__,
+		ps1: #file,
+		ps2: #function,
 		abort: { () -> Void in
 			// EOF'd by Ctrl-D
 			// self.close() // FIXME: self is still retained (by the browser?)
@@ -521,7 +551,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 	override func validateUserInterfaceItem(anItem: NSValidatedUserInterfaceItem) -> Bool {
-		switch (anItem.action().description) {
+		switch (anItem.action.description) {
 			//case "askToOpenCurrentURL": return true
 			case "copyAsPDF": fallthrough
 			case "console": fallthrough
@@ -530,7 +560,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 			case "savePage": return true
 			case "printWebView:": return true
 			default:
-				warn("not capturing selector but passing to super: \(anItem.action())")
+				warn("not capturing selector but passing to super: \(anItem.action)")
 				return super.validateUserInterfaceItem(anItem)
 		}
 
@@ -573,7 +603,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 			}
 
 			if let urls = pboard.readObjectsForClasses([NSURL.self], options: nil) {
-				if jsdelegate.tryFunc("handleDragAndDroppedURLs", urls.map({$0.description})) {
+				if AppScriptRuntime.shared.jsdelegate.tryFunc("handleDragAndDroppedURLs", urls.map({$0.description})) {
 			 		return true  // app.js indicated it handled drag itself
 				}
 			}

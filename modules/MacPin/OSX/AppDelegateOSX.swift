@@ -2,7 +2,7 @@ import AppKit
 import ObjectiveC
 import WebKitPrivates
 import Darwin
-import Bookmarks
+//import Bookmarks
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
 public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
@@ -11,7 +11,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	var window: Window?
 
 	var effectController = EffectViewController()
-	var windowController: WindowController
+	var windowController: WindowController?
 
 	override init() {
 		// gotta set these before MacPin()->NSWindow()
@@ -57,6 +57,26 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		}
 		//replyEvent == ??
 	}
+
+	func updateProxies() {
+		let alert = NSAlert()
+		alert.messageText = "Set HTTP(s) proxy"
+		alert.addButtonWithTitle("Update")
+		alert.informativeText = "Enter the proxy URL:"
+		alert.icon = NSApplication.sharedApplication().applicationIconImage
+		let input = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
+		input.stringValue = NSUserDefaults.standardUserDefaults().stringForKey("WebKit2HTTPProxy") ?? ""
+		input.editable = true
+ 		alert.accessoryView = input
+ 		guard let window = window else { return }
+		alert.beginSheetModalForWindow(window, completionHandler: { (response:NSModalResponse) -> Void in
+			NSUserDefaults.standardUserDefaults().setObject(input.stringValue, forKey: "WebKit2HTTPProxy")
+			NSUserDefaults.standardUserDefaults().setObject(input.stringValue, forKey: "WebKit2HTTPSProxy")
+			NSUserDefaults.standardUserDefaults().synchronize()
+			// FIXME: need to serialize all tabs & reinit them for proxy change to take effect?
+		})
+	}
+
 }
 
 extension MacPinAppDelegateOSX: ApplicationDelegate {
@@ -83,8 +103,8 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		appMenu.submenu?.addItem(MenuItem("About \(appname)", "orderFrontStandardAboutPanel:"))
 		appMenu.submenu?.addItem(MenuItem("Restart \(appname)", "loadSiteApp"))
 		appMenu.submenu?.addItem(NSMenuItem.separatorItem())
-		appMenu.submenu?.addItem(MenuItem("Hide \(appname)", "hide:", "h", [.CommandKeyMask]))
-		appMenu.submenu?.addItem(MenuItem("Hide Others", "hideOtherApplications:", "H", [.CommandKeyMask, .ShiftKeyMask]))
+		appMenu.submenu?.addItem(MenuItem("Hide \(appname)", "hide:", "h", [.Command]))
+		appMenu.submenu?.addItem(MenuItem("Hide Others", "hideOtherApplications:", "H", [.Command, .Shift]))
 		appMenu.submenu?.addItem(NSMenuItem.separatorItem())
 		//appMenu.submenu?.addItem(MenuItem("Edit App...", "editSiteApp")) // can't modify signed apps' Resources
 		app!.mainMenu?.addItem(appMenu) // 1st item shows up as CFPrintableName
@@ -93,21 +113,23 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		let svcMenu = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
 		svcMenu.submenu = app!.servicesMenu!
 		appMenu.submenu?.addItem(svcMenu)
+		appMenu.submenu?.addItem(MenuItem("Preferences...", "updateProxies")) // not much for now
 		appMenu.submenu?.addItem(MenuItem("Quit \(appname)", "terminate:", "q"))
 
 		let editMenu = NSMenuItem() //NSTextArea funcs
 		// plutil -p /System/Library/Frameworks/AppKit.framework/Resources/StandardKeyBinding.dict
 		editMenu.submenu = NSMenu()
-		editMenu.submenu?.title = "Edit"
-		editMenu.submenu?.addItem(MenuItem("Cut", "cut:", "x", [.CommandKeyMask]))
-		editMenu.submenu?.addItem(MenuItem("Copy", "copy:", "c", [.CommandKeyMask]))
-		editMenu.submenu?.addItem(MenuItem("Paste", "paste:", "v", [.CommandKeyMask]))
-		editMenu.submenu?.addItem(MenuItem("Select All", "selectAll:", "a", [.CommandKeyMask]))
+		editMenu.submenu?.title = "Edit" // https://github.com/WebKit/webkit/commit/f53fbb8b6c206c3cdd8d010267b8d6c430a02dab
+		// & https://github.com/WebKit/webkit/commit/a580e447224c51e7cb28a1d03ca96d5ff851e6e1
+		editMenu.submenu?.addItem(MenuItem("Cut", "cut:", "x", [.Command]))
+		editMenu.submenu?.addItem(MenuItem("Copy", "copy:", "c", [.Command]))
+		editMenu.submenu?.addItem(MenuItem("Paste", "paste:", "v", [.Command]))
+		editMenu.submenu?.addItem(MenuItem("Select All", "selectAll:", "a", [.Command]))
 		editMenu.submenu?.addItem(NSMenuItem.separatorItem())
 		let findMenu = MenuItem("Find")
 		findMenu.submenu = NSMenu()
 		findMenu.submenu?.title = "Find"
-		findMenu.submenu?.addItem(MenuItem("Find...", "performTextFinderAction:", "f", [.CommandKeyMask], tag: NSTextFinderAction.ShowFindInterface.rawValue)) //wvc
+		findMenu.submenu?.addItem(MenuItem("Find...", "performTextFinderAction:", "f", [.Command], tag: NSTextFinderAction.ShowFindInterface.rawValue)) //wvc
 		findMenu.submenu?.addItem(MenuItem("Find Next", "performTextFinderAction:", tag: NSTextFinderAction.NextMatch.rawValue)) //wvc
 		findMenu.submenu?.addItem(MenuItem("Find Previous", "performTextFinderAction:", tag: NSTextFinderAction.PreviousMatch.rawValue)) //wvc
 		findMenu.submenu?.addItem(MenuItem("Find and Replace...", "performTextFinderAction:", tag: NSTextFinderAction.ShowReplaceInterface.rawValue)) //wvc
@@ -118,38 +140,38 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		let tabMenu = NSMenuItem() //WebViewController and WKWebView funcs
 		tabMenu.submenu = NSMenu()
 		tabMenu.submenu?.title = "Tab"
-		tabMenu.submenu?.addItem(MenuItem("Zoom In", "zoomIn", "+", [.CommandKeyMask])) //wvc
-		tabMenu.submenu?.addItem(MenuItem("Zoom Out", "zoomOut", "-", [.CommandKeyMask])) //wvc
-		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", "zoomOut", nil, [.CommandKeyMask]))
+		tabMenu.submenu?.addItem(MenuItem("Zoom In", "zoomIn", "+", [.Command])) //wvc
+		tabMenu.submenu?.addItem(MenuItem("Zoom Out", "zoomOut", "-", [.Command])) //wvc
+		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", "zoomText", nil, [.Command]))
 		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", "toggleTransparency")) //wvc
 		tabMenu.submenu?.addItem(NSMenuItem.separatorItem())
-		tabMenu.submenu?.addItem(MenuItem("Show JS Console", "console", "c", [.AlternateKeyMask, .CommandKeyMask])) //wv
-		tabMenu.submenu?.addItem(MenuItem("Reload", "reload:", "r", [.CommandKeyMask])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Uncache & Reload", "reloadFromOrigin:", "R", [.CommandKeyMask, .ShiftKeyMask])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Go Back", "goBack:", "[", [.CommandKeyMask])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Go Forward", "goForward:", "]", [.CommandKeyMask]))	//webview
-		tabMenu.submenu?.addItem(MenuItem("Stop Loading", "stopLoading:", ".", [.CommandKeyMask])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Show JS Console", "console", "c", [.Option, .Command])) //wv
+		tabMenu.submenu?.addItem(MenuItem("Reload", "reload:", "r", [.Command])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Uncache & Reload", "reloadFromOrigin:", "R", [.Command, .Shift])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Go Back", "goBack:", "[", [.Command])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Go Forward", "goForward:", "]", [.Command]))	//webview
+		tabMenu.submenu?.addItem(MenuItem("Stop Loading", "stopLoading:", ".", [.Command])) //webview
 		tabMenu.submenu?.addItem(NSMenuItem.separatorItem())
-		tabMenu.submenu?.addItem(MenuItem("Print Page...", "printWebView:", "p", [.CommandKeyMask])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Save Web Archive...", "saveWebArchive", "s", [.CommandKeyMask, .ShiftKeyMask])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Save Page...", "savePage", "s", [.CommandKeyMask])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Open with Default Browser", "askToOpenCurrentURL", "d", [.CommandKeyMask])) //wvc
+		tabMenu.submenu?.addItem(MenuItem("Print Page...", "printWebView:", "p", [.Command])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Save Web Archive...", "saveWebArchive", "s", [.Command, .Shift])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Save Page...", "savePage", "s", [.Command])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Open with Default Browser", "askToOpenCurrentURL", "d", [.Command])) //wvc
 		app!.mainMenu?.addItem(tabMenu)
 
 		let winMenu = NSMenuItem() //BrowserViewController and NSWindow funcs
 		winMenu.submenu = NSMenu()
 		winMenu.submenu?.title = "Window"
-		winMenu.submenu?.addItem(MenuItem("Enter URL", "revealOmniBox", "l", [.CommandKeyMask])) //bc
+		winMenu.submenu?.addItem(MenuItem("Enter URL", "revealOmniBox", "l", [.Command])) //bc
 		winMenu.submenu?.addItem(MenuItem(nil, "toggleFullScreen:")) //bc
 		winMenu.submenu?.addItem(MenuItem(nil, "toggleToolbarShown:")) //bc
 		winMenu.submenu?.addItem(MenuItem("Toggle Titlebar", "toggleTitlebar")) //wc
 		//winMenu.submenu?.addItem(MenuItem("Edit Toolbar", "runToolbarCustomizationPalette:"))
-		winMenu.submenu?.addItem(MenuItem("New Tab", "newTabPrompt", "t", [.CommandKeyMask])) //bc
+		winMenu.submenu?.addItem(MenuItem("New Tab", "newTabPrompt", "t", [.Command])) //bc
 		winMenu.submenu?.addItem(MenuItem("New Isolated Tab", "newIsolatedTabPrompt")) //bc
-		winMenu.submenu?.addItem(MenuItem("New Private Tab", "newPrivateTabPrompt", "t", [.ControlKeyMask, .CommandKeyMask])) //bc
-		winMenu.submenu?.addItem(MenuItem("Close Tab", "closeTab", "w", [.CommandKeyMask])) //wvc, bc
-		winMenu.submenu?.addItem(MenuItem("Show Next Tab", "selectNextTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask])) //bc
-		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", "selectPreviousTabViewItem:", String(format:"%c", NSTabCharacter), [.ControlKeyMask, .ShiftKeyMask])) //bc
+		winMenu.submenu?.addItem(MenuItem("New Private Tab", "newPrivateTabPrompt", "t", [.Control, .Command])) //bc
+		winMenu.submenu?.addItem(MenuItem("Close Tab", "closeTab:", "w", [.Command])) //bc
+		winMenu.submenu?.addItem(MenuItem("Show Next Tab", "selectNextTabViewItem:", String(format:"%c", NSTabCharacter), [.Control])) //bc
+		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", "selectPreviousTabViewItem:", String(format:"%c", NSTabCharacter), [.Control, .Shift])) //bc
 		app!.mainMenu?.addItem(winMenu)
 
 		let tabListMenu = NSMenuItem(title: "Tabs", action: nil, keyEquivalent: "")
@@ -164,12 +186,14 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		shortcutsMenu.submenu?.title = "Shortcuts"
 		app!.mainMenu?.addItem(shortcutsMenu)
 
+/*
 		let bookMenu = NSMenuItem()
 		bookMenu.submenu = NSMenu()
 		bookMenu.submenu?.title = "Bookmarks"
 		let bookmarks = Bookmark.readFrom("~/Library/Safari/Bookmarks.plist")
 		app!.mainMenu?.addItem(bookMenu)
 		// https://github.com/peckrob/FRBButtonBar
+*/
 
 		let dbgMenu = NSMenuItem()
 		dbgMenu.submenu = NSMenu()
@@ -185,11 +209,11 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 #endif
 		app!.mainMenu?.addItem(dbgMenu)
 
-		windowController.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
-		windowController.window?.bind(NSTitleBinding, toObject: browserController, withKeyPath: "title", options: nil)
-		windowController.window?.makeKeyAndOrderFront(self)
+		windowController?.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
+		windowController?.window?.bind(NSTitleBinding, toObject: browserController, withKeyPath: "title", options: nil)
+		windowController?.window?.makeKeyAndOrderFront(self)
 
-		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: "handleGetURLEvent:replyEvent:", forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url schemes
+		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: #selector(MacPinAppDelegateOSX.handleGetURLEvent(_:replyEvent:)), forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url schemes
 	}
 
     public func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
@@ -291,8 +315,12 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 
 	public func applicationShouldTerminate(sender: NSApplication) -> NSApplicationTerminateReply {
 		warn()
-		//browserController.close() // kill the tabs
-		//windowController.close() // kill the window
+		windowController?.close() // kill the window if it still exists
+		windowController?.window = nil
+		windowController = nil // deinit the wc
+		window = nil // deinit the window
+		browserController.unextend(AppScriptRuntime.shared.exports)
+		//browserController.close() // kill any zombie tabs -- causes lock-loop?
 		// unfocus app?
 #if arch(x86_64) || arch(i386)
 		if prompter != nil { return .TerminateLater } // wait for user to EOF the Prompt
@@ -313,6 +341,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 	public func applicationShouldTerminateAfterLastWindowClosed(app: NSApplication) -> Bool { return true }
 
 	// handles drag-to-dock-badge, /usr/bin/open and argv[1:] requests specifiying urls & local pathnames
+	// https://github.com/WebKit/webkit/commit/3e028543b95387e8ac73e9947a5cef4dd1ac90f2
 	public func application(theApplication: NSApplication, openFile filename: String) -> Bool {
 		warn(filename)
 		if let ftype = try? NSWorkspace.sharedWorkspace().typeOfFile(filename) {

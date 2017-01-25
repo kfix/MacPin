@@ -27,13 +27,13 @@ mapsTab = $.browser.tabSelected = new $.WebView(maps);
 function search(query, mapper) {
 	// https://developers.google.com/maps/documentation/ios/urlscheme#search
 	if (!mapper) mapper = $.browser.tabSelected;
-	mapper.evalJS( // hook app.js to perform search
-		"document.getElementById('searchboxinput').value = '" + query + "';" + 
-		 "document.getElementById('searchbox_form').submit();"
+	mapper.evalJS(`
+		document.getElementById('searchboxinput').value = '${query}';
+		document.getElementById('searchbox_form').submit();
+ 	`);
 		//"document.getElementById('searchbox_form').dispatchEvent(new Event('submit', {bubbles: true, cancelable: true}));"
 		// "document.querySelector('button[aria-label=Search]').click();"
 		// append '?q='+encodeURI(query)
- 	);
 }
 
 delegate.launchURL = function(url) {
@@ -53,25 +53,24 @@ delegate.launchURL = function(url) {
 	}
 };
 
-delegate.decideNavigationForURL = function(url) {
+delegate.decideNavigationForURL = function(url, tab) {
 	var comps = url.split(':'),
 		scheme = comps.shift(),
 		addr = comps.shift();
 	switch (scheme) {
 		case "http":
 		case "https":
-			if (!~addr.indexOf("//maps.google.com") &&
-				!~addr.indexOf("//www.google.com/maps/") &&
-				!~addr.indexOf("//google.com/maps/") &&
-				!~addr.indexOf("//accounts.google.com") &&
-				!~addr.indexOf("//www.google.com/a/") &&
-				!~addr.indexOf("//places.google.com") &&
-				!~addr.indexOf("//plus.google.com") &&
+			if (!addr.startsWith("//maps.google.com") &&
+				!addr.startsWith("//google.com/maps/") &&
+				!addr.startsWith("//accounts.google.com") &&
+				!addr.startsWith("//www.google.com/a/") &&
+				!addr.startsWith("//places.google.com") &&
+				!addr.startsWith("//plus.google.com") &&
 				!addr.startsWith("//docs.google.com/picker?") &&
-				!~addr.indexOf("//www.google.com/maps/") &&
-				!~addr.indexOf("//google-latlong.blogspot.com") &&
-				!~addr.indexOf("//gokml.net") &&
-				!~addr.indexOf("//www.youtube.com") // yt vids are usually embedded players
+				!addr.startsWith("//www.google.com/maps") &&
+				!addr.startsWith("//google-latlong.blogspot.com") &&
+				!addr.startsWith("//gokml.net") &&
+				!addr.startsWith("//www.youtube.com") // yt vids are usually embedded players
 			) {
 				$.app.openURL(url); //pop all external links to system browser
 				console.log("opened "+url+" externally!");
@@ -85,8 +84,11 @@ delegate.decideNavigationForURL = function(url) {
 };
 
 delegate.handleUserInputtedInvalidURL = function(query, tab) {
-	// assuming the invalid url is a search request
-	var mapper = (~tab.url.indexOf('//www.google.com/maps/')) ? tab : mapsTab;
+	// assuming the invalid url is a location search request
+	var comps = tab.url.split(':'),
+		scheme = comps.shift(),
+		addr = comps.shift();
+	var mapper = (addr && addr.startsWith('//www.google.com/maps/')) ? tab : mapsTab;
 	search(query, mapper);
 	return true; // tell MacPin to stop validating the URL
 };
@@ -116,6 +118,8 @@ delegate.updateGeolocation = function(lat, lon) {
 	// fire custom geolocation event in mapsTab (or all tabs?) with lat, lon
 }
 
+$.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
+
 delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('gmaps');
 	//$.app.registerURLScheme('googlemaps'); //IOS?
@@ -128,6 +132,7 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('Google Maps API Team blog', "http://googlegeodevelopers.blogspot.com");
 	$.browser.addShortcut('Classic gMaps', "http://gokml.net/maps");
 	$.browser.addShortcut("Install 'Show Address in Google Maps app' service", `http://github.com/kfix/MacPin/tree/master/extras/${escape('Show Address in Google Maps app.workflow')}`);
+	$.browser.addShortcut('Dark Mode', ['enDarken']);
 
 	// TODO: add "Open in Apple Maps", send it http://maps.apple.com lat & long
 	// https://developer.apple.com/library/ios/featuredarticles/iPhoneURLScheme_Reference/MapLinks/MapLinks.html

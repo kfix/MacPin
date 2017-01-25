@@ -3,6 +3,9 @@ export
 #^ export all the variables
 builddir			?= build
 
+# Safari Technology Preview required
+STP 				:= 1
+
 # scan modules/ and define cross: target and vars: outdir, platform, arch, sdk, target, objs, execs, statics, incdirs, libdirs, linklibs, frameworks
 archs_macosx		?= x86_64
 # ^ supporting Yosemite+ only, so don't bother with 32-bit builds
@@ -66,15 +69,19 @@ endif
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly stp $(gen_apps): $(execs)
 doc test apirepl tabrepl test.app test.ios stp stp.app: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
-stpdoc stp stp.app: linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
-stpdoc stp stp.app: linkopts_main += -Wl,-F,"/Applications/Safari Technology Preview.app/Contents/Frameworks"
-stpdoc stp stp.app: libdirs += -L "/Applications/Safari Technology Preview.app/Contents/Frameworks"
-stpdoc stp stp.app: debug += -D STP
-stpdoc stp stp.app: clang += -DSTP
-stpdoc stp stp.app: clangpp += -DSTP
-stpdoc stp stp.app: swiftc += -Xcc -DSTP
-stpdoc stp stp.app: swift += -Xcc -DSTP
-stpdoc stp stp.app: env += DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
+
+ifeq ($(STP),1)
+linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
+linkopts_main += -Wl,-F,"/Applications/Safari Technology Preview.app/Contents/Frameworks"
+libdirs += -L "/Applications/Safari Technology Preview.app/Contents/Frameworks"
+debug += -D STP
+clang += -DSTP
+clangpp += -DSTP
+swiftc += -D STP -Xcc -DSTP
+swift += -D STP -Xcc -DSTP
+env += DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
+endif
+
 test apirepl tabrepl test.app test.ios stp stp.app: | $(execs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))
@@ -133,7 +140,7 @@ endef
 $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/Info.plist: templates/$(platform)/Info.plist
 	$(gen_plist_template)
 ifeq ($(platform),OSX)
-	[ -f $(macpin_sites)/$*/ServicesOSX.plist ] && /usr/libexec/PlistBuddy -c 'merge $(macpin_sites)/$*/ServicesOSX.plist' -c save $@
+	[ ! -f $(macpin_sites)/$*/ServicesOSX.plist ] || /usr/libexec/PlistBuddy -c 'merge $(macpin_sites)/$*/ServicesOSX.plist :NSServices' -c save $@
 endif
 
 $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings: templates/$(platform)/InfoPlist.strings
@@ -219,6 +226,7 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.
 	@touch $@
 endif
 
+# https://developer.apple.com/library/content/documentation/NetworkingInternetWeb/Conceptual/SafariAppExtension_PG/index.html#//apple_ref/doc/uid/TP40017319
 # http://www.appcoda.com/ios-8-action-extensions-tutorial/
 $(appdir)/%/PlugIns/ActionExtension.appex: $(appdir)/%/PlugIns/ActionExtension.appex/Info.plist $(icons)/%.icns $(macpin_sites)/%/appex.js
 	# ld -e _NSExtensionMain -fapplicationextension -o execs/MacPin.appex obj/ActionExtension.o
@@ -351,6 +359,12 @@ release:
 	@exit 1
 endif
 
+stp_symbols:
+	symbols /Applications/Safari\ Technology\ Preview.app/Contents/Frameworks/WebKit.framework/Versions/A/WebKit | less
+
+stp_jsc:
+	/Applications/Safari\ Technology\ Preview.app/Contents/Frameworks/JavaScriptCore.framework/Resources/jsc
+
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist
-.PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics
+.PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics stp_symbols stp_jsc
 .SUFFIXES:

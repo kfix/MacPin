@@ -11,7 +11,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 		let appearance = NSUserDefaults.standardUserDefaults().stringForKey("AppleInterfaceStyle") ?? "Light"
 		if let window = window {
 			window.collectionBehavior = [.FullScreenPrimary, .ParticipatesInCycle, .Managed]
-			window.styleMask |= NSUnifiedTitleAndToolbarWindowMask // FIXME: toggle for borderless?
+			window.styleMask.insert(.UnifiedTitleAndToolbar) // FIXME: toggle for borderless?
 			window.movableByWindowBackground = true
 			window.backgroundColor = NSColor.whiteColor()
 			window.opaque = true
@@ -27,6 +27,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
 			window.delegate = self
 			window.restorable = true
+			//window.isReleasedWhenClosed = true
 			window.restorationClass = MacPinAppDelegateOSX.self
 			window.sharingType = .ReadWrite
 			NSApplication.sharedApplication().windowsMenu = NSMenu()
@@ -38,7 +39,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 
 	// these just handle drags to a tabless-background, webviews define their own
 	func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
-	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
+	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } // FIXME: should open the file:// url
 
 	func window(window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplicationPresentationOptions) -> NSApplicationPresentationOptions {
 		return [.AutoHideToolbar, .AutoHideMenuBar, .FullScreen, proposedOptions]
@@ -63,13 +64,27 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			min.hidden = !min.hidden
 			zoom.hidden = !zoom.hidden
 			window.titlebarAppearsTransparent = !window.titlebarAppearsTransparent
-			window.styleMask ^= NSUnifiedTitleAndToolbarWindowMask
-			window.styleMask ^= NSFullSizeContentViewWindowMask // makes contentView (browserController) extend underneath the now invisible titlebar
-			//window.styleMask ^= NSTitledWindowMask // this blows away the actual .toolbar object, making browserController crash
+			//window.styleMask.formSymmetricDifference(.UnifiedTitleAndToolbar) // XOR ^= in Swift3?
+			//window.styleMask.formSymmetricDifference(.FullSizeContentView)
+			window.styleMask = NSWindowStyleMask(rawValue: window.styleMask.rawValue
+				^ NSWindowStyleMask.UnifiedTitleAndToolbar.rawValue
+				^ NSWindowStyleMask.FullSizeContentView.rawValue // makes contentView (browserController) extend underneath the now invisible titlebar
+			)
+			//window.styleMask ^= .Titled // this blows away the actual .toolbar object, making browserController crash
 			if window.titlebarAppearsTransparent { window.toolbar?.showsBaselineSeparator = false }
 		}
 	}
 
 	// only useful in non-fullscreen mode
 	//func toggleMenuBarAutoHide() { NSApp.presentationOptions |= .AutoHideMenuBar }
+
+	override func windowTitleForDocumentDisplayName(displayName: String) -> String { warn(displayName); return window?.title ?? displayName }
+
+	func windowShouldClose(sender: AnyObject) -> Bool {
+		warn()
+		return true
+	}
+	func windowWillClose(notification: NSNotification) { warn() } // window was closed by red stoplight button
+
+	deinit { warn(description) }
 }

@@ -35,10 +35,10 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			progressRect.size.width *= progress == 1.0 ? 0 : CGFloat(progress) // only draw line when downloading
 
 			NSColor(calibratedRed:0.0, green: 0.0, blue: 1.0, alpha: 0.4).set() // transparent blue line
-			NSRectFillUsingOperation(progressRect, .CompositeSourceOver)
+			NSRectFillUsingOperation(progressRect, .SourceOver)
 		} else {
-			//NSRectFillUsingOperation(bounds, .CompositeClear)
-			NSRectFillUsingOperation(bounds, .CompositeCopy)
+			//NSRectFillUsingOperation(bounds, .Clear)
+			NSRectFillUsingOperation(bounds, .Copy)
 		}
 		super.drawRect(dirtyRect)
 	}
@@ -55,7 +55,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 
 @objc class OmniBoxController: NSViewController {
 	let urlbox = URLAddressField()
-	var webview: MPWebView? = nil {
+	weak var webview: MPWebView? = nil {
 		didSet { //KVC to copy updates to webviews url & title (user navigations, history.pushState(), window.title=)
 			if let wv = webview {
 				view.bind(NSToolTipBinding, toObject: wv, withKeyPath: "title", options: nil)
@@ -124,7 +124,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 		if let cell = urlbox.cell as? NSTextFieldCell {
 			cell.placeholderString = "Navigate to URL"
 			cell.scrollable = true
-			cell.action = Selector("userEnteredURL")
+			cell.action = #selector(OmniBoxController.userEnteredURL)
 			cell.target = self
 			cell.sendsActionOnEndEditing = false //only send action when Return is pressed
 			cell.usesSingleLineMode = true
@@ -148,7 +148,8 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	func userEnteredURL() {
 		if let tf = view as? NSTextField, url = validateURL(tf.stringValue, fallback: { [unowned self] (urlstr: String) -> NSURL? in
 			if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr, self.webview ?? false) { return nil } // app.js did its own thing FIXME: it should be able to return URL<->NSURL
-			return nil
+			if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedKeywords", urlstr, self.webview ?? false) { return nil } // app.js did its own thing
+			return searchForKeywords(urlstr)
 		}){
 			if let wv = webview { // FIXME: Selector(gotoURL:) to nextResponder
 				view.window?.makeFirstResponder(wv) // no effect if this vc was brought up as a modal sheet
@@ -181,7 +182,14 @@ extension OmniBoxController { //NSControl
 
 extension OmniBoxController: NSTextFieldDelegate {
 	//func textShouldBeginEditing(textObject: NSText) -> Bool { return true } //allow editing
-		//replace textvalue with URL value, should normally be bound to title
+	/*
+		replace textvalue with URL value, might be bound to title
+		"smart search" behavior:
+		if url was a common search provider query...
+			duckduckgo.com/?q=...
+			www.google.com/search?q=...
+		then extract the first query param, decode, and set the text value to that
+	*/
 
 	//func textDidChange(aNotification: NSNotification)
 	func textShouldEndEditing(textObject: NSText) -> Bool { //user attempting to focus out of field
@@ -203,7 +211,7 @@ extension OmniBoxController: NSControlTextEditingDelegate {
 		warn(commandSelector.description)
 		switch commandSelector {
 			case "noop:":
-				if let event = NSApplication.sharedApplication().currentEvent where event.modifierFlags.contains(.CommandKeyMask) {
+				if let event = NSApplication.sharedApplication().currentEvent where event.modifierFlags.contains(.Command) {
 					guard let url = validateURL(control.stringValue) else { return false }
 					popup(webview?.clone(url)) // cmd-enter pops open a new tab
 				}

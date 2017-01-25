@@ -14,7 +14,7 @@ extension WebViewControllerOSX {
 		alert.addButtonWithTitle("Dismiss")
 		alert.informativeText = message
 		alert.icon = webview.favicon.icon
-		alert.alertStyle = .InformationalAlertStyle // .Warning .Critical
+		alert.alertStyle = .Informational // .Warning .Critical
 		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler() }
 	}
 
@@ -203,6 +203,27 @@ extension WebViewControllerOSX { // _WKDownloadDelegate
 	}
 }
 
+extension WebViewControllerOSX { // HTML5 fullscreen
+	func _webViewFullscreenMayReturnToInline(webView: WKWebView) -> Bool {
+		// https://developer.apple.com/reference/webkit/wkwebviewconfiguration/1614793-allowsinlinemediaplayback
+		warn()
+		return true
+	}
+
+	// https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API
+	//   https://github.com/WebKit/webkit/blob/fdbe0fbe284beb61d253ee00119346b5e3f41957/Source/WebKit2/Shared/WebPreferencesDefinitions.h#L142
+
+	// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/mac/WKFullScreenWindowController.mm
+	//  https://github.com/WebKit/webkit/search?q=fullScreenWindowController
+	// https://github.com/WebKit/webkit/blob/master/Source/WebCore/platform/mac/WebVideoFullscreenInterfaceMac.mm
+	func _webViewDidEnterFullscreen(webView: WKWebView) {
+		warn("JS <\(webView.URL)>: `<video>.requestFullscreen(); // begun`")
+	}
+	func _webViewDidExitFullscreen(webView: WKWebView) {
+		warn("JS <\(webView.URL)>: `<video>.requestFullscreen(); // finished`")
+	}
+}
+
 extension WebViewControllerOSX { // _WKFindDelegate
 	func _webView(webView: WKWebView!, didCountMatches matches: UInt, forString string: String!) {
 		warn()
@@ -228,6 +249,7 @@ extension WebViewController { // _WKInputDelegate
 	}
 }
 
+@available(OSX 10.12, *)
 extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 	// https://bugs.webkit.org/show_bug.cgi?id=137759
 	// https://github.com/WebKit/webkit/blob/4b7052ab44fa581810188638d1fdf074e7d754ca/Tools/MiniBrowser/mac/WK2BrowserWindowController.m#L451

@@ -73,12 +73,20 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 
 	var cornerRadius = CGFloat(0.0) // increment above 0.0 to put nice corners on the window FIXME userDefaults
 
-	func close() { // close all tabs, which will close the whole browser window
-		dispatch_sync(dispatch_get_main_queue(), {
-			self.tabViewItems.forEach {
+	func close() { // close all tabs
+		dispatch_async(dispatch_get_main_queue(), { //AppScriptRuntime needs this
+			self.omnibox.webview = nil
+			self.view.window?.makeFirstResponder(nil)
+
+			self.tabViewItems.forEach { // quickly close any remaining tabs
+				//dismissViewController($0.viewController?)
 				$0.view?.removeFromSuperviewWithoutNeedingDisplay()
 				self.removeTabViewItem($0)
 			}
+			// last webview should be released and deinit'd now
+
+			// FIXME: dispatch a browserClose notification
+			self.view.window?.windowController?.close() // kicks off automatic app termination
 		})
 	}
 
@@ -86,6 +94,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 		if let view = tab.view {
 			tab.initialFirstResponder = view
 			if let wvc = tab.viewController as? WebViewController {
+				// FIXME: set tab.observer.onTitleChanged & onURLchanged & onProgressChanged closures instead of KVO bindings
 				tab.bind(NSLabelBinding, toObject: wvc.webview, withKeyPath: "title", options: nil)
 				tab.bind(NSToolTipBinding, toObject: wvc.webview, withKeyPath: "title", options: nil)
 				tab.bind(NSImageBinding, toObject: wvc.webview.favicon, withKeyPath: "icon", options: nil)
@@ -95,9 +104,9 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 	}
 
 	override func removeTabViewItem(tab: NSTabViewItem) {
-		if let _ = tab.view {
+		if tab.view != nil {
 			tab.initialFirstResponder = nil
-			if let _ = tab.viewController as? WebViewController {
+			if tab.viewController is WebViewController {
 				tab.unbind(NSLabelBinding)
 				tab.unbind(NSToolTipBinding)
 				tab.unbind(NSImageBinding)
@@ -106,6 +115,10 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 			tab.toolTip = nil
 			tab.image = nil
 		}
+		if let wvc = tab.viewController as? WebViewControllerOSX {
+			wvc.dismiss() // remove retainers
+		}
+
 		super.removeTabViewItem(tab)
 	}
 
@@ -121,7 +134,9 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 		}
 	}
 
-	override func tabViewDidChangeNumberOfTabViewItems(tabView: NSTabView) { warn("@\(tabView.tabViewItems.count)") }
+	override func tabViewDidChangeNumberOfTabViewItems(tabView: NSTabView) {
+		warn("@\(tabView.tabViewItems.count)")
+	}
 
 	override func toolbarAllowedItemIdentifiers(toolbar: NSToolbar) -> [String] {
 		let tabs = super.toolbarAllowedItemIdentifiers(toolbar) ?? []
@@ -167,42 +182,42 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 			//btnCell.controlSize = .SmallControlSize
 			btn.toolTip = itemIdentifier
 			btn.image = NSImage(named: NSImageNamePreferencesGeneral) // https://hetima.github.io/fucking_nsimage_syntax/
-			btn.bezelStyle = .RecessedBezelStyle // RoundRectBezelStyle ShadowlessSquareBezelStyle
-			btn.setButtonType(.MomentaryLightButton) //MomentaryChangeButton MomentaryPushInButton
+			btn.bezelStyle = .Recessed // RoundRectBezelStyle ShadowlessSquareBezelStyle
+			btn.setButtonType(.MomentaryLight) //MomentaryChangeButton MomentaryPushInButton
 			btn.target = nil // walk the Responder Chain
-			btn.sendActionOn(Int(NSEventMask.LeftMouseDownMask.rawValue))
+			btn.sendActionOn(.LeftMouseDown)
 			ti.view = btn
 
 			switch (btnType) {
 				case .Share:
 					btn.image = NSImage(named: NSImageNameShareTemplate)
-					btn.action = Selector("shareButtonClicked:")
+					btn.action = #selector(WebViewControllerOSX.shareButtonClicked(_:))
 					return ti
 
 					case .Snapshot:
 					btn.image = NSImage(named: NSImageNameQuickLookTemplate)
-					btn.action = Selector("snapshotButtonClicked:")
+					btn.action = #selector(WebViewControllerOSX.snapshotButtonClicked(_:))
 					return ti
 
 				//case .Inspect: // NSMagnifyingGlass
 				case .NewTab:
 					btn.image = NSImage(named: NSImageNameAddTemplate)
-					btn.action = Selector("newTabPrompt")
+					btn.action = #selector(BrowserViewControllerOSX.newTabPrompt)
 					return ti
 
 				case .CloseTab:
 					btn.image = NSImage(named: NSImageNameRemoveTemplate)
-					btn.action = Selector("closeTab")
+					btn.action = #selector(BrowserViewControllerOSX.closeTab(_:))
 					return ti
 
 				case .Forward:
 					btn.image = NSImage(named: NSImageNameGoRightTemplate)
-					btn.action = Selector("goForward:")
+					btn.action = #selector(WebView.goForward(_:))
 					return ti
 
 				case .Back:
 					btn.image = NSImage(named: NSImageNameGoLeftTemplate)
-					btn.action = Selector("goBack:")
+					btn.action = #selector(WebView.goBack(_:))
 					return ti
 
 				case .ForwardBack:
@@ -211,7 +226,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 					seg.segmentStyle = .Separated
 					let segCell = seg.cell as! NSSegmentedCell
 					seg.trackingMode = .Momentary
-					seg.action = Selector("goBack:")
+					seg.action = #selector(WebView.goBack(_:))
 
 					seg.setImage(NSImage(named: NSImageNameGoLeftTemplate), forSegment: 0)
 					//seg.setLabel(BackButton, forSegment: 0)
@@ -228,7 +243,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 
 				case .Refresh:
 					btn.image = NSImage(named: NSImageNameRefreshTemplate)
-					btn.action = Selector("reload:")
+					btn.action = #selector(WebView.reload)
 					return ti
 
 				case .SelectedTab:
@@ -242,7 +257,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 
 				case .TabList:
 					btn.image = NSImage(named: "ToolbarButtonTabOverviewTemplate.pdf")
-					btn.action = Selector("tabListButtonClicked:")
+					//btn.action = #selector(BrowserViewControllerOSX.tabListButtonClicked(sender:))
 					return ti
 
 				case .OmniBox:
@@ -320,6 +335,7 @@ func faviconReady(iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Unsa
 
 class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
+ 	// FIXME: not needed with STP v21: https://github.com/WebKit/webkit/commit/583510ef68c8aa56558c17263791b5cd8f762f99
 	var iconClient = WKIconDatabaseClientV1(
 		base: WKIconDatabaseClientBase(),
 		didChangeIconForPageURL: faviconChanged,
@@ -334,6 +350,18 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		// internally, webcore has a delegation model for grabbing icon URLs: https://bugs.webkit.org/show_bug.cgi?id=136059#c1
 		iconClient.base = WKIconDatabaseClientBase(version: 1, clientInfo: unsafeAddressOf(self))
 		tabMenu.delegate = self
+
+		let center = NSNotificationCenter.defaultCenter()
+		let mainQueue = NSOperationQueue.mainQueue()
+		var token: NSObjectProtocol?
+		token = center.addObserverForName(NSWindowWillCloseNotification, object: nil, queue: mainQueue) { (note) in //object: self.view.window?
+			//warn("window closed notification!")
+			center.removeObserver(token!) // prevent notification loop by close()
+		}
+		center.addObserverForName(NSApplicationWillTerminateNotification, object: nil, queue: mainQueue) { (note) in //object: self.view.window?
+			//warn("application closed notification!")
+		}
+
 	}
 
 	deinit { warn(description) }
@@ -347,6 +375,10 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 				"popTab: function(tab) { if (this.tabs.indexOf(tab) != -1) this.tabs = this.tabs.splice(this.tabs.indexOf(tab), 1)}" +
 			"})"
 		browser.thisEval(helpers)
+		mountObj.setValue(browser, forProperty: "browser")
+	}
+	func unextend(mountObj: JSValue) {
+		let browser = JSValue(nullInContext: mountObj.context)
 		mountObj.setValue(browser, forProperty: "browser")
 	}
 
@@ -552,6 +584,32 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		revealOmniBox()
 	}
 
+	func pushTab(webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerOSX(webview: webview)) } }
+
+	func closeTab(tab: AnyObject?) {
+		switch (tab) {
+			case let vc as NSViewController:
+				guard let ti = tabViewItemForViewController(vc) else { break } // not a loaded tab
+				dispatch_async(dispatch_get_main_queue()) {	self.removeTabViewItem(ti) }
+				return
+			case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
+				guard let vc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first else { break }
+				guard let ti = tabViewItemForViewController(vc) else { break } // not a loaded tab
+				dispatch_async(dispatch_get_main_queue()) {	self.removeTabViewItem(ti) }
+				return
+			//case let js as JSValue: guard let wv = js.toObjectOfClass(MPWebView.self) { self.tabSelected = wv } //custom bridging coercion
+			default:
+				// sender from a MenuItem?
+				break
+		}
+
+		// close currently selected tab
+		if selectedTabViewItemIndex == -1 { return } // no tabs? bupkiss!
+		dispatch_async(dispatch_get_main_queue()) { // DispatchQueue.main.async
+			self.removeChildViewControllerAtIndex(self.selectedTabViewItemIndex)
+		}
+	}
+
 	func revealOmniBox() {
 		if omnibox.view.window != nil {
 			// if omnibox is already visible somewhere in the window, move key focus there
@@ -566,19 +624,18 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		}
 	}
 
-	func pushTab(webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerOSX(webview: webview)) } }
-
 	override func removeTabViewItem(tab: NSTabViewItem) {
 		super.removeTabViewItem(tab)
 		if tabView.tabViewItems.count != 0 {
 			tabView.selectNextTabViewItem(self) //safari behavior
-			// previous webview should be released and deinit'd now
-		} else {
-			// just closed the last item, self destruct the browser
-			omnibox.webview = nil
-			view.window?.makeFirstResponder(nil)
-			// last webview should be released and deinit'd now
-			self.view.window?.windowController?.close() // kicks off automatic app termination
+		}
+
+		menuNeedsUpdate(tabMenu) // previous webview should be released and deinit'd now
+
+		if tabView.tabViewItems.count == 0 {
+			// no more tabs? close the window and app, like Safari
+			omnibox.webview = nil //retains last webview
+			view.window?.windowController?.close() // kicks off automatic app termination
 		}
 	}
 
@@ -659,7 +716,7 @@ extension BrowserViewControllerOSX: NSMenuDelegate {
 			case "Tabs":
 				menu.removeAllItems()
 				for tab in tabViewItems {
-					let mi = NSMenuItem(title: tab.label, action:Selector("menuSelectedTab:"), keyEquivalent:"")
+					let mi = NSMenuItem(title: tab.label, action:#selector(menuSelectedTab(_:)), keyEquivalent:"")
 					mi.toolTip = tab.toolTip
 					mi.image = tab.image
 					mi.image?.size = NSSize(width: 16, height: 16)

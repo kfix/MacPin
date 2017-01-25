@@ -4,22 +4,7 @@ delegate.enDarken = function(tab) {
 	(idx >= 0) ? tab.popStyle(idx) : tab.style('enDarken');
 	return;
 
-	// adapted from https://lnikki.la/articles/night-mode-css-filter/
-	tab.evalJS(`
-		var css = document.getElementById('enDarken');
-		if (css) {
-			document.head.removeChild(css); //toggle
-		} else {
-			var css = document.createElement("style");
-			css.id = "enDarken";
-			css.type = 'text/css';
-			css.innerText = \`
-				:root, img, video, object, iframe, *:not(object):not(body)>embed, *[style*="background:url"]:empty, *[style*="background-image:url"]:empty, *[style*="background: url"]:empty, *[style*="background-image: url"]:empty {
-					filter: invert(1) hue-rotate(180deg);
-				}
-				:root { background: white; }
-			\`
-			document.head.appendChild(css);
-		}
-	`);
+	// I really wish this worked in WebKit: https://developer.mozilla.org/en-US/docs/Web/CSS/Alternative_style_sheets
+	//   https://developer.mozilla.org/en-US/docs/Web/API/Document/preferredStyleSheetSet
+	//   http://www.thesitewizard.com/css/switch-alternate-css-styles.shtml
 };

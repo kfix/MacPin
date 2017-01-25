@@ -17,11 +17,11 @@ class MenuItem: NSMenuItem {
 			// each OSX class can privately extend its own bundle of Selectors
 			keyEquivalent: charCode ?? ""
 		)
-
 		for keyflag in keyflags {
-			keyEquivalentModifierMask |= Int(keyflag.rawValue)
-			 // .[AlphaShift|Shift|Control|Alternate|Command|Numeric|Function|Help]KeyMask
+			keyEquivalentModifierMask.insert(keyflag)
 		}
+
+		//keyEquivalentModifierMask.formUnion(keyflags)
 		target = aTarget
 		representedObject = represents
 		tag = aTag
