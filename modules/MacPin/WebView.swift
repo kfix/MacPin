@@ -255,6 +255,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		// https://github.com/brave/browser-ios/issues/96#issuecomment-260365341
 		// https://github.com/WebKit/webkit/blob/fa0c14782ed939dabdb52f7cffcb1fd0254d4ef0/Tools/TestWebKitAPI/cocoa/TestProtocol.mm
 		// https://github.com/WebKit/webkit/blob/49cc03e4bf77a42908478cfbda938088cf1a8567/Source/WebKit2/NetworkProcess/CustomProtocols/CustomProtocolManager.h
+		//   registerProtocolClass(NSURLSessionConfiguration) <- that could let you configure ad-hoc CFProxySupport dictionaries: http://stackoverflow.com/a/28101583/3878712
 		self.browsingContextController.registerSchemeForCustomProtocol("macpin-http")
 		NSURLProtocol.registerClass(MPURLProtocol)
 	}
