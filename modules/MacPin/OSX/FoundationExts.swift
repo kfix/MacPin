@@ -127,7 +127,7 @@ extension NSPasteboard {
 // show an NSError to the user, attaching it to any given view
 func displayError(error: NSError, _ vc: NSViewController? = nil) {
 	warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
-	if Darwin.isatty(Int32(0)) == 0 { // don't popup these modal alerts if REPL() is active on STDIN!
+	if NSThread.isMainThread() && Darwin.isatty(Int32(0)) == 0 { // don't popup these modal alerts if REPL() is active on STDIN!
 		if let window = vc?.view.window {
 			// display it as a NSPanel sheet
 			vc?.view.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)

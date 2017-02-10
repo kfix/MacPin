@@ -371,6 +371,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 	func gotoURL(url: NSURL) {
+		let act = NSProcessInfo.processInfo().beginActivityWithOptions([NSActivityOptions.UserInitiated, NSActivityOptions.IdleSystemSleepDisabled], reason: "browsing begun")
 		guard #available(OSX 10.11, iOS 9.1, *) else { loadRequest(NSURLRequest(URL: url)); return }
 		guard url.scheme == "file" else { loadRequest(NSURLRequest(URL: url)); return }
 		if let readURL = url.URLByDeletingLastPathComponent {
@@ -379,6 +380,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 			warn("Bypassing CORS: \(readURL)")
 			loadFileURL(url, allowingReadAccessToURL: readURL)
 		}
+		NSProcessInfo.processInfo().endActivity(act)
 	}
 
 	func loadURL(urlstr: String) -> Bool {

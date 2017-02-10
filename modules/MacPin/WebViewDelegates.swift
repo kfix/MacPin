@@ -167,6 +167,11 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 				case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.CFErrorHTTPSProxyConnectionFailure.rawValue)):
 					NSUserDefaults.standardUserDefaults().removeObjectForKey("WebKit2HTTPSProxy") // FIXME: should prompt first
 					fallthrough ////webview.flushProcessPool()
+				//case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.CFURLErrorZeroByteResource.rawValue)):
+				//case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.CFErrorHTTPConnectionLost.rawValue)):
+				//	fallthrough // retry?
+				case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.CFURLErrorNotConnectedToInternet.rawValue)):
+					fallthrough // machine might not be awake and wifi is off
 				case(NSPOSIXErrorDomain, 1): // Operation not permitted
 					warn("Sandboxed?")
 					fallthrough
@@ -176,6 +181,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 				// https://developer.apple.com/reference/foundation/nsurlerror
 				case (NSURLErrorDomain, NSURLErrorCancelled) where !webView.loading: return // ignore stopLoading() and HTTP redirects
 				default:
+					// needs to be async, don't lock the webview to the GUI
 					displayError(error, self)
 			}
 		}
@@ -240,6 +246,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 			if error.domain == WebKitErrorDomain && error.code == kWKErrorCodePlugInWillHandleLoad { askToOpenURL(url) } // `Plug-in handled load!` video/mp4
 			if error.domain == WebKitErrorDomain && error.code == kWKErrorCodeFrameLoadInterruptedByPolicyChange { warn("IFrame converted to download?") }
 			if error.domain == NSURLErrorDomain && error.code != NSURLErrorCancelled { // dont catch on stopLoading() and HTTP redirects
+				// needs to be async
 				displayError(error, self)
 			}
 		}
