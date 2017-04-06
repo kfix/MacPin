@@ -95,7 +95,7 @@ $(info [$(eXcode)] $$(target) := $(target))
 #modules with clang modulemaps (and probably associated C-headers and linklib hints)
 incdirs				:= -I modules
 # ^ clang will recurse one more level to check modules/*/*.modulemaps
-#incdirs += /Applications/Xcode.app/Contents/Developer//Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(sdk)/$(arch)/
+#incdirs += /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(sdk)/$(arch)/
 
 #find all modules with compilable source code
 build_mods			:= $(sort $(filter-out %/$(platform),$(patsubst modules/%/,%,$(dir $(wildcard modules/*/*.m modules/*/$(platform)/*.m modules/*/*.swift modules/*/$(platform)/*.swift modules/*/*.mm modules/*/$(platform)/*.mm)))))
@@ -133,6 +133,8 @@ verbose				?=
 
 sdkpath				:= $(shell xcrun --show-sdk-path --sdk $(sdk))
 swiftc				:= xcrun --toolchain com.apple.dt.toolchain.Swift_2_3 -sdk $(sdk) swiftc -target $(arch)-$(target_$(platform)) $(verbose)
+# Xcode.app/Contents/Developer/Toolchains/*.xctoolchain/ToolchainInfo.plist << TC ids in there
+swift-update		:= xcrun -sdk $(sdk) swift-update -target $(arch)-$(target_$(platform)) $(verbose)
 clang				:= xcrun -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platform)) $(verbose)
 clangpp				:= xcrun -sdk $(sdk) clang++ -fmodules -fcxx-modules -std=c++11 -stdlib=libc++ -target $(arch)-$(target_$(platform)) $(verbose)
 #-fobj-arc
@@ -149,6 +151,7 @@ swiftlibdir			:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/l
 swiftstaticdir		:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift_static/$(sdk) $(shell xcode-select -p)/Toolchains/$(swifttoolchain)/usr/lib/swift_static/$(sdk)))
 $(info [$(eXcode)] compiling against $(sdkpath))
 $(info [$(eXcode)] swift libraries: $(swiftlibdir) $(swiftstaticdir))
+$(info [$(eXcode)] swiftc version: $(shell $(swiftc) --version))
 ifeq ($(platform),OSX)
 clang += -mmacosx-version-min=$(target_ver_OSX)
 else ifeq ($(platform),iOS)
@@ -181,6 +184,9 @@ $(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks $(outd
 	# grab the .d's of $^ and build any used modules ....
 	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../SwiftSupport $(linkopts_main) -o $@ $^
 	$(bundle_libswift)
+
+%.3.swift: %.swift
+	$(swift-update) $^ > $@
 
 # this is for standalone utility/helper programs, use module/main.swift for Application starters
 $(outdir)/exec/%: execs/$(platform)/%.swift | $(outdir)/exec
