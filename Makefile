@@ -15,6 +15,12 @@ archs_iphoneos		?= arm64
 target_ver_OSX		?= 10.11
 target_ver_iOS		?= 9.1
 
+xcode				?= /Applications/Xcode8.2.1.app
+# Xcode 8.3 removed swift2 support
+ifneq ($(xcode),)
+xcrun				?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcrun
+xcs					?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcode-select
+endif
 include eXcode.mk
 
 # now layout the MacPin .apps to generate
