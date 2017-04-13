@@ -7,11 +7,10 @@
 // official Slack.app uses MacGap
 
 var slackTab, slack = {
-	url: 'https://slack.com/signin/',
+	url: 'https://slack.com/ssb/',
 	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
-	agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/603.1.6 (KHTML, like Gecko) Slack/600.5.17",
-	// ^ having "Safari" makes Slack's JS peg the CPU...
-	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Slack_SSB/2.0.3',
+	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Slack_SSB/2.0.3', // MacGap app
+	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleWebKit/537.36 (KHTML, like Gecko) AtomShell/2.5.2 Chrome/53.0.2785.143 Electron/1.4.15 Safari/537.36 MacAppStore/16.5.0 Slack_SSB/2.5.2', // new Electron app (env SLACK_DEVELOPER_MENU=true)
 	preinject: ['shim_html5_notifications'],
 	postinject: ['slack_notifications'] //, 'styler']
 };
@@ -87,6 +86,7 @@ delegate.decideNavigationForClickedURL = function(url, tab) {
 				&& !host.endsWith('.giphy.com')
 				&& !host.endsWith('.imgur.com')
 				&& !host.endsWith('.vimeo.com')
+				&& !host.endsWith('.fbcdn.net')
 			) {
 				$.app.openURL(url);
 				return true;
@@ -129,8 +129,8 @@ delegate.AppFinishedLaunching = function() {
 	//$.browser.addShortcut('Slack', slack);
 	// FIXME: use LocalStorage to save slackTab's team-domain after sign-in, and restore that on every start up
 	$.browser.addShortcut('Dark Mode', ['enDarken']);
-	// FIXME add themes: https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99
-	slackTab.asyncEvalJS(`document.location = document.querySelectorAll('.btn')[1].href ? document.querySelectorAll('.btn')[1].href : document.location;`, 3); // try logging into the first signed-in team
+	// FIXME add themes: https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99  DrewML/Theming-Slack-OSX.md
+	//slackTab.asyncEvalJS(`document.location = document.querySelectorAll('.btn')[1].href ? document.querySelectorAll('.btn')[1].href : document.location;`, 3); // try logging into the first signed-in team
 };
 
 delegate; //return this to macpin

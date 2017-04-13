@@ -243,7 +243,11 @@ var globalIconClient = WKIconDatabaseClientV1(
 		allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
 #if os(OSX)
 		allowsMagnification = true
-		_applicationNameForUserAgent = "Version/8.0.5 Safari/600.5.17"
+#if STP
+		_applicationNameForUserAgent = "Version/10.1 Safari/603.1.30"
+#else
+		_applicationNameForUserAgent = "Version/9.0 Safari/600.5.17"
+#endif
 #elseif os(iOS)
 		_applicationNameForUserAgent = "Version/8.0 Mobile/12F70 Safari/600.1.4"
 #endif
