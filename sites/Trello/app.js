@@ -47,9 +47,12 @@ delegate.decideNavigationForURL = function(url, webview) {
 	switch (scheme) {
 		case "http":
 		case "https":
-			if (!~addr.indexOf("//trello.com") &&
-				!~addr.indexOf("//accounts.google.com") &&
-				!~addr.indexOf("//www.youtube.com") // yt vids are usually embedded players
+			if (addr.endsWith(".doubleclick.net")) {
+				// boo trello! stop selling my data!
+				return true; //tell webkit to do nothing
+			} else if (addr.endsWith("//trello.com") &&
+				addr.endsWith("//accounts.google.com") &&
+				addr.endsWith("//www.youtube.com") // yt vids are usually embedded players
 			) {
 				$.app.openURL(url); //pop all external links to system browser
 				console.log("opened "+url+" externally!");
