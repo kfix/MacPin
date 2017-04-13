@@ -144,6 +144,7 @@ delegate.decideNavigationForURL = function(url, tab) {
 				!addr.startsWith("//9.docs.google.com") &&
 				!addr.startsWith("//content.googleapis.com") &&
 				!addr.startsWith("//www.youtube.com") && // yt vids are usually embedded players
+				!addr.startsWith("//youtube.googleapis.com/embed/") &&
 				!addr.startsWith("//www.google.com/a/") &&
 				!addr.startsWith("//myaccount.google.com") &&
 				!addr.startsWith("//www.google.com/tools/feedback/content_frame") &&
