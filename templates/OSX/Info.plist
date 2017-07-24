@@ -349,6 +349,19 @@
 			<key>NSDocumentClass</key>
 			<string>BrowserDocument</string>
 		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>m3u</string>
+				<string>m3u8</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>Playlist file</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>NSDocumentClass</key>
+			<string>BrowserDocument</string>
+		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>${EXECUTABLE_NAME}</string>
@@ -372,6 +385,13 @@
 	<true/>
 	<key>LSMinimumSystemVersion</key>
 	<string>${PLAT_VER}</string>
+	<key>NETestAppMapping</key>
+	<dict>
+		<key>302B2390-57A8-4384-AE12-C1E994B87EF3</key>
+		<array>
+			<string>${BUNDLE_ID}</string>
+		</array>
+	</dict>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
