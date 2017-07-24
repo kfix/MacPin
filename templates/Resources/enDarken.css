@@ -9,9 +9,10 @@
 }
 
 /* double-inversion to undarken all the image-like things in a page */
-:matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]):not(body,body>div,input), /* I h8 these pseudo-img div's*/
-:not(:not(body,body>div,input):matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]) *):matches(
+:matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]):not(html,body,body>div,input,a), /* I h8 these pseudo-img div's*/
+:not(:not(html,body,body>div,input,a):matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]) *):matches(
 	/* image-like things except if children of pseudo-img's */
+	/*  -ed: why can't anybody use <video poster=blah.img> */
 	/* FIXME: background-imgs added by CSS classes (not in HTML markup) cannot be matched! */
 	img, video, iframe,
 	object, :not(object)>embed /* Flash */
