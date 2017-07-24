@@ -32,27 +32,32 @@ delegate.handleClickedNotification = function(title, subtitle, msg, id) {
 };
 
 delegate.receivedRedirectionToURL = function(url, tab) {
-	var comps = url.split(':'),
-		scheme = comps.shift(),
-		addr = comps.shift();
+	var comps = url.split('/'),
+		scheme = comps.shift();
+	comps.shift();
+	var	host = comps.shift(),
+		path = comps.shift();
+
 	switch (scheme) {
 		case "http":
 		case "https":
-			if (tab.allowAnyRedir || unescape(unescape(addr)).match("//accounts.google.com/")) {
+			if (alwaysAllowRedir) break; //user override
+			if (tab.allowAnyRedir || unescape(unescape(url)).match("//accounts.google.com/")) {
+				// match(".slack.com/sso/saml/start?redir=") || slack.com/checkcookie
 				// we might be redirected to an external domain for a SSO-integrated Google Apps login
 				// https://support.google.com/a/answer/60224#userSSO
 				// process starts w/ https://accounts.google.com/ServiceLogin(Auth) and ends w/ /MergeSession
 				tab.allowAnyRedir = true;
-			} else if (addr.endsWith(".slack.com//signin?ssb_success=1")) {
+			} else if (url.endsWith(".slack.com//signin?ssb_success=1")) {
 				tab.allowAnyRedir = false; // we are back home
 				// if login was success, navigate to team page
-				host = addr.split('/')[2]
+				host = url.split('/')[2]
 				redir = `${scheme}://${host}/`
-				$.app.openURL(url); //pop all external links to system browser
 				console.log(`redirecting from ${url} to ${redir}!`);
 				tab.gotoURL(redir);
 				return true; //tell webkit that we handled this
 			}
+			if (host.endsWith('.slack.com')) break;
 		case "about":
 		case "file":
 		default:
@@ -70,6 +75,7 @@ delegate.decideNavigationForClickedURL = function(url, tab) {
 	switch (scheme) {
 		case "http:":
 		case "https:":
+			if (alwaysAllowRedir) break; //user override
 			if ((host == "slack-redir.net") && path.startsWith("link?url=")) {
 				// stripping obnoxious redirector
 				redir = decodeURIComponent(path.slice(9));
@@ -125,10 +131,14 @@ delegate.tabTransparencyToggled = function(transparent, tab) {
 	return; // cannot affect built-in transperatizing of tab
 };
 
+var alwaysAllowRedir = false;
+delegate.toggleRedirection = function(state) { alwaysAllowRedir = (state) ? true : false; };
+
 delegate.AppFinishedLaunching = function() {
 	//$.browser.addShortcut('Slack', slack);
 	// FIXME: use LocalStorage to save slackTab's team-domain after sign-in, and restore that on every start up
 	$.browser.addShortcut('Dark Mode', ['enDarken']);
+	$.browser.addShortcut('Enable Redirection to external domains', ['toggleRedirection', true]);
 	// FIXME add themes: https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99  DrewML/Theming-Slack-OSX.md
 	//slackTab.asyncEvalJS(`document.location = document.querySelectorAll('.btn')[1].href ? document.querySelectorAll('.btn')[1].href : document.location;`, 3); // try logging into the first signed-in team
 };
