@@ -409,6 +409,8 @@
 	<string>Joey Korkames (2017)</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Websites you visit may request your location.</string>
+	<key>NSServices</key>
+	<array/>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
 	<key>NSSupportsAutomaticTermination</key>

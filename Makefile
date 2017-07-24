@@ -255,9 +255,9 @@ install: /usr/local/bin/ios-deploy
 else
 install:
 	install -d $(installdir)
-	cp -R $(filter %.app,$^) $(installdir)
-	#/System/Library/CoreServices/pbs # look for new NSServices
+	for a in $(filter %.app,$^); do echo inst $$a; cp -R $$a $(installdir); sleep 0.5; done
 endif
+# /System/Library/CoreServices/pbs # look for new NSServices
 
 unregister:
 	-/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -u $(builddir)/*/apps/*.app
@@ -280,7 +280,7 @@ reset:
 	# open ~/Library/Preferences/com.apple.spaces.plist
 
 uninstall: $(wildcard $(appnames:%=$(installdir)/%))
-	rm -rf $(filter %.app,$^)
+	for a in $(filter %.app,$^); do echo del $$a; rm -rf $$a; done
 
 stp test:
 	#-defaults delete $(macpin)

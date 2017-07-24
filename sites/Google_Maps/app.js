@@ -85,12 +85,13 @@ delegate.decideNavigationForURL = function(url, tab) {
 
 delegate.handleUserInputtedInvalidURL = function(query, tab) {
 	// assuming the invalid url is a location search request
+	// see if current tab is a mapper, if not then dispatch the original map tab.
 	var comps = tab.url.split(':'),
 		scheme = comps.shift(),
 		addr = comps.shift();
 	var mapper = (addr && addr.startsWith('//www.google.com/maps/')) ? tab : mapsTab;
 	search(query, mapper);
-	return true; // tell MacPin to stop validating the URL
+	return true; // tell MacPin to stop validating the URL so it wont dispatch a URL request
 };
 
 // handles all URLs drag-and-dropped into NON-html5 parts of Drive and Dock icon.
