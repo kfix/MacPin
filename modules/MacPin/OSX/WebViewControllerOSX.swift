@@ -204,6 +204,12 @@ extension WebViewControllerOSX { // AppGUI funcs
 	}
 
 	func displayAlert(alert: NSAlert, _ completionHandler: (NSModalResponse) -> Void) {
+	/* FIXME BIG TIME
+		make JS's modal alerts dismissable on tab change, like Safari does
+		see: https://developers.google.com/web/updates/2017/03/dialogs-policy
+
+		also rate-limit modals and nop them if limit exceeded
+	*/
 		if let window = view.window {
 			alert.beginSheetModalForWindow(window, completionHandler: completionHandler)
 		} else {

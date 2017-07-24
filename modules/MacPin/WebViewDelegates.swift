@@ -171,17 +171,17 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 				//case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.CFErrorHTTPConnectionLost.rawValue)):
 				//	fallthrough // retry?
 				case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.CFURLErrorNotConnectedToInternet.rawValue)):
-					fallthrough // machine might not be awake and wifi is off
+					warn("Disconnected?")
+					//fallthrough // machine might not be awake and wifi is off
 				case(NSPOSIXErrorDomain, 1): // Operation not permitted
 					warn("Sandboxed?")
-					fallthrough
+					//fallthrough
 				case(WebKitErrorDomain, kWKErrorCodeFrameLoadInterruptedByPolicyChange): //`Frame load interrupted` WebKitErrorFrameLoadInterruptedByPolicyChange
 					warn("Attachment received from an IFrame and was converted to a download? webView.loading == \(webView.loading)")
 					return
 				// https://developer.apple.com/reference/foundation/nsurlerror
 				case (NSURLErrorDomain, NSURLErrorCancelled) where !webView.loading: return // ignore stopLoading() and HTTP redirects
 				default:
-					// needs to be async, don't lock the webview to the GUI
 					displayError(error, self)
 			}
 		}
@@ -236,6 +236,13 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 			}
 		}
 
+		if url.fileURL && mime == "audio/mpegurl" {
+			// offer to cache HLS streams to an asset for offline-play
+			// AVFoundation plugin will not stream from file:///*.m3u8 without caching them
+			//  https://github.com/r-plus/HLSion AVAssetDownloadURLSession
+			// TODO: need to copy webview's request cookies/headers for remote AVAssetDownloads...
+		}
+
 		decisionHandler(.Allow)
 	}
 
@@ -243,7 +250,14 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		// like server-issued error Statuses with no page content
 		if let url = webView.URL {
 			warn("[\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
-			if error.domain == WebKitErrorDomain && error.code == kWKErrorCodePlugInWillHandleLoad { askToOpenURL(url) } // `Plug-in handled load!` video/mp4
+			if error.domain == WebKitErrorDomain && error.code == kWKErrorCodePlugInWillHandleLoad {
+				warn("allowing plugin to handle \(url)")
+				// FIXME: get MIME somehow?? video/mp4 video/m3u8
+				// FIXME: can't catch & handle AVFoundation plugin's errors
+				//  [2017-02-22 19:55:57 +0000] <modules/MacPin/WebViewController.swift:78:126> [_webView(_:logDiagnosticMessageWithValue:description:value:)] media || video == loading
+				//  [2017-02-22 19:55:57 +0000] <modules/MacPin/WebViewController.swift:78:126> [_webView(_:logDiagnosticMessageWithValue:description:value:)] engineFailedToLoad || AVFoundation == 0
+				// GOOD: [2017-02-22 19:57:55 +0000] <modules/MacPin/WebViewController.swift:76:102> [_webView(_:logDiagnosticMessage:description:)] mediaLoaded || AVFoundation
+			}
 			if error.domain == WebKitErrorDomain && error.code == kWKErrorCodeFrameLoadInterruptedByPolicyChange { warn("IFrame converted to download?") }
 			if error.domain == NSURLErrorDomain && error.code != NSURLErrorCancelled { // dont catch on stopLoading() and HTTP redirects
 				// needs to be async

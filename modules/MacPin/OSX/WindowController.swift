@@ -87,4 +87,10 @@ class WindowController: NSWindowController, NSWindowDelegate {
 	func windowWillClose(notification: NSNotification) { warn() } // window was closed by red stoplight button
 
 	deinit { warn(description) }
+
+	// TODO: implement rate-limiting of alert-sheets to flummox JS malwares
+	// TODO: allow sheets to be dismissed by switching focus or tabs
+	// func windowWillBeginSheet(_ notification: Notification)
+	// func windowDidEndSheet(_ notification: Notification)
+	// notification.object is the displaying window (the sheet itself is another derived-window)
 }

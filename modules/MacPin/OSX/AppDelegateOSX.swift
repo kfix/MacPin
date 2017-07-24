@@ -374,6 +374,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 			}
 		}
 
+		// handles public.url
 		if let url = validateURL(filename) {
 			warn("opening: \(url)")
 			browserController.tabSelected = MPWebView(url: url)
