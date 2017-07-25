@@ -206,9 +206,11 @@ var globalIconClient = WKIconDatabaseClientV1(
 		prefs._fullScreenEnabled = true
 
 		// https://webkit.org/blog/7763/a-closer-look-into-webrtc/
-		prefs._mediaCaptureRequiresSecureConnection = false
-		prefs._mediaDevicesEnabled = true
-		prefs._mockCaptureDevicesEnabled = false
+		if #available(OSX 10.12, iOS 10, *) {
+			prefs._mediaCaptureRequiresSecureConnection = false
+			prefs._mediaDevicesEnabled = true
+			prefs._mockCaptureDevicesEnabled = false
+		}
 #endif
 		if let privacy = privacy where privacy {
 			//prevent HTML5 application cache and asset/page caching by WebKit, MacPin never saves any history itself
