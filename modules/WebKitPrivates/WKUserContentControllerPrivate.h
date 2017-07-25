@@ -35,18 +35,18 @@
 
 @interface WKUserContentController (WKPrivate)
 
-- (void)_removeUserScript:(WKUserScript *)userScript WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-- (void)_removeAllUserScriptsAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+- (void)_removeUserScript:(WKUserScript *)userScript WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+- (void)_removeAllUserScriptsAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 
-- (void)_addUserContentFilter:(_WKUserContentFilter *)userContentFilter WK_AVAILABLE(10_11, 9_0);
-- (void)_removeUserContentFilter:(NSString *)userContentFilterName WK_AVAILABLE(10_11, 9_0);
-- (void)_removeAllUserContentFilters WK_AVAILABLE(10_11, 9_0);
+- (void)_addUserContentFilter:(_WKUserContentFilter *)userContentFilter WK2_AVAILABLE(10_11, 9_0);
+- (void)_removeUserContentFilter:(NSString *)userContentFilterName WK2_AVAILABLE(10_11, 9_0);
+- (void)_removeAllUserContentFilters WK2_AVAILABLE(10_11, 9_0);
 
-@property (nonatomic, readonly, copy) WK_ARRAY(_WKUserStyleSheet *) *_userStyleSheets WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-- (void)_addUserStyleSheet:(_WKUserStyleSheet *)userStyleSheet WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-- (void)_removeUserStyleSheet:(_WKUserStyleSheet *)userStyleSheet WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-- (void)_removeAllUserStyleSheets WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-- (void)_removeAllUserStyleSheetsAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, readonly, copy) WK_ARRAY(_WKUserStyleSheet *) *_userStyleSheets WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+- (void)_addUserStyleSheet:(_WKUserStyleSheet *)userStyleSheet WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+- (void)_removeUserStyleSheet:(_WKUserStyleSheet *)userStyleSheet WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+- (void)_removeAllUserStyleSheets WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+- (void)_removeAllUserStyleSheetsAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 
 @end
 

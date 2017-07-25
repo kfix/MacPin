@@ -42,37 +42,37 @@
 
 @property (nonatomic, weak, setter=_setAlternateWebViewForNavigationGestures:) WKWebView *_alternateWebViewForNavigationGestures;
 
-@property (nonatomic, setter=_setTreatsSHA1SignedCertificatesAsInsecure:) BOOL _treatsSHA1SignedCertificatesAsInsecure WK_AVAILABLE(NA, 9_0);
+@property (nonatomic, setter=_setTreatsSHA1SignedCertificatesAsInsecure:) BOOL _treatsSHA1SignedCertificatesAsInsecure WK2_AVAILABLE(NA, 9_0);
 
-@property (nonatomic, setter=_setRespectsImageOrientation:) BOOL _respectsImageOrientation WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-@property (nonatomic, setter=_setPrintsBackgrounds:) BOOL _printsBackgrounds WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-@property (nonatomic, setter=_setIncrementalRenderingSuppressionTimeout:) CGFloat _incrementalRenderingSuppressionTimeout WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-@property (nonatomic, setter=_setAllowsJavaScriptMarkup:) BOOL _allowsJavaScriptMarkup WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-@property (nonatomic, setter=_setConvertsPositionStyleOnCopy:) BOOL _convertsPositionStyleOnCopy WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-@property (nonatomic, setter=_setAllowsMetaRefresh:) BOOL _allowsMetaRefresh WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-//@property (nonatomic, setter=_setAllowUniversalAccessFromFileURLs:) BOOL _allowUniversalAccessFromFileURLs WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-@property (nonatomic, setter=_setRequiresUserActionForAudioPlayback:) BOOL _requiresUserActionForAudioPlayback WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-@property (nonatomic, setter=_setRequiresUserActionForVideoPlayback:) BOOL _requiresUserActionForVideoPlayback WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-@property (nonatomic, setter=_setMainContentUserGestureOverrideEnabled:) BOOL _mainContentUserGestureOverrideEnabled WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-@property (nonatomic, setter=_setInvisibleAutoplayNotPermitted:) BOOL _invisibleAutoplayNotPermitted WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-@property (nonatomic, setter=_setMediaDataLoadsAutomatically:) BOOL _mediaDataLoadsAutomatically WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, setter=_setRespectsImageOrientation:) BOOL _respectsImageOrientation WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, setter=_setPrintsBackgrounds:) BOOL _printsBackgrounds WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, setter=_setIncrementalRenderingSuppressionTimeout:) CGFloat _incrementalRenderingSuppressionTimeout WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, setter=_setAllowsJavaScriptMarkup:) BOOL _allowsJavaScriptMarkup WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, setter=_setConvertsPositionStyleOnCopy:) BOOL _convertsPositionStyleOnCopy WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, setter=_setAllowsMetaRefresh:) BOOL _allowsMetaRefresh WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+//@property (nonatomic, setter=_setAllowUniversalAccessFromFileURLs:) BOOL _allowUniversalAccessFromFileURLs WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, setter=_setRequiresUserActionForAudioPlayback:) BOOL _requiresUserActionForAudioPlayback WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, setter=_setRequiresUserActionForVideoPlayback:) BOOL _requiresUserActionForVideoPlayback WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, setter=_setMainContentUserGestureOverrideEnabled:) BOOL _mainContentUserGestureOverrideEnabled WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, setter=_setInvisibleAutoplayNotPermitted:) BOOL _invisibleAutoplayNotPermitted WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, setter=_setMediaDataLoadsAutomatically:) BOOL _mediaDataLoadsAutomatically WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 
 #if STP
 @property (nonatomic, setter=_setAllowUniversalAccessFromFileURLs:) BOOL _allowUniversalAccessFromFileURLs; // WK_API_AVAILABLE(macosx(10.12), ios(10.0));
 #endif
 
 #if TARGET_OS_IPHONE
-@property (nonatomic, setter=_setAlwaysRunsAtForegroundPriority:) BOOL _alwaysRunsAtForegroundPriority WK_AVAILABLE(NA, 9_0);
-@property (nonatomic, setter=_setInlineMediaPlaybackRequiresPlaysInlineAttribute:) BOOL _inlineMediaPlaybackRequiresPlaysInlineAttribute WK_AVAILABLE(NA, WK_IOS_TBA);
+@property (nonatomic, setter=_setAlwaysRunsAtForegroundPriority:) BOOL _alwaysRunsAtForegroundPriority WK2_AVAILABLE(NA, 9_0);
+@property (nonatomic, setter=_setInlineMediaPlaybackRequiresPlaysInlineAttribute:) BOOL _inlineMediaPlaybackRequiresPlaysInlineAttribute WK2_AVAILABLE(NA, WK_IOS_TBA);
 #else
-@property (nonatomic, setter=_setShowsURLsInToolTips:) BOOL _showsURLsInToolTips WK_AVAILABLE(WK_MAC_TBA, NA);
-@property (nonatomic, setter=_setServiceControlsEnabled:) BOOL _serviceControlsEnabled WK_AVAILABLE(WK_MAC_TBA, NA);
-@property (nonatomic, setter=_setImageControlsEnabled:) BOOL _imageControlsEnabled WK_AVAILABLE(WK_MAC_TBA, NA);
+@property (nonatomic, setter=_setShowsURLsInToolTips:) BOOL _showsURLsInToolTips WK2_AVAILABLE(WK_MAC_TBA, NA);
+@property (nonatomic, setter=_setServiceControlsEnabled:) BOOL _serviceControlsEnabled WK2_AVAILABLE(WK_MAC_TBA, NA);
+@property (nonatomic, setter=_setImageControlsEnabled:) BOOL _imageControlsEnabled WK2_AVAILABLE(WK_MAC_TBA, NA);
 #endif
 
-@property (nonatomic, strong, setter=_setVisitedLinkProvider:) _WKVisitedLinkProvider *_visitedLinkProvider WK_DEPRECATED(10_10, WK_MAC_TBA, 8_0, WK_IOS_TBA, "Please use _visitedLinkStore instead");
+@property (nonatomic, strong, setter=_setVisitedLinkProvider:) _WKVisitedLinkProvider *_visitedLinkProvider WK2_DEPRECATED(10_10, WK_MAC_TBA, 8_0, WK_IOS_TBA, "Please use _visitedLinkStore instead");
 
-@property (nonatomic, strong, setter=_setWebsiteDataStore:) _WKWebsiteDataStore *_websiteDataStore WK_DEPRECATED(10_10, 10_11, 8_0, 9_0, "Please use websiteDataStore instead");
+@property (nonatomic, strong, setter=_setWebsiteDataStore:) _WKWebsiteDataStore *_websiteDataStore WK2_DEPRECATED(10_10, 10_11, 8_0, 9_0, "Please use websiteDataStore instead");
 
 @end
 

@@ -104,6 +104,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		// NSURLSessionConfiguration ? https://www.objc.io/issues/5-ios7/from-nsurlconnection-to-nsurlsession/
 
 	var context: WKContextRef? = nil
+	// iconDB is going bye-bye: https://github.com/WebKit/webkit/commit/9a48388fe4e65e01969c475a1df0ed9b23c8bb43
 	var iconDB: WKIconDatabaseRef? = nil
 	var iconClient: WKIconDatabaseClientV1? = WKIconDatabaseClientV1() {
 		didSet {
@@ -203,6 +204,11 @@ var globalIconClient = WKIconDatabaseClientV1(
 		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
 		prefs._fullScreenEnabled = true
+
+		// https://webkit.org/blog/7763/a-closer-look-into-webrtc/
+		prefs._mediaCaptureRequiresSecureConnection = false
+		prefs._mediaDevicesEnabled = true
+		prefs._mockCaptureDevicesEnabled = false
 #endif
 		if let privacy = privacy where privacy {
 			//prevent HTML5 application cache and asset/page caching by WebKit, MacPin never saves any history itself
@@ -517,6 +523,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 #if os(OSX)
+	// dragDestinationActionMaskForDraggingInfo -> WKDragDestinationActionAny https://github.com/WebKit/webkit/commit/5e1e5eab17cfded9ea9eaa9b46075b78d68575e4
 
 	// FIXME: unified save*()s like Safari does with a drop-down for "Page Source" & Web Archive, or auto-mime for single non-HTML asset
 	func saveWebArchive() {

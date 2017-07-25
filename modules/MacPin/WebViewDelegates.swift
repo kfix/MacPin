@@ -59,8 +59,12 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 }
 
 extension WebViewController: WKUIDelegate { } // javascript prompts, implemented per-platform
+// window.beforeunload -> runBeforeUnloadConfirmPanelWithMessage https://github.com/WebKit/webkit/commit/204a88b497f6d2051997226e940f088e6ab51178
 
 extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
+
+	// FUTURE: didPerformClientRedirectForNavigation https://github.com/WebKit/webkit/commit/9475f62f3602aa91309f00c64e4430a25d5ae4e9
+
 	func webView(webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
 		if let url = webView.URL {
 			warn("'\(url)'")
@@ -211,6 +215,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 				let cookies = NSHTTPCookie.cookiesWithResponseHeaderFields(headers, forURL: url)
 				//let cookies = NSHTTPCookie._parsedCookiesWithResponseHeaderFields(headers, forURL: url) //ElCap
 				for cookie in cookies { jsdelegate.tryFunc("receivedCookie", webView, cookie.name, cookie.value) }
+				//FUTURE: API for this https://github.com/WebKit/webkit/commit/a01fab49a9571e9bcf6703b30dadf5419d87bc11
 
 				if let cd = headers["Content-Disposition"] where cd.hasPrefix("attachment") {
 					// JS hook?

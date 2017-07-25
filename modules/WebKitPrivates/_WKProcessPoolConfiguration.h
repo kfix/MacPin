@@ -35,7 +35,7 @@ WK_CLASS_AVAILABLE(10_10, 8_0)
 
 @property (nonatomic, copy) NSURL *injectedBundleURL;
 @property (nonatomic) NSUInteger maximumProcessCount;
-@property (nonatomic) NSInteger diskCacheSizeOverride WK_AVAILABLE(10_11, 9_0);
+@property (nonatomic) NSInteger diskCacheSizeOverride WK2_AVAILABLE(10_11, 9_0);
 @property (nonatomic, copy) NSArray *cachePartitionedURLSchemes;
 
 @end

@@ -32,6 +32,6 @@ typedef NS_ENUM(NSInteger, _WKSameDocumentNavigationType) {
     _WKSameDocumentNavigationTypeSessionStatePush,
     _WKSameDocumentNavigationTypeSessionStateReplace,
     _WKSameDocumentNavigationTypeSessionStatePop,
-} WK_AVAILABLE(10_10, 8_0);
+} WK2_AVAILABLE(10_10, 8_0);
 
 #endif

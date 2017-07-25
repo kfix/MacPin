@@ -52,7 +52,20 @@ extension WebViewControllerOSX {
 }
 
 extension WebViewControllerOSX {
+  func _webView(_ webView: WKWebView!, requestUserMediaAuthorizationFor devices: _WKCaptureDevices, url: NSURL!, mainFrameURL: NSURL!, decisionHandler: ((Bool) -> Void)!) {
+	warn()
+    decisionHandler(true)
+  }
+  func _webView(_ webView: WKWebView!, checkUserMediaPermissionFor url: NSURL!, mainFrameURL: NSURL!, frameIdentifier: UInt, decisionHandler: ((String?, Bool) -> Void)!) {
+	warn()
+    decisionHandler("0x987654321", true)
+  }
+  //func _webView(_ webView: WKWebView!, mediaCaptureStateDidChange state: _WKMediaCaptureState)
+}
 
+extension WebViewControllerOSX {
+
+	// https://github.com/WebKit/webkit/commit/fa99fc8295905850b2b9444ba019a7250996ee7d
 	func webView(webView: WKWebView, didReceiveAuthenticationChallenge challenge: NSURLAuthenticationChallenge,
 		completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
 
@@ -134,7 +147,9 @@ Global Trace Buffer (reverse chronological seconds):
 */
 
 		if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
-			completionHandler(.PerformDefaultHandling, nil)
+			// Server Trust Method not implemented, reject it out of hand
+			//completionHandler(.PerformDefaultHandling, nil)
+			completionHandler(.RejectProtectionSpace, nil)
 			return
 		}
 		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.URL ?? String())]")
@@ -176,7 +191,8 @@ Global Trace Buffer (reverse chronological seconds):
 				))
 			} else {
 				// need to cancel request, else user can get locked into a modal prompt loop
-				completionHandler(.PerformDefaultHandling, nil)
+				//completionHandler(.PerformDefaultHandling, nil)
+				completionHandler(.RejectProtectionSpace, nil)
 				webView.stopLoading()
 			}
  		}
