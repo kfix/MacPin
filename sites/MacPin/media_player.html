@@ -1,0 +1,18 @@
+<html>
+    <head>
+    	<style>
+    		body { background: black; }
+    	</style>
+        <script>
+            var controls;
+            function start() {
+            	var params = new URLSearchParams(window.location.search);
+                video = document.getElementById('video');
+                video.src = params.get('src');
+            }
+        </script>
+    </head>
+    <body onload="start()">
+        <video id="video" controls></video>
+    </body>
+</html>

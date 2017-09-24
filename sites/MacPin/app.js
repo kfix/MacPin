@@ -50,6 +50,20 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 	return ret;
 };
 
+delegate.decideNavigationForMIME = function(mime, url, webview) {
+	console.log(`${mime} : ${url}`);
+	switch (mime) {
+		case 'audio/mpegurl': // m3u8
+		case 'application/x-mpegurl':
+			// FIXME: ensure url is for main frame
+			webview.loadURL('file://' + $.app.resourcePath + '/media_player.html?src=' + url); // FIXME: urldecode(url)
+			return true;
+		default:
+			break;
+	}
+	return false;
+}
+
 delegate.setAgent = function(agent, tab) { tab.userAgent = agent; };
 delegate.img2data = function(tab) {
 	if (!tab) tab = $.browser.tabSelected;
