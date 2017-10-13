@@ -44,7 +44,8 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
 .day_divider,
 .tab_container,
 .panel .heading,
-#mentions_options {
+#mentions_options,
+#search_tab, #flex_contents, #search_results {
     background: none !important;
 	background-color: none !important;
 }
@@ -97,7 +98,8 @@ ts-message .action_hover_container a {
    background: none !important;
 }
 
-#search_container input, .search_input,
+#search_container input,
+.search_input,
 #message-input {
     background: none !important;
     color: white !important;
