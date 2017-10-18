@@ -45,7 +45,8 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
 .tab_container,
 .panel .heading,
 #mentions_options,
-#search_tab, #flex_contents, #search_results {
+#search_tab, #flex_contents, #search_results,
+#search_options, #search_filters, #search_results_loading {
     background: none !important;
 	background-color: none !important;
 }
