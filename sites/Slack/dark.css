@@ -14,7 +14,9 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
 	/* if tab is made transparent, these are overriden */
 }
 
-ts-message, .c-message__sender, .c-message__body {
+ts-message,
+.c-message__sender, .c-message__body,
+.c-timestamp__label {
     font-size: 9pt !important;
 	font-family: -apple-system-font !important;
 }
@@ -32,8 +34,7 @@ ts-message, .c-message__sender, .c-message__body {
 html, body,
 ts-message.active:not(.standalone):not(.multi_delete_mode):not(.highlight),
 ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
-.c_message.active:not(.standalone):not(.ephemeral):not(.highlight),
-.c_message:hover:not(.standalone):not(.ephemeral):not(.highlight),
+.c-message:hover,
 .channel_title_info,
 .channel-header .flex_header,
 .flex_header,
@@ -53,7 +54,7 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
 #search_tab, #flex_contents, #search_results,
 #search_options, #search_filters, #search_results_loading {
     background: none !important;
-	background-color: none !important;
+	background-color: inherit !important;
 }
 
 span.match {
@@ -115,7 +116,7 @@ ts-message .action_hover_container a {
 
 #message-input:placeholder {
     background: white !important;
-    color: none !important;
+    color: initial !important;
 }
 
 .special_formatting {
