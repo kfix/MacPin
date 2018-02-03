@@ -1,6 +1,8 @@
 /* https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99 */
 /* https://a.slack-edge.com/4e3ef/style/rollup-client_secondary.css */
 
+/* hoping that Slack eventually Darkens up: https://twitter.com/slackhq/status/531941157283315712 */
+
 /*
 ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
     background: #353535;
@@ -12,7 +14,7 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
 	/* if tab is made transparent, these are overriden */
 }
 
-ts-message {
+ts-message, .c-message__sender, .c-message__body {
     font-size: 9pt !important;
 	font-family: -apple-system-font !important;
 }
@@ -21,7 +23,8 @@ ts-message {
 
 #col_channels,
 #team_menu,
-#quick_switcher_btn {
+#quick_switcher_btn,
+.c_message {
     background: #2B2B2B !important;
 	font-family: -apple-system-font !important;
 }
@@ -29,6 +32,8 @@ ts-message {
 html, body,
 ts-message.active:not(.standalone):not(.multi_delete_mode):not(.highlight),
 ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
+.c_message.active:not(.standalone):not(.ephemeral):not(.highlight),
+.c_message:hover:not(.standalone):not(.ephemeral):not(.highlight),
 .channel_title_info,
 .channel-header .flex_header,
 .flex_header,
@@ -57,7 +62,7 @@ span.match {
 
 .ts_icon:not(.ts_icon_presence):before, ts-icon:before,
 .panel .heading,
-.message_body,
+.message_body, .c-message__body,
 .timestamp,
 .initial_comment .comment,
 #im_title,
@@ -91,8 +96,10 @@ span.match {
 .action_hover_container .ts_icon:before,
 .action_hover_container .ts_icon:after,
 #menu_items .ts_icon:before,
-#menu_items .ts_icon:after {
-   color: none !important;
+#menu_items .ts_icon:after,
+body
+{
+   color: initial !important;
 }
 
 ts-message .action_hover_container a {
