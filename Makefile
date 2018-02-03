@@ -12,7 +12,7 @@ archs_macosx		?= x86_64
 archs_iphonesimulator	?= i386 x86_64
 
 archs_iphoneos		?= arm64
-target_ver_OSX		?= 10.11
+target_ver_OSX		?= 10.13
 target_ver_iOS		?= 9.1
 
 xcode				?= /Applications/Xcode8.2.1.app
@@ -72,20 +72,21 @@ endif
 
 ifeq ($(platform),OSX)
 endif
+allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly stp $(gen_apps): $(execs)
 doc test apirepl tabrepl test.app test.ios stp stp.app: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
 
 ifeq ($(STP),1)
-linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
-linkopts_main += -Wl,-F,"/Applications/Safari Technology Preview.app/Contents/Frameworks"
-libdirs += -L "/Applications/Safari Technology Preview.app/Contents/Frameworks"
+#linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
+#linkopts_main += -Wl,-F,"/Applications/Safari Technology Preview.app/Contents/Frameworks"
+#libdirs += -L "/Applications/Safari Technology Preview.app/Contents/Frameworks"
 debug += -D STP
 clang += -DSTP
 clangpp += -DSTP
 swiftc += -D STP -Xcc -DSTP
 swift += -D STP -Xcc -DSTP
-env += DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
+#env += DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
 endif
 
 test apirepl tabrepl test.app test.ios stp stp.app: | $(execs:%=%.dSYM)
@@ -174,9 +175,10 @@ ifeq ($(platform),OSX)
 $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/Assets.car: $(xcassets)/%.xcassets
 	@install -d $(dir $@)
 	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
-		--platform $(sdk) --minimum-deployment-target $(target_ver_OSX) --target-device mac \
-		--compress-pngs --compile $(dir $@) $(realpath $<)
-	test -f $@
+		--platform $(sdk) --minimum-deployment-target 10.12 --target-device mac \
+		--compress-pngs --compile $(dir $@) $(realpath $(filter %.xcassets, $^)) >/dev/null
+    test ! -f $@ && echo error: $@ was not created by actool! && cat $@.plist && exit 1
+    # | grep '/* com.apple.actool.compilation-results */\n\w+ Icon.icns'
 
 # OSX apps
 # https://developer.apple.com/library/mac/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html#//apple_ref/doc/uid/10000123i-CH101-SW1
@@ -193,7 +195,7 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	[ ! -d $@/Contents/Resources/Library ] || ln -sfh Resources/Library $@/Contents/Library
 	[ ! -n "$(wildcard $(outdir)/Frameworks/*.dylib)" ] || cp -a $(outdir)/Frameworks $@/Contents
 	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/Contents
-	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist
+	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist >/dev/null
 	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
 	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@ $@/Contents/SwiftSupport/*.dylib
 	-codesign --display -r- --verbose=4 --deep --entitlements :- $@
@@ -208,8 +210,8 @@ $(appdir)/%.app/Assets.car: $(xcassets)/%.xcassets $(xcassets)/icons8.xcassets
 	@install -d $(dir $@)
 	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
 		--platform $(sdk) --minimum-deployment-target $(target_ver_iOS)  --target-device iphone  --target-device ipad --app-icon AppIcon \
-		--compress-pngs --compile $(dir $@) $(realpath $(filter %.xcassets, $^))
-	test -f $@
+		--compress-pngs --compile $(dir $@) $(realpath $(filter %.xcassets, $^)) > /dev/null
+    test ! -f $@ && echo error: $@ was not created by actool! && cat $@.plist && exit 1
 
 $(appdir)/%.app/LaunchScreen.nib: templates/$(platform)/LaunchScreen.xib
 	@install -d $(dir $@)
