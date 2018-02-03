@@ -14,8 +14,15 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
 	/* if tab is made transparent, these are overriden */
 }
 
+code {
+	border: none !important;
+}
+
 ts-message,
 .c-message__sender, .c-message__body,
+.c-message_attachment__row,
+.c-message_attachment__text,
+.c-message_attachment__field_value,
 .c-timestamp__label {
     font-size: 9pt !important;
 	font-family: -apple-system-font !important;
@@ -64,6 +71,9 @@ span.match {
 .ts_icon:not(.ts_icon_presence):before, ts-icon:before,
 .panel .heading,
 .message_body, .c-message__body,
+.c-message_attachment__row,
+.c-message_attachment__text,
+.c-message_attachment__field_value,
 .timestamp,
 .initial_comment .comment,
 #im_title,
