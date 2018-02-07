@@ -30,11 +30,24 @@ ts-message,
 
 /* ts-message.active .star, ts-message:hover .star */
 
+/* make callouts a little less burning */
+.c-mrkdwn__member--link, .c-mrkdwn__subteam--link {
+	color: #ff2f91 !important;
+	background: inherit !important;
+}
+
 #col_channels,
 #team_menu,
 #quick_switcher_btn,
+.c-message_list__day_divider__label__pill,
 .c_message {
     background: #2B2B2B !important;
+	font-family: -apple-system-font !important;
+}
+
+.channel_title, .channel_topic_text,
+#edit_topic_inner,
+.search_input, #msg_input {
 	font-family: -apple-system-font !important;
 }
 
@@ -43,7 +56,10 @@ ts-message.active:not(.standalone):not(.multi_delete_mode):not(.highlight),
 ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
 .c-message:hover, .c-message--hover,
 .channel_title_info,
-.channel-header .flex_header,
+.channel-header .flex_header, .channel_topic,
+.p-message_pane, .c-scrollbar__hider:before,
+#edit_topic_inner:before,
+#msg_input,
 .flex_header,
 #channel_header_info,
 #primary_file_button,
@@ -74,6 +90,8 @@ span.match {
 .c-message_attachment__row,
 .c-message_attachment__text,
 .c-message_attachment__field_value,
+.c-message_list__day_divider__label__pill,
+#msg_input,
 .timestamp,
 .initial_comment .comment,
 #im_title,
@@ -140,9 +158,11 @@ ts-message .action_hover_container a {
 }
 
 .snippet_container, .file_container, .CodeMirror, .CodeMirror-code,
+.c-file_container,
 .file_container .CodeMirror .Condemirror-code>div:before,
 .file_container .CodeMirror .Condemirror-code>div pre
 {
 	background: black !important;
+	background-color: inherit !important;
 	color: lime !important;
 }
