@@ -39,6 +39,7 @@ ts-message,
 #col_channels,
 #team_menu,
 #quick_switcher_btn,
+.p-message_pane__unread_banner__banner,
 .c-message_list__day_divider__label__pill,
 .c_message {
     background: #2B2B2B !important;
@@ -47,6 +48,9 @@ ts-message,
 
 .channel_title, .channel_topic_text,
 #edit_topic_inner,
+.p-message_pane__top_banners,
+.c-virtual_list__item--sticky,
+.p-message_pane__unread_banner, .p-message_pane__banner,
 .search_input, #msg_input {
 	font-family: -apple-system-font !important;
 }
@@ -56,8 +60,13 @@ ts-message.active:not(.standalone):not(.multi_delete_mode):not(.highlight),
 ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
 .c-message:hover, .c-message--hover,
 .channel_title_info,
+.p-message_pane__top_banners,
+.c-virtual_list__item--sticky,
+.c-message--adjacent,
+.c-message--ephemeral,
 .channel-header .flex_header, .channel_topic,
-.p-message_pane, .c-scrollbar__hider:before,
+.p-message_pane, .c-scrollbar__hider::before,
+pre,
 #edit_topic_inner:before,
 #msg_input,
 .flex_header,
@@ -79,6 +88,10 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
     background: none !important;
 	background-color: inherit !important;
 }
+
+/*
+#messages_container > div.p-history_container.message_pane_scroller > div > div:nth-child(2) > div > div.c-virtual_list.c-virtual_list--scrollbar.c-message_list.c-scrollbar.c-scrollbar--fade > div.c-scrollbar__hider::before
+*/
 
 span.match {
 	background: magenta !important;
@@ -160,7 +173,8 @@ ts-message .action_hover_container a {
 .snippet_container, .file_container, .CodeMirror, .CodeMirror-code,
 .c-file_container,
 .file_container .CodeMirror .Condemirror-code>div:before,
-.file_container .CodeMirror .Condemirror-code>div pre
+.file_container .CodeMirror .Condemirror-code>div pre,
+pre.c-mrkdwn__pre
 {
 	background: black !important;
 	background-color: inherit !important;
