@@ -46,7 +46,7 @@ ts-message,
 	font-family: -apple-system-font !important;
 }
 
-.channel_title, .channel_topic_text,
+.channel_title,
 #edit_topic_inner,
 .p-message_pane__top_banners,
 .c-virtual_list__item--sticky,
@@ -97,7 +97,7 @@ span.match {
 	background: magenta !important;
 }
 
-.ts_icon:not(.ts_icon_presence):before, ts-icon:before,
+.ts_icon:not(.ts_icon_presence):not(.back_icon):before, ts-icon:before,
 .panel .heading,
 .message_body, .c-message__body,
 .c-message_attachment__row,
@@ -120,8 +120,8 @@ span.match {
 #client_body:not(.onboarding):before {
 /*
     border-bottom: 1px solid #4C4C4C;
-    background: none !important;
 */
+    background: none !important;
     content: none !important;
 }
 
@@ -144,15 +144,25 @@ body
    color: initial !important;
 }
 
+div.c-virtual_list__scroll_container,
+.c-virtual_list__sticky_container,
 ts-message .action_hover_container a {
    background: none !important;
 }
 
+.message_sender,
+.flexpane_file_title .member,
+#flex_contents .heading_text,
+.indifferent_grey,
 #search_container input,
 .search_input,
+.channel_topic_text,
+.messages_header,
+#typing_text,
 #message-input {
     background: none !important;
     color: white !important;
+	font-family: -apple-system-font !important;
 }
 
 #message-input:placeholder {
@@ -172,8 +182,8 @@ ts-message .action_hover_container a {
 
 .snippet_container, .file_container, .CodeMirror, .CodeMirror-code,
 .c-file_container,
-.file_container .CodeMirror .Condemirror-code>div:before,
-.file_container .CodeMirror .Condemirror-code>div pre,
+.file_container .CodeMirror .CodeMirror-code>div:before,
+.file_container .CodeMirror .CodeMirror-code>div pre,
 pre.c-mrkdwn__pre
 {
 	background: black !important;
