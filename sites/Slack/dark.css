@@ -16,6 +16,8 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
 
 code {
 	border: none !important;
+	background-color: inherit !important;
+	color: lime !important;
 }
 
 ts-message,
@@ -56,6 +58,7 @@ ts-message,
 }
 
 html, body,
+.unread_msgs_loading, ts-thread,
 ts-message.active:not(.standalone):not(.multi_delete_mode):not(.highlight),
 ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
 .c-message:hover, .c-message--hover,
@@ -65,7 +68,6 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
 .c-message--adjacent,
 .c-message--ephemeral,
 .channel-header .flex_header, .channel_topic,
-.p-message_pane, .c-scrollbar__hider::before,
 pre,
 #edit_topic_inner:before,
 #msg_input,
@@ -79,6 +81,12 @@ pre,
 .channel_header,
 #footer,
 #messages_container,
+#messages_container:after,
+#unread_msgs_scroller_div:after,
+.p-history_container,
+.message_pane_scroller,
+#threads_view_banner, .messages_banner,
+#msgs_overlay_div, #client_header,
 .day_divider,
 .tab_container,
 .panel .heading,
@@ -91,6 +99,9 @@ pre,
 
 /*
 #messages_container > div.p-history_container.message_pane_scroller > div > div:nth-child(2) > div > div.c-virtual_list.c-virtual_list--scrollbar.c-message_list.c-scrollbar.c-scrollbar--fade > div.c-scrollbar__hider::before
+
+message_banner
+opacity: 0
 */
 
 span.match {
@@ -117,12 +128,36 @@ span.match {
     border-top: none !important;
 }
 
+/*
+.p-message_pane, .c-scrollbar__hider::before
+{ display: none !important }
+*/
+
+.channel_header,
+#col_messages,
+#footer
+{
+    /* just make it greyer?
+	box-shadow: none !important;
+    */
+    box-shadow: inset 1px 0 0 0 darkgrey !important;
+}
+
+.c-message_list__day_divider__line
+{
+	/* display: none !important; */
+	border-top: 1px solid darkgrey !important;
+}
+
+.p-message_pane, .c-scrollbar__hider::before,
 #client_body:not(.onboarding):before {
 /*
     border-bottom: 1px solid #4C4C4C;
 */
+    border-bottom: none !important;
     background: none !important;
     content: none !important;
+    background-color: inherit !important;
 }
 
 .monkey_scroll_bar,
@@ -144,13 +179,16 @@ body
    color: initial !important;
 }
 
+.c-snippet__code .CodeMirror-code > div:before,
 div.c-virtual_list__scroll_container,
 .c-virtual_list__sticky_container,
 ts-message .action_hover_container a {
+   border-right: none !important;
    background: none !important;
 }
 
 .message_sender,
+ts-message,
 .flexpane_file_title .member,
 #flex_contents .heading_text,
 .indifferent_grey,
@@ -189,4 +227,16 @@ pre.c-mrkdwn__pre
 	background: black !important;
 	background-color: inherit !important;
 	color: lime !important;
+}
+
+.c-member--large,
+.c-member__display-name--large,
+.c-member__title,
+.c-member__other-names {
+	color: darkseagreen !important;
+}
+
+.c-file_container--gradient::after
+{
+background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(255, 255, 255, 0.1)) !important;
 }
