@@ -193,11 +193,13 @@ ts-message,
 #flex_contents .heading_text,
 .indifferent_grey,
 #search_container input,
-.search_input,
+.search_input, .search_input_wrapper,
 .channel_topic_text,
 .messages_header,
 #typing_text,
-#message-input {
+#message-input,
+.p-emoji_picker__input_container, .p-emoji_picker__input
+{
     background: none !important;
     color: white !important;
 	font-family: -apple-system-font !important;
@@ -227,6 +229,15 @@ pre.c-mrkdwn__pre
 	background: black !important;
 	background-color: inherit !important;
 	color: lime !important;
+}
+
+.p-emoji_picker, .p-emoji_picker__list_container,
+.p-emoji_picker__heading, .p-emoji_picker__heading,
+.search_menu, .query_header, .footer__navigation-help
+{
+	background: black !important;
+	color: lime !important;
+	font-family: -apple-system-font !important;
 }
 
 .c-member--large,
