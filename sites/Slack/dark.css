@@ -233,7 +233,8 @@ pre.c-mrkdwn__pre
 
 .p-emoji_picker, .p-emoji_picker__list_container,
 .p-emoji_picker__heading, .p-emoji_picker__heading,
-.search_menu, .query_header, .footer__navigation-help
+.search_menu, .query_header, .footer__navigation-help,
+.fs_modal_file_viewer_header, .viewer
 {
 	background: black !important;
 	color: lime !important;
