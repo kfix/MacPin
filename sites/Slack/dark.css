@@ -194,14 +194,17 @@ ts-message,
 .indifferent_grey,
 #search_container input,
 .search_input, .search_input_wrapper,
+.comment_input, .comment_body,
 .channel_topic_text,
 .messages_header,
 #typing_text,
-#message-input,
-.p-emoji_picker__input_container, .p-emoji_picker__input
+#message-input, .message_input,
+.p-emoji_picker__input_container, .p-emoji_picker__input,
+.title, .c-message__file_meta_title,
+.reply_broadcast_label_container
 {
     background: none !important;
-    color: white !important;
+    color: whitesmoke !important;
 	font-family: -apple-system-font !important;
 }
 
