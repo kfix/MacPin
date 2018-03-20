@@ -92,7 +92,8 @@ pre,
 .panel .heading,
 #mentions_options,
 #search_tab, #flex_contents, #search_results,
-#search_options, #search_filters, #search_results_loading {
+#search_options, #search_filters, #search_results_loading,
+.thread_messages{
     background: none !important;
 	background-color: inherit !important;
 }
