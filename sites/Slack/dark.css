@@ -10,7 +10,7 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
 */
 
 :root, #client-ui {
-	background: black;
+	background: black !important;
 	/* if tab is made transparent, these are overriden */
 }
 
@@ -61,9 +61,12 @@ html, body,
 .unread_msgs_loading, ts-thread,
 ts-message.active:not(.standalone):not(.multi_delete_mode):not(.highlight),
 ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
+.client_container, .client_main_container, .container-fluid,
+.c-scrollbar__hider, .c-message,
 .c-message:hover, .c-message--hover,
 .channel_title_info,
 .p-message_pane__top_banners,
+.c-virtual_list,
 .c-virtual_list__item--sticky,
 .c-message--adjacent,
 .c-message--ephemeral,
@@ -75,6 +78,7 @@ pre,
 #channel_header_info,
 #primary_file_button,
 #col_messages > .row-fluid,
+#col_messages,
 #col_flex,
 .search_message_result,
 .search_result_with_extract,
@@ -238,7 +242,8 @@ pre.c-mrkdwn__pre
 .p-emoji_picker, .p-emoji_picker__list_container,
 .p-emoji_picker__heading, .p-emoji_picker__heading,
 .search_menu, .query_header, .footer__navigation-help,
-.fs_modal_file_viewer_header, .viewer
+.fs_modal_file_viewer_header, .viewer,
+.contents_container, .channel_list_container
 {
 	background: black !important;
 	color: lime !important;
