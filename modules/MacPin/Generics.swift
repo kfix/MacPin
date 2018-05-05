@@ -150,6 +150,7 @@ func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? 
 				return nil
 			}
 		}
+		if urlp.scheme == "about" { return urlp.URL }
 		barehttp: if let path = urlp.path where !path.isEmpty && !urlstr.characters.contains(" ") && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
 			if let _ = Int(path) { break barehttp; } //FIXME: ensure not all numbers. RFC952 & 1123 differ on this, but inet_ does weird stuff regardless
 			urlp.scheme = "http"
