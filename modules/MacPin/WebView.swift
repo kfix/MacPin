@@ -206,7 +206,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		prefs._fullScreenEnabled = true
 
 		// https://webkit.org/blog/7763/a-closer-look-into-webrtc/
-		if #available(OSX 10.12, iOS 10, *) {
+		if #available(OSX 10.13, iOS 11, *) {
 			prefs._mediaCaptureRequiresSecureConnection = false
 			prefs._mediaDevicesEnabled = true
 			prefs._mockCaptureDevicesEnabled = false

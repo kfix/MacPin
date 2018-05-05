@@ -73,9 +73,9 @@ import JavaScriptCore
 }
 
 extension WebViewController: _WKDiagnosticLoggingDelegate {
-	func _webView(webView: WKWebView, logDiagnosticMessage message: String, description: String) { warn("\(message) || \(description)") }
-	func _webView(webView: WKWebView, logDiagnosticMessageWithResult message: String, description: String, result: _WKDiagnosticLoggingResultType) { warn("\(message) || \(description) >> \(String(result))") }
-	func _webView(webView: WKWebView, logDiagnosticMessageWithValue message: String, description: String, value: String) { warn("\(message) || \(description) == \(value)") }
+	func _webView(webView: WKWebView, logDiagnosticMessage message: String, description: String) { warn("\(message) || \(description) << \(webView.URL ?? String())") }
+	func _webView(webView: WKWebView, logDiagnosticMessageWithResult message: String, description: String, result: _WKDiagnosticLoggingResultType) { warn("\(message) || \(description) >> \(String(result)) << \(webView.URL ?? String())") }
+	func _webView(webView: WKWebView, logDiagnosticMessageWithValue message: String, description: String, value: String) { warn("\(message) || \(description) == \(value) << \(webView.URL ?? String())") }
 }
 
 extension WebViewController: _WKDownloadDelegate {
