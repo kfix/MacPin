@@ -33,6 +33,10 @@ delegate.launchURL = function(url) {
 	}
 };
 
+delegate.networkIsOffline = function(url, tab) {
+	console.log(`Could not navigate to ${url} - network is offline!`);
+}
+
 // handles all URLs drag-and-dropped into MacPin.
 delegate.handleDragAndDroppedURLs = function(urls) {
 	var ret = false;
@@ -55,6 +59,7 @@ delegate.decideNavigationForMIME = function(mime, url, webview) {
 	switch (mime) {
 		case 'audio/mpegurl': // m3u8
 		case 'application/x-mpegurl':
+		case 'application/vnd.apple.mpegurl':
 			// FIXME: ensure url is for main frame
 			webview.loadURL('file://' + $.app.resourcePath + '/media_player.html?src=' + url); // FIXME: urldecode(url)
 			return true;
