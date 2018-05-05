@@ -271,7 +271,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 					}
 					// ooh, pretty: https://github.com/Naituw/WBWebViewConsole
 					// https://github.com/Naituw/WBWebViewConsole/blob/master/WBWebViewConsole/Views/WBWebViewConsoleInputView.m
-				case let isurl where !launched && (arg.hasPrefix("http:") || arg.hasPrefix("https:")):
+				case let isurl where !launched && (arg.hasPrefix("http:") || arg.hasPrefix("https:") || arg.hasPrefix("about:") || arg.hasPrefix("file:")):
 					warn("launched: \(launched) -> \(arg)")
 					application(NSApp, openFile: arg) // LS will openFile AND argv.append() fully qualified URLs
 				default:
@@ -345,7 +345,9 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 	public func application(theApplication: NSApplication, openFile filename: String) -> Bool {
 		warn(filename)
 		if let ftype = try? NSWorkspace.sharedWorkspace().typeOfFile(filename) {
+			warn(ftype)
 			switch ftype {
+				// check file:s for spaces and urlescape them
 				//case "public.data":
 				//case "public.folder":
 				case "com.apple.web-internet-location": //.webloc http://stackoverflow.com/questions/146575/crafting-webloc-file
@@ -376,7 +378,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 
 		// handles public.url
 		if let url = validateURL(filename) {
-			warn("opening: \(url)")
+			warn("opening public.url: \(url)")
 			browserController.tabSelected = MPWebView(url: url)
 			return true
 		}

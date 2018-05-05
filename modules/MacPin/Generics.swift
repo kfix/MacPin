@@ -132,24 +132,42 @@ func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? 
 	// or firefox-ios: https://github.com/mozilla/firefox-ios/commit/6cab24f7152c2e56e864a9d75f4762b2fbdc6890
 	// FIXME: handle javascript: urls
 	if urlstr.isEmpty { return nil }
-	if let urlp = NSURLComponents(string: urlstr) where !urlstr.hasPrefix("?") {
-		// FIXME: ^ urlp doesn't handle unescaped spaces in filenames
-		if urlp.scheme == "file" || urlstr.hasPrefix("/") || urlstr.hasPrefix("~/") || urlstr.hasPrefix("./") {
-			urlp.scheme = "file"
-			guard var path = urlp.path else { warn("no filepath!"); return nil }
-			if path.hasPrefix("./") { // consider this == Resources/, then == CWD/
-				path.replaceRange(path.startIndex..<path.startIndex.advancedBy(1),
-					with: NSBundle.mainBundle().resourcePath ?? NSFileManager().currentDirectoryPath)
-				urlp.path = path
-			}
 
-			if let url = urlp.URL?.URLByStandardizingPath where NSFileManager.defaultManager().fileExistsAtPath(url.path ?? String()) {
-				return url
-			} else {
-				warn("\(path) not found - request was for \(urlstr)")
-				return nil
-			}
+	// handle file:s
+	if urlstr.hasPrefix("file:") || urlstr.hasPrefix("/") || urlstr.hasPrefix("~/") || urlstr.hasPrefix("./") {
+		warn("validating file: url: \(urlstr)")
+		let urlp = NSURLComponents()
+		var path = urlstr
+		urlp.scheme = "file"
+		//if path.hasPrefix("file:") { path.removeFirst(5) } // swift3
+		if path.hasPrefix("file:") { path.removeRange(path.startIndex..<path.startIndex.advancedBy(5)) }
+		if path.hasPrefix("///") { path.removeRange(path.startIndex..<path.startIndex.advancedBy(2)) }
+		if path.isEmpty { warn("no filepath!"); return nil }
+		urlp.path = path
+
+		//if var upath = path.stringByAddingPercentEncodingWithAllowedCharacters(NSCharacterSet.URLPathAllowedCharacterSet()) {
+		//	urlp.path = upath
+		//	warn("urlescaped \(upath) -> \(urlp.path)")
+		//}
+
+		if path.hasPrefix("./") { // consider this == Resources/, then == CWD/
+			path.replaceRange(path.startIndex..<path.startIndex.advancedBy(1),
+				with: NSBundle.mainBundle().resourcePath ?? NSFileManager().currentDirectoryPath)
+			// TODO: handle spaces
+			urlp.path = path
 		}
+
+		// TODO: handle ~/
+
+		if let url = urlp.URL?.URLByStandardizingPath where NSFileManager.defaultManager().fileExistsAtPath(path) {
+			return url // this file is confirmed to exist, lets use it
+			// BUG: this is accepting all folders, should only do that if index.html exists
+		} else {
+			warn("\(path) not found - request was for \(urlstr)")
+			return nil
+		}
+	} else if let urlp = NSURLComponents(string: urlstr) where !urlstr.hasPrefix("?") {
+		// handle networked urls
 		if urlp.scheme == "about" { return urlp.URL }
 		barehttp: if let path = urlp.path where !path.isEmpty && !urlstr.characters.contains(" ") && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
 			if let _ = Int(path) { break barehttp; } //FIXME: ensure not all numbers. RFC952 & 1123 differ on this, but inet_ does weird stuff regardless
@@ -164,6 +182,7 @@ func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? 
 			if gethostbyname2(chost, AF_INET).hashValue > 0 || gethostbyname2(chost, AF_INET6).hashValue > 0 { // failed lookups return null pointer
 				return url // hostname resolved, so use this url
 			}
+			// what if lookup failed because internet offline? should call jsdelegate.networkIsOffline ??
 		}
 	}
 
@@ -180,7 +199,7 @@ func searchForKeywords(str: String) -> NSURL? {
 
 	// maybe its a search query? check if blank and reformat it
 	if !str.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
-		let query = str.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding),
+		let query = str.stringByAddingPercentEncodingWithAllowedCharacters(NSCharacterSet.URLQueryAllowedCharacterSet()),
 		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") { // FIXME: JS setter
 			return search
 		}
