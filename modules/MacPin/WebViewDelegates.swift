@@ -174,9 +174,14 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 				//case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.CFURLErrorZeroByteResource.rawValue)):
 				//case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.CFErrorHTTPConnectionLost.rawValue)):
 				//	fallthrough // retry?
-				case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.CFURLErrorNotConnectedToInternet.rawValue)):
+				case (NSURLErrorDomain, Int(CFNetworkErrors.CFURLErrorNotConnectedToInternet.rawValue)):
+					// JS console *might* error-say: "Failed to load resource: The Internet connection appears to be offline."
 					warn("Disconnected?")
 					//fallthrough // machine might not be awake and wifi is off
+					// URL never appears in the address bar if it was the primary addr
+					// this should not be the case. it should show struck-through or red or italic or something.
+					// or SOS bonk noises
+					jsdelegate.tryFunc("networkIsOffline", url.description, webView)
 				case(NSPOSIXErrorDomain, 1): // Operation not permitted
 					warn("Sandboxed?")
 					//fallthrough
@@ -241,13 +246,17 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 			}
 		}
 
-		if url.fileURL && mime == "audio/mpegurl" {
+		if url.fileURL && (mime == "audio/mpegurl") {
 			// offer to cache HLS streams to an asset for offline-play
 			// AVFoundation plugin will not stream from file:///*.m3u8 without caching them
 			//  https://github.com/r-plus/HLSion AVAssetDownloadURLSession
 			// TODO: need to copy webview's request cookies/headers for remote AVAssetDownloads...
+			warn(mime)
+			// or ... at least convert to an HTML5 <video> player with the url injected into it
+			//   will allow inspector to work properly...dunno about session state (cookies/headers/blah blah)
+				//decisionHandler(.Cancel)
+		    //webView.goto(MP_HLS_PLAYER_URL + "?src=\(url)")
 		}
-
 		decisionHandler(.Allow)
 	}
 
@@ -275,6 +284,11 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
     }
 
 	func webView(webView: WKWebView, didFinishNavigation navigation: WKNavigation!) {
+		// no-loads from fresh tabs to pages while offline end up here with no errors fired on provisonal navigation handlers....
+		//  need to be able check final disposition here and throw a notification
+		//  A navigation object is returned from the web view load methods and is also passed to the navigation delegate methods to uniquely identify a webpage load from start to finish. It has no method or properties of its own.
+		// so MPWebView(Controller) needs to track top-level WKNavigations so we can compare the webView.url to see if the related-url for this particular WKNavigation matches it.
+		//   if not, then the navigation was unsuccessful (but not failed, and the difference is ...?)
 		warn(webView.description)
 		//let title = webView.title ?? String()
 		//let url = webView.URL ?? NSURL(string:"")!
@@ -332,8 +346,9 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 	}
 
 	func _webViewWebProcessDidCrash(webView: WKWebView) {
-	    warn("reloading page")
-		webView.reload()
+	    //warn("reloading page")
+		//webView.reload()
+		warn("webview crashed!!")
 	}
 }
 
