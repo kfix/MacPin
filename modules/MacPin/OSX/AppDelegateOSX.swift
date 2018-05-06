@@ -5,7 +5,7 @@ import Darwin
 //import Bookmarks
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
-public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
+open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 	var browserController: BrowserViewController = BrowserViewControllerOSX()
 	var window: Window?
@@ -48,7 +48,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	}
 
 	// handle URLs passed by open
-	func handleGetURLEvent(event: NSAppleEventDescriptor!, replyEvent: NSAppleEventDescriptor?) {
+	func handleGetURLEvent(_ event: NSAppleEventDescriptor!, replyEvent: NSAppleEventDescriptor?) {
 		if let urlstr = event.paramDescriptorForKeyword(AEKeyword(keyDirectObject))!.stringValue {
 			warn("`\(urlstr)` -> AppScriptRuntime.shared.jsdelegate.launchURL()")
 			AppScriptRuntime.shared.exports.setObject(urlstr, forKeyedSubscript: "launchedWithURL")
@@ -81,16 +81,16 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 extension MacPinAppDelegateOSX: ApplicationDelegate {
 
-	public func applicationDockMenu(sender: NSApplication) -> NSMenu? { return browserController.tabMenu }
+	public func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { return browserController.tabMenu }
 
-	public func applicationShouldOpenUntitledFile(app: NSApplication) -> Bool { return false }
+	public func applicationShouldOpenUntitledFile(_ app: NSApplication) -> Bool { return false }
 
 	//public func application(sender: AnyObject, openFileWithoutUI filename: String) -> Bool {} // app terminates on return!
 	//public func application(theApplication: NSApplication, printFile filename: String) -> Bool {} // app terminates on return
 
 	//public func finishLaunching() { super.finishLaunching() } // app activates, NSOpen files opened
 
-	public func applicationWillFinishLaunching(notification: NSNotification) { // dock icon bounces, also before self.openFile(foo.bar) is called
+	public func applicationWillFinishLaunching(_ notification: NSNotification) { // dock icon bounces, also before self.openFile(foo.bar) is called
 		NSUserNotificationCenter.defaultUserNotificationCenter().delegate = self
 		let app = notification.object as? NSApplication
 		//let appname = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleName") ?? NSProcessInfo.processInfo().processName
@@ -216,7 +216,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		NSAppleEventManager.sharedAppleEventManager().setEventHandler(self, andSelector: #selector(MacPinAppDelegateOSX.handleGetURLEvent(_:replyEvent:)), forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url schemes
 	}
 
-    public func applicationDidFinishLaunching(notification: NSNotification) { //dock icon stops bouncing
+    public func applicationDidFinishLaunching(_ notification: NSNotification) { //dock icon stops bouncing
 
 /*
 		http://stackoverflow.com/a/13621414/3878712
@@ -240,9 +240,9 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 			userNotificationCenter(NSUserNotificationCenter.defaultUserNotificationCenter(), didActivateNotification: userNotification)
 		}
 
-		let launched = Process.arguments.dropFirst().first?.hasPrefix("-psn_0_") ?? false // Process Serial Number from LaunchServices open()
-		warn(Process.arguments.description)
-		for (idx, arg) in Process.arguments.dropFirst().enumerate() {
+		let launched = CommandLine.arguments.dropFirst().first?.hasPrefix("-psn_0_") ?? false // Process Serial Number from LaunchServices open()
+		warn(CommandLine.arguments.description)
+		for (idx, arg) in CommandLine.arguments.dropFirst().enumerated() {
 			switch (arg) {
 				case "-i" where isatty(1) == 1:
 					 //open a JS console on the terminal, if present
@@ -258,12 +258,12 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 					// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/inspector/remote/RemoteInspectorConstants.h
 					// https://github.com/siuying/IGJavaScriptConsole
 				case "-t" where isatty(1) == 1:
-					if idx + 1 >= Process.arguments.count { // no arg after this one
+					if idx + 1 >= CommandLine.arguments.count { // no arg after this one
 						browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
 						break
 					}
 
-					if let tabnum = Int(Process.arguments[idx + 1]) where browserController.tabs.count >= tabnum { // next argv should be tab number
+					if let tabnum = Int(CommandLine.arguments[idx + 1]) where browserController.tabs.count >= tabnum { // next argv should be tab number
 						browserController.tabs[tabnum].REPL() // open a JS Console on the requested tab number
 						// FIXME skip one more arg
 					} else {
@@ -292,11 +292,11 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 
     }
 
-	public func applicationDidBecomeActive(notification: NSNotification) {
+	public func applicationDidBecomeActive(_ notification: NSNotification) {
 		//if application?.orderedDocuments?.count < 1 { showApplication(self) }
 	}
 
-	public func application(application: NSApplication, willPresentError error: NSError) -> NSError {
+	public func application(_ application: NSApplication, willPresentError error: NSError) -> NSError {
 		// not in iOS: http://stackoverflow.com/a/13083203/3878712
 		// NOPE, this can cause loops warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 		if error.domain == NSURLErrorDomain {
@@ -313,7 +313,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		return error
 	}
 
-	public func applicationShouldTerminate(sender: NSApplication) -> NSApplicationTerminateReply {
+	public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplicationTerminateReply {
 		warn()
 		windowController?.close() // kill the window if it still exists
 		windowController?.window = nil
@@ -328,7 +328,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		return .TerminateNow
 	}
 
-	public func applicationWillTerminate(notification: NSNotification) {
+	public func applicationWillTerminate(_ notification: NSNotification) {
 		warn()
 		NSUserDefaults.standardUserDefaults().synchronize()
 #if arch(x86_64) || arch(i386)
@@ -338,11 +338,11 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 #endif
 	}
 
-	public func applicationShouldTerminateAfterLastWindowClosed(app: NSApplication) -> Bool { return true }
+	public func applicationShouldTerminateAfterLastWindowClosed(_ app: NSApplication) -> Bool { return true }
 
 	// handles drag-to-dock-badge, /usr/bin/open and argv[1:] requests specifiying urls & local pathnames
 	// https://github.com/WebKit/webkit/commit/3e028543b95387e8ac73e9947a5cef4dd1ac90f2
-	public func application(theApplication: NSApplication, openFile filename: String) -> Bool {
+	public func application(_ theApplication: NSApplication, openFile filename: String) -> Bool {
 		warn(filename)
 		if let ftype = try? NSWorkspace.sharedWorkspace().typeOfFile(filename) {
 			warn(ftype)
@@ -389,7 +389,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 
 extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 	//didDeliverNotification
-	public func userNotificationCenter(center: NSUserNotificationCenter, didActivateNotification notification: NSUserNotification) {
+	public func userNotificationCenter(_ center: NSUserNotificationCenter, didActivateNotification notification: NSUserNotification) {
 		warn("user clicked notification")
 
 		if AppScriptRuntime.shared.jsdelegate.tryFunc("handleClickedNotification", notification.title ?? "", notification.subtitle ?? "", notification.informativeText ?? "", notification.identifier ?? "") {
@@ -399,12 +399,12 @@ extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 	}
 
 	// always display notifcations, even if app is active in foreground (for alert sounds)
-	public func userNotificationCenter(center: NSUserNotificationCenter, shouldPresentNotification notification: NSUserNotification) -> Bool { return true }
+	public func userNotificationCenter(_ center: NSUserNotificationCenter, shouldPresentNotification notification: NSUserNotification) -> Bool { return true }
 }
 
 extension MacPinAppDelegateOSX: NSWindowRestoration {
 	// https://developer.apple.com/library/mac/documentation/General/Conceptual/MOSXAppProgrammingGuide/CoreAppDesign/CoreAppDesign.html#//apple_ref/doc/uid/TP40010543-CH3-SW35
-	public static func restoreWindowWithIdentifier(identifier: String, state: NSCoder, completionHandler: ((NSWindow?,NSError?) -> Void)) {
+	public static func restoreWindowWithIdentifier(_ identifier: String, state: NSCoder, completionHandler: ((NSWindow?,NSError?) -> Void)) {
 		if let app = MacPinApp.sharedApplication().appDelegate, let window = app.window where identifier == "browser" {
 			completionHandler(window, nil)
 			//WKWebView._restoreFromSessionStateData ...

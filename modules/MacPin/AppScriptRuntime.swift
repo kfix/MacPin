@@ -40,7 +40,7 @@ extension NSObject: JSExport {
 
 // FIXME: AppScript needs a HandlerMethods enum instead of just tryFunc("unsafe-string")s everywhere....
 extension JSValue {
-	func tryFunc (method: String, argv: [AnyObject]) -> Bool {
+	func tryFunc (_ method: String, argv: [AnyObject]) -> Bool {
 		if self.isObject && self.hasProperty(method) {
 			warn("this.\(method) <- \(argv)")
 			let ret = self.invokeMethod(method, withArguments: argv)
@@ -51,11 +51,11 @@ extension JSValue {
 		//FIXME: handle a passed-in closure so we can handle any ret-type instead of only bools ...
 	}
 
-	func tryFunc (method: String, _ args: AnyObject...) -> Bool { //variadic overload
+	func tryFunc (_ method: String, _ args: AnyObject...) -> Bool { //variadic overload
 		return self.tryFunc(method, argv: args)
 	}
 
-	func thisEval(code: String, sourceURL: String? = nil, exception: JSValue = JSValue()) -> JSValue? {
+	func thisEval(_ code: String, sourceURL: String? = nil, exception: JSValue = JSValue()) -> JSValue? {
 		let source: JSStringRef?
 		if let urlstr = sourceURL { source = JSStringCreateWithCFString(urlstr as CFString) } else { source = nil }
 		/*guard*/ let jsval = JSEvaluateScript(
@@ -77,7 +77,7 @@ extension JSValue {
 	var appPath: String { get }
 	var resourcePath: String { get }
 	var arguments: [AnyObject] { get }
-	var environment: [NSObject:AnyObject] { get }
+	var environment: [AnyHashable: Any] { get }
 	var name: String { get }
 	var bundleID: String { get }
 	var hostname: String { get }
@@ -85,17 +85,17 @@ extension JSValue {
 	var arches: [AnyObject]? { get }
 	var platform: String { get }
 	var platformVersion: String { get }
-	func registerURLScheme(scheme: String)
+	func registerURLScheme(_ scheme: String)
 	//func registerMIMEType(scheme: String)
-	func registerUTI(scheme: String)
-	func changeAppIcon(iconpath: String)
-	@objc(postNotification::::) func postNotification(title: String?, subtitle: String?, msg: String?, id: String?)
-	func postHTML5Notification(object: [String:AnyObject])
-	func openURL(urlstr: String, _ app: String?)
-	func sleep(secs: Double)
-	func doesAppExist(appstr: String) -> Bool
-	func pathExists(path: String) -> Bool
-	func loadAppScript(urlstr: String) -> JSValue?
+	func registerUTI(_ scheme: String)
+	func changeAppIcon(_ iconpath: String)
+	@objc(postNotification::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?)
+	func postHTML5Notification(_ object: [String:AnyObject])
+	func openURL(_ urlstr: String, _ app: String?)
+	func sleep(_ secs: Double)
+	func doesAppExist(_ appstr: String) -> Bool
+	func pathExists(_ path: String) -> Bool
+	func loadAppScript(_ urlstr: String) -> JSValue?
 	// static func // exported as global JS func
 #if DEBUG
 	func evalJXA(script: String)
@@ -111,7 +111,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	let exports: JSValue
 
 	var arguments: [AnyObject] { return NSProcessInfo.processInfo().arguments }
-	var environment: [NSObject:AnyObject] { return NSProcessInfo.processInfo().environment }
+	var environment: [AnyHashable: Any] { return NSProcessInfo.processInfo().environment }
 	var appPath: String { return NSBundle.mainBundle().bundlePath ?? String() }
 	var resourcePath: String { return NSBundle.mainBundle().resourcePath ?? String() }
 	var hostname: String { return NSProcessInfo.processInfo().hostName }
@@ -165,9 +165,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		//FIXME: extend Fetch API instead: https://facebook.github.io/react-native/docs/network.html
 
 		// set console.log to NSBlock that will call warn()
-		let logger: @convention(block) String -> Void = { msg in warn(msg) }
+		let logger: @convention(block) (String) -> Void = { msg in warn(msg) }
 		let console = JSValue(newObjectInContext: context)
-		console.setObject(unsafeBitCast(logger, AnyObject.self), forKeyedSubscript: "log")
+		console.setObject(unsafeBitCast(logger, to: AnyObject.self), forKeyedSubscript: "log")
 		context.globalObject.setObject(console, forKeyedSubscript: "console") // overrides JSC's built-in
 
 		// FIXME: imitate JSConsole or JSConsoleClient to intercept built-in console.* support instead of shimming blocks
@@ -183,7 +183,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	override var description: String { return "<\(self.dynamicType)> [\(appPath)] `\(context.name)`" }
 
-	func sleep(secs: Double) {
+	func sleep(_ secs: Double) {
 		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * secs))
 		dispatch_after(delayTime, dispatch_get_main_queue()){}
 		//NSThread.sleepForTimeInterval(secs)
@@ -235,7 +235,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	// FIXME: ES6 modules? context.evaluateScript("import ...") or "System.load()";
-	func loadAppScript(urlstr: String) -> JSValue? {
+	func loadAppScript(_ urlstr: String) -> JSValue? {
 		if let scriptURL = NSURL(string: urlstr), script = try? NSString(contentsOfURL: scriptURL, encoding: NSUTF8StringEncoding), sourceURL = scriptURL.absoluteString {
 			// FIXME: script code could be loaded from anywhere, exploitable?
 			warn("\(scriptURL): read")
@@ -284,7 +284,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		return nil
 	}
 
-	func doesAppExist(appstr: String) -> Bool {
+	func doesAppExist(_ appstr: String) -> Bool {
 #if os(OSX)
 		if LSCopyApplicationURLsForBundleIdentifier(appstr as CFString, nil) != nil { return true }
 #elseif os(iOS)
@@ -295,9 +295,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		return false
 	}
 
-	func pathExists(path: String) -> Bool {	return NSFileManager.defaultManager().fileExistsAtPath((path as NSString).stringByExpandingTildeInPath) }
+	func pathExists(_ path: String) -> Bool {	return NSFileManager.defaultManager().fileExistsAtPath((path as NSString).stringByExpandingTildeInPath) }
 
-	func openURL(urlstr: String, _ appid: String? = nil) {
+	func openURL(_ urlstr: String, _ appid: String? = nil) {
 		if let url = NSURL(string: urlstr) {
 #if os(OSX)
 			if let appid = appid where appid != "undefined" {
@@ -322,7 +322,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	//  support opening a page as a NSStatusItem icon by the clock
 	// https://github.com/phranck/CCNStatusItem
 
-	func changeAppIcon(iconpath: String) {
+	func changeAppIcon(_ iconpath: String) {
 #if os(OSX)
 		/*
 		switch (iconpath) {
@@ -343,7 +343,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
-	func registerURLScheme(scheme: String) {
+	func registerURLScheme(_ scheme: String) {
 		// there *could* be an API for this in WebKit, like Chrome & FF: https://bugs.webkit.org/show_bug.cgi?id=92749
 		// https://developer.mozilla.org/en-US/docs/Web-based_protocol_handlers
 #if os(OSX)
@@ -362,14 +362,14 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		//registerUTI(uti)
 	//}
 
-	func registerUTI(uti: String) {
+	func registerUTI(_ uti: String) {
 #if os(OSX)
 		LSSetDefaultRoleHandlerForContentType(uti, .All,  NSBundle.mainBundle().bundleIdentifier!) //kLSRolesNone|Viewer|Editor|Shell|All
 		warn("registered UTI handler in OSX: \(uti)")
 #endif
 	}
 
-	@objc(postNotification::::) func postNotification(title: String?, subtitle: String?, msg: String?, id: String?) {
+	@objc(postNotification::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?) {
 #if os(OSX)
 		let note = NSUserNotification()
 		note.title = title ?? ""
@@ -414,7 +414,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 */
 
-	func postHTML5Notification(object: [String:AnyObject]) {
+	func postHTML5Notification(_ object: [String:AnyObject]) {
 		// object's keys conforming to:
 		//   https://developer.mozilla.org/en-US/docs/Web/API/notification/Notification
 
@@ -495,7 +495,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		)
 	}
 
-	func evalJXA(script: String) {
+	func evalJXA(_ script: String) {
 		// FIXME: force a confirmation panel with printout of script and func+args to be called.....
 #if os(OSX)
 		var error: NSDictionary?
@@ -508,7 +508,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
-	func callJXALibrary(library: String, _ call: String, _ args: [AnyObject]) {
+	func callJXALibrary(_ library: String, _ call: String, _ args: [AnyObject]) {
 		// FIXME: force a confirmation panel with link to library path and func+args to be called.....
 #if os(OSX)
 #if DEBUG

@@ -20,7 +20,7 @@ import Prompt // https://github.com/neilpa/swift-libedit
 var prompter: Async? = nil
 #endif
 
-func warn(msg: String = String(), function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
+func warn(_ msg: String = String(), function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
 	// https://github.com/swisspol/XLFacility ?
 	NSFileHandle.fileHandleWithStandardError().writeData(("[\(NSDate())] <\(file):\(line):\(column)> [\(function)] \(msg)\n").dataUsingEncoding(NSUTF8StringEncoding)!)
 #if WARN2NSLOG
@@ -51,7 +51,7 @@ func assert(condition: @autoclosure () -> Bool, _ message: String = "",
 */
 
 // https://developer.apple.com/library/content/documentation/Tools/Conceptual/SafariExtensionGuide/InjectingScripts/InjectingScripts.html#//apple_ref/doc/uid/TP40009977-CH6-SW1
-func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
+func loadUserScriptFromBundle(_ basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
 	if let scriptUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") where !basename.isEmpty {
 		warn("loading userscript: \(scriptUrl)")
 		let script = WKUserScript(
@@ -98,7 +98,7 @@ func loadUserScriptFromBundle(basename: String, webctl: WKUserContentController,
 
 // https://developer.apple.com/library/content/documentation/Tools/Conceptual/SafariExtensionGuide/AddingStyles/AddingStyles.html#//apple_ref/doc/uid/TP40009977-CH7-SW3
 // does WK2 support `@import: url("file://Path/To/Your/Stylesheet.css");` ??
-func loadUserStyleSheetFromBundle(basename: String, webctl: WKUserContentController, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
+func loadUserStyleSheetFromBundle(_ basename: String, webctl: WKUserContentController, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
 	if let cssUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "css") where !basename.isEmpty {
 		warn("loading stylesheet: \(cssUrl)")
 		let css = _WKUserStyleSheet(
@@ -127,7 +127,7 @@ func loadUserStyleSheetFromBundle(basename: String, webctl: WKUserContentControl
 	return true
 }
 
-func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? {
+func validateURL(_ urlstr: String, fallback: ((String) -> NSURL?)? = nil) -> NSURL? {
 	// apply fuzzy logic like WK1: https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 	// or firefox-ios: https://github.com/mozilla/firefox-ios/commit/6cab24f7152c2e56e864a9d75f4762b2fbdc6890
 	// FIXME: handle javascript: urls
@@ -194,7 +194,7 @@ func validateURL(urlstr: String, fallback: (String -> NSURL?)? = nil) -> NSURL? 
 	}
 }
 
-func searchForKeywords(str: String) -> NSURL? {
+func searchForKeywords(_ str: String) -> NSURL? {
 	// return a URL that will search the given keyword string
 
 	// maybe its a search query? check if blank and reformat it
@@ -209,10 +209,10 @@ func searchForKeywords(str: String) -> NSURL? {
 }
 
 // TODO: exposing a websocketREPL would also be neat: https://github.com/siuying/IGJavaScriptConsole https://github.com/zwopple/PocketSocket
-func termiosREPL(eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2: StaticString = #function, abort:(()->Void)? = nil) {
+func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2: StaticString = #function, abort:(()->Void)? = nil) {
 #if arch(x86_64) || arch(i386)
 	prompter = Async.background {
-		let prompt = Prompt(argv0: Process.unsafeArgv[0], prompt: "\(ps1)[\(ps2)]:> ")
+		let prompt = Prompt(argv0: CommandLine.unsafeArgv[0], prompt: "\(ps1)[\(ps2)]:> ")
 		while (true) {
 		    if let line = prompt.gets() { // R: blocks here until Enter pressed
 				if !line.hasPrefix("\n") {

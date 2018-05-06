@@ -18,20 +18,20 @@ class MacPinAppDelegateIOS: NSObject, MacPinAppDelegate {
 }
 
 extension MacPinAppDelegateIOS: ApplicationDelegate { //UIResponder
-	func application(application: UIApplication, openURL url: NSURL, sourceApplication: String?, annotation: AnyObject) -> Bool {
+	func application(_ application: UIApplication, openURL url: NSURL, sourceApplication: String?, annotation: AnyObject) -> Bool {
 		warn("`\(url)` -> AppScriptRuntime.shared.jsdelegate.launchURL()")
 		AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(url.description, forKeyedSubscript: "launchedWithURL")
 		AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", url.description)
 		return true //FIXME
 	}
 
-	func application(application: UIApplication, willFinishLaunchingWithOptions launchOptions: [NSObject : AnyObject]?) -> Bool { // state not restored, UI not presented
+	func application(_ application: UIApplication, willFinishLaunchingWithOptions launchOptions: [AnyHashable: Any]?) -> Bool { // state not restored, UI not presented
 		application.registerUserNotificationSettings(UIUserNotificationSettings(forTypes: [UIUserNotificationType.Sound, UIUserNotificationType.Alert, UIUserNotificationType.Badge], categories: nil))
 
 		return true //FIXME
 	}
 
-	func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject : AnyObject]?) -> Bool { //state restored, but UI not presented yet
+	func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable: Any]?) -> Bool { //state restored, but UI not presented yet
 		// launchOptions: http://nshipster.com/launch-options/
 
 		window = Window(frame: UIScreen.mainScreen().bounds) // total pixels w/ rotation
@@ -43,17 +43,17 @@ extension MacPinAppDelegateIOS: ApplicationDelegate { //UIResponder
 		// airplay to an external screen on a mac or appletv
 		//	https://developer.apple.com/library/ios/documentation/WindowsViews/Conceptual/WindowAndScreenGuide/UsingExternalDisplay/UsingExternalDisplay.html#//apple_ref/doc/uid/TP40012555-CH3-SW1
 
-		for (idx, arg) in Process.arguments.enumerate() {
+		for (idx, arg) in CommandLine.arguments.enumerated() {
 			switch (arg) {
 				case "-i":
 					if isatty(1) == 1 { AppScriptRuntime.shared.REPL() } //open a JS console on the terminal, if present
 				case "-t":
 					if isatty(1) == 1 {
-						if idx + 1 >= Process.arguments.count { // no arg after this one
+						if idx + 1 >= CommandLine.arguments.count { // no arg after this one
 							browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
 							break
 						}
-						if let tabnum = Int(Process.arguments[idx + 1]) where browserController.tabs.count >= tabnum { // next argv should be tab number
+						if let tabnum = Int(CommandLine.arguments[idx + 1]) where browserController.tabs.count >= tabnum { // next argv should be tab number
 							browserController.tabs[tabnum].REPL() // open a JS Console on the requested tab number
 						} else {
 							browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
@@ -62,7 +62,7 @@ extension MacPinAppDelegateIOS: ApplicationDelegate { //UIResponder
 					// ooh, pretty: https://github.com/Naituw/WBWebViewConsole
 					// https://github.com/Naituw/WBWebViewConsole/blob/master/WBWebViewConsole/Views/WBWebViewConsoleInputView.m
 				default:
-					if arg != Process.arguments[0] && !arg.hasPrefix("-psn_0_") { // Process Serial Number from LaunchServices open()
+					if arg != CommandLine.arguments[0] && !arg.hasPrefix("-psn_0_") { // Process Serial Number from LaunchServices open()
 						warn("unrecognized argv[]: `\(arg)`")
 					}
 			}
@@ -71,7 +71,7 @@ extension MacPinAppDelegateIOS: ApplicationDelegate { //UIResponder
 		return true //FIXME
   }
 
-	func applicationDidBecomeActive(application: UIApplication) { // UI presented
+	func applicationDidBecomeActive(_ application: UIApplication) { // UI presented
 		//if application?.orderedDocuments?.count < 1 { showApplication(self) }
 
 		browserController.view.frame = UIScreen.mainScreen().bounds
@@ -108,14 +108,14 @@ extension MacPinAppDelegateIOS: ApplicationDelegate { //UIResponder
 	}
 	*/
 
-	func applicationWillTerminate(application: UIApplication) { NSUserDefaults.standardUserDefaults().synchronize() }
+	func applicationWillTerminate(_ application: UIApplication) { NSUserDefaults.standardUserDefaults().synchronize() }
 
-	func application(application: UIApplication, shouldSaveApplicationState coder: NSCoder) -> Bool { return false }
-	func application(application: UIApplication, shouldRestoreApplicationState coder: NSCoder) -> Bool { return false }
+	func application(_ application: UIApplication, shouldSaveApplicationState coder: NSCoder) -> Bool { return false }
+	func application(_ application: UIApplication, shouldRestoreApplicationState coder: NSCoder) -> Bool { return false }
 
 	//func applicationDidReceiveMemoryWarning(application: UIApplication) { close all hung tabs! }
 
-	func application(application: UIApplication, didReceiveLocalNotification notification: UILocalNotification) {
+	func application(_ application: UIApplication, didReceiveLocalNotification notification: UILocalNotification) {
 		warn("user clicked notification")
 
 		if AppScriptRuntime.shared.jsdelegate.tryFunc("handleClickedNotification", notification.alertTitle ?? "", notification.alertAction ?? "", notification.alertBody ?? "") {

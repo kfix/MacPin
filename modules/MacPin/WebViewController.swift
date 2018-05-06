@@ -67,29 +67,29 @@ import JavaScriptCore
 	func askToOpenCurrentURL() { askToOpenURL(webview.URL!) }
 
 	// sugar for delgates' opening a new tab in parent browser VC
-	func popup(webview: MPWebView) { parentViewController?.addChildViewController(self.dynamicType.init(webview: webview)) }
+	func popup(_ webview: MPWebView) { parentViewController?.addChildViewController(self.dynamicType.init(webview: webview)) }
 
 	deinit { warn(description) }
 }
 
 extension WebViewController: _WKDiagnosticLoggingDelegate {
-	func _webView(webView: WKWebView, logDiagnosticMessage message: String, description: String) { warn("\(message) || \(description) << \(webView.URL ?? String())") }
-	func _webView(webView: WKWebView, logDiagnosticMessageWithResult message: String, description: String, result: _WKDiagnosticLoggingResultType) { warn("\(message) || \(description) >> \(String(result)) << \(webView.URL ?? String())") }
-	func _webView(webView: WKWebView, logDiagnosticMessageWithValue message: String, description: String, value: String) { warn("\(message) || \(description) == \(value) << \(webView.URL ?? String())") }
+	func _webView(_ webView: WKWebView, logDiagnosticMessage message: String, description: String) { warn("\(message) || \(description) << \(webView.URL ?? String())") }
+	func _webView(_ webView: WKWebView, logDiagnosticMessageWithResult message: String, description: String, result: _WKDiagnosticLoggingResultType) { warn("\(message) || \(description) >> \(String(result)) << \(webView.URL ?? String())") }
+	func _webView(_ webView: WKWebView, logDiagnosticMessageWithValue message: String, description: String, value: String) { warn("\(message) || \(description) == \(value) << \(webView.URL ?? String())") }
 }
 
 extension WebViewController: _WKDownloadDelegate {
-    func _downloadDidStart(download: _WKDownload!) { warn(download.request.description) }
-	func _download(download: _WKDownload!, didRecieveResponse response: NSURLResponse!) { warn(response.description) }
-	func _download(download: _WKDownload!, didRecieveData length: UInt64) { warn(length.description) }
-	func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
+    func _downloadDidStart(_ download: _WKDownload!) { warn(download.request.description) }
+	func _download(_ download: _WKDownload!, didRecieveResponse response: NSURLResponse!) { warn(response.description) }
+	func _download(_ download: _WKDownload!, didRecieveData length: UInt64) { warn(length.description) }
+	func _download(_ download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
 		warn("NOIMPL: " + download.request.description)
 		download.cancel()
 		return ""
 	}
-	func _downloadDidFinish(download: _WKDownload!) { warn(download.request.description) }
-	func _download(download: _WKDownload!, didFailWithError error: NSError!) { warn(error.description) }
-	func _downloadDidCancel(download: _WKDownload!) { warn(download.request.description) }
+	func _downloadDidFinish(_ download: _WKDownload!) { warn(download.request.description) }
+	func _download(_ download: _WKDownload!, didFailWithError error: NSError!) { warn(error.description) }
+	func _downloadDidCancel(_ download: _WKDownload!) { warn(download.request.description) }
 }
 
 // extensions WebViewController: WebsitePoliciesDelegate // FIXME: STP v20: per-site preferences: https://github.com/WebKit/webkit/commit/d9f6f7249630d7756e4b6ca572b29ac61d5c38d7

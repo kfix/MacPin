@@ -5,7 +5,7 @@
 import AppKit
 import WebKit
 extension WKWebView {
-	override public func setValue(value: AnyObject?, forUndefinedKey key: String) {
+	override public func setValue(_ value: AnyObject?, forUndefinedKey key: String) {
 		if key != "URL" { super.setValue(value, forUndefinedKey: key) } //prevents URLbox from trying to directly rewrite webView.URL
 	}
 }
@@ -26,7 +26,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 		}
 	}
 
-	override func drawRect(dirtyRect: NSRect) {
+	override func drawRect(_ dirtyRect: NSRect) {
 		if isLoading {
 			// draw a Safari style progress-line along edge of the text box's focus ring
 			//var progressRect = NSOffsetRect(bounds, 0, 4) // top edge
@@ -84,7 +84,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView() 
 	override func loadView() { view = urlbox } // NIBless
 
-	func popup(webview: MPWebView?) {
+	func popup(_ webview: MPWebView?) {
 		guard let webview = webview else { return }
 		MacPinApp.sharedApplication().appDelegate?.browserController.tabSelected = webview
 	}
@@ -166,7 +166,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 		}
 	}
 
-	override func cancelOperation(sender: AnyObject?) {
+	override func cancelOperation(_ sender: AnyObject?) {
 		view.resignFirstResponder() // relinquish key focus to webview
 		presentingViewController?.dismissViewController(self) //if a thoust art a popover, close thyself
 	}
@@ -192,7 +192,7 @@ extension OmniBoxController: NSTextFieldDelegate {
 	*/
 
 	//func textDidChange(aNotification: NSNotification)
-	func textShouldEndEditing(textObject: NSText) -> Bool { //user attempting to focus out of field
+	func textShouldEndEditing(_ textObject: NSText) -> Bool { //user attempting to focus out of field
 		if let _ = validateURL(textObject.string ?? "") { return true } //allow focusout
 		warn("invalid url entered: \(textObject.string)")
 		return false //NSBeep()s, keeps focus
@@ -207,7 +207,7 @@ extension OmniBoxController: NSControlTextEditingDelegate {
 //func control(_ control: NSControl, textShouldEndEditing fieldEditor: NSText) -> Bool
 //func control(_ control: NSControl, textView textView: NSTextView, completions words: [String], forPartialWordRange charRange: NSRange, indexOfSelectedItem index: UnsafeMutablePointer<Int>) -> [String]
 
-	func control(control: NSControl, textView: NSTextView, doCommandBySelector commandSelector: Selector) -> Bool {
+	func control(_ control: NSControl, textView: NSTextView, doCommandBySelector commandSelector: Selector) -> Bool {
 		warn(commandSelector.description)
 		switch commandSelector {
 			case "noop:":
@@ -228,7 +228,7 @@ extension OmniBoxController: NSControlTextEditingDelegate {
 }
 
 extension OmniBoxController: NSPopoverDelegate {
-	func popoverWillShow(notification: NSNotification) {
+	func popoverWillShow(_ notification: NSNotification) {
 		//urlbox.sizeToFit() //fixme: makes the box undersized sometimes
 	}
 }

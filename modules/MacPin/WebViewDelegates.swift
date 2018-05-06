@@ -19,7 +19,7 @@ import WebKitPrivates
 import UTIKit
 
 extension WKWebView {
-	func clone(url: NSURL? = nil) -> MPWebView {
+	func clone(_ url: NSURL? = nil) -> MPWebView {
 		// create a new MPWebView sharing the same cookie/sesssion data and useragent
 		let clone = MPWebView(config: self.configuration, agent: self._customUserAgent)
 		if let url = url { clone.gotoURL(url) }
@@ -28,7 +28,7 @@ extension WKWebView {
 }
 
 extension AppScriptRuntime: WKScriptMessageHandler {
-	func userContentController(userContentController: WKUserContentController, didReceiveScriptMessage message: WKScriptMessage) {
+	func userContentController(_ userContentController: WKUserContentController, didReceiveScriptMessage message: WKScriptMessage) {
 		if let webView = message.webView as? MPWebView {
 			//called from JS: webkit.messageHandlers.<messsage.name>.postMessage(<message.body>);
 			switch message.name {
@@ -65,7 +65,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 
 	// FUTURE: didPerformClientRedirectForNavigation https://github.com/WebKit/webkit/commit/9475f62f3602aa91309f00c64e4430a25d5ae4e9
 
-	func webView(webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+	func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
 		if let url = webView.URL {
 			warn("'\(url)'")
 			// check url against regex'd keys of MatchedAddressOptions
@@ -83,7 +83,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 #endif
 	}
 
-	func webView(webView: WKWebView, decidePolicyForNavigationAction navigationAction: WKNavigationAction, decisionHandler: (WKNavigationActionPolicy) -> Void) {
+	func webView(_ webView: WKWebView, decidePolicyForNavigationAction navigationAction: WKNavigationAction, decisionHandler: (WKNavigationActionPolicy) -> Void) {
 		if let url = navigationAction.request.URL, scheme = url.scheme {
 			switch scheme {
 				case "data": fallthrough
@@ -152,13 +152,13 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		}
 	}
 
-	func webView(webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
+	func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
 		guard let url = webView.URL else { return }
 		warn("~> [\(url)]")
 		jsdelegate.tryFunc("receivedRedirectionToURL", url.description, webView)
 	}
 
-	func webView(webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: NSError) { //error returned by webkit when loading content
+	func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: NSError) { //error returned by webkit when loading content
 		if let url = webView.URL {
 			warn("'\(url)' -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 
@@ -196,12 +196,12 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		}
 	}
 
-	func webView(webView: WKWebView, didCommitNavigation navigation: WKNavigation!) {
+	func webView(_ webView: WKWebView, didCommitNavigation navigation: WKNavigation!) {
 		//content starts arriving...I assume <body> has materialized in the DOM?
 		//(webView as? MPWebView)?.scrapeIcon()
 	}
 
-	func webView(webView: WKWebView, decidePolicyForNavigationResponse navigationResponse: WKNavigationResponse, decisionHandler: (WKNavigationResponsePolicy) -> Void) {
+	func webView(_ webView: WKWebView, decidePolicyForNavigationResponse navigationResponse: WKNavigationResponse, decisionHandler: (WKNavigationResponsePolicy) -> Void) {
 		let mime = navigationResponse.response.MIMEType!
 		let url = navigationResponse.response.URL!
 		let fn = navigationResponse.response.suggestedFilename!
@@ -260,7 +260,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		decisionHandler(.Allow)
 	}
 
-	func webView(webView: WKWebView, didFailNavigation navigation: WKNavigation!, withError error: NSError) { //error during commited main frame navigation
+	func webView(_ webView: WKWebView, didFailNavigation navigation: WKNavigation!, withError error: NSError) { //error during commited main frame navigation
 		// like server-issued error Statuses with no page content
 		if let url = webView.URL {
 			warn("[\(url)] -> `\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
@@ -283,7 +283,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 #endif
     }
 
-	func webView(webView: WKWebView, didFinishNavigation navigation: WKNavigation!) {
+	func webView(_ webView: WKWebView, didFinishNavigation navigation: WKNavigation!) {
 		// no-loads from fresh tabs to pages while offline end up here with no errors fired on provisonal navigation handlers....
 		//  need to be able check final disposition here and throw a notification
 		//  A navigation object is returned from the web view load methods and is also passed to the navigation delegate methods to uniquely identify a webpage load from start to finish. It has no method or properties of its own.
@@ -299,7 +299,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 #endif
 	}
 
-	func webView(webView: WKWebView, createWebViewWithConfiguration configuration: WKWebViewConfiguration, forNavigationAction navigationAction: WKNavigationAction,
+	func webView(_ webView: WKWebView, createWebViewWithConfiguration configuration: WKWebViewConfiguration, forNavigationAction navigationAction: WKNavigationAction,
                 windowFeatures: WKWindowFeatures) -> WKWebView? {
 		// called via JS:window.open()
 		// https://developer.mozilla.org/en-US/docs/Web/API/window.open
@@ -340,12 +340,12 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		//return nil //window.open() -> undefined
 	}
 
-	func webViewDidClose(webView: WKWebView) {
+	func webViewDidClose(_ webView: WKWebView) {
 		warn("JS <\(webView.URL)>: `window.close();`")
 		dismiss() // FIXME: need to ensure webView was window.open()'d by a JS script
 	}
 
-	func _webViewWebProcessDidCrash(webView: WKWebView) {
+	func _webViewWebProcessDidCrash(_ webView: WKWebView) {
 	    //warn("reloading page")
 		//webView.reload()
 		warn("webview crashed!!")

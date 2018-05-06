@@ -8,7 +8,7 @@ import Async
 
 extension WebViewControllerOSX {
 
-	func webView(webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
 		let alert = NSAlert()
 		alert.messageText = webView.title ?? ""
 		alert.addButtonWithTitle("Dismiss")
@@ -18,7 +18,7 @@ extension WebViewControllerOSX {
 		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler() }
 	}
 
-	func webView(webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
 		let alert = NSAlert()
 		alert.messageText = webView.title ?? ""
 		alert.addButtonWithTitle("OK")
@@ -28,7 +28,7 @@ extension WebViewControllerOSX {
 		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler(response == NSAlertFirstButtonReturn ? true : false) }
 	}
 
-	func webView(webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String!) -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String!) -> Void) {
 		let alert = NSAlert()
 		alert.messageText = webView.title ?? ""
 		alert.addButtonWithTitle("Submit")
@@ -41,7 +41,7 @@ extension WebViewControllerOSX {
 		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler(input.stringValue) }
 	}
 
-	func _webView(webView: WKWebView, printFrame: WKFrameInfo) {
+	func _webView(_ webView: WKWebView, printFrame: WKFrameInfo) {
 		warn("JS: `window.print();`")
 #if STP
 		let printer = webView._printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo())
@@ -66,7 +66,7 @@ extension WebViewControllerOSX {
 extension WebViewControllerOSX {
 
 	// https://github.com/WebKit/webkit/commit/fa99fc8295905850b2b9444ba019a7250996ee7d
-	func webView(webView: WKWebView, didReceiveAuthenticationChallenge challenge: NSURLAuthenticationChallenge,
+	func webView(_ webView: WKWebView, didReceiveAuthenticationChallenge challenge: NSURLAuthenticationChallenge,
 		completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
 
 /*
@@ -203,7 +203,7 @@ Global Trace Buffer (reverse chronological seconds):
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/DownloadClient.mm
 // https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
 extension WebViewControllerOSX { // _WKDownloadDelegate
-	override func _download(download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
+	override func _download(_ download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
 		warn(download.description)
 		//pop open a save Panel to dump data into file
 		let saveDialog = NSSavePanel()
@@ -220,7 +220,7 @@ extension WebViewControllerOSX { // _WKDownloadDelegate
 }
 
 extension WebViewControllerOSX { // HTML5 fullscreen
-	func _webViewFullscreenMayReturnToInline(webView: WKWebView) -> Bool {
+	func _webViewFullscreenMayReturnToInline(_ webView: WKWebView) -> Bool {
 		// https://developer.apple.com/reference/webkit/wkwebviewconfiguration/1614793-allowsinlinemediaplayback
 		warn()
 		return true
@@ -232,33 +232,33 @@ extension WebViewControllerOSX { // HTML5 fullscreen
 	// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/mac/WKFullScreenWindowController.mm
 	//  https://github.com/WebKit/webkit/search?q=fullScreenWindowController
 	// https://github.com/WebKit/webkit/blob/master/Source/WebCore/platform/mac/WebVideoFullscreenInterfaceMac.mm
-	func _webViewDidEnterFullscreen(webView: WKWebView) {
+	func _webViewDidEnterFullscreen(_ webView: WKWebView) {
 		warn("JS <\(webView.URL)>: `<video>.requestFullscreen(); // begun`")
 	}
-	func _webViewDidExitFullscreen(webView: WKWebView) {
+	func _webViewDidExitFullscreen(_ webView: WKWebView) {
 		warn("JS <\(webView.URL)>: `<video>.requestFullscreen(); // finished`")
 	}
 }
 
 extension WebViewControllerOSX { // _WKFindDelegate
-	func _webView(webView: WKWebView!, didCountMatches matches: UInt, forString string: String!) {
+	func _webView(_ webView: WKWebView!, didCountMatches matches: UInt, forString string: String!) {
 		warn()
 	}
-	func _webView(webView: WKWebView!, didFindMatches matches: UInt, forString string: String!, withMatchIndex matchIndex: Int) {
+	func _webView(_ webView: WKWebView!, didFindMatches matches: UInt, forString string: String!, withMatchIndex matchIndex: Int) {
 		warn()
 	}
-	func _webView(webView: WKWebView!, didFailToFindString string: String!) {
+	func _webView(_ webView: WKWebView!, didFailToFindString string: String!) {
 		warn()
 	}
 }
 
 extension WebViewController { // _WKInputDelegate
-	func _webView(webView: WKWebView!, didStartInputSession inputSession: _WKFormInputSession!) {
+	func _webView(_ webView: WKWebView!, didStartInputSession inputSession: _WKFormInputSession!) {
 		//inputSession.valid .userObject .focusedElementInfo==[.Link,.Image]
 		warn()
 	}
 
-	func _webView(webView: WKWebView!, willSubmitFormValues values: [NSObject : AnyObject]!, userObject: protocol<NSSecureCoding, NSObjectProtocol>!, submissionHandler: (() -> Void)!) {
+	func _webView(_ webView: WKWebView!, willSubmitFormValues values: [AnyHashable: Any]!, userObject: protocol<NSSecureCoding, NSObjectProtocol>!, submissionHandler: (() -> Void)!) {
 		warn(values.description)
 		//userObject: https://github.com/WebKit/webkit/commit/c65916009f1e95f53f329ce3cfe69bf70616cc02#diff-776c38c9a3b2252729ea3ac028367308R1201
 		submissionHandler()
@@ -269,7 +269,7 @@ extension WebViewController { // _WKInputDelegate
 extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 	// https://bugs.webkit.org/show_bug.cgi?id=137759
 	// https://github.com/WebKit/webkit/blob/4b7052ab44fa581810188638d1fdf074e7d754ca/Tools/MiniBrowser/mac/WK2BrowserWindowController.m#L451
-	func webView(webView: WKWebView!, runOpenPanelWithParameters parameters: WKOpenPanelParameters!, initiatedByFrame frame: WKFrameInfo!, completionHandler: (([NSURL]?) -> Void)!) {
+	func webView(_ webView: WKWebView!, runOpenPanelWithParameters parameters: WKOpenPanelParameters!, initiatedByFrame frame: WKFrameInfo!, completionHandler: (([NSURL]?) -> Void)!) {
 		warn("<input> file upload panel opening!")
 		//pop open a save Panel to dump data into file
 		let openDialog = NSOpenPanel()

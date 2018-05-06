@@ -9,7 +9,7 @@ import AppKit
 @objc class ServiceOSX: NSObject {
 
 	//Service Specification: must set "NSMessage" = handlePboard" in sites/Blah/Services.plist to get dispatched
-	func handlePboard(pboard: NSPasteboard, userData: String, error: UnsafeMutablePointer<String>) {
+	func handlePboard(_ pboard: NSPasteboard, userData: String, error: UnsafeMutablePointer<String>) {
 		// should always defer to the app.js to handle the input
 		// any error given is printed to Console/ASL
 		warn()

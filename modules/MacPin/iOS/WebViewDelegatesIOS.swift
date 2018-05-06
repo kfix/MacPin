@@ -6,14 +6,14 @@ import WebKit
 
 extension WebViewControllerIOS {
 
-	func webView(webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
 		let alerter = UIAlertController(title: webView.title, message: message, preferredStyle: .Alert) //.ActionSheet
 		let OK = UIAlertAction(title: "OK", style: .Default) { (action) in completionHandler() }
 		alerter.addAction(OK)
 		self.presentViewController(alerter, animated: true, completion: nil)
 	}
 
-	func webView(webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
 		let alerter = UIAlertController(title: webView.title, message: message, preferredStyle: .Alert) //.ActionSheet
 		let OK = UIAlertAction(title: "OK", style: .Default) { (action) in completionHandler(true) }
 		alerter.addAction(OK)
@@ -22,7 +22,7 @@ extension WebViewControllerIOS {
 		self.presentViewController(alerter, animated: true, completion: nil)
 	}
 
-	func webView(webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String!) -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String!) -> Void) {
 		let alerter = UIAlertController(title: webView.title, message: prompt, preferredStyle: .Alert)
 
 		//var promptTF: UITextField?
@@ -41,7 +41,7 @@ extension WebViewControllerIOS {
 	}
 
 
-	func _webView(webView: WKWebView, printFrame: WKFrameInfo) {
+	func _webView(_ webView: WKWebView, printFrame: WKFrameInfo) {
 		warn("JS: `window.print();`")
 		// do iOS printing here
 	}
@@ -50,7 +50,7 @@ extension WebViewControllerIOS {
 
 extension WebViewControllerIOS {
 
-	func webView(webView: WKWebView, didReceiveAuthenticationChallenge challenge: NSURLAuthenticationChallenge,
+	func webView(_ webView: WKWebView, didReceiveAuthenticationChallenge challenge: NSURLAuthenticationChallenge,
 		completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
 
 		if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {

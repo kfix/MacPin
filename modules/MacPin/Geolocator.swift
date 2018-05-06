@@ -27,7 +27,7 @@ class Geolocator: NSObject  {
 	}
 #endif
 
-	func sendLocationEvent(webview: MPWebView) {
+	func sendLocationEvent(_ webview: MPWebView) {
 		if !subscribers.contains(webview) { subscribers.append(webview) }
 		manager.stopUpdatingLocation()
 		manager.startUpdatingLocation()
@@ -38,7 +38,7 @@ class Geolocator: NSObject  {
 
 extension Geolocator: CLLocationManagerDelegate {
 
-	func locationManager(manager: CLLocationManager, didFailWithError error: NSError) {
+	func locationManager(_ manager: CLLocationManager, didFailWithError error: NSError) {
 		manager.stopUpdatingLocation()
 		//if (error != nil) { warn(error) }
 	}
@@ -48,7 +48,7 @@ extension Geolocator: CLLocationManagerDelegate {
 //		if let location = locations.last {
 
 #if os(OSX)
-	func locationManager(manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+	func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
 		if let location = locations.last where locations.count > 0 {
 			currentLocation = location
 			warn("lat: \(location.coordinate.latitude) lon:\(location.coordinate.longitude)")
@@ -65,7 +65,7 @@ extension Geolocator: CLLocationManagerDelegate {
     }
 #endif
 
-	func locationManager(manager: CLLocationManager, didChangeAuthorizationStatus status: CLAuthorizationStatus) {
+	func locationManager(_ manager: CLLocationManager, didChangeAuthorizationStatus status: CLAuthorizationStatus) {
 		switch status {
 			//case CLAuthorizationStatus.Restricted:
 			//case CLAuthorizationStatus.Denied:

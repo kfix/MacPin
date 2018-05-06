@@ -122,6 +122,9 @@ $(info [$(eXcode)] $$(dynamics) (dynamic libraries available to build): $(dynami
 #objs				:= $(patsubst %,$(outdir)/obj/%.o,$(build_mods:modules/%=%))
 #$(info $(eXcode) - Objects available to build: $(objs))
 
+updates				:= $(patsubst %,$(outdir)/swup/%,$(exec_mods:modules/%=%))
+$(info [$(eXcode)] $$(updates) (swift modules available to update): $(updates))
+
 #libs				:= $(patsubst %,$(outdir)/Frameworks/lib%.dylib,$(build_mods:modules/%=%))
 #$(info $(eXcode) - Libraries available to build: $(libs))
 ###########################
@@ -246,6 +249,13 @@ $(outdir)/obj/lib%.a: $(outdir)/obj/%.o
 
 $(outdir)/libswift%.a: $(outdir)/obj/lib%.a
 	lipo -output $@ -create $^
+
+$(outdir)/swup/%.swift: modules/%.swift
+	install -v -d $(dir $@)
+	$(swift-update) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(linklibs) $(libdirs) \
+		$(filter %.swift,$^) > $@
+	diff -Naus $^ $@
+
 
 .PRECIOUS: $(outdir)/Frameworks/lib%.dylib $(outdir)/obj/%.o $(outdir)/exec/% $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc
 .PHONY: submake_% statics dynamics

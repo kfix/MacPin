@@ -47,7 +47,7 @@ let NSImageNameApplicationIcon = "icon"
 		}
 	}
 
-	static func grabFavIcon(url: NSURL, completion: (NSData -> Void)) {
+	static func grabFavIcon(_ url: NSURL, completion: ((NSData) -> Void)) {
 		// http://stackoverflow.com/a/26540173/3878712
 		// http://jamesonquave.com/blog/developing-ios-apps-using-swift-part-5-async-image-loading-and-caching/
 		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), { //[unowned self]

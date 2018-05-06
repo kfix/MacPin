@@ -38,10 +38,10 @@ class WindowController: NSWindowController, NSWindowDelegate {
 	}
 
 	// these just handle drags to a tabless-background, webviews define their own
-	func draggingEntered(sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
-	func performDragOperation(sender: NSDraggingInfo) -> Bool { return true } // FIXME: should open the file:// url
+	func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
+	func performDragOperation(_ sender: NSDraggingInfo) -> Bool { return true } // FIXME: should open the file:// url
 
-	func window(window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplicationPresentationOptions) -> NSApplicationPresentationOptions {
+	func window(_ window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplicationPresentationOptions) -> NSApplicationPresentationOptions {
 		return [.AutoHideToolbar, .AutoHideMenuBar, .FullScreen, proposedOptions]
 	}
 
@@ -78,13 +78,13 @@ class WindowController: NSWindowController, NSWindowDelegate {
 	// only useful in non-fullscreen mode
 	//func toggleMenuBarAutoHide() { NSApp.presentationOptions |= .AutoHideMenuBar }
 
-	override func windowTitleForDocumentDisplayName(displayName: String) -> String { warn(displayName); return window?.title ?? displayName }
+	override func windowTitleForDocumentDisplayName(_ displayName: String) -> String { warn(displayName); return window?.title ?? displayName }
 
-	func windowShouldClose(sender: AnyObject) -> Bool {
+	func windowShouldClose(_ sender: AnyObject) -> Bool {
 		warn()
 		return true
 	}
-	func windowWillClose(notification: NSNotification) { warn() } // window was closed by red stoplight button
+	func windowWillClose(_ notification: NSNotification) { warn() } // window was closed by red stoplight button
 
 	deinit { warn(description) }
 

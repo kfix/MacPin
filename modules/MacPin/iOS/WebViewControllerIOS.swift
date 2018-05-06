@@ -16,7 +16,7 @@ import WebKit
 		view.autoresizingMask = [.FlexibleHeight , .FlexibleWidth]
 	}
 
-	override func viewWillAppear(animated: Bool) { // window popping up with this tab already selected & showing
+	override func viewWillAppear(_ animated: Bool) { // window popping up with this tab already selected & showing
 		super.viewWillAppear(animated) // or tab switching into view as current selection
 	}
 
@@ -38,7 +38,7 @@ import WebKit
 }
 
 extension WebViewControllerIOS { // AppGUI funcs
-	func shareButtonClicked(sender: AnyObject?) {
+	func shareButtonClicked(_ sender: AnyObject?) {
 		warn()
 		// http://nshipster.com/uiactivityviewcontroller/
 		if let url = webview.URL, title = webview.title {
@@ -47,7 +47,7 @@ extension WebViewControllerIOS { // AppGUI funcs
 		}
 	}
 
-	func askToOpenURL(url: NSURL) {
+	func askToOpenURL(_ url: NSURL) {
 		if UIApplication.sharedApplication().canOpenURL(url) {
 			let alerter = UIAlertController(title: "Open non-browser URL", message: url.description, preferredStyle: .ActionSheet)
 			let OK = UIAlertAction(title: "OK", style: .Default) { (_) in UIApplication.sharedApplication().openURL(url) }

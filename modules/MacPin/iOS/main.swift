@@ -1,3 +1,3 @@
 import Foundation
 import UIKit
-UIApplicationMain(Process.argc, Process.unsafeArgv, NSStringFromClass(MacPinApp), NSStringFromClass(MacPinAppDelegatePlatform))
+UIApplicationMain(CommandLine.argc, CommandLine.unsafeArgv, NSStringFromClass(MacPinApp), NSStringFromClass(MacPinAppDelegatePlatform))

@@ -11,7 +11,7 @@ import WebKitPrivates
 		willSet { if findBarView != nil { findBarVisible = false } }
 		didSet { if findBarView != nil { findBarVisible = true } }
 	}
-	private var _findBarVisible = false
+	fileprivate var _findBarVisible = false
 	var findBarVisible: Bool {
 		@objc(isFindBarVisible) get { return _findBarVisible }
 		set(vis) {
@@ -51,7 +51,7 @@ import WebKitPrivates
 
 	func contentView() -> NSView? { return webview }
 
-	override func performTextFinderAction(sender: AnyObject?) {
+	override func performTextFinderAction(_ sender: AnyObject?) {
 		if let control = sender as? NSMenuItem, action = NSTextFinderAction(rawValue: control.tag) {
 			textFinder.performAction(action)
 		}
@@ -113,11 +113,11 @@ import WebKitPrivates
 
 	deinit { unbind(NSTitleBinding) }
 
-	override func cancelOperation(sender: AnyObject?) { webview.stopLoading(sender) } // NSResponder: make Esc key stop page load
+	override func cancelOperation(_ sender: AnyObject?) { webview.stopLoading(sender) } // NSResponder: make Esc key stop page load
 }
 
 extension WebViewControllerOSX: NSMenuDelegate {
-	func menuNeedsUpdate(menu: NSMenu) {
+	func menuNeedsUpdate(_ menu: NSMenu) {
 		//if menu.tag == 1 //backlist
 		/*
 		for histItem in webview.backForwardList.backList {
@@ -143,7 +143,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 #if STP
 	func zoomIn() { zoom(0.2) }
 	func zoomOut() { zoom(-0.2) }
-	func zoom(factor: Double) {
+	func zoom(_ factor: Double) {
 		// https://github.com/WebKit/webkit/commit/1fe5bc35da4a688b9628e2e0b0c013fd0d44b9d5
 		//webview.magnification -= factor
 		textZoom(factor)
@@ -160,7 +160,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 	}
 	func textZoomIn() { textZoom(0.2) }
 	func textZoomOut() { textZoom(-0.2) }
-	func textZoom(factor: Double) {
+	func textZoom(_ factor: Double) {
 		webview._textZoomFactor += factor
 	}
 #else
@@ -173,13 +173,13 @@ extension WebViewControllerOSX { // AppGUI funcs
 		webview._layoutMode = .DynamicSizeComputedFromViewScale
 	}
 
-	func print(sender: AnyObject?) { warn(""); webview.print(sender) }
+	func print(_ sender: AnyObject?) { warn(""); webview.print(sender) }
 
 	func highlightConstraints() { view.window?.visualizeConstraints(view.constraints) }
 
 	func replaceContentView() { view.window?.contentView = view }
 
-	func shareButtonClicked(sender: AnyObject?) {
+	func shareButtonClicked(_ sender: AnyObject?) {
 		if let btn = sender as? NSView {
 			if let url = webview.URL {
 				let sharer = NSSharingServicePicker(items: [url])
@@ -190,7 +190,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		}
 	}
 
-	func snapshotButtonClicked(sender: AnyObject?) {
+	func snapshotButtonClicked(_ sender: AnyObject?) {
 		//guard if let btn = sender as? NSView else { }
 		return // WKWebViewSnappable can't link yet :-(
 		/*
@@ -203,7 +203,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		*/
 	}
 
-	func displayAlert(alert: NSAlert, _ completionHandler: (NSModalResponse) -> Void) {
+	func displayAlert(_ alert: NSAlert, _ completionHandler: (NSModalResponse) -> Void) {
 	/* FIXME BIG TIME
 		make JS's modal alerts dismissable on tab change, like Safari does
 		see: https://developers.google.com/web/updates/2017/03/dialogs-policy
@@ -217,7 +217,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		}
 	}
 
-	func popupMenu(items: [String: String]) { // trigger a menu @ OSX right-click & iOS longPress point
+	func popupMenu(_ items: [String: String]) { // trigger a menu @ OSX right-click & iOS longPress point
 		let _ = NSMenu(title:"popup")
 		// items: [itemTitle:String eventName:String], when clicked, fire event in jsdelegate?
 		//menu.popUpMenu(menu.itemArray.first, atLocation: NSPointFromCGPoint(CGPointMake(0,0)), inView: self.view)

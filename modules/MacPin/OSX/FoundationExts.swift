@@ -125,21 +125,23 @@ extension NSPasteboard {
 }
 
 // show an NSError to the user, attaching it to any given view
-func displayError(error: NSError, _ vc: NSViewController? = nil) {
+func displayError(_ error: NSError, _ vc: NSViewController? = nil) {
 	warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
-	if NSThread.isMainThread() && Darwin.isatty(Int32(0)) == 0 { // don't popup these modal alerts if REPL() is active on STDIN!
-		if let window = vc?.view.window {
-			// display it as a NSPanel sheet
-			vc?.view.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
-		} else if let window = NSApplication.sharedApplication().mainWindow {
-			window.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
-		} else {
-			NSApplication.sharedApplication().presentError(error)
+	dispatch_async(dispatch_get_main_queue()) { // don't lock up other threads on modally-presented errors
+		if Darwin.isatty(Int32(0)) == 0 { // don't popup these modal alerts if REPL() is active on STDIN!
+			if let window = vc?.view.window {
+				// display it as a NSPanel sheet
+				vc?.view.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
+			} else if let window = NSApplication.sharedApplication().mainWindow {
+				window.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
+			} else {
+				NSApplication.sharedApplication().presentError(error)
+			}
 		}
 	}
 }
 
-func askToOpenURL(url: NSURL?) { //uti: UTIType? = nil
+func askToOpenURL(_ url: NSURL?) { //uti: UTIType? = nil
 	let app = NSApplication.sharedApplication()
 	let window = app.mainWindow
 	let wk = NSWorkspace.sharedWorkspace()

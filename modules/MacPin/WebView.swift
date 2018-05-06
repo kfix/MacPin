@@ -42,17 +42,17 @@ var globalIconClient = WKIconDatabaseClientV1(
 	var injected: [String] { get }
 	var styles: [String] { get }
 	static var MatchedAddressOptions: [String:String] { get set }
-	@objc(evalJS::) func evalJS(js: String, callback: JSValue?)
-	@objc(asyncEvalJS:::) func asyncEvalJS(js: String, delay: Double, callback: JSValue?)
-	func loadURL(urlstr: String) -> Bool
-	func loadIcon(icon: String) -> Bool
-	func popStyle(idx: Int)
-	func style(css: String) -> Bool
-	func mainStyle(css: String) -> Bool
-	func preinject(script: String) -> Bool
-	func postinject(script: String) -> Bool
-	func addHandler(handler: String) // FIXME kill
-	func subscribeTo(handler: String)
+	@objc(evalJS::) func evalJS(_ js: String, callback: JSValue?)
+	@objc(asyncEvalJS:::) func asyncEvalJS(_ js: String, delay: Double, callback: JSValue?)
+	func loadURL(_ urlstr: String) -> Bool
+	func loadIcon(_ icon: String) -> Bool
+	func popStyle(_ idx: Int)
+	func style(_ css: String) -> Bool
+	func mainStyle(_ css: String) -> Bool
+	func preinject(_ script: String) -> Bool
+	func postinject(_ script: String) -> Bool
+	func addHandler(_ handler: String) // FIXME kill
+	func subscribeTo(_ handler: String)
 	func console()
 	func scrapeIcon()
 	//func goBack()
@@ -337,7 +337,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		}
 	}
 
-	@objc(evalJS::) func evalJS(js: String, callback: JSValue? = nil) {
+	@objc(evalJS::) func evalJS(_ js: String, callback: JSValue? = nil) {
 		if let callback = callback where callback.isObject { //is a function or a {}
 			warn("callback: \(callback)")
 			evaluateJavaScript(js, completionHandler:{ (result: AnyObject?, exception: NSError?) -> Void in
@@ -359,7 +359,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 	// cuz JSC doesn't come with setTimeout()
-	@objc(asyncEvalJS:::) func asyncEvalJS(js: String, delay: Double, callback: JSValue?) {
+	@objc(asyncEvalJS:::) func asyncEvalJS(_ js: String, delay: Double, callback: JSValue?) {
 		let backgroundQueue = dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0)
 		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * delay))
 		dispatch_after(delayTime, backgroundQueue) {
@@ -382,7 +382,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		}
 	}
 
-	func gotoURL(url: NSURL) {
+	func gotoURL(_ url: NSURL) {
 		let act = NSProcessInfo.processInfo().beginActivityWithOptions([NSActivityOptions.UserInitiated, NSActivityOptions.IdleSystemSleepDisabled], reason: "browsing begun")
 		guard #available(OSX 10.11, iOS 9.1, *) else { loadRequest(NSURLRequest(URL: url)); return }
 		guard url.scheme == "file" else { loadRequest(NSURLRequest(URL: url)); return }
@@ -395,7 +395,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		NSProcessInfo.processInfo().endActivity(act)
 	}
 
-	func loadURL(urlstr: String) -> Bool {
+	func loadURL(_ urlstr: String) -> Bool {
 		if let url = NSURL(string: urlstr) {
 			gotoURL(url as NSURL)
 			return true
@@ -443,7 +443,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		}
 	}
 
-	func loadIcon(icon: String) -> Bool {
+	func loadIcon(_ icon: String) -> Bool {
 		if let url = NSURL(string: icon) where !icon.isEmpty {
 			favicon.url = url
 			return true
@@ -462,26 +462,26 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 */
 
-	func popStyle(idx: Int) {
+	func popStyle(_ idx: Int) {
 		guard idx >= 0 && idx <= configuration.userContentController._userStyleSheets.count else { return }
 		let style = configuration.userContentController._userStyleSheets[idx]
 		configuration.userContentController._removeUserStyleSheet(style)
-		styles.removeAtIndex(idx)
+		styles.remove(at: idx)
 	}
 
-	func style(css: String) -> Bool {
+	func style(_ css: String) -> Bool {
 		if !styles.contains(css) && loadUserStyleSheetFromBundle(css, webctl: configuration.userContentController, onlyForTop: false) { styles.append(css); return true }
 		return false
 	}
-	func mainStyle(css: String) -> Bool {
+	func mainStyle(_ css: String) -> Bool {
 		if !styles.contains(css) && loadUserStyleSheetFromBundle(css, webctl: configuration.userContentController, onlyForTop: true) { styles.append(css); return true }
 		return false
 	}
-	func preinject(script: String) -> Bool {
+	func preinject(_ script: String) -> Bool {
 		if !injected.contains(script) && loadUserScriptFromBundle(script, webctl: configuration.userContentController, inject: .AtDocumentStart, onlyForTop: false) { injected.append(script); return true }
 		return false
 	}
-	func postinject(script: String) -> Bool {
+	func postinject(_ script: String) -> Bool {
 		if !injected.contains(script) && loadUserScriptFromBundle(script, webctl: configuration.userContentController, inject: .AtDocumentEnd, onlyForTop: false) { injected.append(script); return true }
 		return false
 		// forcefully install a userscript fror post-page-loads
@@ -492,8 +492,8 @@ var globalIconClient = WKIconDatabaseClientV1(
 		//return true
 	}
 
-	func addHandler(handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) } //FIXME kill
-	func subscribeTo(handler: String) {
+	func addHandler(_ handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) } //FIXME kill
+	func subscribeTo(_ handler: String) {
 		configuration.userContentController.removeScriptMessageHandlerForName(handler)
 		configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler)
 	}
@@ -562,7 +562,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		}
 	}
 
-	override func validateUserInterfaceItem(anItem: NSValidatedUserInterfaceItem) -> Bool {
+	override func validateUserInterfaceItem(_ anItem: NSValidatedUserInterfaceItem) -> Bool {
 		switch (anItem.action.description) {
 			//case "askToOpenCurrentURL": return true
 			case "copyAsPDF": fallthrough
@@ -602,7 +602,8 @@ var globalIconClient = WKIconDatabaseClientV1(
 
 	// try to accept DnD'd links from other browsers more gracefully than default WebKit behavior
 	// this mess ain't funny: https://hsivonen.fi/kesakoodi/clipboard/
-	override func performDragOperation(sender: NSDraggingInfo) -> Bool {
+	// https://webkit.org/blog/8170/clipboard-api-improvements/
+	override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
 		if sender.draggingSource() == nil { //dragged from external application
 			let pboard = sender.draggingPasteboard()
 
@@ -649,7 +650,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		writePDFInsideRect(bounds, toPasteboard: pb)
 	}
 
-	func printWebView(sender: AnyObject?) {
+	func printWebView(_ sender: AnyObject?) {
 #if STP
 		// _printOperation not avail in 10.11.4's WebKit
 		let printer = _printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo())

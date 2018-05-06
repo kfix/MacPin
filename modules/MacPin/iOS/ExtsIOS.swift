@@ -5,7 +5,7 @@
 import UIKit
 
 // show an NSError to the user, attaching it to any given view
-func displayError(error: NSError, _ vc: UIViewController? = nil) {
+func displayError(_ error: NSError, _ vc: UIViewController? = nil) {
 	warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 	let alerter = UIAlertController(title: error.localizedFailureReason, message: error.localizedDescription, preferredStyle: .Alert) //.ActionSheet
 	let OK = UIAlertAction(title: "OK", style: .Default) { (_) in }
@@ -18,7 +18,7 @@ func displayError(error: NSError, _ vc: UIViewController? = nil) {
 	}
 }
 
-func askToOpenURL(url: NSURL?) {
+func askToOpenURL(_ url: NSURL?) {
 	if let url = url where UIApplication.sharedApplication().canOpenURL(url) {
 		//if {
 		//	// macpin is already the registered handler for this (probably custom) url scheme, so just open it

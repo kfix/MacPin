@@ -181,7 +181,7 @@ extension UIView {
 		NSNotificationCenter.defaultCenter().addObserver(self, selector: Selector("appWillChangeStatusBarFrameNotification:"), name: UIApplicationWillChangeStatusBarFrameNotification, object: nil)
 	}
 
-	override func viewWillAppear(animated: Bool) { warn() }
+	override func viewWillAppear(_ animated: Bool) { warn() }
 
 	override func viewWillLayoutSubviews() { // do manual layout of our views
 		toolBar.hidden = !showBars
@@ -212,14 +212,14 @@ extension UIView {
 
 	override var description: String { return "<\(self.dynamicType)> `\(title ?? String())`" }
 
-	func indexOfChildViewController(vc: UIViewController) -> Int {
+	func indexOfChildViewController(_ vc: UIViewController) -> Int {
 		for (index, el) in childViewControllers.enumerate() {
 			if el === vc { return index }
 		}
 		return -3
 	}
 
-	override func addChildViewController(childController: UIViewController) {
+	override func addChildViewController(_ childController: UIViewController) {
 		if indexOfChildViewController(childController) >= 0 { return } // don't re-add existing children, that moves them to back of list
 		warn()
 		super.addChildViewController(childController)
@@ -235,7 +235,7 @@ extension UIView {
 		view.insertSubview(childController.view, belowSubview: tabView) // ensure new tab is in view hierarchy, but behind visible tab & toolBar
 	}
 
-	override func presentViewController(viewController: UIViewController, animated: Bool, completion: (() -> Void)?) {
+	override func presentViewController(_ viewController: UIViewController, animated: Bool, completion: (() -> Void)?) {
 		warn()
 		super.presentViewController(viewController, animated: animated, completion: completion)
 	}
@@ -243,7 +243,7 @@ extension UIView {
 	//override func viewWillAppear(animated: Bool) { warn() }
 	//override func viewDidAppear(animated: Bool) { warn() }
 
-	override func viewWillTransitionToSize(size: CGSize, withTransitionCoordinator coordinator: UIViewControllerTransitionCoordinator) {
+	override func viewWillTransitionToSize(_ size: CGSize, withTransitionCoordinator coordinator: UIViewControllerTransitionCoordinator) {
 		view.dumpFrame()
 		let oldStatusHeight = UIApplication.sharedApplication().statusBarFrame.size.height
 		warn("rotating size to \(size.width),\(size.height)")
@@ -260,7 +260,7 @@ extension UIView {
 		super.viewWillTransitionToSize(size, withTransitionCoordinator: coordinator)
 	}
 
-	func appWillChangeStatusBarFrameNotification(notification: NSNotification) {
+	func appWillChangeStatusBarFrameNotification(_ notification: NSNotification) {
 		if let status = notification.userInfo?[UIApplicationStatusBarFrameUserInfoKey] as? NSValue {
 			let statusRect = status.CGRectValue()
 			warn("\(statusRect.size.height)") // FIXME: this is off-phase if app started in landscape mode on iPhone
@@ -272,7 +272,7 @@ extension UIView {
 
 	override func supportedInterfaceOrientations() -> UIInterfaceOrientationMask { return .All }
 
-	override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutablePointer<Void>) {
+	override func observeValueForKeyPath(_ keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutableRawPointer) {
 		if let keyPath = keyPath {
 			switch (keyPath) {
 				case "webview.estimatedProgress": if let prog = change?[NSKeyValueChangeNewKey] as? Float {
@@ -343,9 +343,9 @@ extension MobileBrowserViewController {
 	func newIsolatedTabPrompt() {}
 	func newPrivateTabPrompt() {}
 
-	func pushTab(webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerIOS(webview: webview)) } }
+	func pushTab(_ webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerIOS(webview: webview)) } }
 
-	func addShortcut(title: String, _ obj: AnyObject?) {} // FIXME: populate bottom section of tabList with App shortcuts
+	func addShortcut(_ title: String, _ obj: AnyObject?) {} // FIXME: populate bottom section of tabList with App shortcuts
 	// + Force Touch AppIcon menu?
 
 	func focusOnBrowser() {}
@@ -369,7 +369,7 @@ extension MobileBrowserViewController {
 }
 
 extension MobileBrowserViewController: UISearchBarDelegate {
-	func searchBarSearchButtonClicked(searchBar: UISearchBar) {
+	func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
 		warn()
 		if let wvc = selectedViewController as? WebViewController, url = validateURL(searchBar.text ?? "") {
 			searchBar.text = url.absoluteString
@@ -379,13 +379,13 @@ extension MobileBrowserViewController: UISearchBarDelegate {
 		}
 	}
 
-	func searchBarCancelButtonClicked(searchBar: UISearchBar) {
+	func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
 		warn()
 	}
 }
 
 extension MobileBrowserViewController: UITextFieldDelegate {
-	func textFieldShouldReturn(textField: UITextField) -> Bool {
+	func textFieldShouldReturn(_ textField: UITextField) -> Bool {
 		if let wvc = selectedViewController as? WebViewController, url = validateURL(textField.text ?? "") {
 			textField.resignFirstResponder()
 			textField.text = url.absoluteString
@@ -395,7 +395,7 @@ extension MobileBrowserViewController: UITextFieldDelegate {
 		}
 		return true
 	}
-	func textFieldDidBeginEditing(textField: UITextField) {
+	func textFieldDidBeginEditing(_ textField: UITextField) {
 		if let wvc = selectedViewController as? WebViewController, urlstr = wvc.webview.URL?.absoluteString {
 			textField.text = urlstr
 		}
@@ -403,9 +403,9 @@ extension MobileBrowserViewController: UITextFieldDelegate {
 }
 
 extension MobileBrowserViewController: UIScrollViewDelegate {
-	func scrollViewWillBeginDragging(scrollView: UIScrollView) { warn("\(lastContentOffset)") }
+	func scrollViewWillBeginDragging(_ scrollView: UIScrollView) { warn("\(lastContentOffset)") }
 
-	func scrollViewDidScroll(scrollView: UIScrollView) {
+	func scrollViewDidScroll(_ scrollView: UIScrollView) {
 		let drag = scrollView.contentOffset.y
 		if (scrollView.dragging || scrollView.tracking) && !scrollView.decelerating { //active-touch scrolling in progress
 			if (lastContentOffset > drag) { // scrolling Up
@@ -416,12 +416,12 @@ extension MobileBrowserViewController: UIScrollViewDelegate {
 		}
 		lastContentOffset = drag
 	}
-	func scrollViewWillEndDragging(scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) { warn() }
-	func scrollViewDidEndDragging(scrollView: UIScrollView, willDecelerate decelerate: Bool) { decelerate ? warn("finger flicked off") : warn("finger lifted off") }
+	func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) { warn() }
+	func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) { decelerate ? warn("finger flicked off") : warn("finger lifted off") }
 }
 
 extension MobileBrowserViewController: UITableViewDataSource, UITableViewDelegate {
-	func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+	func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
 		//section: 0
 		return tabs.count
 		//return childViewControllers.count
@@ -429,7 +429,7 @@ extension MobileBrowserViewController: UITableViewDataSource, UITableViewDelegat
 		// section: 1 could be for addShortcuts ...
 	}
 
-    func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
+    func tableView(_ tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier("TableViewCell", forIndexPath: indexPath)
 
         let wv = tabs[indexPath.row]
@@ -442,7 +442,7 @@ extension MobileBrowserViewController: UITableViewDataSource, UITableViewDelegat
         return cell
     }
 
-    func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
+    func tableView(_ tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         tableView.deselectRowAtIndexPath(indexPath, animated: true)
 		tabSelected = tabs[indexPath.row]
 		//if let newVC = childViewControllers[indexPath.row] as? UIViewController { selectedViewController = newVC }
