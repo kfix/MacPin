@@ -137,7 +137,7 @@ xcrun				?= xcrun
 xcs					?= xcode-select
 
 sdkpath				:= $(shell $(xcrun) --show-sdk-path --sdk $(sdk))
-swiftc				:= $(xcrun) --toolchain com.apple.dt.toolchain.Swift_2_3 -sdk $(sdk) swiftc -target $(arch)-$(target_$(platform)) $(verbose)
+swiftc				:= $(xcrun) --toolchain com.apple.dt.toolchain.Swift_3_0_2 -sdk $(sdk) swiftc -target $(arch)-$(target_$(platform)) $(verbose)
 # Xcode.app/Contents/Developer/Toolchains/*.xctoolchain/ToolchainInfo.plist << TC ids in there
 swift-update		:= $(xcrun) -sdk $(sdk) swift-update -target $(arch)-$(target_$(platform)) $(verbose)
 clang				:= $(xcrun) -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platform)) $(verbose)
