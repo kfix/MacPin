@@ -19,6 +19,7 @@ struct WeakThing<T: AnyObject> {
 func faviconChanged(_ iconDatabase: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: UnsafeRawPointer) { // WKIconDatabaseDidChangeIconForPageURLCallback
 	warn()
 }
+// cannot convert value of type '(WKIconDatabaseRef, WKURLRef, UnsafeRawPointer) -> ()' to expected argument type 'WKIconDatabaseDidChangeIconForPageURLCallback!'
 func faviconsCleared(_ iconDatabase: WKIconDatabaseRef, clientInfo: UnsafeRawPointer) { //WKIconDatabaseDidRemoveAllIconsCallback
 	warn()
 }
@@ -26,7 +27,7 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 	let browser: BrowserViewControllerOSX = unsafeBitCast(clientInfo, to: BrowserViewControllerOSX.self) // translate pointer to browser instance
 	WKIconDatabaseRetainIconForURL(iconDB, pageURL)
 	let url = WKURLCopyCFURL(kCFAllocatorDefault, pageURL) as NSURL
-	for tab in browser.tabs.filter({ $0.URL == url }) {
+	for tab in browser.tabs.filter({ $0.url == url as URL}) {
 		//let iconurl = WKStringCopyCFString(CFAllocatorGetDefault().takeUnretainedValue(), WKURLCopyString(WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithUTF8CString(url)))) as NSString
 		let iconurl: NSURL = WKURLCopyCFURL(kCFAllocatorDefault, WKIconDatabaseCopyIconURLForPageURL(iconDB, pageURL))
 		// ^^ FIXME: EXEC_BAD_ACCS on disappeared tabs?
@@ -36,7 +37,7 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 
 @objc class TabViewController: NSTabViewController {
 	required init?(coder: NSCoder) { super.init(coder: coder) } // required by NSCoder
-	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
+	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
 
 	let omnibox = OmniBoxController() // we could & should only present one of these at a time
 	lazy var tabPopBtn = NSPopUpButton(frame: NSRect(x:0, y:0, width:400, height:24), pullsDown: false)
@@ -74,7 +75,7 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 	var cornerRadius = CGFloat(0.0) // increment above 0.0 to put nice corners on the window FIXME userDefaults
 
 	func close() { // close all tabs
-		dispatch_async(dispatch_get_main_queue(), { //AppScriptRuntime needs this
+		DispatchQueue.main.async() { //AppScriptRuntime needs this
 			self.omnibox.webview = nil
 			self.view.window?.makeFirstResponder(nil)
 
@@ -87,20 +88,20 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 
 			// FIXME: dispatch a browserClose notification
 			self.view.window?.windowController?.close() // kicks off automatic app termination
-		})
+		}
 	}
 
-	override func insertTabViewItem(_ tab: NSTabViewItem, atIndex: Int) {
+	override func insertTabViewItem(_ tab: NSTabViewItem, at: Int) {
 		if let view = tab.view {
 			tab.initialFirstResponder = view
 			if let wvc = tab.viewController as? WebViewController {
 				// FIXME: set tab.observer.onTitleChanged & onURLchanged & onProgressChanged closures instead of KVO bindings
-				tab.bind(NSLabelBinding, toObject: wvc.webview, withKeyPath: "title", options: nil)
-				tab.bind(NSToolTipBinding, toObject: wvc.webview, withKeyPath: "title", options: nil)
-				tab.bind(NSImageBinding, toObject: wvc.webview.favicon, withKeyPath: "icon", options: nil)
+				tab.bind(NSLabelBinding, to: wvc.webview, withKeyPath: "title", options: nil)
+				tab.bind(NSToolTipBinding, to: wvc.webview, withKeyPath: "title", options: nil)
+				tab.bind(NSImageBinding, to: wvc.webview.favicon, withKeyPath: "icon", options: nil)
 			}
 		}
-		super.insertTabViewItem(tab, atIndex: atIndex)
+		super.insertTabViewItem(tab, at: at)
 	}
 
 	override func removeTabViewItem(_ tab: NSTabViewItem) {
@@ -122,14 +123,14 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 		super.removeTabViewItem(tab)
 	}
 
-	override func tabView(_ tabView: NSTabView, willSelectTabViewItem tabViewItem: NSTabViewItem?) {
-		super.tabView(tabView, willSelectTabViewItem: tabViewItem)
+	override func tabView(_ tabView: NSTabView, willSelect tabViewItem: NSTabViewItem?) {
+		super.tabView(tabView, willSelect: tabViewItem)
 		omnibox.webview = tabViewItem?.view?.subviews.first as? MPWebView
 	}
 
-	override func tabView(_ tabView: NSTabView, didSelectTabViewItem tabViewItem: NSTabViewItem?) {
-		super.tabView(tabView, didSelectTabViewItem: tabViewItem)
-		if let window = view.window, view = tabViewItem?.view {
+	override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
+		super.tabView(tabView, didSelect: tabViewItem)
+		if let window = self.view.window, let view = tabViewItem?.view {
 			window.makeFirstResponder(view) // steal app focus to whatever the tab represents
 		}
 	}
@@ -139,7 +140,7 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 	}
 
 	override func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [String] {
-		let tabs = super.toolbarAllowedItemIdentifiers(toolbar) ?? []
+		let tabs = super.toolbarAllowedItemIdentifiers(toolbar)
 		warn(tabs.description)
 		return tabs + [
 			NSToolbarSeparatorItemIdentifier,
@@ -164,7 +165,7 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 	}
 
 	override func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [String] {
-		let tabs = super.toolbarDefaultItemIdentifiers(toolbar) ?? []
+		let tabs = super.toolbarDefaultItemIdentifiers(toolbar)
 		return [BrowserButtons.Share.rawValue, BrowserButtons.NewTab.rawValue] + tabs + [BrowserButtons.OmniBox.rawValue] // [NSToolbarFlexibleSpaceItemIdentifier]
 		//tabviewcontroller remembers where tabs was and keeps pushing new tabs to that position
 	}
@@ -182,10 +183,10 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 			//btnCell.controlSize = .SmallControlSize
 			btn.toolTip = itemIdentifier
 			btn.image = NSImage(named: NSImageNamePreferencesGeneral) // https://hetima.github.io/fucking_nsimage_syntax/
-			btn.bezelStyle = .Recessed // RoundRectBezelStyle ShadowlessSquareBezelStyle
-			btn.setButtonType(.MomentaryLight) //MomentaryChangeButton MomentaryPushInButton
+			btn.bezelStyle = .recessed // RoundRectBezelStyle ShadowlessSquareBezelStyle
+			btn.setButtonType(.momentaryLight) //MomentaryChangeButton MomentaryPushInButton
 			btn.target = nil // walk the Responder Chain
-			btn.sendActionOn(.LeftMouseDown)
+			btn.sendAction(on: .leftMouseDown)
 			ti.view = btn
 
 			switch (btnType) {
@@ -223,9 +224,9 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 				case .ForwardBack:
 					let seg = NSSegmentedControl()
 					seg.segmentCount = 2
-					seg.segmentStyle = .Separated
+					seg.segmentStyle = .separated
 					let segCell = seg.cell as! NSSegmentedCell
-					seg.trackingMode = .Momentary
+					seg.trackingMode = .momentary
 					seg.action = #selector(WebView.goBack(_:))
 
 					seg.setImage(NSImage(named: NSImageNameGoLeftTemplate), forSegment: 0)
@@ -285,10 +286,10 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 
 	override func viewDidLoad() {
 		// note, .view != tabView, view wraps tabView + whatever tabStyle is selected
-		tabView.tabViewType = .NoTabsNoBorder
+		tabView.tabViewType = .noTabsNoBorder
 		tabView.drawsBackground = false // let the window be the background
 		identifier = "TabViewController"
-		tabStyle = .Toolbar // this will reinit window.toolbar to mirror the tabview itembar
+		tabStyle = .toolbar // this will reinit window.toolbar to mirror the tabview itembar
 		//tabStyle = .Unspecified
 		//tabStyle = .SegmentedControlOnTop
 		//tabStyle = .SegmentedControlOnBottom
@@ -299,12 +300,12 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 		view.layer?.masksToBounds = true // include layer contents in clipping effects
 		view.canDrawSubviewsIntoLayer = true // coalesce all subviews' layers into this one
 
-		view.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable] //resize tabview to match parent ContentView size
+		view.autoresizingMask = [.viewWidthSizable, .viewHeightSizable] //resize tabview to match parent ContentView size
 		view.autoresizesSubviews = true // resize tabbed subviews based on their autoresizingMasks
-		transitionOptions = .None //.Crossfade .SlideUp/Down/Left/Right/Forward/Backward
+		transitionOptions = [] //.Crossfade .SlideUp/Down/Left/Right/Forward/Backward
 
 		super.viewDidLoad()
-		view.registerForDraggedTypes([NSPasteboardTypeString,NSURLPboardType,NSFilenamesPboardType]) //webviews already do this, this just enables openURL when tabless
+		view.register(forDraggedTypes: [NSPasteboardTypeString,NSURLPboardType,NSFilenamesPboardType]) //webviews already do this, this just enables openURL when tabless
 	}
 
 	override func viewWillAppear() {
@@ -313,23 +314,23 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 
 	override func viewDidAppear() {
 		super.viewDidAppear()
-		if let window = view.window, toolbar = window.toolbar {
+		if let window = view.window, let toolbar = window.toolbar {
 			//if #available(OSX 10.11, *) {
-			if NSProcessInfo().isOperatingSystemAtLeastVersion(NSOperatingSystemVersion(majorVersion: 10, minorVersion: 11, patchVersion: 0)) &&
+			if ProcessInfo().isOperatingSystemAtLeast(OperatingSystemVersion(majorVersion: 10, minorVersion: 11, patchVersion: 0)) &&
 					// FIXME: toolbar delegation broken on El Capitan http://www.openradar.me/22348095
-				!NSProcessInfo().isOperatingSystemAtLeastVersion(NSOperatingSystemVersion(majorVersion: 10, minorVersion: 11, patchVersion: 2)) {
+				!ProcessInfo().isOperatingSystemAtLeast(OperatingSystemVersion(majorVersion: 10, minorVersion: 11, patchVersion: 2)) {
 					// fixed in 10.11.2 final https://forums.developer.apple.com/thread/14237#88260
 			} else {
 				toolbar.delegate = self
 			}
 			toolbar.allowsUserCustomization = true
-			toolbar.displayMode = .IconOnly
-			toolbar.sizeMode = .Small //favicons are usually 16*2
+			toolbar.displayMode = .iconOnly
+			toolbar.sizeMode = .small //favicons are usually 16*2
 		}
-		view.window?.excludedFromWindowsMenu = true
+		view.window?.isExcludedFromWindowsMenu = true
 	}
 
-	func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
+	func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.every }
 	func performDragOperation(_ sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
 }
 
@@ -338,9 +339,9 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
  	// FIXME: not needed with STP v21: https://github.com/WebKit/webkit/commit/583510ef68c8aa56558c17263791b5cd8f762f99
 	var iconClient = WKIconDatabaseClientV1(
 		base: WKIconDatabaseClientBase(),
-		didChangeIconForPageURL: faviconChanged,
-		didRemoveAllIcons: faviconsCleared,
-		iconDataReadyForPageURL: faviconReady
+		didChangeIconForPageURL: nil, //faviconChanged
+		didRemoveAllIcons: nil, //faviconsCleared,
+		iconDataReadyForPageURL: nil //faviconReady as WKIconDatabaseIconDataReadyForPageURLCallback!
 	)
 
 	convenience init() {
@@ -351,34 +352,34 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		iconClient.base = WKIconDatabaseClientBase(version: 1, clientInfo: Unmanaged.passUnretained(self).toOpaque())
 		tabMenu.delegate = self
 
-		let center = NSNotificationCenter.defaultCenter()
-		let mainQueue = NSOperationQueue.mainQueue()
+		let center = NotificationCenter.default
+		let mainQueue = OperationQueue.main
 		var token: NSObjectProtocol?
-		token = center.addObserverForName(NSWindowWillCloseNotification, object: nil, queue: mainQueue) { (note) in //object: self.view.window?
+		token = center.addObserver(forName: NSNotification.Name.NSWindowWillClose, object: nil, queue: mainQueue) { (note) in //object: self.view.window?
 			//warn("window closed notification!")
 			center.removeObserver(token!) // prevent notification loop by close()
 		}
-		center.addObserverForName(NSApplicationWillTerminateNotification, object: nil, queue: mainQueue) { (note) in //object: self.view.window?
+		center.addObserver(forName: NSNotification.Name.NSApplicationWillTerminate, object: nil, queue: mainQueue) { (note) in //object: self.view.window?
 			//warn("application closed notification!")
 		}
 
 	}
 
 	deinit { warn(description) }
-	override var description: String { return "<\(self.dynamicType))> `\(title ?? String())`" }
+	override var description: String { return "<\(type(of: self))> `\(title ?? String())`" }
 
 	func extend(_ mountObj: JSValue) {
-		let browser = JSValue(object: self, inContext: mountObj.context)
+		let browser = JSValue(object: self, in: mountObj.context)
 		let helpers = // some helper code to smooth out some rough edges & wrinkles in the JSExported API
 			"Object.assign(this, {" +
 				"pushTab: function(tab) { this.tabs = this.tabs.concat(tab); }," +
 				"popTab: function(tab) { if (this.tabs.indexOf(tab) != -1) this.tabs = this.tabs.splice(this.tabs.indexOf(tab), 1)}" +
 			"})"
-		browser.thisEval(helpers)
+		browser?.thisEval(helpers)
 		mountObj.setValue(browser, forProperty: "browser")
 	}
 	func unextend(_ mountObj: JSValue) {
-		let browser = JSValue(nullInContext: mountObj.context)
+		let browser = JSValue(nullIn: mountObj.context)
 		mountObj.setValue(browser, forProperty: "browser")
 	}
 
@@ -389,12 +390,12 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/mac/UserAgentMac.mm
 
 	var isFullscreen: Bool {
-		get { return view.window?.contentView?.inFullScreenMode ?? false }
+		get { return view.window?.contentView?.isInFullScreenMode ?? false }
 		set(bool) { if bool != isFullscreen { view.window!.toggleFullScreen(nil) } }
 	}
 
 	var isToolbarShown: Bool {
-		get { return view.window?.toolbar?.visible ?? true }
+		get { return view.window?.toolbar?.isVisible ?? true }
 		set(bool) { if bool != isToolbarShown { view.window!.toggleToolbarShown(nil) } }
 	}
 
@@ -468,14 +469,14 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		get {
 			if selectedTabViewItemIndex == -1 { return nil } // no tabs? bupkiss!
 			let vc = childViewControllers[selectedTabViewItemIndex]
-			if let obj: AnyObject = vc.representedObject { return obj } // try returning an actual model first
+			if let obj: AnyObject = vc.representedObject as AnyObject? { return obj } // try returning an actual model first
 			return vc
 		}
 		set(obj) {
 			switch (obj) {
 				case let vc as NSViewController:
-					if tabViewItemForViewController(vc) == nil { childViewControllers.append(vc) } // add the given vc as a child if it isn't already
-					tabView.selectTabViewItem(tabViewItemForViewController(vc))
+					if tabViewItem(for: vc) == nil { childViewControllers.append(vc) } // add the given vc as a child if it isn't already
+					tabView.selectTabViewItem(tabViewItem(for: vc))
 				case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
 					self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
 					//FIXME: a backref in the wv to wvc would be helpful
@@ -487,9 +488,9 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	}
 
 
-	override func insertChildViewController(_ childViewController: NSViewController, atIndex index: Int) {
+	override func insertChildViewController(_ childViewController: NSViewController, at index: Int) {
 		warn("#\(index)")
-		super.insertChildViewController(childViewController, atIndex: index)
+		super.insertChildViewController(childViewController, at: index)
 
 		if let wvc = childViewController as? WebViewController {
 			//let gridItem = tabFlow.newItemForRepresentedObject(wvc)
@@ -529,9 +530,9 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		}
 	}
 */
-	override func removeChildViewControllerAtIndex(_ index: Int) {
+	override func removeChildViewController(at index: Int) {
 		warn("#\(index)")
-		super.removeChildViewControllerAtIndex(index)
+		super.removeChildViewController(at: index)
 	}
 
 	override func presentViewController(_ viewController: NSViewController, animator: NSViewControllerPresentationAnimator) {
@@ -539,10 +540,10 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		super.presentViewController(viewController, animator: animator)
 	}
 
-	override func transitionFromViewController(_ fromViewController: NSViewController, toViewController: NSViewController,
+	override func transition(from fromViewController: NSViewController, to toViewController: NSViewController,
 		options: NSViewControllerTransitionOptions, completionHandler completion: (() -> Void)?) {
 
-		super.transitionFromViewController(fromViewController, toViewController: toViewController,
+		super.transition(from: fromViewController, to: toViewController,
 			options: options, completionHandler: completion)
 
 		//view.layer?.addSublayer(toViewController.view.layer?)
@@ -566,7 +567,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	func switchToNextTab() { tabView.selectNextTabViewItem(self) }
 
 	func loadSiteApp() { AppScriptRuntime.shared.loadSiteApp() }
-	func editSiteApp() { NSWorkspace.sharedWorkspace().openFile(NSBundle.mainBundle().resourcePath!) }
+	func editSiteApp() { NSWorkspace.shared().openFile(Bundle.main.resourcePath!) }
 
 	func newTabPrompt() {
 		//tabSelected = WebViewControllerOSX(url: NSURL(string: "about:blank")!)
@@ -589,13 +590,13 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	func closeTab(_ tab: AnyObject?) {
 		switch (tab) {
 			case let vc as NSViewController:
-				guard let ti = tabViewItemForViewController(vc) else { break } // not a loaded tab
-				dispatch_async(dispatch_get_main_queue()) {	self.removeTabViewItem(ti) }
+				guard let ti = tabViewItem(for: vc) else { break } // not a loaded tab
+				DispatchQueue.main.async() { self.removeTabViewItem(ti) }
 				return
 			case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
 				guard let vc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first else { break }
-				guard let ti = tabViewItemForViewController(vc) else { break } // not a loaded tab
-				dispatch_async(dispatch_get_main_queue()) {	self.removeTabViewItem(ti) }
+				guard let ti = tabViewItem(for: vc) else { break } // not a loaded tab
+				DispatchQueue.main.async() { self.removeTabViewItem(ti) }
 				return
 			//case let js as JSValue: guard let wv = js.toObjectOfClass(MPWebView.self) { self.tabSelected = wv } //custom bridging coercion
 			default:
@@ -605,9 +606,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 		// close currently selected tab
 		if selectedTabViewItemIndex == -1 { return } // no tabs? bupkiss!
-		dispatch_async(dispatch_get_main_queue()) { // DispatchQueue.main.async
-			self.removeChildViewControllerAtIndex(self.selectedTabViewItemIndex)
-		}
+		DispatchQueue.main.async() { self.removeChildViewController(at: self.selectedTabViewItemIndex) }
 	}
 
 	func revealOmniBox() {
@@ -620,7 +619,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			//presentViewControllerAsSheet(omnibox) // modal, yuck
 			var poprect = view.bounds
 			poprect.size.height -= omnibox.preferredContentSize.height + 12 // make room at the top to stuff the popover
-			presentViewController(omnibox, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSRectEdge.MaxY, behavior: NSPopoverBehavior.Transient)
+			presentViewController(omnibox, asPopoverRelativeTo: poprect, of: view, preferredEdge: NSRectEdge.maxY, behavior: NSPopoverBehavior.transient)
 		}
 	}
 
@@ -641,17 +640,17 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	func focusOnBrowser() {  // un-minimizes app, switches to its screen/space, and steals key focus to the window
 		//NSApplication.sharedApplication().activateIgnoringOtherApps(true)
-		let app = NSRunningApplication.currentApplication()
+		let app = NSRunningApplication.current()
 		app.unhide() // un-minimize app
-		app.activateWithOptions(.ActivateIgnoringOtherApps) // brings up key window
+		app.activate(options: .activateIgnoringOtherApps) // brings up key window
 		view.window?.makeKeyAndOrderFront(nil) // steals key focus
 		// CoreProcess stealer: https://github.com/gnachman/iTerm2/commit/c2a79333da01116ce84ec38d573fd95e3f632e4f
 	}
 
 	func unhideApp() { // un-minimizes app, but doesn't steal key focus or screen or menubar
-		let app = NSRunningApplication.currentApplication()
+		let app = NSRunningApplication.current()
 		app.unhide() // un-minimize app
-		app.activateWithOptions(.ActivateIgnoringOtherApps) // brings up key window
+		app.activate(options: .activateIgnoringOtherApps) // brings up key window
 		view.window?.makeKeyAndOrderFront(nil) // steals key focus
 /*
 		//windowController.showWindow(self)
@@ -666,7 +665,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		//if let tvi = tabViewItemForViewController(vc) { }
 	}
 
-	func bounceDock() { NSApplication.sharedApplication().requestUserAttention(.InformationalRequest) } //Critical keeps bouncing
+	func bounceDock() { NSApplication.shared().requestUserAttention(.informationalRequest) } //Critical keeps bouncing
 
 	func addShortcut(_ title: String, _ obj: AnyObject?) {
 		if title.isEmpty {
@@ -678,21 +677,21 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			//case is String: fallthrough
 			//case is [String:AnyObject]: fallthrough
             //case is [String]: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: obj))
-            case let str as String: mi = MenuItem(title, "gotoShortcut:", target: self, represents: str)
-            case let dict as [String:AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: dict)
+            case let str as String: mi = MenuItem(title, "gotoShortcut:", target: self, represents: str as NSString)
+            case let dict as [String:AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: NSDictionary(dictionary: dict))
             case is [AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: obj)
 			default:
 				warn("invalid shortcut object type!")
 				return
 		}
         shortcutsMenu.addItem(mi)
-		mi.parentItem?.hidden = false
+		mi.parent?.isHidden = false
 	}
 
 	func gotoShortcut(_ sender: AnyObject?) {
 		if let shortcut = sender as? NSMenuItem {
 			switch (shortcut.representedObject) {
-				case let urlstr as String: AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr)
+				case let urlstr as String: AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr as NSString)
 				// FIXME: fire event in jsdelegate if string, only NSURLs should do launchURL
 				case let dict as [String:AnyObject]: tabSelected = MPWebView(object: dict) // FIXME: do a try here
                 case let arr as [AnyObject] where arr.count > 0 && arr.first is String:
@@ -706,7 +705,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 }
 
 extension BrowserViewControllerOSX: NSMenuDelegate {
-	func menuHasKeyEquivalent(_ menu: NSMenu, forEvent event: NSEvent, target: AutoreleasingUnsafeMutablePointer<AnyObject?>, action: UnsafeMutablePointer<Selector>) -> Bool {
+	func menuHasKeyEquivalent(_ menu: NSMenu, for event: NSEvent, target: AutoreleasingUnsafeMutablePointer<AnyObject?>?, action: UnsafeMutablePointer<Selector?>?) -> Bool {
 		return false // no numeric index shortcuts for tabz (unlike Safari)
 	}
 
@@ -722,14 +721,14 @@ extension BrowserViewControllerOSX: NSMenuDelegate {
 					mi.image?.size = NSSize(width: 16, height: 16)
 					mi.representedObject = tab
 					mi.target = self
-					mi.state = (tab.tabState == .SelectedTab) ? NSOnState : NSOffState
+					mi.state = (tab.tabState == .selectedTab) ? NSOnState : NSOffState
 					menu.addItem(mi)
 				}
 			default: return
 		}
 	}
 
-	func menu(_ menu: NSMenu, willHighlightItem item: NSMenuItem?) {
+	func menu(_ menu: NSMenu, willHighlight item: NSMenuItem?) {
 		// popup thumbnail snapshot?
 	}
 }

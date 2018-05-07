@@ -8,35 +8,35 @@ import Async
 
 extension WebViewControllerOSX {
 
-	func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
 		let alert = NSAlert()
 		alert.messageText = webView.title ?? ""
-		alert.addButtonWithTitle("Dismiss")
+		alert.addButton(withTitle: "Dismiss")
 		alert.informativeText = message
 		alert.icon = webview.favicon.icon
-		alert.alertStyle = .Informational // .Warning .Critical
+		alert.alertStyle = .informational // .Warning .Critical
 		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler() }
 	}
 
-	func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
 		let alert = NSAlert()
 		alert.messageText = webView.title ?? ""
-		alert.addButtonWithTitle("OK")
-		alert.addButtonWithTitle("Cancel")
+		alert.addButton(withTitle: "OK")
+		alert.addButton(withTitle: "Cancel")
 		alert.informativeText = message
-		alert.icon = NSApplication.sharedApplication().applicationIconImage
+		alert.icon = NSApplication.shared().applicationIconImage
 		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler(response == NSAlertFirstButtonReturn ? true : false) }
 	}
 
-	func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String!) -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String!) -> Void) {
 		let alert = NSAlert()
 		alert.messageText = webView.title ?? ""
-		alert.addButtonWithTitle("Submit")
+		alert.addButton(withTitle: "Submit")
 		alert.informativeText = prompt
-		alert.icon = NSApplication.sharedApplication().applicationIconImage
+		alert.icon = NSApplication.shared().applicationIconImage
 		let input = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
 		input.stringValue = defaultText ?? ""
-		input.editable = true
+		input.isEditable = true
  		alert.accessoryView = input
 		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler(input.stringValue) }
 	}
@@ -44,9 +44,9 @@ extension WebViewControllerOSX {
 	func _webView(_ webView: WKWebView, printFrame: WKFrameInfo) {
 		warn("JS: `window.print();`")
 #if STP
-		let printer = webView._printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo())
-		printer.showsPrintPanel = true
-		printer.runOperation()
+		let printer = webView._printOperation(with: NSPrintInfo.shared())
+		printer?.showsPrintPanel = true
+		printer?.run()
 #endif
 	}
 }
@@ -66,8 +66,8 @@ extension WebViewControllerOSX {
 extension WebViewControllerOSX {
 
 	// https://github.com/WebKit/webkit/commit/fa99fc8295905850b2b9444ba019a7250996ee7d
-	func webView(_ webView: WKWebView, didReceiveAuthenticationChallenge challenge: NSURLAuthenticationChallenge,
-		completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
+	func webView(_ webView: WKWebView, didReceiveAuthenticationChallenge challenge: URLAuthenticationChallenge,
+		completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
 
 /*
 FIXME: `completionHandler(.PerformDefaultHandling, nil)` sometimes causes missing selector exceptions in com.apple.WebKit.Networking
@@ -149,17 +149,17 @@ Global Trace Buffer (reverse chronological seconds):
 		if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
 			// Server Trust Method not implemented, reject it out of hand
 			//completionHandler(.PerformDefaultHandling, nil)
-			completionHandler(.RejectProtectionSpace, nil)
+			completionHandler(.rejectProtectionSpace, nil)
 			return
 		}
-		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.URL ?? String())]")
+		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.url)]")
 
 		let alert = NSAlert()
 		alert.messageText = webView.title ?? ""
-		alert.addButtonWithTitle("Submit")
-		alert.addButtonWithTitle("Cancel")
+		alert.addButton(withTitle: "Submit")
+		alert.addButton(withTitle: "Cancel")
 		alert.informativeText = "auth challenge"
-		alert.icon = NSApplication.sharedApplication().applicationIconImage
+		alert.icon = NSApplication.shared().applicationIconImage
 
 		let prompts = NSView(frame: NSMakeRect(0, 0, 200, 64))
 
@@ -168,14 +168,14 @@ Global Trace Buffer (reverse chronological seconds):
  		if let cred = challenge.proposedCredential {
 			if let user = cred.user { userbox.stringValue = user }
 		}
-		userbox.editable = true
+		userbox.isEditable = true
 
 		let passbox = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
 		passbox.stringValue = "Enter password"
  		if let cred = challenge.proposedCredential {
 			if cred.hasPassword { passbox.stringValue = cred.password! }
 		}
-		passbox.editable = true
+		passbox.isEditable = true
 
 		prompts.subviews = [userbox, passbox]
 
@@ -184,15 +184,15 @@ Global Trace Buffer (reverse chronological seconds):
 		//alert.beginSheetModalForWindow(webView.window!, completionHandler:{(response:NSModalResponse) -> Void in
 		displayAlert(alert) { (response:NSModalResponse) -> Void in
 			if response == NSAlertFirstButtonReturn {
-				completionHandler(.UseCredential, NSURLCredential(
+				completionHandler(.useCredential, URLCredential(
 					user: userbox.stringValue,
 					password: passbox.stringValue,
-					persistence: .Permanent
+					persistence: .permanent
 				))
 			} else {
 				// need to cancel request, else user can get locked into a modal prompt loop
 				//completionHandler(.PerformDefaultHandling, nil)
-				completionHandler(.RejectProtectionSpace, nil)
+				completionHandler(.rejectProtectionSpace, nil)
 				webView.stopLoading()
 			}
  		}
@@ -209,10 +209,10 @@ extension WebViewControllerOSX { // _WKDownloadDelegate
 		let saveDialog = NSSavePanel()
 		saveDialog.canCreateDirectories = true
 		saveDialog.nameFieldStringValue = filename
-		if let webview = download.originatingWebView, window = webview.window {
-			NSApplication.sharedApplication().requestUserAttention(.InformationalRequest)
-			saveDialog.beginSheetModalForWindow(window, completionHandler: { (choice: Int) -> Void in NSApp.stopModalWithCode(choice) })
-			if NSApp.runModalForWindow(window) != NSModalResponseAbort { if let url = saveDialog.URL, path = url.path { return path } }
+		if let webview = download.originatingWebView, let window = webview.window {
+			NSApplication.shared().requestUserAttention(.informationalRequest)
+			saveDialog.beginSheetModal(for: window, completionHandler: { (choice: Int) -> Void in NSApp.stopModal(withCode: choice) })
+			if NSApp.runModal(for: window) != NSModalResponseAbort { if let url = saveDialog.url { return url.path } }
 		}
 		download.cancel()
 		return ""
@@ -233,10 +233,10 @@ extension WebViewControllerOSX { // HTML5 fullscreen
 	//  https://github.com/WebKit/webkit/search?q=fullScreenWindowController
 	// https://github.com/WebKit/webkit/blob/master/Source/WebCore/platform/mac/WebVideoFullscreenInterfaceMac.mm
 	func _webViewDidEnterFullscreen(_ webView: WKWebView) {
-		warn("JS <\(webView.URL)>: `<video>.requestFullscreen(); // begun`")
+		warn("JS <\(webView.url)>: `<video>.requestFullscreen(); // begun`")
 	}
 	func _webViewDidExitFullscreen(_ webView: WKWebView) {
-		warn("JS <\(webView.URL)>: `<video>.requestFullscreen(); // finished`")
+		warn("JS <\(webView.url)>: `<video>.requestFullscreen(); // finished`")
 	}
 }
 
@@ -253,12 +253,12 @@ extension WebViewControllerOSX { // _WKFindDelegate
 }
 
 extension WebViewController { // _WKInputDelegate
-	func _webView(_ webView: WKWebView!, didStartInputSession inputSession: _WKFormInputSession!) {
+	func _webView(_ webView: WKWebView!, didStart inputSession: _WKFormInputSession!) {
 		//inputSession.valid .userObject .focusedElementInfo==[.Link,.Image]
 		warn()
 	}
 
-	func _webView(_ webView: WKWebView!, willSubmitFormValues values: [AnyHashable: Any]!, userObject: protocol<NSSecureCoding, NSObjectProtocol>!, submissionHandler: (() -> Void)!) {
+	func _webView(_ webView: WKWebView!, willSubmitFormValues values: [AnyHashable: Any]!, userObject: (NSSecureCoding & NSObjectProtocol)!, submissionHandler: (() -> Void)!) {
 		warn(values.description)
 		//userObject: https://github.com/WebKit/webkit/commit/c65916009f1e95f53f329ce3cfe69bf70616cc02#diff-776c38c9a3b2252729ea3ac028367308R1201
 		submissionHandler()
@@ -275,14 +275,15 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 		let openDialog = NSOpenPanel()
 		openDialog.allowsMultipleSelection =  parameters.allowsMultipleSelection
 		if let window = webview.window {
-			NSApplication.sharedApplication().requestUserAttention(.InformationalRequest)
-			openDialog.beginSheetModalForWindow(window, completionHandler: { (choice: Int) -> Void in
+			NSApplication.shared().requestUserAttention(.informationalRequest)
+			openDialog.beginSheetModal(for: window) { (choice: Int) -> Void in
 				if choice == NSFileHandlingPanelOKButton {
-					completionHandler(openDialog.URLs)
+					//completionHandler(openDialog.URLs)
+					completionHandler(nil)
 				} else {
 					completionHandler(nil)
 				}
-			})
+			}
 		}
 	}
 }

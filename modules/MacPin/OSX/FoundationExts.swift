@@ -42,7 +42,7 @@ extension NSPasteboard {
 				for uti in item.types { // https://developer.apple.com/library/mac/documentation/MobileCoreServices/Reference/UTTypeRef/
 					// https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/UTIRef/Articles/System-DeclaredUniformTypeIdentifiers.html
 					// http://arstechnica.com/apple/2005/04/macosx-10-4/11/ http://www.cocoanetics.com/2012/09/fun-with-uti/
-					if !uti.isEmpty, let value = item.stringForType(uti) {
+					if !uti.isEmpty, let value = item.string(forType: uti) {
 				 		if let cfdesc = UTTypeCopyDescription(uti as CFString), let cfmime = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassMIMEType) {
 							let desc = cfdesc.takeUnretainedValue()
 							let mime = cfmime.takeUnretainedValue()
@@ -64,14 +64,14 @@ extension NSPasteboard {
 		// extracts any URLs dragged in, and makes the pasteboard writeable whilst restoring most of the original contents
 		//var urls: [NSURL] = []
 
-		let apsfctype = dataForType(kPasteboardTypeFilePromiseContent as String) //"com.apple.pasteboard.promised-file-content-type")
-		let apsfurl = dataForType(kPasteboardTypeFileURLPromise as String) //"com.apple.pasteboard.promised-file-url")
+		let apsfctype = data(forType: kPasteboardTypeFilePromiseContent as String) //"com.apple.pasteboard.promised-file-content-type")
+		let apsfurl = data(forType: kPasteboardTypeFileURLPromise as String) //"com.apple.pasteboard.promised-file-url")
 		//let urlstr = stringForType(kUTTypeURL as String)
 		//let urlname = stringForType("public.url-name" as String)
-		let str = stringForType(NSStringPboardType as String)
-		let wkurls = WebURLsWithTitles.URLsFromPasteboard(self)
+		let str = string(forType: NSStringPboardType as String)
+		let wkurls = WebURLsWithTitles.urls(from: self)
 
-		if let urls = readObjectsForClasses([NSURL.self], options: nil) as? [NSURL] {
+		if let urls = readObjects(forClasses: [NSURL.self], options: nil) as? [NSURL] {
 			// FIXME: pass file urls to separate JS handler - image drags from safari to dock icons are tmpfiles
 			clearContents() // have to wipe it clean in order to modify
 
@@ -115,7 +115,7 @@ extension NSPasteboard {
 			}
 
 			addTypes(["WebURLsWithTitlesPboardType"], owner: nil)
-			WebURLsWithTitles.writeURLs(wkurls ?? urls, andTitles: nil, toPasteboard: self)
+			WebURLsWithTitles.writeURLs(wkurls ?? urls, andTitles: nil, to: self)
 			// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/History/WebURLsWithTitles.h
 		}
 
@@ -127,24 +127,24 @@ extension NSPasteboard {
 // show an NSError to the user, attaching it to any given view
 func displayError(_ error: NSError, _ vc: NSViewController? = nil) {
 	warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
-	dispatch_async(dispatch_get_main_queue()) { // don't lock up other threads on modally-presented errors
+	DispatchQueue.main.async() { // don't lock up other threads on modally-presented errors
 		if Darwin.isatty(Int32(0)) == 0 { // don't popup these modal alerts if REPL() is active on STDIN!
 			if let window = vc?.view.window {
 				// display it as a NSPanel sheet
-				vc?.view.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
-			} else if let window = NSApplication.sharedApplication().mainWindow {
-				window.presentError(error, modalForWindow: window, delegate: nil, didPresentSelector: nil, contextInfo: nil)
+				vc?.view.presentError(error, modalFor: window, delegate: nil, didPresent: nil, contextInfo: nil)
+			} else if let window = NSApplication.shared().mainWindow {
+				window.presentError(error, modalFor: window, delegate: nil, didPresent: nil, contextInfo: nil)
 			} else {
-				NSApplication.sharedApplication().presentError(error)
+				NSApplication.shared().presentError(error)
 			}
 		}
 	}
 }
 
 func askToOpenURL(_ url: NSURL?) { //uti: UTIType? = nil
-	let app = NSApplication.sharedApplication()
+	let app = NSApplication.shared()
 	let window = app.mainWindow
-	let wk = NSWorkspace.sharedWorkspace()
+	let wk = NSWorkspace.shared()
 	app.unhide(nil)
 				// if let uti = uti, opener = LSCopyDefaultRoleHandlerForContentType(UTI, kLSRolesAll)
 					// offer to send url directly to compatible app if there is one
@@ -152,21 +152,21 @@ func askToOpenURL(_ url: NSURL?) { //uti: UTIType? = nil
 					//wk.localizedDescriptionForType(uti)
 					// ask to open direct, .Cancel & return if we did
 
-	if let url = url, window = window, opener = NSWorkspace.sharedWorkspace().URLForApplicationToOpenURL(url) {
-		if opener == NSBundle.mainBundle().bundleURL {
+	if let url = url, let window = window, let opener = NSWorkspace.shared().urlForApplication(toOpen: url as URL) {
+		if opener == Bundle.main.bundleURL {
 			// macpin is already the registered handler for this (probably custom) url scheme, so just open it
-			NSWorkspace.sharedWorkspace().openURL(url)
+			NSWorkspace.shared().open(url as URL)
 			return
 		}
 		warn("[\(url)]")
 		let alert = NSAlert()
 		alert.messageText = "Open using App:\n\(opener)"
-		alert.addButtonWithTitle("OK")
-		alert.addButtonWithTitle("Cancel")
+		alert.addButton(withTitle: "OK")
+		alert.addButton(withTitle: "Cancel")
 		alert.informativeText = url.description
-		alert.icon = wk.iconForFile(opener.path!)
-		alert.beginSheetModalForWindow(window, completionHandler:{(response:NSModalResponse) -> Void in
-			if response == NSAlertFirstButtonReturn { wk.openURL(url) }
+		alert.icon = wk.icon(forFile: opener.path)
+		alert.beginSheetModal(for: window, completionHandler:{(response:NSModalResponse) -> Void in
+			if response == NSAlertFirstButtonReturn { wk.open(url as URL) }
  		})
 		return
 	}

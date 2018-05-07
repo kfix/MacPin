@@ -8,13 +8,14 @@ import WebKitPrivates
 @objc class WebViewControllerOSX: WebViewController, NSTextFinderBarContainer {
 	let textFinder = NSTextFinder()
 	var findBarView: NSView? {
-		willSet { if findBarView != nil { findBarVisible = false } }
-		didSet { if findBarView != nil { findBarVisible = true } }
+		willSet { if findBarView != nil { _findBarVisible = false } }
+		didSet { if findBarView != nil { _findBarVisible = true } }
 	}
 	fileprivate var _findBarVisible = false
-	var findBarVisible: Bool {
+	var isFindBarVisible: Bool {
 		@objc(isFindBarVisible) get { return _findBarVisible }
-		set(vis) {
+		//set(vis) {
+		@objc(setFindBarVisible:) set (vis) {
 			_findBarVisible = vis
 			if let findview = findBarView {
 				vis ? view.addSubview(findview) : findview.removeFromSuperview()
@@ -28,21 +29,21 @@ import WebKitPrivates
 		//view.wantsLayer = true //use CALayer to coalesce views
 		//^ default=true:  https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3641
 		view.autoresizesSubviews = true
-		view.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable]
-		webview.autoresizingMask = [.ViewWidthSizable, .ViewHeightSizable]
+		view.autoresizingMask = [.viewWidthSizable, .viewHeightSizable]
+		webview.autoresizingMask = [.viewWidthSizable, .viewHeightSizable]
 #if STP
 		// scale-to-fit https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
-		webview._layoutMode = .DynamicSizeComputedFromViewScale
+		webview._layoutMode = .dynamicSizeComputedFromViewScale
 #endif
 
-		bind(NSTitleBinding, toObject: webview, withKeyPath: "title", options: nil)
+		bind(NSTitleBinding, to: webview, withKeyPath: "title", options: nil)
 		//backMenu.delegate = self
 		//forwardMenu.delegate = self
 
 		//webview._editable = true //makes about:blank editable by default
 		textFinder.client = webview
 		textFinder.findBarContainer = self
-		textFinder.incrementalSearchingEnabled = true
+		textFinder.isIncrementalSearchingEnabled = true
 		textFinder.incrementalSearchingShouldDimContentView = true
 		// FIXME: webview doesn't auto-scroll to found matches
 		//  https://github.com/WebKit/webkit/blob/112c663463807e8676765cb7a006d415c372f447/Source/WebKit2/UIProcess/mac/WKTextFinderClient.mm#L39
@@ -51,8 +52,8 @@ import WebKitPrivates
 
 	func contentView() -> NSView? { return webview }
 
-	override func performTextFinderAction(_ sender: AnyObject?) {
-		if let control = sender as? NSMenuItem, action = NSTextFinderAction(rawValue: control.tag) {
+	override func performTextFinderAction(_ sender: Any?) {
+		if let control = sender as? NSMenuItem, let action = NSTextFinderAction(rawValue: control.tag) {
 			textFinder.performAction(action)
 		}
 	}
@@ -67,8 +68,8 @@ import WebKitPrivates
 		//view.translatesAutoresizingMaskIntoConstraints = false
 		if let window = view.window {
 			//window.backgroundColor = webview.transparent ? NSColor.clearColor() : NSColor.whiteColor()
-			window.backgroundColor = window.backgroundColor.colorWithAlphaComponent(webview.transparent ? 0 : 1) //clearColor | fooColor
-			window.opaque = !webview.transparent
+			window.backgroundColor = window.backgroundColor.withAlphaComponent(webview.transparent ? 0 : 1) //clearColor | fooColor
+			window.isOpaque = !webview.transparent
 			window.hasShadow = !webview.transparent
 			window.invalidateShadow()
 			window.toolbar?.showsBaselineSeparator = window.titlebarAppearsTransparent ? false : !webview.transparent
@@ -83,7 +84,7 @@ import WebKitPrivates
 
 	func layout() {
 		warn()
-		if let find = findBarView where findBarVisible {
+		if let find = findBarView, _findBarVisible {
 			find.frame = CGRect(x: view.bounds.origin.x,
 				y: view.bounds.origin.y + view.bounds.size.height - find.frame.size.height,
 				width: view.bounds.size.width, height: find.frame.size.height)
@@ -113,7 +114,7 @@ import WebKitPrivates
 
 	deinit { unbind(NSTitleBinding) }
 
-	override func cancelOperation(_ sender: AnyObject?) { webview.stopLoading(sender) } // NSResponder: make Esc key stop page load
+	override func cancelOperation(_ sender: Any?) { webview.stopLoading(sender) } // NSResponder: make Esc key stop page load
 }
 
 extension WebViewControllerOSX: NSMenuDelegate {
@@ -153,7 +154,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		guard let window = view.window else {return}
 		let oldFrame = window.frame
 		//let oldFrame = view.frame
-		var newFrameSize = NSMakeSize(oldFrame.size.width * (scale / oldScale), oldFrame.size.height * (scale / oldScale));
+		let newFrameSize = NSMakeSize(oldFrame.size.width * (scale / oldScale), oldFrame.size.height * (scale / oldScale));
 		window.setFrame(NSMakeRect(oldFrame.origin.x, oldFrame.origin.y - (newFrameSize.height - oldFrame.size.height), newFrameSize.width, newFrameSize.height), display: true)
 		//view.frame = NSMakeRect(oldFrame.origin.x, oldFrame.origin.y - (newFrameSize.height - oldFrame.size.height), newFrameSize.width, newFrameSize.height)
 		webview._viewScale = scale
@@ -170,7 +171,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 	func zoomText() {
 		webview._textZoomFactor = webview._textZoomFactor
 		webview._pageZoomFactor = webview._pageZoomFactor
-		webview._layoutMode = .DynamicSizeComputedFromViewScale
+		webview._layoutMode = .dynamicSizeComputedFromViewScale
 	}
 
 	func print(_ sender: AnyObject?) { warn(""); webview.print(sender) }
@@ -181,10 +182,10 @@ extension WebViewControllerOSX { // AppGUI funcs
 
 	func shareButtonClicked(_ sender: AnyObject?) {
 		if let btn = sender as? NSView {
-			if let url = webview.URL {
+			if let url = webview.url {
 				let sharer = NSSharingServicePicker(items: [url])
 				sharer.delegate = self
-				sharer.showRelativeToRect(btn.bounds, ofView: btn, preferredEdge: NSRectEdge.MinY)
+				sharer.show(relativeTo: btn.bounds, of: btn, preferredEdge: NSRectEdge.minY)
 				//sharer.style = 1 // https://github.com/iljaiwas/NSSharingPickerTest/pull/1
 			}
 		}
@@ -203,7 +204,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		*/
 	}
 
-	func displayAlert(_ alert: NSAlert, _ completionHandler: (NSModalResponse) -> Void) {
+	func displayAlert(_ alert: NSAlert, _ completionHandler: @escaping (NSModalResponse) -> Void) {
 	/* FIXME BIG TIME
 		make JS's modal alerts dismissable on tab change, like Safari does
 		see: https://developers.google.com/web/updates/2017/03/dialogs-policy
@@ -211,7 +212,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		also rate-limit modals and nop them if limit exceeded
 	*/
 		if let window = view.window {
-			alert.beginSheetModalForWindow(window, completionHandler: completionHandler)
+			alert.beginSheetModal(for: window, completionHandler: completionHandler)
 		} else {
 			completionHandler(alert.runModal())
 		}

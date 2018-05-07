@@ -8,15 +8,15 @@ class WindowController: NSWindowController, NSWindowDelegate {
 		// take care of awakeFromNib() & windowDidLoad() tasks, which are not called for NIBless windows
 		super.init(window: window)
 
-		let appearance = NSUserDefaults.standardUserDefaults().stringForKey("AppleInterfaceStyle") ?? "Light"
+		let appearance = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") ?? "Light"
 		if let window = window {
-			window.collectionBehavior = [.FullScreenPrimary, .ParticipatesInCycle, .Managed]
-			window.styleMask.insert(.UnifiedTitleAndToolbar) // FIXME: toggle for borderless?
-			window.movableByWindowBackground = true
-			window.backgroundColor = NSColor.whiteColor()
-			window.opaque = true
+			window.collectionBehavior = [.fullScreenPrimary, .participatesInCycle, .managed]
+			window.styleMask.insert(.unifiedTitleAndToolbar) // FIXME: toggle for borderless?
+			window.isMovableByWindowBackground = true
+			window.backgroundColor = NSColor.white
+			window.isOpaque = true
 			window.hasShadow = true
-			window.titleVisibility = .Hidden
+			window.titleVisibility = .hidden
 			if appearance == "Dark" {
 				window.appearance = NSAppearance(named: NSAppearanceNameVibrantDark) // match overall system dark-mode
 			} else {
@@ -24,25 +24,25 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			} // NSVisualEffectMaterialAppearanceBased ??
 			window.identifier = "browser"
 			//window.registerForDraggedTypes([NSPasteboardTypeString, NSURLPboardType, NSFilenamesPboardType]) //wkwebviews do this themselves
-			window.cascadeTopLeftFromPoint(NSMakePoint(20,20))
+			window.cascadeTopLeft(from: NSMakePoint(20,20))
 			window.delegate = self
-			window.restorable = true
+			window.isRestorable = true
 			//window.isReleasedWhenClosed = true
 			window.restorationClass = MacPinAppDelegateOSX.self
-			window.sharingType = .ReadWrite
-			NSApplication.sharedApplication().windowsMenu = NSMenu()
-			NSApplication.sharedApplication().addWindowsItem(window, title: window.title, filename: false)
+			window.sharingType = .readWrite
+			NSApplication.shared().windowsMenu = NSMenu()
+			NSApplication.shared().addWindowsItem(window, title: window.title, filename: false)
 		}
 		shouldCascadeWindows = false // messes with Autosave
 		windowFrameAutosaveName = "browser"
 	}
 
 	// these just handle drags to a tabless-background, webviews define their own
-	func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.Every }
+	func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.every }
 	func performDragOperation(_ sender: NSDraggingInfo) -> Bool { return true } // FIXME: should open the file:// url
 
 	func window(_ window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplicationPresentationOptions) -> NSApplicationPresentationOptions {
-		return [.AutoHideToolbar, .AutoHideMenuBar, .FullScreen, proposedOptions]
+		return [.autoHideToolbar, .autoHideMenuBar, .fullScreen, proposedOptions]
 	}
 
 	//class func restorableStateKeyPaths() -> [String] { return [] }
@@ -53,22 +53,22 @@ class WindowController: NSWindowController, NSWindowDelegate {
 
 	func toggleTitlebar() {
 		if let window = window,
-			close = window.standardWindowButton(.CloseButton),
-			min = window.standardWindowButton(.MiniaturizeButton),
-			zoom = window.standardWindowButton(.ZoomButton),
-			toolbar = window.toolbar
+			let close = window.standardWindowButton(.closeButton),
+			let min = window.standardWindowButton(.miniaturizeButton),
+			let zoom = window.standardWindowButton(.zoomButton),
+			let toolbar = window.toolbar
 		{
 			//window.toggleToolbarShown(nil)
- 			toolbar.visible = window.titlebarAppearsTransparent
-			close.hidden = !close.hidden
-			min.hidden = !min.hidden
-			zoom.hidden = !zoom.hidden
+ 			toolbar.isVisible = window.titlebarAppearsTransparent
+			close.isHidden = !close.isHidden
+			min.isHidden = !min.isHidden
+			zoom.isHidden = !zoom.isHidden
 			window.titlebarAppearsTransparent = !window.titlebarAppearsTransparent
 			//window.styleMask.formSymmetricDifference(.UnifiedTitleAndToolbar) // XOR ^= in Swift3?
 			//window.styleMask.formSymmetricDifference(.FullSizeContentView)
 			window.styleMask = NSWindowStyleMask(rawValue: window.styleMask.rawValue
-				^ NSWindowStyleMask.UnifiedTitleAndToolbar.rawValue
-				^ NSWindowStyleMask.FullSizeContentView.rawValue // makes contentView (browserController) extend underneath the now invisible titlebar
+				^ NSWindowStyleMask.unifiedTitleAndToolbar.rawValue
+				^ NSWindowStyleMask.fullSizeContentView.rawValue // makes contentView (browserController) extend underneath the now invisible titlebar
 			)
 			//window.styleMask ^= .Titled // this blows away the actual .toolbar object, making browserController crash
 			if window.titlebarAppearsTransparent { window.toolbar?.showsBaselineSeparator = false }
@@ -78,13 +78,13 @@ class WindowController: NSWindowController, NSWindowDelegate {
 	// only useful in non-fullscreen mode
 	//func toggleMenuBarAutoHide() { NSApp.presentationOptions |= .AutoHideMenuBar }
 
-	override func windowTitleForDocumentDisplayName(_ displayName: String) -> String { warn(displayName); return window?.title ?? displayName }
+	override func windowTitle(forDocumentDisplayName displayName: String) -> String { warn(displayName); return window?.title ?? displayName }
 
-	func windowShouldClose(_ sender: AnyObject) -> Bool {
+	func windowShouldClose(_ sender: Any) -> Bool {
 		warn()
 		return true
 	}
-	func windowWillClose(_ notification: NSNotification) { warn() } // window was closed by red stoplight button
+	func windowWillClose(_ notification: Notification) { warn() } // window was closed by red stoplight button
 
 	deinit { warn(description) }
 
