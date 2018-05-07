@@ -177,7 +177,7 @@ $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/
 	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
 		--platform $(sdk) --minimum-deployment-target 10.12 --target-device mac \
 		--compress-pngs --compile $(dir $@) $(realpath $(filter %.xcassets, $^)) >/dev/null
-	test ! -f $@ && echo "error: $@ was not created by actool!" && cat $@.plist && exit 1
+	test -f $@ || { echo "error: $@ was not created by actool!" && cat $@.plist && exit 1; }
 	# | grep '/* com.apple.actool.compilation-results */\n\w+ Icon.icns'
 
 # OSX apps
@@ -211,7 +211,7 @@ $(appdir)/%.app/Assets.car: $(xcassets)/%.xcassets $(xcassets)/icons8.xcassets
 	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
 		--platform $(sdk) --minimum-deployment-target $(target_ver_iOS)  --target-device iphone  --target-device ipad --app-icon AppIcon \
 		--compress-pngs --compile $(dir $@) $(realpath $(filter %.xcassets, $^)) > /dev/null
-	test ! -f $@ && echo "error: $@ was not created by actool!" && cat $@.plist && exit 1
+	test -f $@ || { echo "error: $@ was not created by actool!" && cat $@.plist && exit 1; }
 
 $(appdir)/%.app/LaunchScreen.nib: templates/$(platform)/LaunchScreen.xib
 	@install -d $(dir $@)
