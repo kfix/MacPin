@@ -45,7 +45,7 @@ extension JSValue {
 			warn("this.\(method) <- \(argv)")
 			let ret = self.invokeMethod(method, withArguments: argv)
 			if ret == nil { return false }
-			if let bool = ret.toObject() as? Bool { return bool }
+			if let bool = ret?.toObject() as? Bool { return bool }
 		}
 		return false
 		//FIXME: handle a passed-in closure so we can handle any ret-type instead of only bools ...
@@ -59,14 +59,14 @@ extension JSValue {
 		let source: JSStringRef?
 		if let urlstr = sourceURL { source = JSStringCreateWithCFString(urlstr as CFString) } else { source = nil }
 		/*guard*/ let jsval = JSEvaluateScript(
-			/*ctx:*/ context.JSGlobalContextRef,
+			/*ctx:*/ context.jsGlobalContextRef,
 			/*script:*/ JSStringCreateWithCFString(code as CFString),
-			/*thisObject:*/ JSValueRef,
+			/*thisObject:*/ nil,
 			/*sourceURL:*/ source ?? nil,
 			/*startingLineNumber:*/ Int32(1),
-			/*exception:*/ UnsafeMutablePointer(exception.JSValueRef)
+			/*exception:*/ UnsafeMutablePointer(exception.jsValueRef)
 		) /*else { return nil }*/
-		if jsval != nil { return JSValue(JSValueRef: jsval, inContext: context) }
+		if jsval != nil { return JSValue(jsValueRef: jsval, in: context) }
 		return nil
 	}
 
@@ -76,7 +76,7 @@ extension JSValue {
 	//func warn(msg: String)
 	var appPath: String { get }
 	var resourcePath: String { get }
-	var arguments: [AnyObject] { get }
+	var arguments: [String] { get }
 	var environment: [AnyHashable: Any] { get }
 	var name: String { get }
 	var bundleID: String { get }
@@ -92,14 +92,14 @@ extension JSValue {
 	@objc(postNotification::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?)
 	func postHTML5Notification(_ object: [String:AnyObject])
 	func openURL(_ urlstr: String, _ app: String?)
-	func sleep(_ secs: Double)
+	func sleep(_ secs: Int)
 	func doesAppExist(_ appstr: String) -> Bool
 	func pathExists(_ path: String) -> Bool
 	func loadAppScript(_ urlstr: String) -> JSValue?
 	// static func // exported as global JS func
 #if DEBUG
-	func evalJXA(script: String)
-	func callJXALibrary(library: String, _ call: String, _ args: [AnyObject])
+	func evalJXA(_ script: String)
+	func callJXALibrary(_ library: String, _ call: String, _ args: [AnyObject])
 #endif
 }
 
@@ -110,25 +110,25 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	var jsdelegate: JSValue
 	let exports: JSValue
 
-	var arguments: [AnyObject] { return NSProcessInfo.processInfo().arguments }
-	var environment: [AnyHashable: Any] { return NSProcessInfo.processInfo().environment }
-	var appPath: String { return NSBundle.mainBundle().bundlePath ?? String() }
-	var resourcePath: String { return NSBundle.mainBundle().resourcePath ?? String() }
-	var hostname: String { return NSProcessInfo.processInfo().hostName }
-	var bundleID: String { return NSBundle.mainBundle().bundleIdentifier ?? String() }
+	var arguments: [String] { return ProcessInfo.processInfo.arguments }
+	var environment: [AnyHashable: Any] { return ProcessInfo.processInfo.environment }
+	var appPath: String { return Bundle.main.bundlePath }
+	var resourcePath: String { return Bundle.main.resourcePath ?? String() }
+	var hostname: String { return ProcessInfo.processInfo.hostName }
+	var bundleID: String { return Bundle.main.bundleIdentifier ?? String() }
 
 #if os(OSX)
-	var name: String { return NSRunningApplication.currentApplication().localizedName ?? String() }
+	var name: String { return NSRunningApplication.current().localizedName ?? String() }
 	let platform = "OSX"
 #elseif os(iOS)
-	var name: String { return NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleDisplayName") as? String ?? String() }
+	var name: String { return Bundle.main.objectForInfoDictionaryKey("CFBundleDisplayName") as? String }
 	let platform = "iOS"
 #endif
 
 	// http://nshipster.com/swift-system-version-checking/
-	var platformVersion: String { return NSProcessInfo.processInfo().operatingSystemVersionString }
+	var platformVersion: String { return ProcessInfo.processInfo.operatingSystemVersionString }
 
-	var arches: [AnyObject]? { return NSBundle.mainBundle().executableArchitectures }
+	var arches: [AnyObject]? { return Bundle.main.executableArchitectures }
 #if arch(i386)
 	let architecture = "i386"
 #elseif arch(x86_64)
@@ -142,33 +142,33 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	//static func(extend: mountObj) { }
 
 	init(global: String = "$") { // FIXME: ever heard of jQuery?
-		context.name = "AppScriptRuntime"
-		jsdelegate = JSValue(newObjectInContext: context) //default property-less delegate obj // FIXME: #11 make an App() from ES6 class
+		context?.name = "AppScriptRuntime"
+		jsdelegate = JSValue(newObjectIn: context) //default property-less delegate obj // FIXME: #11 make an App() from ES6 class
 #if SAFARIDBG
 		// https://github.com/WebKit/webkit/commit/e9f4a5ef360d47b719f7391fe02d28ff1e63fc7://github.com/WebKit/webkit/commit/e9f4a5ef360d47b719f7391fe02d28ff1e63fc7e
 		// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSContextPrivate.h
-		context._remoteInspectionEnabled = true
+		context?._remoteInspectionEnabled = true
 		//context.logToSystemConsole = true
 #else
-		context._remoteInspectionEnabled = false
+		context?._remoteInspectionEnabled = false
 		//context.logToSystemConsole = false
 #endif
 		//context._debuggerRunLoop = CFRunLoopRef // FIXME: make a new thread for REPL and Web Inspector console eval()s
 
-		exports = JSValue(newObjectInContext: context)
-		exports.setObject("", forKeyedSubscript: "launchedWithURL") // FIXME: use context.currentArguments ?
+		exports = JSValue(newObjectIn: context)
+		exports.setObject("", forKeyedSubscript: "launchedWithURL" as NSString) // FIXME: use context.currentArguments ?
 		//exports.setObject(GlobalUserScripts, forKeyedSubscript: "globalUserScripts")
 		// FIXME: make .extend methods for all MacPin classes that want to export constructors?
-		exports.setObject(MPWebView.self, forKeyedSubscript: "WebView") // `new $.WebView({})` WebView -> [object MacPin.WebView]
-		exports.setObject(SSKeychain.self, forKeyedSubscript: "keychain")
+		exports.setObject(MPWebView.self, forKeyedSubscript: "WebView" as NSString) // `new $.WebView({})` WebView -> [object MacPin.WebView]
+		exports.setObject(SSKeychain.self, forKeyedSubscript: "keychain" as NSString)
 		XMLHttpRequest().extend(context) // allows `new XMLHTTPRequest` for doing xHr's
 		//FIXME: extend Fetch API instead: https://facebook.github.io/react-native/docs/network.html
 
 		// set console.log to NSBlock that will call warn()
 		let logger: @convention(block) (String) -> Void = { msg in warn(msg) }
-		let console = JSValue(newObjectInContext: context)
-		console.setObject(unsafeBitCast(logger, to: AnyObject.self), forKeyedSubscript: "log")
-		context.globalObject.setObject(console, forKeyedSubscript: "console") // overrides JSC's built-in
+		let console = JSValue(newObjectIn: context)
+		console?.setObject(unsafeBitCast(logger, to: AnyObject.self), forKeyedSubscript: "log" as NSString)
+		context?.globalObject.setObject(console, forKeyedSubscript: "console" as NSString) // overrides JSC's built-in
 
 		// FIXME: imitate JSConsole or JSConsoleClient to intercept built-in console.* support instead of shimming blocks
 		// https://github.com/WebKit/webkit/commits/master/Source/JavaScriptCore/runtime/ConsoleTypes.h
@@ -177,15 +177,15 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		// console.invokeMethod("log", withArguments: ["hello console.log"])
 		// console.objectForKeyedSubscript("log") == JSFunction
 
-		context.globalObject.setObject(exports, forKeyedSubscript: global)
+		context?.globalObject.setObject(exports, forKeyedSubscript: global as NSString)
 		super.init()
 	}
 
-	override var description: String { return "<\(self.dynamicType)> [\(appPath)] `\(context.name)`" }
+	override var description: String { return "<\(type(of: self))> [\(appPath)] `\(context?.name)`" }
 
-	func sleep(_ secs: Double) {
-		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * secs))
-		dispatch_after(delayTime, dispatch_get_main_queue()){}
+	func sleep(_ secs: Int) {
+		let delayTime = DispatchTime.now() + DispatchTimeInterval.seconds(secs)
+		DispatchQueue.main.asyncAfter(deadline: delayTime){}
 		//NSThread.sleepForTimeInterval(secs)
 	}
 
@@ -201,26 +201,26 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 */
 
 	func loadSiteApp() {
-		let app = (NSBundle.mainBundle().objectForInfoDictionaryKey("MacPin-AppScriptName") as? String) ?? "app"
-		context.objectForKeyedSubscript("$").setObject(self, forKeyedSubscript: "app")
+		let app = (Bundle.main.object(forInfoDictionaryKey:"MacPin-AppScriptName") as? String) ?? "app"
+		context?.objectForKeyedSubscript("$").setObject(self, forKeyedSubscript: "app" as NSString)
 
-		if let app_js = NSBundle.mainBundle().URLForResource(app, withExtension: "js") {
+		if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
 
 			// make thrown exceptions popup an nserror displaying the file name and error type
 			// FIXME: doesn't print actual text of throwing code
 			// Safari Web Inspector <-> JSContext seems to get an actual source-map
-			context.exceptionHandler = { context, exception in
-				let line = exception.valueForProperty("line").toNumber()
-				let column = exception.valueForProperty("column").toNumber()
-				let stack = exception.valueForProperty("stack").toString()
-				let message = exception.valueForProperty("message").toString()
+			context?.exceptionHandler = { context, exception in
+				let line = exception?.forProperty("line").toNumber()
+				let column = exception?.forProperty("column").toNumber()
+				let stack = exception?.forProperty("stack").toString()
+				let message = exception?.forProperty("message").toString()
 				let error = NSError(domain: "MacPin", code: 4, userInfo: [
-					NSURLErrorKey: context.name,
+					NSURLErrorKey: context?.name as Any,
 					NSLocalizedDescriptionKey: "JS Exception @ \(line):\(column): \(message)\n\(stack)"
 					// exception seems to be Error.toString(). I want .message|line|column|stack too
 				])
 				displayError(error) // FIXME: would be nicer to pop up an inspector pane or tab to interactively debug this
-				context.exception = exception //default in JSContext.mm
+				context?.exception = exception //default in JSContext.mm
 				return // gets returned to evaluateScript()?
 			}
 
@@ -236,7 +236,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	// FIXME: ES6 modules? context.evaluateScript("import ...") or "System.load()";
 	func loadAppScript(_ urlstr: String) -> JSValue? {
-		if let scriptURL = NSURL(string: urlstr), script = try? NSString(contentsOfURL: scriptURL, encoding: NSUTF8StringEncoding), sourceURL = scriptURL.absoluteString {
+		if let scriptURL = NSURL(string: urlstr), let script = try? NSString(contentsOf: scriptURL as URL, encoding: String.Encoding.utf8.rawValue), let sourceURL = scriptURL.absoluteString {
 			// FIXME: script code could be loaded from anywhere, exploitable?
 			warn("\(scriptURL): read")
 
@@ -250,21 +250,21 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			let exception = JSValue()
 
 			if JSCheckScriptSyntax(
-				/*ctx:*/ context.JSGlobalContextRef,
+				/*ctx:*/ context?.jsGlobalContextRef,
 				/*script:*/ JSStringCreateWithCFString(script as CFString),
 				/*sourceURL:*/ JSStringCreateWithCFString(sourceURL as CFString),
 				/*startingLineNumber:*/ Int32(1),
-				/*exception:*/ UnsafeMutablePointer(exception.JSValueRef)
+				/*exception:*/ UnsafeMutablePointer(exception.jsValueRef)
 			) {
 				warn("\(scriptURL): syntax checked ok")
-				context.name = "\(context.name) <\(urlstr)>"
+				context?.name = "\(context?.name) <\(urlstr)>"
 				// FIXME: assumes last script loaded is the source file of *all* thrown errors, which is not always true
 #if DEBUG
 #else
-				context.evaluateScript("eval = null;") // Saaaaaaafe Plaaaaace
+				context?.evaluateScript("eval = null;") // Saaaaaaafe Plaaaaace
 #endif
 				//return jsdelegate.thisEval(script as String, sourceURL: scriptURL) // TODO: issue #11 - make `this` the delegate in app scripts, not the return
-				return context.evaluateScript(script as String, withSourceURL: scriptURL)
+				return context?.evaluateScript(script as String, withSourceURL: scriptURL as URL!)
 			} else {
 				// hmm, using self.context for the syntax check seems to evaluate the contents anyways
 				// need to make a throwaway dupe of it
@@ -295,15 +295,15 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		return false
 	}
 
-	func pathExists(_ path: String) -> Bool {	return NSFileManager.defaultManager().fileExistsAtPath((path as NSString).stringByExpandingTildeInPath) }
+	func pathExists(_ path: String) -> Bool { return FileManager.default.fileExists(atPath: (path as NSString).expandingTildeInPath) }
 
 	func openURL(_ urlstr: String, _ appid: String? = nil) {
 		if let url = NSURL(string: urlstr) {
 #if os(OSX)
-			if let appid = appid where appid != "undefined" {
-				NSWorkspace.sharedWorkspace().openURLs([url], withAppBundleIdentifier: appid, options: .Default, additionalEventParamDescriptor: nil, launchIdentifiers: nil)
+			if let appid = appid, appid != "undefined" {
+				NSWorkspace.shared().open([url as URL], withAppBundleIdentifier: appid, options: .default, additionalEventParamDescriptor: nil, launchIdentifiers: nil)
 			} else {
-				NSWorkspace.sharedWorkspace().openURL(url)
+				NSWorkspace.shared().open(url as URL)
 			}
 			//options: .Default .NewInstance .AndHideOthers
 			// FIXME: need to force focus on appid too, already launched apps may not pop-up#elseif os (iOS)
@@ -334,9 +334,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		}
 		*/
 
-		if let icon_url = NSBundle.mainBundle().URLForResource(iconpath, withExtension: "png") ?? NSURL(string: iconpath) {
+		if let icon_url = Bundle.main.url(forResource: iconpath, withExtension: "png") ?? URL(string: iconpath) {
 			// path was a url, local or remote
-			NSApplication.sharedApplication().applicationIconImage = NSImage(contentsOfURL: icon_url)
+			Application.shared().applicationIconImage = NSImage(contentsOf: icon_url)
 		} else {
 			warn("invalid icon: \(iconpath)")
 		}
@@ -347,7 +347,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		// there *could* be an API for this in WebKit, like Chrome & FF: https://bugs.webkit.org/show_bug.cgi?id=92749
 		// https://developer.mozilla.org/en-US/docs/Web-based_protocol_handlers
 #if os(OSX)
-		LSSetDefaultHandlerForURLScheme(scheme, NSBundle.mainBundle().bundleIdentifier!)
+		LSSetDefaultHandlerForURLScheme(scheme as CFString, Bundle.main.bundleIdentifier! as CFString)
 		warn("registered URL handler in OSX: \(scheme)")
 		//NSApp.registerServicesMenuSendTypes(sendTypes:[.kUTTypeFileURL], returnTypes:nil)
 		// http://stackoverflow.com/questions/20461351/how-do-i-enable-services-which-operate-on-selected-files-and-folders
@@ -364,7 +364,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	func registerUTI(_ uti: String) {
 #if os(OSX)
-		LSSetDefaultRoleHandlerForContentType(uti, .All,  NSBundle.mainBundle().bundleIdentifier!) //kLSRolesNone|Viewer|Editor|Shell|All
+		LSSetDefaultRoleHandlerForContentType(uti as CFString, .all,  Bundle.main.bundleIdentifier! as CFString) //kLSRolesNone|Viewer|Editor|Shell|All
 		warn("registered UTI handler in OSX: \(uti)")
 #endif
 	}
@@ -382,7 +382,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		//note.responsePlaceholder = "say something stupid"
 
 		note.soundName = NSUserNotificationDefaultSoundName // something exotic?
-		NSUserNotificationCenter.defaultUserNotificationCenter().deliverNotification(note)
+		NSUserNotificationCenter.default.deliver(note)
 		// these can be listened for by all: http://pagesofinterest.net/blog/2012/09/observing-all-nsnotifications-within-an-nsapp/
 #elseif os(iOS)
 		let note = UILocalNotification()
@@ -432,19 +432,19 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				case let body as String where key == "body": note.informativeText = body
 				case let tag as String where key == "tag": note.identifier = tag
 				case let icon as String where key == "icon":
-					if let url = NSURL(string: icon), img = NSImage(contentsOfURL: url) {
+					if let url = NSURL(string: icon), let img = NSImage(contentsOf: url as URL) {
 						note._identityImage = img // left-side iTunes-ish http://stackoverflow.com/a/22586980/3878712
 						//note._imageURL = url //must be a file:// URL
 					}
 				case let image as String where key == "image": //not-spec
-					if let url = NSURL(string: image), img = NSImage(contentsOfURL: url) {
+					if let url = NSURL(string: image), let img = NSImage(contentsOf: url as URL) {
 						note.contentImage = img // right-side embed
 					}
 				default: warn("unhandled param: `\(key): \(value)`")
 			}
 		}
 		note.soundName = NSUserNotificationDefaultSoundName // something exotic?
-		NSUserNotificationCenter.defaultUserNotificationCenter().deliverNotification(note)
+		NSUserNotificationCenter.default.deliver(note)
 #elseif os(iOS)
 		let note = UILocalNotification()
 		note.alertAction = "Open"
@@ -470,13 +470,13 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 		termiosREPL(
 			{ [unowned self] (line: String) -> Void in
-				let val = self.context.evaluateScript(line)
+				let val = self.context?.evaluateScript(line)
 				if self.jsdelegate.isObject && self.jsdelegate.hasProperty("REPLprint") { // app.js will customize output
-					if let ret = self.jsdelegate.invokeMethod("REPLprint", withArguments: [val]).toString() {
+					if let ret = self.jsdelegate.invokeMethod("REPLprint", withArguments: [val as Any]).toString() {
 						print(ret)
 					}
 				} else { // no REPLprint handler, just eval and dump
-					print(val)
+					print(val as Any)
 				}
 			},
 			ps1: #file,
@@ -485,11 +485,11 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				// EOF'd by Ctrl-D
 #if os(OSX)
 				//NSProcessInfo.processInfo().enableAutomaticTermination("REPL")
-				NSProcessInfo.processInfo().enableSuddenTermination()
-				NSApp.replyToApplicationShouldTerminate(true) // now close App if this was deferring a terminate()
+				ProcessInfo.processInfo.enableSuddenTermination()
+				NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
 				// FIXME: make sure prompter is deinit'd
 				prompter = nil
-				NSApplication.sharedApplication().terminate(self)
+				NSApplication.shared().terminate(self)
 #endif
 			}
 		)
@@ -518,7 +518,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 		var error: NSDictionary?
 		let osa = OSAScript(source: script, language: OSALanguage(forName: "JavaScript"))
-		if let output: NSAppleEventDescriptor = osa.executeHandlerWithName("run", arguments: args, error: &error) {
+		if let output: NSAppleEventDescriptor = osa.executeHandler(withName: "run", arguments: args, error: &error) {
 			// does this interpreter persist? http://lists.apple.com/archives/applescript-users/2015/Jan/msg00164.html
 			warn(output.description) // FIXME: use https://bitbucket.org/hhas/swiftae to introspect?
 		} else if (error != nil) {

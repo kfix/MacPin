@@ -28,7 +28,7 @@ let NSImageNameApplicationIcon = "icon"
 
 	var data: NSData? = nil {
 		didSet {
-			if let data = data, img = IconImage(data: data) {
+			if let data = data, let img = IconImage(data: data as Data) {
 				self.icon = img
 #if os(OSX)
 				self.icon16 = img
@@ -47,19 +47,19 @@ let NSImageNameApplicationIcon = "icon"
 		}
 	}
 
-	static func grabFavIcon(_ url: NSURL, completion: ((NSData) -> Void)) {
+	static func grabFavIcon(_ url: NSURL, completion: @escaping ((NSData) -> Void)) {
 		// http://stackoverflow.com/a/26540173/3878712
 		// http://jamesonquave.com/blog/developing-ios-apps-using-swift-part-5-async-image-loading-and-caching/
-		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), { //[unowned self]
-			if let data = NSData(contentsOfURL: url) { // downloaded from background thread. HTTP error should return nil...
-				dispatch_async(dispatch_get_main_queue(), { () -> Void in // return to UI thread to update icon
+		DispatchQueue.global(qos: .default).async(execute: { // [unowned self]
+			if let data = NSData(contentsOf: url as URL) { // downloaded from background thread. HTTP error should return nil...
+				DispatchQueue.main.async(execute: { () -> Void in // return to UI thread to update icon
 					completion(data)
 				})
 			}
 		})
 	}
 
-	override var description: String { return "<\(self.dynamicType)> `\(url)`" }
+	override var description: String { return "<\(type(of: self))> `\(url)`" }
 	//deinit { warn(description) }
 /*
 	convenience init(url: NSURL) {

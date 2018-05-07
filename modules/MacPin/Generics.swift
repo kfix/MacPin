@@ -22,7 +22,7 @@ var prompter: Async? = nil
 
 func warn(_ msg: String = String(), function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
 	// https://github.com/swisspol/XLFacility ?
-	NSFileHandle.fileHandleWithStandardError().writeData(("[\(NSDate())] <\(file):\(line):\(column)> [\(function)] \(msg)\n").dataUsingEncoding(NSUTF8StringEncoding)!)
+	FileHandle.standardError.write("[\(NSDate())] <\(file):\(line):\(column)> [\(function)] \(msg)\n".data(using: String.Encoding.utf8)!)
 #if WARN2NSLOG
 	NSLog("<\(file):\(line):\(column)> [\(function)] \(msg)")
 	//FIXME timestamp?
@@ -51,11 +51,11 @@ func assert(condition: @autoclosure () -> Bool, _ message: String = "",
 */
 
 // https://developer.apple.com/library/content/documentation/Tools/Conceptual/SafariExtensionGuide/InjectingScripts/InjectingScripts.html#//apple_ref/doc/uid/TP40009977-CH6-SW1
-func loadUserScriptFromBundle(_ basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
-	if let scriptUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "js") where !basename.isEmpty {
+func loadUserScriptFromBundle(_ basename: String, webctl: WKUserContentController, inject: WKUserScriptInjectionTime, onlyForTop: Bool = true, error: NSErrorPointer = nil) -> Bool {
+	if let scriptUrl = Bundle.main.url(forResource: basename, withExtension: "js"), !basename.isEmpty {
 		warn("loading userscript: \(scriptUrl)")
 		let script = WKUserScript(
-			source: (try? NSString(contentsOfURL: scriptUrl, encoding: NSUTF8StringEncoding) as String) ?? "",
+			source: (try? NSString(contentsOf: scriptUrl, encoding: String.Encoding.utf8.rawValue) as String) ?? "",
 		    injectionTime: inject,
 		    forMainFrameOnly: onlyForTop
 		)
@@ -76,10 +76,10 @@ func loadUserScriptFromBundle(_ basename: String, webctl: WKUserContentControlle
 		} else { warn("\(scriptUrl) already loaded!"); return false }
 
 	} else {
-		let respath = NSBundle.mainBundle().resourcePath
+		let respath = Bundle.main.resourcePath
 		warn("couldn't find userscript: \(respath)/\(basename).js")
 		if error != nil {
-			error?.memory = NSError(domain: "MacPin", code: 3, userInfo: [
+			/* error?.memory = */ NSError(domain: "MacPin", code: 3, userInfo: [
 				NSFilePathErrorKey: basename + ".js",
 				NSLocalizedDescriptionKey: "No userscript could be found named:\n\n\(respath)/\(basename).js"
 			])
@@ -98,11 +98,11 @@ func loadUserScriptFromBundle(_ basename: String, webctl: WKUserContentControlle
 
 // https://developer.apple.com/library/content/documentation/Tools/Conceptual/SafariExtensionGuide/AddingStyles/AddingStyles.html#//apple_ref/doc/uid/TP40009977-CH7-SW3
 // does WK2 support `@import: url("file://Path/To/Your/Stylesheet.css");` ??
-func loadUserStyleSheetFromBundle(_ basename: String, webctl: WKUserContentController, onlyForTop: Bool = true, error: NSErrorPointer? = nil) -> Bool {
-	if let cssUrl = NSBundle.mainBundle().URLForResource(basename, withExtension: "css") where !basename.isEmpty {
+func loadUserStyleSheetFromBundle(_ basename: String, webctl: WKUserContentController, onlyForTop: Bool = true, error: NSErrorPointer = nil) -> Bool {
+	if let cssUrl = Bundle.main.url(forResource: basename, withExtension: "css"), !basename.isEmpty {
 		warn("loading stylesheet: \(cssUrl)")
 		let css = _WKUserStyleSheet(
-			source: (try? NSString(contentsOfURL: cssUrl, encoding: NSUTF8StringEncoding) as String) ?? "",
+			source: (try? NSString(contentsOf: cssUrl, encoding: String.Encoding.utf8.rawValue) as String) ?? "",
 		    forMainFrameOnly: onlyForTop
 		    //legacyWhitelist
 		    //legacyBlacklist
@@ -110,14 +110,14 @@ func loadUserStyleSheetFromBundle(_ basename: String, webctl: WKUserContentContr
 		    //userContentWorld
 		)
 		if webctl._userStyleSheets.filter({$0 == css}).count < 1 { // don't re-add identical sheets
-			webctl._addUserStyleSheet(css)
+			webctl._add(css)
 		} else { warn("\(cssUrl) already loaded!"); return false }
 
 	} else {
-		let respath = NSBundle.mainBundle().resourcePath
+		let respath = Bundle.main.resourcePath
 		warn("couldn't find stylesheet: \(respath)/\(basename).css")
 		if error != nil {
-			error?.memory = NSError(domain: "MacPin", code: 3, userInfo: [
+			/* error?.memory = */ NSError(domain: "MacPin", code: 3, userInfo: [
 				NSFilePathErrorKey: basename + ".js",
 				NSLocalizedDescriptionKey: "No stylesheet could be found named:\n\n\(respath)/\(basename).css"
 			])
@@ -139,9 +139,10 @@ func validateURL(_ urlstr: String, fallback: ((String) -> NSURL?)? = nil) -> NSU
 		let urlp = NSURLComponents()
 		var path = urlstr
 		urlp.scheme = "file"
-		//if path.hasPrefix("file:") { path.removeFirst(5) } // swift3
-		if path.hasPrefix("file:") { path.removeRange(path.startIndex..<path.startIndex.advancedBy(5)) }
-		if path.hasPrefix("///") { path.removeRange(path.startIndex..<path.startIndex.advancedBy(2)) }
+		//if path.hasPrefix("file:") { path.removeFirst(5) } // swift3.1
+		if path.hasPrefix("file:") { path.removeSubrange(path.startIndex..<path.index(path.startIndex, offsetBy: 5)) }
+		//if path.hasPrefix("///") { path.removeFirst(2) } // swift3.1
+		if path.hasPrefix("///") { path.removeSubrange(path.startIndex..<path.index(path.startIndex, offsetBy: 2)) }
 		if path.isEmpty { warn("no filepath!"); return nil }
 		urlp.path = path
 
@@ -151,36 +152,36 @@ func validateURL(_ urlstr: String, fallback: ((String) -> NSURL?)? = nil) -> NSU
 		//}
 
 		if path.hasPrefix("./") { // consider this == Resources/, then == CWD/
-			path.replaceRange(path.startIndex..<path.startIndex.advancedBy(1),
-				with: NSBundle.mainBundle().resourcePath ?? NSFileManager().currentDirectoryPath)
+			path.replaceSubrange(path.startIndex..<path.index(path.startIndex, offsetBy: 1),
+				with: Bundle.main.resourcePath ?? FileManager().currentDirectoryPath)
 			// TODO: handle spaces
 			urlp.path = path
 		}
 
 		// TODO: handle ~/
 
-		if let url = urlp.URL?.URLByStandardizingPath where NSFileManager.defaultManager().fileExistsAtPath(path) {
-			return url // this file is confirmed to exist, lets use it
+		if let url = urlp.url?.standardizedFileURL, FileManager.default.fileExists(atPath: path) {
+			return url as NSURL? // this file is confirmed to exist, lets use it
 			// BUG: this is accepting all folders, should only do that if index.html exists
 		} else {
 			warn("\(path) not found - request was for \(urlstr)")
 			return nil
 		}
-	} else if let urlp = NSURLComponents(string: urlstr) where !urlstr.hasPrefix("?") {
+	} else if let urlp = NSURLComponents(string: urlstr), !urlstr.hasPrefix("?") {
 		// handle networked urls
-		if urlp.scheme == "about" { return urlp.URL }
-		barehttp: if let path = urlp.path where !path.isEmpty && !urlstr.characters.contains(" ") && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
+		if urlp.scheme == "about" { return urlp.url as NSURL? }
+		barehttp: if let path = urlp.path, !path.isEmpty && !urlstr.characters.contains(" ") && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
 			if let _ = Int(path) { break barehttp; } //FIXME: ensure not all numbers. RFC952 & 1123 differ on this, but inet_ does weird stuff regardless
 			urlp.scheme = "http"
 			urlp.host = urlp.path
 			urlp.path = nil
 		}
-		if let url = urlp.URL, host = urlp.host {
+		if let url = urlp.url, let host = urlp.host {
 			//do preemptive nslookup on urlp.host
-			let chost = host.cStringUsingEncoding(NSUTF8StringEncoding)!
+			let chost = host.cString(using: String.Encoding.utf8)!
 			// FIXME use higher level APIs for NAT64
 			if gethostbyname2(chost, AF_INET).hashValue > 0 || gethostbyname2(chost, AF_INET6).hashValue > 0 { // failed lookups return null pointer
-				return url // hostname resolved, so use this url
+				return url as NSURL? // hostname resolved, so use this url
 			}
 			// what if lookup failed because internet offline? should call jsdelegate.networkIsOffline ??
 		}
@@ -198,8 +199,8 @@ func searchForKeywords(_ str: String) -> NSURL? {
 	// return a URL that will search the given keyword string
 
 	// maybe its a search query? check if blank and reformat it
-	if !str.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()).isEmpty,
-		let query = str.stringByAddingPercentEncodingWithAllowedCharacters(NSCharacterSet.URLQueryAllowedCharacterSet()),
+	if !str.trimmingCharacters(in: NSCharacterSet.whitespacesAndNewlines).isEmpty,
+		let query = str.addingPercentEncoding(withAllowedCharacters: NSCharacterSet.urlQueryAllowed),
 		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") { // FIXME: JS setter
 			return search
 		}
@@ -214,7 +215,7 @@ func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2:
 	prompter = Async.background {
 		let prompt = Prompt(argv0: CommandLine.unsafeArgv[0], prompt: "\(ps1)[\(ps2)]:> ")
 		while (true) {
-		    if let line = prompt.gets() { // R: blocks here until Enter pressed
+		    if let line = prompt?.gets() { // R: blocks here until Enter pressed
 				if !line.hasPrefix("\n") {
 					print("| ") // result prefix
 					eval?(line) // E:, P:
@@ -228,7 +229,7 @@ func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2:
 			// L: command dispatched, restart loop
 		}
 		// prompt loop killed, dealloc'd?
-		NSApp.replyToApplicationShouldTerminate(true) // now close App if this was deferring a terminate()
+		NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
 	}
 #else
 	print("Prompt() not available on this device.")

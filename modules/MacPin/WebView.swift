@@ -31,7 +31,8 @@ var globalIconClient = WKIconDatabaseClientV1(
 	// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSWrapperMap.mm#L412
 
 	var title: String? { get }
-	var url: String { get set }
+	//var url: URL? { get }
+	//var url: URL { get set }
 	var transparent: Bool { get set }
 	var userAgent: String { get set }
 	var allowsMagnification: Bool { get set }
@@ -43,7 +44,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	var styles: [String] { get }
 	static var MatchedAddressOptions: [String:String] { get set }
 	@objc(evalJS::) func evalJS(_ js: String, callback: JSValue?)
-	@objc(asyncEvalJS:::) func asyncEvalJS(_ js: String, delay: Double, callback: JSValue?)
+	@objc(asyncEvalJS:::) func asyncEvalJS(_ js: String, delay: Int, callback: JSValue?)
 	func loadURL(_ urlstr: String) -> Bool
 	func loadIcon(_ icon: String) -> Bool
 	func popStyle(_ idx: Int)
@@ -73,7 +74,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundle.cpp
 		return config
 	}
-	static var sharedWebProcessPool = WKProcessPool()._initWithConfiguration(MPWebView.WebProcessConfiguration()) // cvar singleton
+	static var sharedWebProcessPool = WKProcessPool()._init(with: MPWebView.WebProcessConfiguration()) // cvar singleton
 
 	var injected: [String] = [] //list of script-names already loaded
 	var styles: [String] = [] //list of css-names already loaded
@@ -83,10 +84,12 @@ var globalIconClient = WKIconDatabaseClientV1(
 	// race condition? seems to hit a phantom JSContext/JSValue that doesn't represent the delegate!?
 	var jsdelegate: JSValue { get { return AppScriptRuntime.shared.jsdelegate } }
 
+/*
 	var url: String { // accessor for JSC, which doesn't support `new URL()`
 		get { return URL?.absoluteString ?? "" }
 		set { loadURL(newValue) }
 	}
+*/
 
 	var userAgent: String {
 		get { return _customUserAgent ?? _userAgent ?? "" }
@@ -108,14 +111,16 @@ var globalIconClient = WKIconDatabaseClientV1(
 	var iconDB: WKIconDatabaseRef? = nil
 	var iconClient: WKIconDatabaseClientV1? = WKIconDatabaseClientV1() {
 		didSet {
-			if let iconDB = iconDB, context = context {
+			if let iconDB = iconDB, let context = context {
 				WKIconDatabaseClose(iconDB)
 				guard var iconClient = iconClient else { return }
 				//https://github.com/WebKit/webkit/blob/91700b336a0d0abf1be06c627e3f41281b2728a3/Source/WebCore/loader/icon/IconDatabase.cpp#L114 must close IconDB, setClient, and reopen
 			    WKIconDatabaseSetIconDatabaseClient(iconDB, &iconClient.base)
 				WKIconDatabaseCheckIntegrityBeforeOpening(iconDB)
 				WKIconDatabaseEnableDatabaseCleanup(iconDB)
-				WKContextSetIconDatabasePath(context, WKStringCreateWithUTF8CString("icondb.sqlite".UTF8String)) // is relative to CWD // should report success https://bugs.webkit.org/show_bug.cgi?id=117632
+				"icondb.sqlite".withCString { sqdb in
+					WKContextSetIconDatabasePath(context, WKStringCreateWithUTF8CString(sqdb)) // is relative to CWD // should report success https://bugs.webkit.org/show_bug.cgi?id=117632
+				}
 		   }
 		}
 	}
@@ -125,7 +130,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	var thumbnail: _WKThumbnailView? {
 		get {
 			let snap = self._thumbnailView
-			snap.requestSnapshot()
+			snap?.requestSnapshot()
 			return snap
 		}
 	}
@@ -169,7 +174,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 			//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
  			// so frobble frame size to make content reflow & re-colorize
 			setFrameSize(NSSize(width: frame.size.width, height: frame.size.height - 1)) //needed to fully redraw w/ dom-reflow or reload!
-			AppScriptRuntime.shared.jsdelegate.tryFunc("tabTransparencyToggled", transparent, self)
+			AppScriptRuntime.shared.jsdelegate.tryFunc("tabTransparencyToggled", transparent as AnyObject, self)
 			evalJS("window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(transparent)}}));" +
 				"document.head.appendChild(document.createElement('style')).remove();") //force redraw in case event didn't
 				//"window.scrollTo();")
@@ -212,9 +217,9 @@ var globalIconClient = WKIconDatabaseClientV1(
 			prefs._mockCaptureDevicesEnabled = false
 		}
 #endif
-		if let privacy = privacy where privacy {
+		if let privacy = privacy, privacy {
 			//prevent HTML5 application cache and asset/page caching by WebKit, MacPin never saves any history itself
-			prefs._storageBlockingPolicy = .BlockAll
+			prefs._storageBlockingPolicy = .blockAll
 		}
 		prefs._allowFileAccessFromFileURLs = true // file://s can xHr other file://s
 		//prefs._allowUniversalAccessFromFileURLs = true
@@ -234,11 +239,11 @@ var globalIconClient = WKIconDatabaseClientV1(
 			if isolated {
 				configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
 			} else {
-				configuration.processPool = config?.processPool ?? MPWebView.self.sharedWebProcessPool
+				configuration.processPool = config?.processPool ?? (MPWebView.self.sharedWebProcessPool)!
 			}
 		}
 
-		self.init(frame: CGRectZero, configuration: configuration)
+		self.init(frame: CGRect.zero, configuration: configuration)
 #if SAFARIDBG
 		_allowsRemoteInspection = true // start webinspectord child
 		// enables Safari.app->Develop-><computer name> remote debugging of JSCore and all webviews' JS threads
@@ -263,8 +268,12 @@ var globalIconClient = WKIconDatabaseClientV1(
 
 		let context = WKPageGetContext(_pageForTesting())
 		self.context = context
-	    WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString("http".UTF8String)) // FIXME: makeInsecure() toggle!
-	    WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString("https".UTF8String))
+		"http".withCString { http in
+			WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(http)) // FIXME: makeInsecure() toggle!
+		}
+		"https".withCString { https in
+			WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(https))
+		}
 		self.iconDB = WKContextGetIconDatabase(context)
 	}
 
@@ -316,7 +325,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		gotoURL(url)
 	}
 
-	override var description: String { return "<\(self.dynamicType)> `\(title ?? String())` [\(URL ?? String())]" }
+	override var description: String { return "<\(type(of: self))> `\(title ?? String())` [\(url)]" }
 	//func toString() -> String { return description } // $.browser.tabs[0].__proto__.toString = function(){ return this.title; }
 
 	deinit {
@@ -327,29 +336,29 @@ var globalIconClient = WKIconDatabaseClientV1(
 
 	func flushProcessPool() {
 		// reinit the NetworkProcess to change HTTP(s) proxies or write cookies to disk
-		NSUserDefaults.standardUserDefaults().synchronize()
+		UserDefaults.standard.synchronize()
 		if configuration.processPool == MPWebView.self.sharedWebProcessPool {
 			// replace the global pool if that's what we were using
-			MPWebView.self.sharedWebProcessPool = WKProcessPool()._initWithConfiguration(MPWebView.WebProcessConfiguration())
-			configuration.processPool = MPWebView.self.sharedWebProcessPool
+			MPWebView.self.sharedWebProcessPool = WKProcessPool()._init(with: MPWebView.WebProcessConfiguration())
+			configuration.processPool = MPWebView.self.sharedWebProcessPool!
 		} else { // regenerate a personal pool
 			configuration.processPool = WKProcessPool()
 		}
 	}
 
 	@objc(evalJS::) func evalJS(_ js: String, callback: JSValue? = nil) {
-		if let callback = callback where callback.isObject { //is a function or a {}
+		if let callback = callback, callback.isObject { //is a function or a {}
 			warn("callback: \(callback)")
-			evaluateJavaScript(js, completionHandler:{ (result: AnyObject?, exception: NSError?) -> Void in
+			evaluateJavaScript(js, completionHandler:{ (result: Any?, exception: Error?) -> Void in
 				// (result: WebKit::WebSerializedScriptValue*, exception: WebKit::CallbackBase::Error)
 				//withCallback.callWithArguments([result, exception]) // crashes, need to translate exception into something javascripty
 				warn("callback() ~> \(result),\(exception)")
 				// FIXME: check if exception is WKErrorCode.JavaScriptExceptionOccurred,.JavaScriptResultTypeIsUnsupported
 				if let result = result {
-					callback.callWithArguments([result, true]) // unowning withCallback causes a crash and weaking it muffs the call
+					callback.call(withArguments: [result, true]) // unowning withCallback causes a crash and weaking it muffs the call
 				} else {
 					// passing nil crashes
-					callback.callWithArguments([JSValue(nullInContext: callback.context), true])
+					callback.call(withArguments: [JSValue(nullIn: callback.context), true])
 				}
 				return
 			})
@@ -359,21 +368,20 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 	// cuz JSC doesn't come with setTimeout()
-	@objc(asyncEvalJS:::) func asyncEvalJS(_ js: String, delay: Double, callback: JSValue?) {
-		let backgroundQueue = dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0)
-		let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(Double(NSEC_PER_SEC) * delay))
-		dispatch_after(delayTime, backgroundQueue) {
-			if let callback = callback where callback.isObject { //is a function or a {}
+	@objc(asyncEvalJS:::) func asyncEvalJS(_ js: String, delay: Int, callback: JSValue?) {
+		let delayTime = DispatchTime.now() + DispatchTimeInterval.seconds(delay)
+		DispatchQueue.global(qos: .userInteractive).asyncAfter(deadline: delayTime) {
+			if let callback = callback, callback.isObject { //is a function or a {}
 				warn("callback: \(callback)")
-				self.evaluateJavaScript(js, completionHandler:{ (result: AnyObject?, exception: NSError?) -> Void in
+				self.evaluateJavaScript(js, completionHandler:{ (result: Any?, exception: Error?) -> Void in
 					// (result: WebKit::WebSerializedScriptValue*, exception: WebKit::CallbackBase::Error)
 					//withCallback.callWithArguments([result, exception]) // crashes, need to translate exception into something javascripty
 					warn("callback() ~> \(result),\(exception)")
 					if let result = result {
-						callback.callWithArguments([result, true]) // unowning withCallback causes a crash and weaking it muffs the call
+						callback.call(withArguments: [result, true]) // unowning withCallback causes a crash and weaking it muffs the call
 					} else {
 						// passing nil crashes
-						callback.callWithArguments([JSValue(nullInContext: callback.context), true])
+						callback.call(withArguments: [JSValue(nullIn: callback.context), true])
 					}
 				})
 			} else {
@@ -383,16 +391,16 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 	func gotoURL(_ url: NSURL) {
-		let act = NSProcessInfo.processInfo().beginActivityWithOptions([NSActivityOptions.UserInitiated, NSActivityOptions.IdleSystemSleepDisabled], reason: "browsing begun")
-		guard #available(OSX 10.11, iOS 9.1, *) else { loadRequest(NSURLRequest(URL: url)); return }
-		guard url.scheme == "file" else { loadRequest(NSURLRequest(URL: url)); return }
-		if let readURL = url.URLByDeletingLastPathComponent {
+		let act = ProcessInfo.processInfo.beginActivity(options: [ProcessInfo.ActivityOptions.userInitiated, ProcessInfo.ActivityOptions.idleSystemSleepDisabled], reason: "browsing begun")
+		guard #available(OSX 10.11, iOS 9.1, *) else { load(URLRequest(url: url as URL)); return }
+		guard url.scheme == "file" else { load(URLRequest(url: url as URL)); return }
+		if let readURL = url.deletingLastPathComponent {
 		//if let readURL = url.baseURL {
 		//if let readURL = url.URLByDeletingPathExtension {
 			warn("Bypassing CORS: \(readURL)")
-			loadFileURL(url, allowingReadAccessToURL: readURL)
+			loadFileURL(url as URL, allowingReadAccessTo: readURL)
 		}
-		NSProcessInfo.processInfo().endActivity(act)
+		ProcessInfo.processInfo.endActivity(act)
 	}
 
 	func loadURL(_ urlstr: String) -> Bool {
@@ -404,8 +412,10 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 	func scrapeIcon() { // extract icon location from current webpage and initiate retrieval
+
+		// this C SPI was scrapped in https://github.com/WebKit/webkit/commit/9a48388fe4e65e01969c475a1df0ed9b23c8bb43#diff-e43281f560648e1bddf2935b1d1b8b8b
 		if let iconDB = iconDB { // scrape icon from WebCore's IconDatabase
-			if let wkurl = WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithCFURL(URL)) as? WKURLRef where wkurl != nil {
+			if let wkurl = WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithCFURL(url as CFURL!)) {
 				WKIconDatabaseRetainIconForURL(iconDB, wkurl)
 				favicon.url = WKURLCopyCFURL(kCFAllocatorDefault, wkurl) as NSURL
 
@@ -431,11 +441,11 @@ var globalIconClient = WKIconDatabaseClientV1(
 				*/
 			}
 		} else { // scrape icon from JS DOM
-			evaluateJavaScript("if (icon = document.head.querySelector('link[rel$=icon]')) { icon.href };", completionHandler:{ [unowned self] (result: AnyObject?, exception: NSError?) -> Void in
+			evaluateJavaScript("if (icon = document.head.querySelector('link[rel$=icon]')) { icon.href };", completionHandler:{ [unowned self] (result: Any?, exception: Error?) -> Void in
 				if let href = result as? String { // got link for icon or apple-touch-icon from DOM
 					// FIXME: very rarely this crashes if a page closes/reloads itself during the update closure
 					self.loadIcon(href)
-				} else if let url = self.URL, iconurlp = NSURLComponents(URL: url, resolvingAgainstBaseURL: false) where !((iconurlp.host ?? "").isEmpty) {
+				} else if let url = self.url, let iconurlp = NSURLComponents(url: url, resolvingAgainstBaseURL: false), !((iconurlp.host ?? "").isEmpty) {
 					iconurlp.path = "/favicon.ico" // request a root-of-domain favicon
 					self.loadIcon(iconurlp.string!)
 				}
@@ -444,7 +454,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 	func loadIcon(_ icon: String) -> Bool {
-		if let url = NSURL(string: icon) where !icon.isEmpty {
+		if let url = NSURL(string: icon), !icon.isEmpty {
 			favicon.url = url
 			return true
 		}
@@ -465,7 +475,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	func popStyle(_ idx: Int) {
 		guard idx >= 0 && idx <= configuration.userContentController._userStyleSheets.count else { return }
 		let style = configuration.userContentController._userStyleSheets[idx]
-		configuration.userContentController._removeUserStyleSheet(style)
+		configuration.userContentController._remove(style)
 		styles.remove(at: idx)
 	}
 
@@ -478,11 +488,11 @@ var globalIconClient = WKIconDatabaseClientV1(
 		return false
 	}
 	func preinject(_ script: String) -> Bool {
-		if !injected.contains(script) && loadUserScriptFromBundle(script, webctl: configuration.userContentController, inject: .AtDocumentStart, onlyForTop: false) { injected.append(script); return true }
+		if !injected.contains(script) && loadUserScriptFromBundle(script, webctl: configuration.userContentController, inject: .atDocumentStart, onlyForTop: false) { injected.append(script); return true }
 		return false
 	}
 	func postinject(_ script: String) -> Bool {
-		if !injected.contains(script) && loadUserScriptFromBundle(script, webctl: configuration.userContentController, inject: .AtDocumentEnd, onlyForTop: false) { injected.append(script); return true }
+		if !injected.contains(script) && loadUserScriptFromBundle(script, webctl: configuration.userContentController, inject: .atDocumentEnd, onlyForTop: false) { injected.append(script); return true }
 		return false
 		// forcefully install a userscript fror post-page-loads
 		//guard unless !injected.contains(script) else {return false}
@@ -492,21 +502,21 @@ var globalIconClient = WKIconDatabaseClientV1(
 		//return true
 	}
 
-	func addHandler(_ handler: String) { configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler) } //FIXME kill
+	func addHandler(_ handler: String) { configuration.userContentController.add(AppScriptRuntime.shared, name: handler) } //FIXME kill
 	func subscribeTo(_ handler: String) {
-		configuration.userContentController.removeScriptMessageHandlerForName(handler)
-		configuration.userContentController.addScriptMessageHandler(AppScriptRuntime.shared, name: handler)
+		configuration.userContentController.removeScriptMessageHandler(forName: handler)
+		configuration.userContentController.add(AppScriptRuntime.shared, name: handler)
 	}
 
 	func REPL() {
 		termiosREPL({ (line: String) -> Void in
-			self.evaluateJavaScript(line, completionHandler:{ (result: AnyObject?, exception: NSError?) -> Void in
+			self.evaluateJavaScript(line, completionHandler:{ (result: Any?, exception: Error?) -> Void in
 				// FIXME: the JS execs async so these print()s don't consistently precede the REPL thread's prompt line
 				if let result = result { Swift.print(result) }
 				guard let exception = exception else { return }
-				switch (exception.domain, exception.code) { // codes: https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKError.h
-					case(WKErrorDomain, Int(WKErrorCode.JavaScriptExceptionOccurred.rawValue)): fallthrough
-					case(WKErrorDomain, Int(WKErrorCode.JavaScriptResultTypeIsUnsupported.rawValue)): fallthrough
+				switch (exception._domain, exception._code) { // codes: https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKError.h
+					// case(WKErrorDomain, Int(WKErrorCode.JavaScriptExceptionOccurred.rawValue)): fallthrough
+					// case(WKErrorDomain, Int(WKErrorCode.JavaScriptResultTypeIsUnsupported.rawValue)): fallthrough
 						// info keys: https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKErrorPrivate.h
 						// _WKJavaScriptExceptionMessageErrorKey
 						// _WKJavaScriptExceptionLineNumberErrorKey
@@ -529,15 +539,15 @@ var globalIconClient = WKIconDatabaseClientV1(
 
 	// FIXME: unified save*()s like Safari does with a drop-down for "Page Source" & Web Archive, or auto-mime for single non-HTML asset
 	func saveWebArchive() {
-		_getWebArchiveDataWithCompletionHandler() { [unowned self] (data: NSData!, err: NSError!) -> Void in
+		_getWebArchiveData() { [unowned self] (data: Data?, err: Error?) -> Void in
 			//pop open a save Panel to dump data into file
 			let saveDialog = NSSavePanel();
 			saveDialog.canCreateDirectories = true
 			saveDialog.allowedFileTypes = [kUTTypeWebArchive as String]
 			if let window = self.window {
-				saveDialog.beginSheetModalForWindow(window) { (result: Int) -> Void in
-					if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
-						NSFileManager.defaultManager().createFileAtPath(path, contents: data, attributes: nil)
+				saveDialog.beginSheetModal(for: window) { (result: Int) -> Void in
+					if let url = saveDialog.url, result == NSFileHandlingPanelOKButton {
+						FileManager.default.createFile(atPath: url.path, contents: data, attributes: nil)
 						}
 				}
 			}
@@ -545,17 +555,17 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 	func savePage() {
-		_getMainResourceDataWithCompletionHandler() { [unowned self] (data: NSData!, err: NSError!) -> Void in
+		_getMainResourceData() { [unowned self] (data: Data?, err: Error?) -> Void in
 			//pop open a save Panel to dump data into file
 			let saveDialog = NSSavePanel();
 			saveDialog.canCreateDirectories = true
-			if let mime = self._MIMEType, uti = UTI(MIMEType: mime) {
-				saveDialog.allowedFileTypes = [uti.UTIString]
+			if let mime = self._MIMEType, let uti = UTI(mimeType: mime) {
+				saveDialog.allowedFileTypes = [uti.utiString]
 			}
 			if let window = self.window {
-				saveDialog.beginSheetModalForWindow(window) { (result: Int) -> Void in
-					if let url = saveDialog.URL, path = url.path where result == NSFileHandlingPanelOKButton {
-						NSFileManager.defaultManager().createFileAtPath(path, contents: data, attributes: nil)
+				saveDialog.beginSheetModal(for: window) { (result: Int) -> Void in
+					if let url = saveDialog.url, result == NSFileHandlingPanelOKButton {
+						FileManager.default.createFile(atPath: url.path, contents: data, attributes: nil)
 						}
 				}
 			}
@@ -563,7 +573,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 	override func validateUserInterfaceItem(_ anItem: NSValidatedUserInterfaceItem) -> Bool {
-		switch (anItem.action.description) {
+		switch (anItem.action!.description) {
 			//case "askToOpenCurrentURL": return true
 			case "copyAsPDF": fallthrough
 			case "console": fallthrough
@@ -607,7 +617,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		if sender.draggingSource() == nil { //dragged from external application
 			let pboard = sender.draggingPasteboard()
 
-			if let file = pboard.stringForType(kUTTypeFileURL as String) { //drops from Finder
+			if let file = pboard.string(forType: kUTTypeFileURL as String) { //drops from Finder
 				warn("DnD: file from Finder: \(file)")
 			} else {
 				pboard.dump()
@@ -615,8 +625,8 @@ var globalIconClient = WKIconDatabaseClientV1(
 				pboard.dump()
 			}
 
-			if let urls = pboard.readObjectsForClasses([NSURL.self], options: nil) {
-				if AppScriptRuntime.shared.jsdelegate.tryFunc("handleDragAndDroppedURLs", urls.map({$0.description})) {
+			if let urls = pboard.readObjects(forClasses: [NSURL.self], options: nil) {
+				if AppScriptRuntime.shared.jsdelegate.tryFunc("handleDragAndDroppedURLs", NSArray(array: urls.map({($0 as! NSURL).description}))) {
 			 		return true  // app.js indicated it handled drag itself
 				}
 			}
@@ -645,25 +655,25 @@ var globalIconClient = WKIconDatabaseClientV1(
 	// http://stackoverflow.com/questions/392464/how-do-i-do-base64-encoding-on-iphone-sdk
 
 	func copyAsPDF() {
-		let pb = NSPasteboard.generalPasteboard()
+		let pb = NSPasteboard.general()
 		pb.clearContents()
-		writePDFInsideRect(bounds, toPasteboard: pb)
+		writePDF(inside: bounds, to: pb)
 	}
 
 	func printWebView(_ sender: AnyObject?) {
 #if STP
 		// _printOperation not avail in 10.11.4's WebKit
-		let printer = _printOperationWithPrintInfo(NSPrintInfo.sharedPrintInfo())
-		printer.showsPrintPanel = true
-		printer.runOperation()
+		let printer = _printOperation(with: NSPrintInfo.shared())
+		printer?.showsPrintPanel = true
+		printer?.run()
 #endif
 	}
 
 	func console() {
 		let inspector = WKPageGetInspector(_pageForTesting())
-		dispatch_async(dispatch_get_main_queue(), {
-			WKInspectorShowConsole(inspector); // ShowConsole, Hide, Close, IsAttatched, Attach, Detach
-		})
+		DispatchQueue.main.async() {
+			WKInspectorShowConsole(inspector) // ShowConsole, Hide, Close, IsAttatched, Attach, Detach
+		}
 	}
 
 #endif

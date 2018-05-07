@@ -29,10 +29,10 @@ typealias CollectionViewItem = UICollectionViewCell
 
 class TabGridIcon: NSCollectionViewItem {
 	required init?(coder: NSCoder) { super.init(coder: coder) } // conform to NSCoding
-	override init?(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView() 
+	override init?(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
 	//override func loadView() { view = urlbox } // NIBless
 
-	override var selected: Bool {
+	override var isSelected: Bool {
 		didSet { warn("Selection changed") }
 	}
 }
@@ -41,7 +41,7 @@ class TabGridIcon: NSCollectionViewItem {
 class TabGridView: NSCollectionView {
 	func viewDidLoad() {
 		//super.viewDidLoad()
-		selectable = true
+		isSelectable = true
 		allowsMultipleSelection = false
 		maxNumberOfRows = 0
 		maxNumberOfColumns = 10
@@ -56,13 +56,13 @@ class TabGridController: NSViewController {
 	var tabs: [TabGridIcon] = [] //browser.childViewControllers ?? (representedObject as? TabViewController)?.childViewControllers ?? []
 
 	var browser: BrowserViewController? { get {
-		if let browser = presentingViewController as? BrowserViewController { return browser }
-		if let browser = parentViewController as? BrowserViewController { return browser }
+		if let browser = presenting as? BrowserViewController { return browser }
+		if let browser = parent as? BrowserViewController { return browser }
 		return nil
 	}}
 
 	required init?(coder: NSCoder) { super.init(coder: coder) } // conform to NSCoding
-	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView() 
+	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
 	override func loadView() { view = tabGrid } // NIBless
 
 	convenience init(tvc: TabViewController? = nil) {

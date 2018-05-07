@@ -38,7 +38,7 @@ class Geolocator: NSObject  {
 
 extension Geolocator: CLLocationManagerDelegate {
 
-	func locationManager(_ manager: CLLocationManager, didFailWithError error: NSError) {
+	func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
 		manager.stopUpdatingLocation()
 		//if (error != nil) { warn(error) }
 	}
@@ -49,12 +49,12 @@ extension Geolocator: CLLocationManagerDelegate {
 
 #if os(OSX)
 	func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-		if let location = locations.last where locations.count > 0 {
+		if let location = locations.last, locations.count > 0 {
 			currentLocation = location
 			warn("lat: \(location.coordinate.latitude) lon:\(location.coordinate.longitude)")
 
 			// https://github.com/WebKit/webkit/blob/8c504b60d07b2a5c5f7c32b51730d3f6f6daa540/Tools/WebKitTestRunner/InjectedBundle/InjectedBundle.cpp#L457
-			AppScriptRuntime.shared.jsdelegate.tryFunc("updateGeolocation", location.coordinate.latitude, location.coordinate.longitude)
+			AppScriptRuntime.shared.jsdelegate.tryFunc("updateGeolocation", location.coordinate.latitude as AnyObject, location.coordinate.longitude as AnyObject)
 			for subscriber in subscribers {
 				subscriber.evalJS( //for now, send an omnibus event with all varnames values
 					"window.dispatchEvent(new window.CustomEvent('gotCurrentGeolocation',{detail:{latitude: \(location.coordinate.latitude), longitude: \(location.coordinate.longitude)}}));"
@@ -65,7 +65,7 @@ extension Geolocator: CLLocationManagerDelegate {
     }
 #endif
 
-	func locationManager(_ manager: CLLocationManager, didChangeAuthorizationStatus status: CLAuthorizationStatus) {
+	func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
 		switch status {
 			//case CLAuthorizationStatus.Restricted:
 			//case CLAuthorizationStatus.Denied:
