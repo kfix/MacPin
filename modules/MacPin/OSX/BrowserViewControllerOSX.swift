@@ -337,19 +337,21 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
  	// FIXME: not needed with STP v21: https://github.com/WebKit/webkit/commit/583510ef68c8aa56558c17263791b5cd8f762f99
+	/*
 	var iconClient = WKIconDatabaseClientV1(
 		base: WKIconDatabaseClientBase(),
 		didChangeIconForPageURL: nil, //faviconChanged
 		didRemoveAllIcons: nil, //faviconsCleared,
 		iconDataReadyForPageURL: nil //faviconReady as WKIconDatabaseIconDataReadyForPageURLCallback!
 	)
+	*/
 
 	convenience init() {
 		self.init(nibName: nil, bundle: nil)
 
 		// send browser all iconDB callbacks so it can update the tab.image's -> FavIcons
 		// internally, webcore has a delegation model for grabbing icon URLs: https://bugs.webkit.org/show_bug.cgi?id=136059#c1
-		iconClient.base = WKIconDatabaseClientBase(version: 1, clientInfo: Unmanaged.passUnretained(self).toOpaque())
+		//iconClient.base = WKIconDatabaseClientBase(version: 1, clientInfo: Unmanaged.passUnretained(self).toOpaque())
 		tabMenu.delegate = self
 
 		let center = NotificationCenter.default
@@ -498,7 +500,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			//gridItem.textField = wv.title
 
 			// set the browser as the new webview's iconClient
-			wvc.webview.iconClient = iconClient
+			//wvc.webview.iconClient = iconClient
 			// FIXME: should only do this once per unique processPool, tabs.filter( { $0.configuration.processProol == wvc.webview.configuration.processPool } ) ??
 		}
 	}
@@ -679,7 +681,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
             //case is [String]: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: obj))
             case let str as String: mi = MenuItem(title, "gotoShortcut:", target: self, represents: str as NSString)
             case let dict as [String:AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: NSDictionary(dictionary: dict))
-            case is [AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: obj)
+            case let arr as [AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: NSArray(array: arr))
 			default:
 				warn("invalid shortcut object type!")
 				return
@@ -694,10 +696,10 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 				case let urlstr as String: AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr as NSString)
 				// FIXME: fire event in jsdelegate if string, only NSURLs should do launchURL
 				case let dict as [String:AnyObject]: tabSelected = MPWebView(object: dict) // FIXME: do a try here
-                case let arr as [AnyObject] where arr.count > 0 && arr.first is String:
-                	var args = Array(arr.dropFirst())
-                	if let wv = tabSelected as? MPWebView { args.append(wv) }
-                	AppScriptRuntime.shared.jsdelegate.tryFunc((arr.first as! String), argv: args)
+				case let arr as [AnyObject?] where arr.count > 0 && arr.first is String?:
+					var args = Array(arr.dropFirst()).map({ $0! })
+					if let wv = tabSelected as? MPWebView { args.append(wv) }
+					AppScriptRuntime.shared.jsdelegate.tryFunc((arr.first as! String), argv: args)
 				default: warn("invalid shortcut object type!")
 			}
 		}

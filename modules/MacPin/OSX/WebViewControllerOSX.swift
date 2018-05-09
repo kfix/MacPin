@@ -134,7 +134,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 
 	override func dismiss() {
 		webview._inspectorAttachmentView = nil
-		webview.iconClient = nil
+		//webview.iconClient = nil
 		//view?.removeFromSuperviewWithoutNeedingDisplay()
 		//super.dismiss()
 	}

@@ -198,7 +198,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 
 	func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
 		//content starts arriving...I assume <body> has materialized in the DOM?
-		//(webView as? MPWebView)?.scrapeIcon()
+		(webView as? MPWebView)?.scrapeIcon()
 	}
 
 	func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
@@ -293,7 +293,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		//let title = webView.title ?? String()
 		//let url = webView.URL ?? NSURL(string:"")!
 		//warn("\"\(title)\" [\(url)]")
-		//(webView as? MPWebView)?.scrapeIcon()
+		(webView as? MPWebView)?.scrapeIcon()
 #if os(iOS)
 		UIApplication.sharedApplication().networkActivityIndicatorVisible = false
 #endif

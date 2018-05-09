@@ -8,6 +8,7 @@ import WebKitPrivates
 import JavaScriptCore
 import UTIKit
 
+/*
 var globalIconClient = WKIconDatabaseClientV1(
 	base: WKIconDatabaseClientBase(version: 1, clientInfo: nil),
 	didChangeIconForPageURL: { (iconDatabase, pageURL, clientInfo) -> Void in
@@ -23,6 +24,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		return
 	}
 )
+*/
 
 @objc protocol WebViewScriptExports: JSExport { // $.WebView & $.browser.tabs[WebView]
 	init?(object: [String:AnyObject]) //> new WebView({url: 'http://example.com'});
@@ -104,8 +106,10 @@ var globalIconClient = WKIconDatabaseClientV1(
 		// NSURLSessionConfiguration ? https://www.objc.io/issues/5-ios7/from-nsurlconnection-to-nsurlsession/
 
 	var context: WKContextRef? = nil
+
 	// iconDB is going bye-bye: https://github.com/WebKit/webkit/commit/9a48388fe4e65e01969c475a1df0ed9b23c8bb43
 	var iconDB: WKIconDatabaseRef? = nil
+	/*
 	var iconClient: WKIconDatabaseClientV1? = WKIconDatabaseClientV1() {
 		didSet {
 			if let iconDB = iconDB, let context = context {
@@ -121,6 +125,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		   }
 		}
 	}
+	*/
 
 #if STP
 	// a long lived thumbnail viewer should construct and store thumbviews itself, this is for convenient dumping
@@ -271,7 +276,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		"https".withCString { https in
 			WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(https))
 		}
-		self.iconDB = WKContextGetIconDatabase(context)
+		//self.iconDB = WKContextGetIconDatabase(context)
 	}
 
 	/*
@@ -411,7 +416,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	func scrapeIcon() { // extract icon location from current webpage and initiate retrieval
 
 		// this C SPI was scrapped in https://github.com/WebKit/webkit/commit/9a48388fe4e65e01969c475a1df0ed9b23c8bb43#diff-e43281f560648e1bddf2935b1d1b8b8b
-		if let iconDB = iconDB { // scrape icon from WebCore's IconDatabase
+		if let iconDB = iconDB, iconDB != nil { // scrape icon from WebCore's IconDatabase
 			if let wkurl = WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithCFURL(url as CFURL!)) {
 				WKIconDatabaseRetainIconForURL(iconDB, wkurl)
 				favicon.url = WKURLCopyCFURL(kCFAllocatorDefault, wkurl) as NSURL
