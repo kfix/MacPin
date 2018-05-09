@@ -15,8 +15,10 @@ archs_iphoneos		?= arm64
 target_ver_OSX		?= 10.13
 target_ver_iOS		?= 9.1
 
-xcode				?= /Applications/Xcode8.2.1.app
-# Xcode 8.3 removed swift2 support
+xcode				?= /Applications/Xcode.app
+swifttoolchain		?= XcodeDefault
+swiftver			?= 3
+
 ifneq ($(xcode),)
 xcrun				?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcrun
 xcs					?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcode-select
@@ -328,7 +330,7 @@ endif
 
 # need to gen static html with https://github.com/realm/jazzy
 doc stpdoc: $(execs) $(objs)
-	for i in $(build_mods) WebKit WebKitPrivates; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -deprecated-integrated-repl; done
+	for i in $(build_mods) WebKit WebKitPrivates; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -swift-version $(swiftver) -Xfrontend -color-diagnostics -deprecated-integrated-repl; done
 	#xcrun swift-ide-test -print-module -source-filename /dev/null -print-regular-comments -module-to-print Prompt
 	#xcrun swift-ide-test -sdk "$(sdkpath)" -source-filename=. -print-module -module-to-print="Prompt" -synthesize-sugar-on-types -module-print-submodules -print-implicit-attrs
 

@@ -391,8 +391,8 @@ extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 		warn("user clicked notification")
 
 		if AppScriptRuntime.shared.jsdelegate.tryFunc("handleClickedNotification",
-			notification.title as NSString, notification.subtitle as NSString,
-			notification.informativeText as NSString, notification.identifier as NSString) {
+			notification.title as! NSString, notification.subtitle as! NSString,
+			notification.informativeText as! NSString, notification.identifier as! NSString) {
 				warn("handleClickedNotification fired!")
 				center.removeDeliveredNotification(notification)
 		}

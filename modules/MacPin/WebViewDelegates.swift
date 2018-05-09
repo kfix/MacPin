@@ -165,10 +165,10 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 			switch (error._domain, error._code) {
 				// https://developer.apple.com/reference/cfnetwork/cfnetworkerrors
 				// https://developer.apple.com/library/mac/documentation/Networking/Reference/CFNetworkErrors/index.html#//apple_ref/c/tdef/CFNetworkErrors
-				case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.cfErrorHTTPProxyConnectionFailure.rawValue)):
+				case (String(kCFErrorDomainCFNetwork), Int(CFNetworkErrors.cfErrorHTTPProxyConnectionFailure.rawValue)):
 					UserDefaults.standard.removeObject(forKey: "WebKit2HTTPProxy") // FIXME: should prompt first
 					fallthrough //webview.flushProcessPool()
-				case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.cfErrorHTTPSProxyConnectionFailure.rawValue)):
+				case (String(kCFErrorDomainCFNetwork), Int(CFNetworkErrors.cfErrorHTTPSProxyConnectionFailure.rawValue)):
 					UserDefaults.standard.removeObject(forKey: "WebKit2HTTPSProxy") // FIXME: should prompt first
 					fallthrough ////webview.flushProcessPool()
 				//case (kCFErrorDomainCFNetwork as NSString, Int(CFNetworkErrors.CFURLErrorZeroByteResource.rawValue)):

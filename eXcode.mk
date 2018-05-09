@@ -136,12 +136,14 @@ verbose				?=
 xcrun				?= xcrun
 xcs					?= xcode-select
 
-swiftver			:= Swift_3_0_2
+swiftver			?= 3
+swifttoolchain		?= XcodeDefault
+# Xcode.app/Contents/Developer/Toolchains/*.xctoolchain/ToolchainInfo.plist << TC ids in there
+
 sdkpath				:= $(shell $(xcrun) --show-sdk-path --sdk $(sdk))
 # https://github.com/apple/swift/blob/master/include/swift/Option/FrontendOptions.td
-swiftc				:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swiftver) -sdk $(sdk) swiftc -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
-# Xcode.app/Contents/Developer/Toolchains/*.xctoolchain/ToolchainInfo.plist << TC ids in there
-swift-update		:= $(xcrun) --toolchain com.apple.dt.toolchain.Swift_3_0_2 -sdk $(sdk) swift-update -target $(arch)-$(target_$(platform)) $(verbose)
+swiftc				:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swiftc -swift-version $(swiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
+swift-update		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swift-update -swift-version $(swiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics) $(verbose)
 clang				:= $(xcrun) -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platform)) $(verbose)
 clangpp				:= $(xcrun) -sdk $(sdk) clang++ -fmodules -fcxx-modules -std=c++11 -stdlib=libc++ -target $(arch)-$(target_$(platform)) $(verbose)
 #-fobj-arc
@@ -153,10 +155,8 @@ incdirs				+= -I $(sdkpath)/System/Library/Frameworks
 incdirs				+= -I $(outdir)
 os_frameworks		:= -F $(sdkpath)/System/Library/Frameworks -L $(sdkpath)/System/Library/Frameworks
 frameworks			:= -F $(outdir)/Frameworks
-#swifttoolchain		:= Swift_2.3.xctoolchain
-swifttoolchain		:= XcodeDefault.xctoolchain
-swiftlibdir			:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift/$(sdk) $(shell $(xcs) -p)/Toolchains/$(swifttoolchain)/usr/lib/swift/$(sdk)))
-swiftstaticdir		:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift_static/$(sdk) $(shell $(xcs) -p)/Toolchains/$(swifttoolchain)/usr/lib/swift_static/$(sdk)))
+swiftlibdir			:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift/$(sdk) $(shell $(xcs) -p)/Toolchains/$(swifttoolchain).xctoolchain/usr/lib/swift/$(sdk)))
+swiftstaticdir		:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift_static/$(sdk) $(shell $(xcs) -p)/Toolchains/$(swifttoolchain).xctoolchain/usr/lib/swift_static/$(sdk)))
 $(info [$(eXcode)] compiling against $(sdkpath))
 $(info [$(eXcode)] swift libraries: $(swiftlibdir) $(swiftstaticdir))
 $(info [$(eXcode)] swiftc version: $(shell $(swiftc) --version))
