@@ -46,9 +46,12 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
     _WKCaptureDeviceCamera = 1 << 1,
 } WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
 
+@class _WKIconLoadingDelegate;
+
 @protocol _WKFindDelegate;
 @protocol _WKDiagnosticLoggingDelegate;
 //@protocol _WKInputDelegate;
+@protocol _WKIconLoadingDelegate;
 @interface WKWebView (Privates)
 @property (nonatomic, readonly) WKBrowsingContextHandle *_handle;
 - (WKPageRef)_pageForTesting;
@@ -117,6 +120,10 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 - (void)_countStringMatches:(NSString *)string options:(_WKFindOptions)options maxCount:(NSUInteger)maxCount;
 - (void)_hideFindUI;
 
+// Icon delegate
+// https://github.com/WebKit/webkit/commit/583510ef68c8aa56558c17263791b5cd8f762f99
+@property (nonatomic, weak, setter=_setIconLoadingDelegate:) id <_WKIconLoadingDelegate> _iconLoadingDelegate;
+
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
 #endif
 @end
@@ -144,3 +151,16 @@ typedef enum : NSUInteger {
 - (void)selectFindMatch:(id <NSTextFinderAsynchronousDocumentFindMatch>)findMatch completionHandler:(void (^)(void))completionHandler;
 @end
 #endif
+
+// CPU limit!!
+// https://github.com/WebKit/webkit/commit/7cb2c970ac18d8ea58d95236ef6897feb7f7fb01#diff-8e23aa6fa7b7953093696656facbb583
+
+// [WKWebView _pageRefForTransitionToWKWebView]
+// https://github.com/WebKit/webkit/commit/77f18c8949dad58b43e81f35d1b861a0f28a0efa#diff-8e23aa6fa7b7953093696656facbb583
+
+// _thumbnailView!
+// https://github.com/WebKit/webkit/commit/cabc571fb1a8b5d599592662d4823af181f5dab3#diff-8e23aa6fa7b7953093696656facbb583
+
+// moar from WebViewImpl !!
+// https://github.com/WebKit/webkit/commit/cfe92b4e265636c1396c7c7ed188cc51b78582ca#diff-8e23aa6fa7b7953093696656facbb583
+// https://github.com/WebKit/webkit/commit/dcb4f6fd0815005282c92da91b5f26b12083821d#diff-8e23aa6fa7b7953093696656facbb583

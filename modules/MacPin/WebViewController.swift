@@ -24,6 +24,7 @@ import JavaScriptCore
 		//webview._historyDelegate = self
 		webview._formDelegate = self //FIXME: ._inputDelegate = self
 		webview._findDelegate = self
+		webview._iconLoadingDelegate = self
 #if DEBUG
 		webview._diagnosticLoggingDelegate = self
 #endif
@@ -93,3 +94,12 @@ extension WebViewController: _WKDownloadDelegate {
 }
 
 // extensions WebViewController: WebsitePoliciesDelegate // FIXME: STP v20: per-site preferences: https://github.com/WebKit/webkit/commit/d9f6f7249630d7756e4b6ca572b29ac61d5c38d7
+
+extension WebViewController: _WKIconLoadingDelegate {
+	@objc func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Void) -> Void) {
+		completionHandler() { data in
+			// data.length
+			warn("page (\(webView.url?.absoluteString) got icon from <- \(parameters.url.absoluteString)")
+		}
+	}
+}

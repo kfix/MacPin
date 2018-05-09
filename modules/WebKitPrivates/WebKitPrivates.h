@@ -12,6 +12,8 @@
 #import "_WKInputDelegate.h"
 #import "_WKFormDelegate.h"
 #import "_WKFormInputSession.h"
+#import "_WKLinkIconParameters.h"
+#import "_WKIconLoadingDelegate.h"
 #import "WKProcessPoolPrivate.h"
 #import "JSContext+Privates.h"
 #import "JSContextRefPrivate.h"
