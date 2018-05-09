@@ -80,9 +80,12 @@ zip test apirepl tabrepl wknightly stp $(gen_apps): $(execs)
 doc test apirepl tabrepl test.app test.ios stp stp.app: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
 
 ifeq ($(STP),1)
-#linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
-#linkopts_main += -Wl,-F,"/Applications/Safari Technology Preview.app/Contents/Frameworks"
-#libdirs += -L "/Applications/Safari Technology Preview.app/Contents/Frameworks"
+stpwebkitdir			:= $(wildcard /Applications/Safari\ Technology\ Preview.app/Contents/Frameworks)
+ifneq ($(stpwebkitdir),)
+linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="$(stpwebkitdir)"
+linkopts_main += -Wl,-F,"$(stpwebkitdir)"
+libdirs += -L "$(stpwebkitdir)"
+endif
 debug += -D STP
 clang += -DSTP
 clangpp += -DSTP
