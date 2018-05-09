@@ -31,8 +31,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSWrapperMap.mm#L412
 
 	var title: String? { get }
-	//var url: URL? { get }
-	//var url: URL { get set }
+	@objc(url)var urlstr: String { get set }
 	var transparent: Bool { get set }
 	var userAgent: String { get set }
 	var allowsMagnification: Bool { get set }
@@ -84,12 +83,10 @@ var globalIconClient = WKIconDatabaseClientV1(
 	// race condition? seems to hit a phantom JSContext/JSValue that doesn't represent the delegate!?
 	var jsdelegate: JSValue { get { return AppScriptRuntime.shared.jsdelegate } }
 
-/*
-	var url: String { // accessor for JSC, which doesn't support `new URL()`
-		get { return URL?.absoluteString ?? "" }
+	var urlstr: String { // accessor for JSC, which doesn't support `new URL()`
+		get { return url?.absoluteString ?? "" }
 		set { loadURL(newValue) }
 	}
-*/
 
 	var userAgent: String {
 		get { return _customUserAgent ?? _userAgent ?? "" }
@@ -325,7 +322,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		gotoURL(url)
 	}
 
-	override var description: String { return "<\(type(of: self))> `\(title ?? String())` [\(url)]" }
+	override var description: String { return "<\(type(of: self))> `\(title ?? String())` [\(urlstr)]" }
 	//func toString() -> String { return description } // $.browser.tabs[0].__proto__.toString = function(){ return this.title; }
 
 	deinit {

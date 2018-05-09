@@ -9,14 +9,14 @@
 var delegate = {}; // our delegate to receive events from the webview app
 
 delegate.openInChrome = function(tab) {
-	console.log(tab.url);
+	console.log(`app.js: opening (${tab.url}) in chrome`);
 	switch ($.app.platform) {
 		case "OSX":
 			$.app.openURL(tab.url, "com.google.Chrome");
 			break;
 		case "iOS":
 			$.app.openURL(tab.url,
-				url.startsWith("https://") ? "googlechromes" : "googlechrome");
+				tab.url.startsWith("https://") ? "googlechromes" : "googlechrome");
 			break;
 	}
 };

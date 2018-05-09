@@ -51,7 +51,7 @@ import JavaScriptCore
 	override var title: String? {
 		get {
 	        if let wti = webview.title, !wti.isEmpty { return wti }
-				else if let urlstr = webview.url?.absoluteString, !urlstr.isEmpty { return urlstr }
+				else if !webview.urlstr.isEmpty { return webview.urlstr }
 				else { return "Untitled" }
 		}
 		set {
@@ -73,9 +73,9 @@ import JavaScriptCore
 }
 
 extension WebViewController: _WKDiagnosticLoggingDelegate {
-	func _webView(_ webView: WKWebView, logDiagnosticMessage message: String, description: String) { warn("\(message) || \(description) << \(webView.url)") }
-	func _webView(_ webView: WKWebView, logDiagnosticMessageWithResult message: String, description: String, result: _WKDiagnosticLoggingResultType) { warn("\(message) || \(description) >> \(String(describing: result)) << \(webView.url)") }
-	func _webView(_ webView: WKWebView, logDiagnosticMessageWithValue message: String, description: String, value: String) { warn("\(message) || \(description) == \(value) << \(webView.url)") }
+	func _webView(_ webView: WKWebView, logDiagnosticMessage message: String, description: String) { warn("\(message) || \(description) << \(webView.url?.absoluteString ?? String())") }
+	func _webView(_ webView: WKWebView, logDiagnosticMessageWithResult message: String, description: String, result: _WKDiagnosticLoggingResultType) { warn("\(message) || \(description) >> \(String(describing: result)) << \(webView.url?.absoluteString ?? String())") }
+	func _webView(_ webView: WKWebView, logDiagnosticMessageWithValue message: String, description: String, value: String) { warn("\(message) || \(description) == \(value) << \(webView.url?.absoluteString ?? String())") }
 }
 
 extension WebViewController: _WKDownloadDelegate {
