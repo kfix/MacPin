@@ -205,7 +205,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		dbgMenu.submenu?.addItem(MenuItem("Dismiss VC", "dismissController:")) //bc
 #if DBGMENU
 #else
-		dbgMenu.hidden = true
+		dbgMenu.isHidden = true
 #endif
 		app!.mainMenu?.addItem(dbgMenu)
 
