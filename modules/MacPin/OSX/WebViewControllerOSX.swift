@@ -237,6 +237,16 @@ extension WebViewControllerOSX { // AppGUI funcs
 	}
 */
 
+	// https://github.com/WebKit/webkit/commit/7142fb3b53b77c1f4881f2c7b5fa2a61794cc2e0#diff-da59bd1d4a25653a6963b1d22bbc088f
+	func showHideWebInspector(_ sender: AnyObject?) {
+		let inspectorRef = WKPageGetInspector(webview._pageRefForTransitionToWKWebView)
+		if WKInspectorIsVisible(inspectorRef) {
+			DispatchQueue.main.async() { WKInspectorHide(inspectorRef) }
+			webview.window?.makeFirstResponder(webview)
+		} else {
+			DispatchQueue.main.async() { WKInspectorShow(inspectorRef) }
+		}
+	}
 }
 
 extension WebViewControllerOSX: NSSharingServicePickerDelegate { }

@@ -68,6 +68,8 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @property (readonly) NSColor *_pageExtendedBackgroundColor;
 @property (nonatomic, setter=_setTopContentInset:) CGFloat _topContentInset;
 @property (nonatomic, setter=_setAutomaticallyAdjustsContentInsets:) BOOL _automaticallyAdjustsContentInsets;
+
+@property (nonatomic, readonly) WKPageRef _pageRefForTransitionToWKWebView  WK_API_AVAILABLE(macosx(WK_MAC_TBA));
 #endif
 
 @property (nonatomic, setter=_setLayoutMode:) _WKLayoutMode _layoutMode;

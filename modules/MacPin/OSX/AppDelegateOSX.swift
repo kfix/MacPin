@@ -146,6 +146,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", "toggleTransparency")) //wvc
 		tabMenu.submenu?.addItem(NSMenuItem.separator())
 		tabMenu.submenu?.addItem(MenuItem("Show JS Console", "console", "c", [.option, .command])) //wv
+		tabMenu.submenu?.addItem(MenuItem("Toggle Web Inspector", "showHideWebInspector:", "i", [.option, .command]))
 		tabMenu.submenu?.addItem(MenuItem("Reload", "reload:", "r", [.command])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Uncache & Reload", "reloadFromOrigin:", "R", [.command, .shift])) //webview
 		tabMenu.submenu?.addItem(MenuItem("Go Back", "goBack:", "[", [.command])) //webview
