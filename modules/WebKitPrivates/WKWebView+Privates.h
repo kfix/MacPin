@@ -13,10 +13,7 @@ typedef NS_ENUM(NSInteger, _WKPaginationMode) {
     _WKPaginationModeRightToLeft,
     _WKPaginationModeTopToBottom,
     _WKPaginationModeBottomToTop,
-};
-
-#import "WKBrowsingContextHandle.h"
-@class WKBrowsingContextHandle;
+} WK_API_AVAILABLE(macosx(10.10), ios(8.0));
 
 typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
     _WKImmediateActionNone,
@@ -25,7 +22,7 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
     _WKImmediateActionLookupText,
     _WKImmediateActionMailtoLink,
     _WKImmediateActionTelLink
-};
+} WK_API_AVAILABLE(macosx(10.12));
 
 typedef NS_OPTIONS(NSInteger, _WKMediaCaptureState) {
     _WKMediaCaptureStateNone = 0,
@@ -33,20 +30,25 @@ typedef NS_OPTIONS(NSInteger, _WKMediaCaptureState) {
     _WKMediaCaptureStateActiveCamera = 1 << 1,
     _WKMediaCaptureStateMutedMicrophone = 1 << 2,
     _WKMediaCaptureStateMutedCamera = 1 << 3,
-} WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
+} WK_API_AVAILABLE(macosx(10.13), ios(11.0));
 
 typedef NS_OPTIONS(NSInteger, _WKMediaMutedState) {
     _WKMediaNoneMuted = 0,
     _WKMediaAudioMuted = 1 << 0,
     _WKMediaCaptureDevicesMuted = 1 << 1,
-} WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
+} WK_API_AVAILABLE(macosx(10.13), ios(11.0));
 
 typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
     _WKCaptureDeviceMicrophone = 1 << 0,
     _WKCaptureDeviceCamera = 1 << 1,
-} WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
+    _WKCaptureDeviceDisplay = 1 << 2,
+} WK_API_AVAILABLE(macosx(10.13), ios(11.0));
+
+#import "WKBrowsingContextHandle.h"
+@class WKBrowsingContextHandle;
 
 @class _WKIconLoadingDelegate;
+@class _WKThumbnailView;
 
 @protocol _WKFindDelegate;
 @protocol _WKDiagnosticLoggingDelegate;
@@ -124,6 +126,10 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 // https://github.com/WebKit/webkit/commit/583510ef68c8aa56558c17263791b5cd8f762f99
 @property (nonatomic, weak, setter=_setIconLoadingDelegate:) id <_WKIconLoadingDelegate> _iconLoadingDelegate;
 
+// https://github.com/WebKit/webkit/commit/cabc571fb1a8b5d599592662d4823af181f5dab3#diff-8e23aa6fa7b7953093696656facbb583
+@property (nonatomic, setter=_setThumbnailView:) _WKThumbnailView *_thumbnailView WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+@property (nonatomic, setter=_setIgnoresAllEvents:) BOOL _ignoresAllEvents WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
 #endif
 @end
@@ -157,9 +163,6 @@ typedef enum : NSUInteger {
 
 // [WKWebView _pageRefForTransitionToWKWebView]
 // https://github.com/WebKit/webkit/commit/77f18c8949dad58b43e81f35d1b861a0f28a0efa#diff-8e23aa6fa7b7953093696656facbb583
-
-// _thumbnailView!
-// https://github.com/WebKit/webkit/commit/cabc571fb1a8b5d599592662d4823af181f5dab3#diff-8e23aa6fa7b7953093696656facbb583
 
 // moar from WebViewImpl !!
 // https://github.com/WebKit/webkit/commit/cfe92b4e265636c1396c7c7ed188cc51b78582ca#diff-8e23aa6fa7b7953093696656facbb583

@@ -41,6 +41,18 @@ extension WebViewControllerOSX {
 		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler(input.stringValue) }
 	}
 
+	// JS window.beforeunload() handler
+	func _webView(_ webView: WKWebView!, runBeforeUnloadConfirmPanelWithMessage message: String!, initiatedByFrame frame: WKFrameInfo!, completionHandler: ((Bool) -> Void)!) {
+		let alert = NSAlert()
+		alert.messageText = webView.title ?? ""
+		alert.addButton(withTitle: "Leave Page")
+		alert.addButton(withTitle: "Stay on Page")
+		alert.informativeText = "Are you sure you want to leave this page?" //message
+		// Safari 9.1+, Chrome 51+, & Firefox 44+ do not allow JS to customize the msgTxt. Thanks scammers.
+		alert.icon = NSApplication.shared().applicationIconImage
+		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler(response == NSAlertFirstButtonReturn) }
+ }
+
 	func _webView(_ webView: WKWebView, printFrame: WKFrameInfo) {
 		warn("JS: `window.print();`")
 #if STP
@@ -51,16 +63,20 @@ extension WebViewControllerOSX {
 	}
 }
 
-extension WebViewControllerOSX {
-  func _webView(_ webView: WKWebView!, requestUserMediaAuthorizationFor devices: _WKCaptureDevices, url: NSURL!, mainFrameURL: NSURL!, decisionHandler: ((Bool) -> Void)!) {
-	warn()
-    decisionHandler(true)
-  }
-  func _webView(_ webView: WKWebView!, checkUserMediaPermissionFor url: NSURL!, mainFrameURL: NSURL!, frameIdentifier: UInt, decisionHandler: ((String?, Bool) -> Void)!) {
-	warn()
-    decisionHandler("0x987654321", true)
-  }
-  //func _webView(_ webView: WKWebView!, mediaCaptureStateDidChange state: _WKMediaCaptureState)
+extension WebViewControllerOSX { // WebRTC prompts, auto-approving
+	//@available(OSX 10.13, *)
+	func _webView(_ webView: WKWebView!, requestUserMediaAuthorizationForDevices devices: _WKCaptureDevices, url: URL!, mainFrameURL: URL!, decisionHandler: ((Bool) -> Void)!) {
+		warn()
+		decisionHandler(true)
+	}
+
+	@available(OSX 10.12.3, *)
+	func _webView(_ webView: WKWebView!, checkUserMediaPermissionForURL url: URL!, mainFrameURL: URL!, frameIdentifier: UInt, decisionHandler: ((String?, Bool) -> Void)!) {
+		warn()
+		//decisionHandler(url.absoluteString, true)
+		decisionHandler("0x987654321", true)
+	}
+
 }
 
 extension WebViewControllerOSX {
@@ -276,10 +292,9 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 		openDialog.allowsMultipleSelection =  parameters.allowsMultipleSelection
 		if let window = webview.window {
 			NSApplication.shared().requestUserAttention(.informationalRequest)
-			openDialog.beginSheetModal(for: window) { (choice: Int) -> Void in
-				if choice == NSFileHandlingPanelOKButton {
-					//completionHandler(openDialog.URLs)
-					completionHandler(nil)
+			openDialog.beginSheetModal(for: window) { (choice: NSApplication.ModalResponse) -> Void in
+				if choice == NSFileHandlingPanelOKButton { // .OK
+					completionHandler(openDialog.urls as [NSURL]?)
 				} else {
 					completionHandler(nil)
 				}
@@ -288,3 +303,8 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 	}
 }
 
+/*
+	func _webView(_ webView: WKWebView!, requestGeolocationPermissionForFrame frame: WKFrameInfo!, decisionHandler: ((Bool) -> Void)!)
+
+	func _webView(_ webView: WKWebView!, editorStateDidChange editorState: [AnyHashable : Any]!)
+*/

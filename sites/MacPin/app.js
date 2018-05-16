@@ -95,6 +95,8 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('Apple WebKit API reference', 'https://developer.apple.com/reference/webkit');
 	$.browser.addShortcut('Browsing Test', 'http://browsingtest.appspot.com');
 	$.browser.addShortcut('resizeMyBrowser', 'http://resizemybrowser.com');
+	$.browser.addShortcut('File Upload test', 'https://mdn.github.io/learning-area/html/forms/file-examples/simple-file.html');
+	$.browser.addShortcut('WebRTC effect test', 'https://webkit.org/blog-files/webrtc/pc-with-effects/index.html');
 
 	// http://user-agents.me
 	$.browser.addShortcut('UA: Safari 11 Mac', ["setAgent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/604.1.29 (KHTML, like Gecko) Version/11.0 Safari/604.1.129"]);
