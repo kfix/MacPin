@@ -48,6 +48,9 @@ class TabGridView: NSCollectionView {
 		minItemSize = NSSize(width: 0, height: 0)
 		maxItemSize = NSSize(width: 0, height: 0)
 		//itemPrototype = NSCollectionViewItem
+		// NSStackView might be best for a sidebar (column) or drawer (row) of thumbnails
+		//   https://developer.apple.com/videos/play/wwdc2017/218 @ 5:00
+		// but NSTableView support dynamic data (push/pop tabs) @ 31:30
 	}
 }
 
