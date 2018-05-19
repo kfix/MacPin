@@ -38,6 +38,7 @@ WK_CLASS_AVAILABLE(10_10, 8_0)
 @interface _WKThumbnailView : NSView
 
 - (instancetype)initWithFrame:(NSRect)frame fromWKView:(WKView *)wkView;
+- (instancetype)initWithFrame:(NSRect)frame fromWKWebView:(WKWebView *)webView;
 
 @property (nonatomic) CGFloat scale;
 @property (nonatomic, readonly) CGSize snapshotSize;

@@ -26,6 +26,8 @@
 
 //#import "WKError.h"
 #import <WebKit/WKError.h>
+// /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Versions/A/Headers/WKError.h
+// https://opensource.apple.com/source/WebKit2/WebKit2-7604.5.6/UIProcess/API/Cocoa/WKError.h.auto.html
 
 #if WK_API_ENABLED
 

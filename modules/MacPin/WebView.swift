@@ -37,6 +37,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	var transparent: Bool { get set }
 	var userAgent: String { get set }
 	var allowsMagnification: Bool { get set }
+	var allowsRecording: Bool { get set }
 	//var canGoBack: Bool { get }
 	//var canGoForward: Bool { get }
 	//var hasOnlySecureContent: Bool { get }
@@ -57,6 +58,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	func subscribeTo(_ handler: String)
 	func console()
 	func scrapeIcon()
+	var thumbnail: _WKThumbnailView? { get }
 	//func goBack()
 	//func goForward()
 	//func reload()
@@ -65,14 +67,17 @@ var globalIconClient = WKIconDatabaseClientV1(
 	//var snapshotURL: String { get } // gets a data:// of the WKThumbnailView
 }
 
-@objc class MPWebView: WKWebView, WebViewScriptExports { // from WebKitPrivates.mm: not linkable as of STP v12, see stp_impls.txt
-//@objc class MPWebView: WKWebView, WebViewScriptExports {
+@objc class MPWebView: WKWebView, WebViewScriptExports {
 	static var MatchedAddressOptions: [String:String] = [:] // cvar singleton
 
 	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
 		let config = _WKProcessPoolConfiguration()
 		//config.injectedBundleURL = NSbundle.mainBundle().URLForAuxillaryExecutable("contentfilter.wkbundle")
 		// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundle.cpp
+
+		// https://github.com/WebKit/webkit/commit/9d4359a1f767846db078e6ba669715d5ec4a7ba9
+		// config.trackNetworkActivity = true
+
 		return config
 	}
 	static var sharedWebProcessPool = WKProcessPool()._init(with: MPWebView.WebProcessConfiguration()) // cvar singleton
@@ -131,7 +136,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	// a long lived thumbnail viewer should construct and store thumbviews itself, this is for convenient dumping
 	var thumbnail: _WKThumbnailView? {
 		get {
-			let snap = self._thumbnailView
+			let snap = self._thumbnailView ?? _WKThumbnailView(frame: self.frame, from: self)
 			snap?.requestSnapshot()
 			return snap
 		}
@@ -188,6 +193,10 @@ var globalIconClient = WKIconDatabaseClientV1(
 	var transparent = false // no overlaying MacPin apps upon other apps in iOS, so make it a no-op
 	var allowsMagnification = true // not exposed on iOS WebKit, make it no-op
 #endif
+	var allowsRecording: Bool {
+		get { return _mediaCaptureEnabled }
+		set (recordable) { _mediaCaptureEnabled = recordable }
+	}
 
 	let favicon: FavIcon = FavIcon()
 
@@ -204,6 +213,11 @@ var globalIconClient = WKIconDatabaseClientV1(
 			//configuration._requiresUserActionForEditingControlsManager = true
 #endif
 #endif
+			if #available(OSX 10.13, iOS 11, *) {
+				// https://forums.developer.apple.com/thread/87474#267547
+				configuration.setURLSchemeHandler(MPRetriever(), forURLScheme: "x-macpin")
+				// has to be set before self.init
+			}
 		}
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
 #if os(OSX)
@@ -258,6 +272,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
 #if os(OSX)
 		allowsMagnification = true
+		//_mediaCaptureEnabled = false
 #if STP
 		_applicationNameForUserAgent = "Version/10.1 Safari/603.1.30"
 #else
@@ -268,7 +283,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 #endif
 		if let agent = agent { if !agent.isEmpty { _customUserAgent = agent } }
 
-		let context = WKPageGetContext(_pageForTesting())
+		let context = WKPageGetContext(_pageRefForTransitionToWKWebView)
 		self.context = context
 		"http".withCString { http in
 			WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(http)) // FIXME: makeInsecure() toggle!
@@ -302,6 +317,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 				case let agent as String where key == "agent": _customUserAgent = agent
 				case let icon as String where key == "icon": loadIcon(icon)
 				case let magnification as Bool where key == "allowsMagnification": allowsMagnification = magnification
+				case let recordable as Bool where key == "allowsRecording": _mediaCaptureEnabled = recordable
 				case let transparent as Bool where key == "transparent":
 #if os(OSX)
 #if STP
@@ -392,6 +408,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		}
 	}
 
+	@discardableResult
 	func gotoURL(_ url: NSURL) {
 		let act = ProcessInfo.processInfo.beginActivity(options: [ProcessInfo.ActivityOptions.userInitiated, ProcessInfo.ActivityOptions.idleSystemSleepDisabled], reason: "browsing begun")
 		guard #available(OSX 10.11, iOS 9.1, *) else { load(URLRequest(url: url as URL)); return }
@@ -405,6 +422,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		ProcessInfo.processInfo.endActivity(act)
 	}
 
+	@discardableResult
 	func loadURL(_ urlstr: String) -> Bool {
 		if let url = NSURL(string: urlstr) {
 			gotoURL(url as NSURL)
@@ -413,6 +431,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		return false // tell JS we were given a malformed URL
 	}
 
+	@discardableResult
 	func scrapeIcon() { // extract icon location from current webpage and initiate retrieval
 
 		// this C SPI was scrapped in https://github.com/WebKit/webkit/commit/9a48388fe4e65e01969c475a1df0ed9b23c8bb43#diff-e43281f560648e1bddf2935b1d1b8b8b
@@ -548,7 +567,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 			saveDialog.allowedFileTypes = [kUTTypeWebArchive as String]
 			if let window = self.window {
 				saveDialog.beginSheetModal(for: window) { (result: Int) -> Void in
-					if let url = saveDialog.url, result == NSFileHandlingPanelOKButton {
+					if let url = saveDialog.url, result == NSModalResponseOK {
 						FileManager.default.createFile(atPath: url.path, contents: data, attributes: nil)
 						}
 				}
@@ -566,7 +585,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 			}
 			if let window = self.window {
 				saveDialog.beginSheetModal(for: window) { (result: Int) -> Void in
-					if let url = saveDialog.url, result == NSFileHandlingPanelOKButton {
+					if let url = saveDialog.url, result == NSModalResponseOK {
 						FileManager.default.createFile(atPath: url.path, contents: data, attributes: nil)
 						}
 				}
@@ -672,7 +691,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	}
 
 	func console() {
-		let inspector = WKPageGetInspector(_pageForTesting())
+		let inspector = WKPageGetInspector(_pageRefForTransitionToWKWebView)
 		DispatchQueue.main.async() {
 			WKInspectorShowConsole(inspector) // ShowConsole, Hide, Close, IsAttatched, Attach, Detach
 		}
