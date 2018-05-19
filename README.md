@@ -4,13 +4,21 @@ MacPin creates OSX & [iOS](#iOS) apps for websites & webapps, configured with Ja
 ![screenie](/dock_screenshot.png?raw=true)  
 </center>
 
-The Browser UI is very minimal, just a toolbar (with site tabs) that disappears in Full-Screen mode.
+The Browser UI is very minimal, just a toolbar (with site tabs) that disappears in Full-Screen mode.  
 
-MacPin apps are shown in OSX's Dock, App Switcher, and Launchpad.  
+(I have thoughts to allow browser UI to be replaceable by supplying React or Vue/Weex  
+JS scripts... [XUL](https://github.com/facebook/react/issues/4138) worked great for Mozilla, amirite?)   
+
+MacPin apps are shown in the Dock (or Springboard on iOS), tabbing App Switcher, & Launchpad.  
+New apps need only a single highest-res 1:1 PNG badge to be supplied for all of these representations.  
 
 Custom URL schemes can also be registered to launch a MacPin App from any other app on your Mac.  
 
-Requires OSX 10.11 "El Capitan" with Safari Technical Preview installed.  
+There are a few development branches with their own requirements:
+* swift2.3: Requires OSX 10.11 "El Capitan" with Safari Technical Preview and Xcode 8.2.3 installed.  
+  * This branch is no longer maintained.
+* swift3.1: Requires OSX 10.12 "Sierra" with Safari Technical Preview and Xcode 9 installed.  
+  * This is the current development target.
 
 ## Included Apps in the [Release](https://github.com/kfix/MacPin/releases)
 
@@ -39,26 +47,11 @@ Hooked URLs:
 
 #### [Messenger.app](https://www.messenger.com/hangouts): RIP *WhatsApp in your Facebook while you Facebook*
 
+#### [WhatsApp.app](https://web.whatsapp.com): WhatsApp, this app is. [HAP](https://www.youtube.com/watch?v=5tJt9hs7-vo)!
+
 #### [Slack.app](https://signin.slack.com): A hackable runtime for Slack (your co-workers will be thrilled)
 
 #### [Salesforce.app](https://signin.salesforce.com): _[ALWAYS BE CLOSING](https://www.youtube.com/watch?v=r6Lf8GtMe4M)_ without tying up your main browser
-
-#### [Digg.app](http://digg.com/reader): A replacement for Google Reader
-If you are surfing a blog in Safari and want to subscribe to it in your Digg Reader account:  
-
-* click Safari's Sharing button ![halp](templates/xcassets/iOS/icons8/toolbar_upload.png?raw=true)
-* click **Add to Shared Links**
-* click **Cancel** when asked to add to Shared Links.
-* `Digg.app` will popup and prompt you to subscribe if Safari found a feed or RSS metatag/mime-type.
-
-You can further streamline this process with any of these extras:
-
-* [Add the old RSS button back to Safari 8](http://www.red-sweater.com/blog/2624/subscribe-to-feed-safari-extension)
-* [`Open Feed with Digg`](extras/Open Feed with Digg.workflow): (_OSX_) Subscribe to Feed URLs with Digg Reader from the context-menu (right-click)
-
-Hooked URLs:
-* [`feed:`](feed:http://example.com/sampleblog.xml)
-* [`rss:`](rss://example.com/sampleblog.xml)
 
 #### [Trello.app](http://trello.com): Mind-mapper and project planner
 Hooked URLs:
@@ -135,7 +128,7 @@ delegate; //return this to macpin
 
 ## Hacking MacPin
 Its written in Swift using WKWebView and NSTabViewController with a fully programmatic NIB-less UI layout.  
-You need [Xcode 8](https://developer.apple.com/xcode/) installed on OSX to get the Swift compiler and Cocoa headers.  
+You need [Xcode 9](https://developer.apple.com/xcode/) installed on OSX to get the Swift compiler and Cocoa headers.  
 Otherwise `$EDITOR` and `make` are your fork and knife.
 
 ```
