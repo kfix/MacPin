@@ -13,11 +13,12 @@ archs_iphonesimulator	?= i386 x86_64
 
 archs_iphoneos		?= arm64
 target_ver_OSX		?= 10.13
-target_ver_iOS		?= 9.1
+target_ver_iOS		?= 11
 
 xcode				?= /Applications/Xcode.app
 swifttoolchain		?= XcodeDefault
 swiftver			?= 3
+nextswiftver		?= 4
 
 ifneq ($(xcode),)
 xcrun				?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcrun
@@ -90,6 +91,7 @@ debug += -D STP
 clang += -DSTP
 clangpp += -DSTP
 swiftc += -D STP -Xcc -DSTP
+swift-update += -D STP -Xcc -DSTP
 swift += -D STP -Xcc -DSTP
 #env += DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
 endif
@@ -120,7 +122,7 @@ endif
 
 # github settings for release: target
 #####
-VERSION		 := 1.5.0
+VERSION		 := 1.6.0
 LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin

@@ -137,13 +137,19 @@ xcrun				?= xcrun
 xcs					?= xcode-select
 
 swiftver			?= 3
+nextswiftver		?= 4
 swifttoolchain		?= XcodeDefault
 # Xcode.app/Contents/Developer/Toolchains/*.xctoolchain/ToolchainInfo.plist << TC ids in there
 
 sdkpath				:= $(shell $(xcrun) --show-sdk-path --sdk $(sdk))
+# https://github.com/apple/swift/blob/master/include/swift/Option/Options.td
 # https://github.com/apple/swift/blob/master/include/swift/Option/FrontendOptions.td
+# https://github.com/apple/swift/blob/master/docs/Diagnostics.md
+# https://www.bignerdranch.com/blog/build-log-groveling-for-fun-and-profit-manual-swift-continued/
 swiftc				:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swiftc -swift-version $(swiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
-swift-update		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swift-update -swift-version $(swiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics) $(verbose)
+swift-update		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swift-update -swift-version $(nextswiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
+# https://github.com/apple/swift/tree/master/lib/Migrator
+swift-migrate		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swiftc -update-code -swift-version $(nextswiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
 clang				:= $(xcrun) -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platform)) $(verbose)
 clangpp				:= $(xcrun) -sdk $(sdk) clang++ -fmodules -fcxx-modules -std=c++11 -stdlib=libc++ -target $(arch)-$(target_$(platform)) $(verbose)
 #-fobj-arc
@@ -256,9 +262,19 @@ $(outdir)/libswift%.a: $(outdir)/obj/lib%.a
 $(outdir)/swup/%.swift: modules/%.swift
 	install -v -d $(dir $@)
 	$(swift-update) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(linklibs) $(libdirs) \
-		$(filter %.swift,$^) > $@
+		$(filter %.swift,$^) > $@ || { rm -vf $@; exit 1; }
 	diff -Naus $^ $@
 
+modules.$(swiftver)/%/:
+	install -v -d $@
+	cp -van modules/$* $(dir $@)
+
+modules.$(nextswiftver)/%/: modules.$(swiftver)/%/*.swift modules.$(swiftver)/%/$(platform)/*.swift
+	install -v -d $@
+	$(swift-migrate) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(linklibs) $(libdirs) \
+		-o /dev/null \
+		$(filter %.swift,$^) || { rm -vrf $@; exit 1; }
+	# -c -primary-file this.swift -emit-migrated-file-path that.swift
 
 .PRECIOUS: $(outdir)/Frameworks/lib%.dylib $(outdir)/obj/%.o $(outdir)/exec/% $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc
 .PHONY: submake_% statics dynamics
