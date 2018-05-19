@@ -130,19 +130,18 @@ func loadUserStyleSheetFromBundle(_ basename: String, webctl: WKUserContentContr
 func validateURL(_ urlstr: String, fallback: ((String) -> NSURL?)? = nil) -> NSURL? {
 	// apply fuzzy logic like WK1: https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 	// or firefox-ios: https://github.com/mozilla/firefox-ios/commit/6cab24f7152c2e56e864a9d75f4762b2fbdc6890
+	// CFURL parser: https://opensource.apple.com/source/CF/CF-1153.18/CFURL.inc.h.auto.html
 	// FIXME: handle javascript: urls
 	if urlstr.isEmpty { return nil }
 
 	// handle file:s
-	if urlstr.hasPrefix("file:") || urlstr.hasPrefix("/") || urlstr.hasPrefix("~/") || urlstr.hasPrefix("./") {
+	schemehandler: if urlstr.hasPrefix("file:") || urlstr.hasPrefix("/") || urlstr.hasPrefix("~/") || urlstr.hasPrefix("./") {
 		warn("validating file: url: \(urlstr)")
 		let urlp = NSURLComponents()
 		var path = urlstr
 		urlp.scheme = "file"
-		//if path.hasPrefix("file:") { path.removeFirst(5) } // swift3.1
-		if path.hasPrefix("file:") { path.removeSubrange(path.startIndex..<path.index(path.startIndex, offsetBy: 5)) }
-		//if path.hasPrefix("///") { path.removeFirst(2) } // swift3.1
-		if path.hasPrefix("///") { path.removeSubrange(path.startIndex..<path.index(path.startIndex, offsetBy: 2)) }
+		if path.hasPrefix("file:") { path.removeFirst(5) }
+		if path.hasPrefix("///") { path.removeFirst(2) }
 		if path.isEmpty { warn("no filepath!"); return nil }
 		urlp.path = path
 
@@ -170,20 +169,39 @@ func validateURL(_ urlstr: String, fallback: ((String) -> NSURL?)? = nil) -> NSU
 	} else if let urlp = NSURLComponents(string: urlstr), !urlstr.hasPrefix("?") {
 		// handle networked urls
 		if urlp.scheme == "about" { return urlp.url as NSURL? }
-		barehttp: if let path = urlp.path, !path.isEmpty && !urlstr.characters.contains(" ") && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty { // 'example.com' & 'example.com/foobar'
+		barehttp: if let path = urlp.path, !path.isEmpty && !urlstr.characters.contains(" ") && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty && urlstr.characters.contains(".") { // 'example.com' & 'example.com/foobar'
 			if let _ = Int(path) { break barehttp; } //FIXME: ensure not all numbers. RFC952 & 1123 differ on this, but inet_ does weird stuff regardless
 			urlp.scheme = "http"
 			urlp.host = urlp.path
 			urlp.path = nil
 		}
-		if let url = urlp.url, let host = urlp.host {
-			//do preemptive nslookup on urlp.host
+
+		//do preemptive nslookup on urlp.host
+		if let url = urlp.url, let host = urlp.host, (urlp.scheme == "http" || urlp.scheme == "https"),
+			!host.isEmpty,
+			(host.rangeOfCharacter(from: CharacterSet(charactersIn: "!$&'()*+,;=_~").symmetricDifference(CharacterSet.urlHostAllowed).inverted) != nil ) {
+// my dumper says urlHostAllowed == !$&'()*+,-.0123456789:;=ABCDEFGHIJKLMNOPQRSTUVWXYZ[]_abcdefghijklmnopqrstuvwxyz~
+/// that is really wrong....  https://opensource.apple.com/source/CF/CF-1153.18/CFCharacterSet.h.auto.html
+			warn("preflighting \(host)")
 			let chost = host.cString(using: String.Encoding.utf8)!
-			// FIXME use higher level APIs for NAT64
-			if gethostbyname2(chost, AF_INET).hashValue > 0 || gethostbyname2(chost, AF_INET6).hashValue > 0 { // failed lookups return null pointer
-				return url as NSURL? // hostname resolved, so use this url
+			if let hp = gethostbyname2(chost, AF_INET), hp != nil, hp.hashValue > 0 {
+				warn("IPV4 preflight succeeded")
+				return url as NSURL? // hostname preflighted, so use let WK try this url
+			} else if let hp = gethostbyname2(chost, AF_INET6), hp != nil, hp.hashValue > 0 {
+				warn("IPV6 preflight suceeded")
+				return url as NSURL? // hostname preflighted, so use let WK try this url
+			} else {
+				warn("preflighting failed")
+				break schemehandler // try the fallback
 			}
+
 			// what if lookup failed because internet offline? should call jsdelegate.networkIsOffline ??
+			// FIXME use higher level APIs for NAT64 - NSURLConnection.canHandleRequest()
+
+		} else if !((urlp.scheme ?? "").isEmpty) {
+			// we were force-fed a (custom?) scheme...
+			// I have no idea how to preflight those so follow thru with the URL
+			return urlp.url as NSURL?
 		}
 	}
 
@@ -199,8 +217,8 @@ func searchForKeywords(_ str: String) -> NSURL? {
 	// return a URL that will search the given keyword string
 
 	// maybe its a search query? check if blank and reformat it
-	if !str.trimmingCharacters(in: NSCharacterSet.whitespacesAndNewlines).isEmpty,
-		let query = str.addingPercentEncoding(withAllowedCharacters: NSCharacterSet.urlQueryAllowed),
+	if !str.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+		let query = str.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
 		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") { // FIXME: JS setter
 			return search
 		}
