@@ -177,7 +177,7 @@ func askToOpenURL(_ url: NSURL?) { //uti: UTIType? = nil
 	// all else has failed, complain to user
 	let error = NSError(domain: "MacPin", code: 2, userInfo: [
 		//NSURLErrorKey: url?,
-		NSLocalizedDescriptionKey: "No program present on this system is registered to open this non-browser URL.\n\n\(url?.description)"
+		NSLocalizedDescriptionKey: "No program present on this system is registered to open this non-browser URL.\n\n\(url?.description ?? "")"
 	])
 	displayError(error, nil)
 }

@@ -40,7 +40,8 @@ extension NSObject: JSExport {
 
 // FIXME: AppScript needs a HandlerMethods enum instead of just tryFunc("unsafe-string")s everywhere....
 extension JSValue {
-	func tryFunc (_ method: String, argv: [AnyObject]) -> Bool {
+	@discardableResult
+	func tryFunc (_ method: String, argv: [Any?]) -> Bool {
 		if self.isObject && self.hasProperty(method) {
 			warn("this.\(method) <- \(argv)")
 			let ret = self.invokeMethod(method, withArguments: argv)
@@ -51,10 +52,13 @@ extension JSValue {
 		//FIXME: handle a passed-in closure so we can handle any ret-type instead of only bools ...
 	}
 
+	@discardableResult
 	func tryFunc (_ method: String, _ args: AnyObject...) -> Bool { //variadic overload
+		//warn("this.\(method) <- variadic AnyObject:\(args)")
 		return self.tryFunc(method, argv: args)
 	}
 
+	@discardableResult
 	func thisEval(_ code: String, sourceURL: String? = nil, exception: JSValue = JSValue()) -> JSValue? {
 		let source: JSStringRef?
 		if let urlstr = sourceURL { source = JSStringCreateWithCFString(urlstr as CFString) } else { source = nil }
@@ -181,7 +185,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		super.init()
 	}
 
-	override var description: String { return "<\(type(of: self))> [\(appPath)] `\(context?.name)`" }
+	override var description: String { return "<\(type(of: self))> [\(appPath)] `\(String(describing: context?.name))`" }
 
 	func sleep(_ secs: Int) {
 		let delayTime = DispatchTime.now() + DispatchTimeInterval.seconds(secs)
@@ -216,7 +220,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				let message = exception?.forProperty("message").toString()
 				let error = NSError(domain: "MacPin", code: 4, userInfo: [
 					NSURLErrorKey: context?.name as Any,
-					NSLocalizedDescriptionKey: "JS Exception @ \(line):\(column): \(message)\n\(stack)"
+					NSLocalizedDescriptionKey: "JS Exception @ \(line ?? -1):\(column ?? -1): \(message ?? "?")\n\(stack ?? "?")"
 					// exception seems to be Error.toString(). I want .message|line|column|stack too
 				])
 				displayError(error) // FIXME: would be nicer to pop up an inspector pane or tab to interactively debug this
@@ -235,6 +239,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	// FIXME: ES6 modules? context.evaluateScript("import ...") or "System.load()";
+	@discardableResult
 	func loadAppScript(_ urlstr: String) -> JSValue? {
 		if let scriptURL = NSURL(string: urlstr), let script = try? NSString(contentsOf: scriptURL as URL, encoding: String.Encoding.utf8.rawValue), let sourceURL = scriptURL.absoluteString {
 			// FIXME: script code could be loaded from anywhere, exploitable?

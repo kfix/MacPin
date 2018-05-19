@@ -38,7 +38,7 @@ typealias ViewController = UIViewController
 
 typealias Image = UIImage
 
-class Window: UIWindow {	
+class Window: UIWindow {
 	func setFrame() { } // UIWindows are always size of UIScreen. They only handle focus and z-depth (level)
 }
 

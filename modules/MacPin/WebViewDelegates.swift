@@ -43,8 +43,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 					webView.evaluateJavaScript( //for now, send an omnibus event with all varnames values
 						"window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(webView.transparent)}})); ",
 						completionHandler: nil)
-				default:
-					true // no-op
+				default: break // no-op
 			}
 
 			if jsdelegate.hasProperty(message.name) {
@@ -354,3 +353,35 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 
 extension WebViewController: _WKFormDelegate { } // form input hooks, implemented per-platform
 extension WebViewController: _WKFindDelegate { } // text finder handling, implemented per-platform
+
+extension WebViewController: _WKDiagnosticLoggingDelegate {
+	func _webView(_ webView: WKWebView, logDiagnosticMessage message: String, description: String) { warn("\(message) || \(description) << \(webView.url?.absoluteString ?? String())") }
+	func _webView(_ webView: WKWebView, logDiagnosticMessageWithResult message: String, description: String, result: _WKDiagnosticLoggingResultType) { warn("\(message) || \(description) >> \(String(describing: result)) << \(webView.url?.absoluteString ?? String())") }
+	func _webView(_ webView: WKWebView, logDiagnosticMessageWithValue message: String, description: String, value: String) { warn("\(message) || \(description) == \(value) << \(webView.url?.absoluteString ?? String())") }
+}
+
+extension WebViewController: _WKDownloadDelegate {
+    func _downloadDidStart(_ download: _WKDownload!) { warn(download.request.description) }
+	func _download(_ download: _WKDownload!, didReceive response: URLResponse!) { warn(response.description) }
+	func _download(_ download: _WKDownload!, didReceiveData length: UInt64) { warn(length.description) }
+	func _download(_ download: _WKDownload!, decideDestinationWithSuggestedFilename filename: String!, allowOverwrite: UnsafeMutablePointer<ObjCBool>) -> String! {
+		warn("NOIMPL: " + download.request.description)
+		download.cancel()
+		return ""
+	}
+	func _downloadDidFinish(_ download: _WKDownload!) { warn(download.request.description) }
+	func _download(_ download: _WKDownload!, didFailWithError error: Error!) { warn(error.localizedDescription) }
+	func _downloadDidCancel(_ download: _WKDownload!) { warn(download.request.description) }
+}
+
+// extensions WebViewController: WebsitePoliciesDelegate // FIXME: STP v20: per-site preferences: https://github.com/WebKit/webkit/commit/d9f6f7249630d7756e4b6ca572b29ac61d5c38d7
+
+extension WebViewController: _WKIconLoadingDelegate {
+	@objc func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Void) -> Void) {
+		completionHandler() { data in
+			// data.length
+			warn("page (\(webView.url?.absoluteString) got icon from <- \(parameters.url.absoluteString)")
+			//parameters . mimeType iconType
+		}
+	}
+}
