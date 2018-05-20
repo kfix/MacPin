@@ -17,8 +17,8 @@ target_ver_iOS		?= 11
 
 xcode				?= /Applications/Xcode.app
 swifttoolchain		?= XcodeDefault
-swiftver			?= 3
-nextswiftver		?= 4
+swiftver			?= 4
+nextswiftver		?= 5
 
 ifneq ($(xcode),)
 xcrun				?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcrun
