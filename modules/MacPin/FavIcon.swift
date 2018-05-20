@@ -16,10 +16,10 @@ let NSImageNameApplicationIcon = "icon"
 #endif
 
 @objc class FavIcon: NSObject {
-	dynamic unowned var icon = IconImage(named: NSImageNameApplicationIcon)!
+	@objc dynamic unowned var icon = IconImage(named: NSImage.Name.applicationIcon)!
 #if os(OSX)
 	//need 24 & 36px**2 representations of the NSImage for bigger grid views
-	dynamic unowned var icon16 = IconImage(named: NSImageNameStatusNone)! {
+	@objc dynamic unowned var icon16 = IconImage(named: NSImage.Name.statusNone)! {
 		willSet {
 			newValue.size = NSSize(width: 16, height: 16)
 		}
@@ -36,7 +36,7 @@ let NSImageNameApplicationIcon = "icon"
 			}
 		}
 	}
-	var url: NSURL? = nil {
+	@objc dynamic var url: NSURL? = nil {
 		didSet {
 			if let url = url {
 				warn("setting favicon.icon to = \(url)")
@@ -59,7 +59,7 @@ let NSImageNameApplicationIcon = "icon"
 		})
 	}
 
-	override var description: String { return "<\(type(of: self))> `\(url)`" }
+	override var description: String { return "<\(type(of: self))> `\(url?.absoluteString ?? "")`" }
 	//deinit { warn(description) }
 /*
 	convenience init(url: NSURL) {

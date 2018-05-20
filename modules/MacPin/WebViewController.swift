@@ -9,13 +9,13 @@ import JavaScriptCore
 
 @objc class WebViewController: ViewController { //, WebViewControllerScriptExports {
 	var jsdelegate: JSValue { get { return AppScriptRuntime.shared.jsdelegate } }
-	dynamic var webview: MPWebView! = nil
+	@objc dynamic var webview: MPWebView! = nil
 
 	//lazy var observer: WebViewObserver = WebViewObserver(obserbee: self.webview) // https://github.com/yashigani/WebKitPlus#webviewobserver
 
 #if os(OSX)
 	required init?(coder: NSCoder) { super.init(coder: coder) } // required by NSCoding protocol
-	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } //calls loadView
+	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } //calls loadView
 	override func loadView() { view = NSView() } // NIBless
 	convenience required init(webview: MPWebView) {
 		self.init(nibName: nil, bundle: nil) // calls init!() http://stackoverflow.com/a/26516534/3878712
@@ -68,7 +68,7 @@ import JavaScriptCore
 		super.viewDidLoad()
 	}
 
-	dynamic func dismiss() { webview._close(); view.removeFromSuperview(); removeFromParentViewController(); warn() }
+	@objc dynamic func dismiss() { webview._close(); view.removeFromSuperview(); removeFromParentViewController(); warn() }
 	func askToOpenCurrentURL() { askToOpenURL(webview.url as NSURL?) }
 
 	// sugar for delgates' opening a new tab in parent browser VC

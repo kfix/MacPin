@@ -26,6 +26,13 @@ var globalIconClient = WKIconDatabaseClientV1(
 )
 */
 
+extension WKWebView {
+	@objc(url) var urlstr: String {
+		get { return url?.absoluteString ?? "" }
+		set { /* not-impl*/  }
+	}
+}
+
 @objc protocol WebViewScriptExports: JSExport { // $.WebView & $.browser.tabs[WebView]
 	init?(object: [String:AnyObject]) //> new WebView({url: 'http://example.com'});
 	// can only JSExport one init*() func!
@@ -68,6 +75,10 @@ var globalIconClient = WKIconDatabaseClientV1(
 }
 
 @objc class MPWebView: WKWebView, WebViewScriptExports {
+
+	//@objc dynamic var isLoading: Bool
+	//@objc dynamic var estimatedProgress: Double
+
 	static var MatchedAddressOptions: [String:String] = [:] // cvar singleton
 
 	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
@@ -90,7 +101,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	// race condition? seems to hit a phantom JSContext/JSValue that doesn't represent the delegate!?
 	var jsdelegate: JSValue { get { return AppScriptRuntime.shared.jsdelegate } }
 
-	var urlstr: String { // accessor for JSC, which doesn't support `new URL()`
+	override var urlstr: String { // accessor for JSC, which doesn't support `new URL()`
 		get { return url?.absoluteString ?? "" }
 		set { loadURL(newValue) }
 	}
@@ -408,7 +419,6 @@ var globalIconClient = WKIconDatabaseClientV1(
 		}
 	}
 
-	@discardableResult
 	func gotoURL(_ url: NSURL) {
 		let act = ProcessInfo.processInfo.beginActivity(options: [ProcessInfo.ActivityOptions.userInitiated, ProcessInfo.ActivityOptions.idleSystemSleepDisabled], reason: "browsing begun")
 		guard #available(OSX 10.11, iOS 9.1, *) else { load(URLRequest(url: url as URL)); return }
@@ -422,7 +432,6 @@ var globalIconClient = WKIconDatabaseClientV1(
 		ProcessInfo.processInfo.endActivity(act)
 	}
 
-	@discardableResult
 	func loadURL(_ urlstr: String) -> Bool {
 		if let url = NSURL(string: urlstr) {
 			gotoURL(url as NSURL)
@@ -431,7 +440,6 @@ var globalIconClient = WKIconDatabaseClientV1(
 		return false // tell JS we were given a malformed URL
 	}
 
-	@discardableResult
 	func scrapeIcon() { // extract icon location from current webpage and initiate retrieval
 
 		// this C SPI was scrapped in https://github.com/WebKit/webkit/commit/9a48388fe4e65e01969c475a1df0ed9b23c8bb43#diff-e43281f560648e1bddf2935b1d1b8b8b
@@ -566,8 +574,8 @@ var globalIconClient = WKIconDatabaseClientV1(
 			saveDialog.canCreateDirectories = true
 			saveDialog.allowedFileTypes = [kUTTypeWebArchive as String]
 			if let window = self.window {
-				saveDialog.beginSheetModal(for: window) { (result: Int) -> Void in
-					if let url = saveDialog.url, result == NSModalResponseOK {
+				saveDialog.beginSheetModal(for: window) { (result: NSApplication.ModalResponse) -> Void in
+					if let url = saveDialog.url, result == .OK {
 						FileManager.default.createFile(atPath: url.path, contents: data, attributes: nil)
 						}
 				}
@@ -584,8 +592,8 @@ var globalIconClient = WKIconDatabaseClientV1(
 				saveDialog.allowedFileTypes = [uti.utiString]
 			}
 			if let window = self.window {
-				saveDialog.beginSheetModal(for: window) { (result: Int) -> Void in
-					if let url = saveDialog.url, result == NSModalResponseOK {
+				saveDialog.beginSheetModal(for: window) { (result: NSApplication.ModalResponse) -> Void in
+					if let url = saveDialog.url, result == .OK {
 						FileManager.default.createFile(atPath: url.path, contents: data, attributes: nil)
 						}
 				}
@@ -638,7 +646,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 		if sender.draggingSource() == nil { //dragged from external application
 			let pboard = sender.draggingPasteboard()
 
-			if let file = pboard.string(forType: kUTTypeFileURL as String) { //drops from Finder
+			if let file = pboard.string(forType: NSPasteboard.PasteboardType(kUTTypeFileURL as String)) { //drops from Finder
 				warn("DnD: file from Finder: \(file)")
 			} else {
 				pboard.dump()
@@ -676,7 +684,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	// http://stackoverflow.com/questions/392464/how-do-i-do-base64-encoding-on-iphone-sdk
 
 	func copyAsPDF() {
-		let pb = NSPasteboard.general()
+		let pb = NSPasteboard.general
 		pb.clearContents()
 		writePDF(inside: bounds, to: pb)
 	}
@@ -684,7 +692,7 @@ var globalIconClient = WKIconDatabaseClientV1(
 	func printWebView(_ sender: AnyObject?) {
 #if STP
 		// _printOperation not avail in 10.11.4's WebKit
-		let printer = _printOperation(with: NSPrintInfo.shared())
+		let printer = _printOperation(with: NSPrintInfo.shared)
 		printer?.showsPrintPanel = true
 		printer?.run()
 #endif

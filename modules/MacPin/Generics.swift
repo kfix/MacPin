@@ -81,7 +81,7 @@ func loadUserScriptFromBundle(_ basename: String, webctl: WKUserContentControlle
 		if error != nil {
 			/* error?.memory = */ NSError(domain: "MacPin", code: 3, userInfo: [
 				NSFilePathErrorKey: basename + ".js",
-				NSLocalizedDescriptionKey: "No userscript could be found named:\n\n\(respath)/\(basename).js"
+				NSLocalizedDescriptionKey: "No userscript could be found named:\n\n\(respath ?? "?no-path?")/\(basename).js"
 			])
 		}
 		/*
@@ -231,6 +231,7 @@ func searchForKeywords(_ str: String) -> NSURL? {
 func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2: StaticString = #function, abort:(()->Void)? = nil) {
 #if arch(x86_64) || arch(i386)
 	prompter = Async.background {
+	//prompter = DispatchQueue(label: "prompter").global(qos: .background).async(execute: {
 		let prompt = Prompt(argv0: CommandLine.unsafeArgv[0], prompt: "\(ps1)[\(ps2)]:> ")
 		while (true) {
 		    if let line = prompt?.gets() { // R: blocks here until Enter pressed

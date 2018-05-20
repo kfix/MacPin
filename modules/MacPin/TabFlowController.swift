@@ -29,7 +29,7 @@ typealias CollectionViewItem = UICollectionViewCell
 
 class TabGridIcon: NSCollectionViewItem {
 	required init?(coder: NSCoder) { super.init(coder: coder) } // conform to NSCoding
-	override init?(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
+	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
 	//override func loadView() { view = urlbox } // NIBless
 
 	override var isSelected: Bool {
@@ -65,7 +65,7 @@ class TabGridController: NSViewController {
 	}}
 
 	required init?(coder: NSCoder) { super.init(coder: coder) } // conform to NSCoding
-	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
+	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
 	override func loadView() { view = tabGrid } // NIBless
 
 	convenience init(tvc: TabViewController? = nil) {

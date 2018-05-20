@@ -122,7 +122,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	var bundleID: String { return Bundle.main.bundleIdentifier ?? String() }
 
 #if os(OSX)
-	var name: String { return NSRunningApplication.current().localizedName ?? String() }
+	var name: String { return NSRunningApplication.current.localizedName ?? String() }
 	let platform = "OSX"
 #elseif os(iOS)
 	var name: String { return Bundle.main.objectForInfoDictionaryKey("CFBundleDisplayName") as? String }
@@ -262,14 +262,14 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				/*exception:*/ UnsafeMutablePointer(exception.jsValueRef)
 			) {
 				warn("\(scriptURL): syntax checked ok")
-				context?.name = "\(context?.name) <\(urlstr)>"
+				context?.name = "\(context?.name ?? "js(??)") <\(urlstr)>"
 				// FIXME: assumes last script loaded is the source file of *all* thrown errors, which is not always true
 #if DEBUG
 #else
 				context?.evaluateScript("eval = null;") // Saaaaaaafe Plaaaaace
 #endif
 				//return jsdelegate.thisEval(script as String, sourceURL: scriptURL) // TODO: issue #11 - make `this` the delegate in app scripts, not the return
-				return context?.evaluateScript(script as String, withSourceURL: scriptURL as URL!)
+				return context?.evaluateScript(script as String, withSourceURL: scriptURL as URL?)
 			} else {
 				// hmm, using self.context for the syntax check seems to evaluate the contents anyways
 				// need to make a throwaway dupe of it
@@ -306,9 +306,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		if let url = NSURL(string: urlstr) {
 #if os(OSX)
 			if let appid = appid, appid != "undefined" {
-				NSWorkspace.shared().open([url as URL], withAppBundleIdentifier: appid, options: .default, additionalEventParamDescriptor: nil, launchIdentifiers: nil)
+				NSWorkspace.shared.open([url as URL], withAppBundleIdentifier: appid, options: .default, additionalEventParamDescriptor: nil, launchIdentifiers: nil)
 			} else {
-				NSWorkspace.shared().open(url as URL)
+				NSWorkspace.shared.open(url as URL)
 			}
 			//options: .Default .NewInstance .AndHideOthers
 			// FIXME: need to force focus on appid too, already launched apps may not pop-up#elseif os (iOS)
@@ -317,7 +317,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			//  unless jailbroken http://stackoverflow.com/a/6821516/3878712
 			if let urlp = NSURLComponents(URL: url, resolvingAgainstBaseURL: true) {
 				if let appid = appid { urlp.scheme = appid } // assume bundle ID is a working scheme
-				UIApplication.sharedApplication().openURL(urlp.URL!)
+				UIApplication.shared.openURL(urlp.url!)
 			}
 #endif
 		}
@@ -341,7 +341,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 		if let icon_url = Bundle.main.url(forResource: iconpath, withExtension: "png") ?? URL(string: iconpath) {
 			// path was a url, local or remote
-			Application.shared().applicationIconImage = NSImage(contentsOf: icon_url)
+			Application.shared.applicationIconImage = NSImage(contentsOf: icon_url)
 		} else {
 			warn("invalid icon: \(iconpath)")
 		}
@@ -494,7 +494,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
 				// FIXME: make sure prompter is deinit'd
 				prompter = nil
-				NSApplication.shared().terminate(self)
+				NSApplication.shared.terminate(self)
 #endif
 			}
 		)
@@ -508,7 +508,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		if let output = osa.executeAndReturnError(&error) {
 			warn(output.description)
 		} else if (error != nil) {
-			warn("error: \(error)")
+			warn("error: \(error ?? [:])")
 		}
 #endif
 	}

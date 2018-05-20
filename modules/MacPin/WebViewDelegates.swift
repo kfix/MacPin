@@ -43,7 +43,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 					webView.evaluateJavaScript( //for now, send an omnibus event with all varnames values
 						"window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(webView.transparent)}})); ",
 						completionHandler: nil)
-				default: break // no-op
+				default: break
 			}
 
 			if jsdelegate.hasProperty(message.name) {
@@ -71,7 +71,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 			// or just call a JS delegate to do that?
 
 			if let webview = webView as? MPWebView, let iconDB = webview.iconDB { // pull icon from WebCore's IconDatabase if its already cached
-				if let wkurl = WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithCFURL(url as CFURL!)) {
+				if let wkurl = WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithCFURL(url as CFURL?)) {
 					WKIconDatabaseRetainIconForURL(iconDB, wkurl)
 					webview.favicon.url = WKURLCopyCFURL(kCFAllocatorDefault, wkurl) as NSURL
 				}
@@ -103,7 +103,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 #if os(OSX)
 					let mousebtn = navigationAction.buttonNumber
 					let modkeys = navigationAction.modifierFlags
-					if modkeys.contains(.option) { NSWorkspace.shared().open(url) } //alt-click opens externally
+					if modkeys.contains(.option) { NSWorkspace.shared.open(url) } //alt-click opens externally
 						else if modkeys.contains(.command) { popup(webView.clone(url as NSURL?)) } // cmd-click pops open a new tab
 						else if modkeys.contains(.command) { popup(MPWebView(url: url as NSURL, agent: webView._customUserAgent)) } // shift-click pops open a new tab w/ new session state
 						// FIXME: same keymods should work with Enter in omnibox controller
@@ -312,7 +312,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		// otherwise == nil
 		// RDAR? would like the tgt string to be passed here
 
-		warn("JS <\(srcurl)>: `window.open(\(openurl), \(tgt));`")
+		warn("JS <\(srcurl)>: `window.open(\(openurl), \(tgt?.absoluteString ?? ""));`")
 		if jsdelegate.tryFunc("decideWindowOpenForURL", openurl.description as NSString, webView) { return nil }
 		let wv = MPWebView(config: configuration, agent: webView._customUserAgent)
 		popup(wv)
@@ -340,7 +340,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 	}
 
 	func webViewDidClose(_ webView: WKWebView) {
-		warn("JS <\(webView.url)>: `window.close();`")
+		warn("JS <\(webView.urlstr)>: `window.close();`")
 		dismiss() // FIXME: need to ensure webView was window.open()'d by a JS script
 	}
 
@@ -377,7 +377,7 @@ extension WebViewController: _WKDownloadDelegate {
 // extensions WebViewController: WebsitePoliciesDelegate // FIXME: STP v20: per-site preferences: https://github.com/WebKit/webkit/commit/d9f6f7249630d7756e4b6ca572b29ac61d5c38d7
 
 extension WebViewController: _WKIconLoadingDelegate {
-	@objc func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Void) -> Void) {
+	func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Swift.Void) -> Swift.Void) {
 		completionHandler() { data in
 			// data.length
 			warn("page (\(webView.url?.absoluteString) got icon from <- \(parameters.url.absoluteString)")
