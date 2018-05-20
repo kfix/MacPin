@@ -69,7 +69,7 @@ import JavaScriptCore
 	}
 
 	@objc dynamic func dismiss() { webview._close(); view.removeFromSuperview(); removeFromParentViewController(); warn() }
-	func askToOpenCurrentURL() { askToOpenURL(webview.url as NSURL?) }
+	@objc func askToOpenCurrentURL() { askToOpenURL(webview.url as NSURL?) }
 
 	// sugar for delgates' opening a new tab in parent browser VC
 	func popup(_ webview: MPWebView) { parent?.addChildViewController(type(of: self).init(webview: webview)) }

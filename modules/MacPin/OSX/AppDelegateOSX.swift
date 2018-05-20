@@ -140,23 +140,23 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		let tabMenu = NSMenuItem() //WebViewController and WKWebView funcs
 		tabMenu.submenu = NSMenu()
 		tabMenu.submenu?.title = "Tab"
-		tabMenu.submenu?.addItem(MenuItem("Zoom In", "zoomIn", "+", [.command])) //wvc
-		tabMenu.submenu?.addItem(MenuItem("Zoom Out", "zoomOut", "-", [.command])) //wvc
-		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", "zoomText", nil, [.command]))
-		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", "toggleTransparency")) //wvc
+		tabMenu.submenu?.addItem(MenuItem("Zoom In", #selector(WebViewControllerOSX.zoomIn), "+", [.command]))
+		tabMenu.submenu?.addItem(MenuItem("Zoom Out", #selector(WebViewControllerOSX.zoomOut), "-", [.command]))
+		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", #selector(WebViewControllerOSX.zoomText), nil, [.command]))
+		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", #selector(WebViewControllerOSX.toggleTransparency)))
 		tabMenu.submenu?.addItem(NSMenuItem.separator())
-		tabMenu.submenu?.addItem(MenuItem("Show JS Console", "console", "c", [.option, .command])) //wv
-		tabMenu.submenu?.addItem(MenuItem("Toggle Web Inspector", "showHideWebInspector:", "i", [.option, .command]))
-		tabMenu.submenu?.addItem(MenuItem("Reload", "reload:", "r", [.command])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Uncache & Reload", "reloadFromOrigin:", "R", [.command, .shift])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Go Back", "goBack:", "[", [.command])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Go Forward", "goForward:", "]", [.command]))	//webview
-		tabMenu.submenu?.addItem(MenuItem("Stop Loading", "stopLoading:", ".", [.command])) //webview
+		tabMenu.submenu?.addItem(MenuItem("Show JS Console", #selector(MPWebView.console), "c", [.option, .command]))
+		tabMenu.submenu?.addItem(MenuItem("Toggle Web Inspector", #selector(WebViewControllerOSX.showHideWebInspector(_:)), "i", [.option, .command]))
+		tabMenu.submenu?.addItem(MenuItem("Reload", #selector(MPWebView.reload(_:)), "r", [.command]))
+		tabMenu.submenu?.addItem(MenuItem("Uncache & Reload", #selector(MPWebView.reloadFromOrigin(_:)), "R", [.command, .shift]))
+		tabMenu.submenu?.addItem(MenuItem("Go Back", #selector(MPWebView.goBack(_:)), "[", [.command]))
+		tabMenu.submenu?.addItem(MenuItem("Go Forward", #selector(MPWebView.goForward(_:)), "]", [.command]))
+		tabMenu.submenu?.addItem(MenuItem("Stop Loading", #selector(MPWebView.stopLoading(_:)), ".", [.command]))
 		tabMenu.submenu?.addItem(NSMenuItem.separator())
-		tabMenu.submenu?.addItem(MenuItem("Print Page...", "printWebView:", "p", [.command])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Save Web Archive...", "saveWebArchive", "s", [.command, .shift])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Save Page...", "savePage", "s", [.command])) //webview
-		tabMenu.submenu?.addItem(MenuItem("Open with Default Browser", "askToOpenCurrentURL", "d", [.command])) //wvc
+		tabMenu.submenu?.addItem(MenuItem("Print Page...", #selector(MPWebView.printWebView), "p", [.command]))
+		tabMenu.submenu?.addItem(MenuItem("Save Web Archive...", #selector(MPWebView.saveWebArchive), "s", [.command, .shift]))
+		tabMenu.submenu?.addItem(MenuItem("Save Page...", #selector(MPWebView.savePage), "s", [.command]))
+		tabMenu.submenu?.addItem(MenuItem("Open with Default Browser", #selector(WebViewControllerOSX.askToOpenCurrentURL), "d", [.command]))
 		app!.mainMenu?.addItem(tabMenu)
 
 		let winMenu = NSMenuItem() //BrowserViewController and NSWindow funcs

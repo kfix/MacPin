@@ -35,6 +35,22 @@ class MenuItem: NSMenuItem {
 		// ChildView -> ChildView ViewController -> ParentView -> ParentView's ViewController -> ParentView's ParentView -> Window -> Window's WindowController -> Window's Delegate -> NSApp -> App Delegate
 	}
 	//func validateMenuItem(menuItem: NSMenuItem) -> Bool { return true }
+	convenience init(_ itemName: String?, _ anAction: Selector?, _ charCode: String? = nil, _ keyflags: [NSEvent.ModifierFlags] = [], target aTarget: AnyObject? = nil, represents: AnyObject? = nil, tag aTag: Int = 0) {
+		self.init(
+			title: itemName ?? "",
+			action: anAction != nil ? anAction! : nil,
+			keyEquivalent: charCode ?? ""
+		)
+		for keyflag in keyflags {
+			keyEquivalentModifierMask.insert(keyflag)
+		}
+
+		//keyEquivalentModifierMask.formUnion(keyflags)
+		target = aTarget
+		representedObject = represents
+		tag = aTag
+	}
+
 }
 
 extension NSPasteboard {

@@ -584,7 +584,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		DispatchQueue.main.async() { self.removeChildViewController(at: self.selectedTabViewItemIndex) }
 	}
 
-	func revealOmniBox() {
+	@objc func revealOmniBox() {
 		if omnibox.view.window != nil {
 			// if omnibox is already visible somewhere in the window, move key focus there
 			view.window?.makeFirstResponder(omnibox.view)

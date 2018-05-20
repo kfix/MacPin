@@ -51,7 +51,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 	//func window(window: NSWindow, willEncodeRestorableState state: NSCoder) {}
 	//func window(window: NSWindow, didDecodeRestorableState state: NSCoder) {}
 
-	func toggleTitlebar() {
+	@objc func toggleTitlebar() {
 		if let window = window,
 			let close = window.standardWindowButton(.closeButton),
 			let min = window.standardWindowButton(.miniaturizeButton),

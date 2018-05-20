@@ -265,7 +265,7 @@ extension WKWebView {
 		allowsMagnification = true
 		//_mediaCaptureEnabled = false
 #if STP
-		_applicationNameForUserAgent = "Version/10.1 Safari/603.1.30"
+		_applicationNameForUserAgent = "Version/11.1 Safari/605.1.33"
 #else
 		_applicationNameForUserAgent = "Version/9.0 Safari/600.5.17"
 #endif
@@ -515,7 +515,7 @@ extension WKWebView {
 	// dragDestinationActionMaskForDraggingInfo -> WKDragDestinationActionAny https://github.com/WebKit/webkit/commit/5e1e5eab17cfded9ea9eaa9b46075b78d68575e4
 
 	// FIXME: unified save*()s like Safari does with a drop-down for "Page Source" & Web Archive, or auto-mime for single non-HTML asset
-	func saveWebArchive() {
+	@objc func saveWebArchive() {
 		_getWebArchiveData() { [unowned self] (data: Data?, err: Error?) -> Void in
 			//pop open a save Panel to dump data into file
 			let saveDialog = NSSavePanel();
@@ -531,7 +531,7 @@ extension WKWebView {
 		}
 	}
 
-	func savePage() {
+	@objc func savePage() {
 		_getMainResourceData() { [unowned self] (data: Data?, err: Error?) -> Void in
 			//pop open a save Panel to dump data into file
 			let saveDialog = NSSavePanel();
@@ -637,7 +637,7 @@ extension WKWebView {
 		writePDF(inside: bounds, to: pb)
 	}
 
-	func printWebView(_ sender: AnyObject?) {
+	@objc func printWebView(_ sender: AnyObject?) {
 #if STP
 		// _printOperation not avail in 10.11.4's WebKit
 		let printer = _printOperation(with: NSPrintInfo.shared)

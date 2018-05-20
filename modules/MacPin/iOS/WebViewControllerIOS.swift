@@ -38,7 +38,7 @@ import WebKit
 }
 
 extension WebViewControllerIOS { // AppGUI funcs
-	func shareButtonClicked(_ sender: AnyObject?) {
+	@objc func shareButtonClicked(_ sender: AnyObject?) {
 		warn()
 		// http://nshipster.com/uiactivityviewcontroller/
 		if let url = webview.URL, title = webview.title {

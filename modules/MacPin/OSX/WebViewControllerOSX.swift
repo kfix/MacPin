@@ -139,11 +139,11 @@ extension WebViewControllerOSX { // AppGUI funcs
 		//super.dismiss()
 	}
 
-	func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }  // WKPageForceRepaint(webview.topFrame?.pageRef, 0, didForceRepaint);
+	@objc func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }  // WKPageForceRepaint(webview.topFrame?.pageRef, 0, didForceRepaint);
 
 #if STP
-	func zoomIn() { zoom(0.2) }
-	func zoomOut() { zoom(-0.2) }
+	@objc func zoomIn() { zoom(0.2) }
+	@objc func zoomOut() { zoom(-0.2) }
 	func zoom(_ factor: Double) {
 		// https://github.com/WebKit/webkit/commit/1fe5bc35da4a688b9628e2e0b0c013fd0d44b9d5
 		//webview.magnification -= factor
@@ -165,20 +165,20 @@ extension WebViewControllerOSX { // AppGUI funcs
 		webview._textZoomFactor += factor
 	}
 #else
-	func zoomIn() { webview.magnification += 0.2 } // user-adjustable "page" scale
-	func zoomOut() { webview.magnification -= 0.2 }
+	@objc func zoomIn() { webview.magnification += 0.2 } // user-adjustable "page" scale
+	@objc func zoomOut() { webview.magnification -= 0.2 }
 #endif
-	func zoomText() {
+	@objc func zoomText() {
 		webview._textZoomFactor = webview._textZoomFactor
 		webview._pageZoomFactor = webview._pageZoomFactor
 		webview._layoutMode = .dynamicSizeComputedFromViewScale
 	}
 
-	//func print(_ sender: AnyObject?) { warn(""); webview.print(sender) }
+	//@objc func print(_ sender: AnyObject?) { warn(""); webview.print(sender) }
 
-	func highlightConstraints() { view.window?.visualizeConstraints(view.constraints) }
+	@objc func highlightConstraints() { view.window?.visualizeConstraints(view.constraints) }
 
-	func replaceContentView() { view.window?.contentView = view }
+	@objc func replaceContentView() { view.window?.contentView = view }
 
 	@objc func shareButtonClicked(_ sender: AnyObject?) {
 		if let btn = sender as? NSView {
@@ -238,7 +238,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 */
 
 	// https://github.com/WebKit/webkit/commit/7142fb3b53b77c1f4881f2c7b5fa2a61794cc2e0#diff-da59bd1d4a25653a6963b1d22bbc088f
-	func showHideWebInspector(_ sender: AnyObject?) {
+	@objc func showHideWebInspector(_ sender: AnyObject?) {
 		let inspectorRef = WKPageGetInspector(webview._pageRefForTransitionToWKWebView)
 		if WKInspectorIsVisible(inspectorRef) {
 			DispatchQueue.main.async() { WKInspectorHide(inspectorRef) }
