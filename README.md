@@ -17,7 +17,7 @@ Custom URL schemes can also be registered to launch a MacPin App from any other 
 There are a few development branches with their own requirements:
 * swift2.3: Requires OSX 10.11 "El Capitan" with Safari Technical Preview and Xcode 8.2.3 installed.  
   * This branch is no longer maintained.
-* swift3.1: Requires OSX 10.12 "Sierra" with Safari Technical Preview and Xcode 9 installed.  
+* swift4.0: Requires OSX 10.12 "Sierra" with Safari Technical Preview and Xcode 9 installed.  
   * This is the current development target.
 
 ## Included Apps in the [Release](https://github.com/kfix/MacPin/releases)
