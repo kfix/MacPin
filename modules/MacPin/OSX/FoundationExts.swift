@@ -8,8 +8,12 @@ import WebKitPrivates
 import UTIKit
 import Darwin
 
+#if swift(>=4.0)
+let NSURLPboardType = NSPasteboard.PasteboardType(kUTTypeURL as String)
+#endif
+
 class MenuItem: NSMenuItem {
-	convenience init(_ itemName: String?, _ anAction: String? = nil, _ charCode: String? = nil, _ keyflags: [NSEventModifierFlags] = [], target aTarget: AnyObject? = nil, represents: AnyObject? = nil, tag aTag: Int = 0) {
+	convenience init(_ itemName: String?, _ anAction: String? = nil, _ charCode: String? = nil, _ keyflags: [NSEvent.ModifierFlags] = [], target aTarget: AnyObject? = nil, represents: AnyObject? = nil, tag aTag: Int = 0) {
 		self.init(
 			title: itemName ?? "",
 			action: anAction != nil ? Selector(anAction!) : nil,
@@ -42,7 +46,7 @@ extension NSPasteboard {
 				for uti in item.types { // https://developer.apple.com/library/mac/documentation/MobileCoreServices/Reference/UTTypeRef/
 					// https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/UTIRef/Articles/System-DeclaredUniformTypeIdentifiers.html
 					// http://arstechnica.com/apple/2005/04/macosx-10-4/11/ http://www.cocoanetics.com/2012/09/fun-with-uti/
-					if !uti.isEmpty, let value = item.string(forType: uti) {
+					if !uti.rawValue.isEmpty, let value = item.string(forType: uti) {
 				 		if let cfdesc = UTTypeCopyDescription(uti as CFString), let cfmime = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassMIMEType) {
 							let desc = cfdesc.takeUnretainedValue()
 							let mime = cfmime.takeUnretainedValue()
@@ -64,11 +68,11 @@ extension NSPasteboard {
 		// extracts any URLs dragged in, and makes the pasteboard writeable whilst restoring most of the original contents
 		//var urls: [NSURL] = []
 
-		let apsfctype = data(forType: kPasteboardTypeFilePromiseContent as String) //"com.apple.pasteboard.promised-file-content-type")
-		let apsfurl = data(forType: kPasteboardTypeFileURLPromise as String) //"com.apple.pasteboard.promised-file-url")
+		let apsfctype = data(forType: NSPasteboard.PasteboardType(kPasteboardTypeFilePromiseContent as String)) //"com.apple.pasteboard.promised-file-content-type") .fileContents
+		let apsfurl = data(forType: NSPasteboard.PasteboardType(kPasteboardTypeFileURLPromise as String)) //"com.apple.pasteboard.promised-file-url") // .fileUrl .filePromise
 		//let urlstr = stringForType(kUTTypeURL as String)
 		//let urlname = stringForType("public.url-name" as String)
-		let str = string(forType: NSStringPboardType as String)
+		let str = string(forType: .string)
 		let wkurls = WebURLsWithTitles.urls(from: self)
 
 		if let urls = readObjects(forClasses: [NSURL.self], options: nil) as? [NSURL] {
@@ -77,19 +81,19 @@ extension NSPasteboard {
 
 			// re-add any promises UTIs
 			if let ctype = apsfctype {
-				addTypes([kPasteboardTypeFilePromiseContent as String], owner: nil)
-				setData(ctype, forType: kPasteboardTypeFilePromiseContent as String)
+				addTypes([NSPasteboard.PasteboardType(kPasteboardTypeFilePromiseContent as String)], owner: nil)
+				setData(ctype, forType: NSPasteboard.PasteboardType(kPasteboardTypeFilePromiseContent as String))
 			}
 			if let url = apsfurl {
-				addTypes([kPasteboardTypeFileURLPromise as String], owner: nil)
-				setData(url, forType: kPasteboardTypeFileURLPromise as String)
+				addTypes([NSPasteboard.PasteboardType(kPasteboardTypeFileURLPromise as String)], owner: nil)
+				setData(url, forType: NSPasteboard.PasteboardType(kPasteboardTypeFileURLPromise as String))
 			}
 
 			if let url = urls.first {
-				addTypes([kUTTypeURL as String, NSStringPboardType], owner: nil) // *WebURLPboardType http://uti.schwa.io/identifier/public.url
-				setString(url.description, forType: kUTTypeURL as String) // -> public.url
+				addTypes([NSPasteboard.PasteboardType(kUTTypeURL as String), .string], owner: nil) // *WebURLPboardType http://uti.schwa.io/identifier/public.url
+				setString(url.description, forType: NSPasteboard.PasteboardType(kUTTypeURL as String)) // -> public.url
 
-				setString(url.description, forType: NSStringPboardType as String) // -> text/plain
+				setString(url.description, forType: PasteboardType.string) // -> text/plain
 				// https://github.com/WebKit/webkit/blob/fb77811f2b8164ce4c34fc63b496519be15f55ca/Source/WebCore/platform/mac/PasteboardMac.mm#L539
 			}
 
@@ -110,11 +114,11 @@ extension NSPasteboard {
 			}
 */
 			if let str = str {
-				addTypes([NSStringPboardType], owner: nil)
-				setString(str, forType: NSStringPboardType as String) // -> text/plain
+				addTypes([PasteboardType.string], owner: nil)
+				setString(str, forType: PasteboardType.string) // -> text/plain
 			}
 
-			addTypes(["WebURLsWithTitlesPboardType"], owner: nil)
+			addTypes([NSPasteboard.PasteboardType("WebURLsWithTitlesPboardType")], owner: nil)
 			WebURLsWithTitles.writeURLs(wkurls ?? urls, andTitles: nil, to: self)
 			// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/History/WebURLsWithTitles.h
 		}
@@ -132,19 +136,19 @@ func displayError(_ error: NSError, _ vc: NSViewController? = nil) {
 			if let window = vc?.view.window {
 				// display it as a NSPanel sheet
 				vc?.view.presentError(error, modalFor: window, delegate: nil, didPresent: nil, contextInfo: nil)
-			} else if let window = NSApplication.shared().mainWindow {
+			} else if let window = NSApplication.shared.mainWindow {
 				window.presentError(error, modalFor: window, delegate: nil, didPresent: nil, contextInfo: nil)
 			} else {
-				NSApplication.shared().presentError(error)
+				NSApplication.shared.presentError(error)
 			}
 		}
 	}
 }
 
 func askToOpenURL(_ url: NSURL?) { //uti: UTIType? = nil
-	let app = NSApplication.shared()
+	let app = NSApplication.shared
 	let window = app.mainWindow
-	let wk = NSWorkspace.shared()
+	let wk = NSWorkspace.shared
 	app.unhide(nil)
 				// if let uti = uti, opener = LSCopyDefaultRoleHandlerForContentType(UTI, kLSRolesAll)
 					// offer to send url directly to compatible app if there is one
@@ -152,10 +156,10 @@ func askToOpenURL(_ url: NSURL?) { //uti: UTIType? = nil
 					//wk.localizedDescriptionForType(uti)
 					// ask to open direct, .Cancel & return if we did
 
-	if let url = url, let window = window, let opener = NSWorkspace.shared().urlForApplication(toOpen: url as URL) {
+	if let url = url, let window = window, let opener = NSWorkspace.shared.urlForApplication(toOpen: url as URL) {
 		if opener == Bundle.main.bundleURL {
 			// macpin is already the registered handler for this (probably custom) url scheme, so just open it
-			NSWorkspace.shared().open(url as URL)
+			NSWorkspace.shared.open(url as URL)
 			return
 		}
 		warn("[\(url)]")
@@ -165,8 +169,8 @@ func askToOpenURL(_ url: NSURL?) { //uti: UTIType? = nil
 		alert.addButton(withTitle: "Cancel")
 		alert.informativeText = url.description
 		alert.icon = wk.icon(forFile: opener.path)
-		alert.beginSheetModal(for: window, completionHandler:{(response:NSModalResponse) -> Void in
-			if response == NSAlertFirstButtonReturn { wk.open(url as URL) }
+		alert.beginSheetModal(for: window, completionHandler:{(response: NSApplication.ModalResponse) -> Void in
+			if response == .alertFirstButtonReturn { wk.open(url as URL) }
  		})
 		return
 	}

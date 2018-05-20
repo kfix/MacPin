@@ -18,11 +18,11 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			window.hasShadow = true
 			window.titleVisibility = .hidden
 			if appearance == "Dark" {
-				window.appearance = NSAppearance(named: NSAppearanceNameVibrantDark) // match overall system dark-mode
+				window.appearance = NSAppearance(named: NSAppearance.Name.vibrantDark) // match overall system dark-mode
 			} else {
-				window.appearance = NSAppearance(named: NSAppearanceNameVibrantLight) // Aqua LightContent VibrantDark VibrantLight
+				window.appearance = NSAppearance(named: NSAppearance.Name.vibrantLight) // Aqua LightContent VibrantDark VibrantLight
 			} // NSVisualEffectMaterialAppearanceBased ??
-			window.identifier = "browser"
+			window.identifier = NSUserInterfaceItemIdentifier("browser")
 			//window.registerForDraggedTypes([NSPasteboardTypeString, NSURLPboardType, NSFilenamesPboardType]) //wkwebviews do this themselves
 			window.cascadeTopLeft(from: NSMakePoint(20,20))
 			window.delegate = self
@@ -30,18 +30,18 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			//window.isReleasedWhenClosed = true
 			window.restorationClass = MacPinAppDelegateOSX.self
 			window.sharingType = .readWrite
-			NSApplication.shared().windowsMenu = NSMenu()
-			NSApplication.shared().addWindowsItem(window, title: window.title, filename: false)
+			NSApplication.shared.windowsMenu = NSMenu()
+			NSApplication.shared.addWindowsItem(window, title: window.title, filename: false)
 		}
 		shouldCascadeWindows = false // messes with Autosave
-		windowFrameAutosaveName = "browser"
+		windowFrameAutosaveName = NSWindow.FrameAutosaveName("browser")
 	}
 
 	// these just handle drags to a tabless-background, webviews define their own
 	func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { return NSDragOperation.every }
 	func performDragOperation(_ sender: NSDraggingInfo) -> Bool { return true } // FIXME: should open the file:// url
 
-	func window(_ window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplicationPresentationOptions) -> NSApplicationPresentationOptions {
+	func window(_ window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplication.PresentationOptions) -> NSApplication.PresentationOptions {
 		return [.autoHideToolbar, .autoHideMenuBar, .fullScreen, proposedOptions]
 	}
 
@@ -66,9 +66,9 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			window.titlebarAppearsTransparent = !window.titlebarAppearsTransparent
 			//window.styleMask.formSymmetricDifference(.UnifiedTitleAndToolbar) // XOR ^= in Swift3?
 			//window.styleMask.formSymmetricDifference(.FullSizeContentView)
-			window.styleMask = NSWindowStyleMask(rawValue: window.styleMask.rawValue
-				^ NSWindowStyleMask.unifiedTitleAndToolbar.rawValue
-				^ NSWindowStyleMask.fullSizeContentView.rawValue // makes contentView (browserController) extend underneath the now invisible titlebar
+			window.styleMask = NSWindow.StyleMask(rawValue: window.styleMask.rawValue
+				^ NSWindow.StyleMask.unifiedTitleAndToolbar.rawValue
+				^ NSWindow.StyleMask.fullSizeContentView.rawValue // makes contentView (browserController) extend underneath the now invisible titlebar
 			)
 			//window.styleMask ^= .Titled // this blows away the actual .toolbar object, making browserController crash
 			if window.titlebarAppearsTransparent { window.toolbar?.showsBaselineSeparator = false }

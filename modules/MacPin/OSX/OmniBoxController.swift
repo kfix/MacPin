@@ -5,7 +5,7 @@
 import AppKit
 import WebKit
 extension WKWebView {
-	override open func setValue(_ value: Any?, forUndefinedKey key: String) {
+	@objc override open func setValue(_ value: Any?, forUndefinedKey key: String) {
 		if key != "URL" { super.setValue(value, forUndefinedKey: key) } //prevents URLbox from trying to directly rewrite webView.URL
 	}
 }
@@ -13,8 +13,8 @@ extension WKWebView {
 import AppKit
 
 class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
-	var isLoading: Bool = false { didSet { needsDisplay = true } }
-	var progress: Double = Double(0.0) { didSet { needsDisplay = true } }
+	@objc dynamic var isLoading: Bool = false { didSet { needsDisplay = true } }
+	@objc dynamic var progress: Double = Double(0.0) { didSet { needsDisplay = true } }
 
 	//override init(frame frameRect: NSRect) {
 	//	self.super(frame: frameRect)
@@ -35,10 +35,9 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			progressRect.size.width *= progress == 1.0 ? 0 : CGFloat(progress) // only draw line when downloading
 
 			NSColor(calibratedRed:0.0, green: 0.0, blue: 1.0, alpha: 0.4).set() // transparent blue line
-			NSRectFillUsingOperation(progressRect, .sourceOver)
+			progressRect.fill(using: .sourceOver)
 		} else {
-			//NSRectFillUsingOperation(bounds, .clear)
-			NSRectFillUsingOperation(bounds, .copy)
+			bounds.fill(using: .copy) // .clear
 		}
 		super.draw(dirtyRect)
 	}
@@ -55,14 +54,14 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 
 @objc class OmniBoxController: NSViewController {
 	let urlbox = URLAddressField()
-	weak var webview: MPWebView? = nil {
+	@objc weak var webview: MPWebView? = nil {
 		didSet { //KVC to copy updates to webviews url & title (user navigations, history.pushState(), window.title=)
 			if let wv = webview {
-				view.bind(NSToolTipBinding, to: wv, withKeyPath: "title", options: nil)
-				view.bind(NSValueBinding, to: wv, withKeyPath: "URL", options: nil)
-				view.bind(NSFontBoldBinding, to: wv, withKeyPath: "hasOnlySecureContent", options: nil)
-				view.bind("isLoading", to: wv, withKeyPath: "isLoading", options: nil)
-				view.bind("progress", to: wv, withKeyPath: "estimatedProgress", options: nil)
+				view.bind(NSBindingName.toolTip, to: wv, withKeyPath: #keyPath(MPWebView.title), options: nil)
+				view.bind(NSBindingName.value, to: wv, withKeyPath: #keyPath(MPWebView.url), options: nil)
+				view.bind(NSBindingName.fontBold, to: wv, withKeyPath: #keyPath(MPWebView.hasOnlySecureContent), options: nil)
+				view.bind(NSBindingName("isLoading"), to: wv, withKeyPath: #keyPath(MPWebView.isLoading), options: nil)
+				view.bind(NSBindingName("progress"), to: wv, withKeyPath: #keyPath(MPWebView.estimatedProgress), options: nil)
 				nextResponder = wv
 				view.nextKeyView = wv
 			}
@@ -71,22 +70,22 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			if let _ = webview {
 				nextResponder = nil
 				view.nextKeyView = nil
-				view.unbind(NSToolTipBinding)
-				view.unbind(NSValueBinding)
-				view.unbind(NSFontBoldBinding)
-				view.unbind("progress")
-				view.unbind("isLoading")
+				view.unbind(NSBindingName.toolTip)
+				view.unbind(NSBindingName.value)
+				view.unbind(NSBindingName.fontBold)
+				view.unbind(NSBindingName("progress"))
+				view.unbind(NSBindingName("isLoading"))
 			}
 		}
 	}
 
 	required init?(coder: NSCoder) { super.init(coder: coder) }
-	override init!(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView() 
+	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
 	override func loadView() { view = urlbox } // NIBless
 
 	func popup(_ webview: MPWebView?) {
 		guard let webview = webview else { return }
-		MacPinApp.shared().appDelegate?.browserController.tabSelected = webview
+		MacPinApp.shared.appDelegate?.browserController.tabSelected = webview
 	}
 
 	/*
@@ -145,7 +144,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 		super.viewDidAppear()
 	}
 
-	func userEnteredURL() {
+	@objc func userEnteredURL() {
 		if let tf = view as? NSTextField, let url = validateURL(tf.stringValue, fallback: { [unowned self] (urlstr: String) -> NSURL? in
 			if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr as NSString, self.webview!) { return nil } // app.js did its own thing FIXME: it should be able to return URL<->NSURL
 			if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedKeywords", urlstr as NSString, self.webview!) { return nil } // app.js did its own thing
@@ -193,7 +192,7 @@ extension OmniBoxController: NSTextFieldDelegate {
 
 	//func textDidChange(aNotification: NSNotification)
 	func textShouldEndEditing(_ textObject: NSText) -> Bool { //user attempting to focus out of field
-		if let _ = validateURL(textObject.string ?? "") { return true } //allow focusout
+		if let _ = validateURL(textObject.string) { return true } //allow focusout
 		warn("invalid url entered: \(textObject.string)")
 		return false //NSBeep()s, keeps focus
 	}
@@ -211,7 +210,7 @@ extension OmniBoxController: NSControlTextEditingDelegate {
 		warn(commandSelector.description)
 		switch commandSelector {
 			case "noop:":
-				if let event = Application.shared().currentEvent, event.modifierFlags.contains(.command) {
+				if let event = Application.shared.currentEvent, event.modifierFlags.contains(.command) {
 					guard let url = validateURL(control.stringValue) else { return false }
 					popup(webview?.clone(url)) // cmd-enter pops open a new tab
 				}

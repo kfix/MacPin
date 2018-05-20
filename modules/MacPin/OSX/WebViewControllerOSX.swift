@@ -29,14 +29,14 @@ import WebKitPrivates
 		//view.wantsLayer = true //use CALayer to coalesce views
 		//^ default=true:  https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3641
 		view.autoresizesSubviews = true
-		view.autoresizingMask = [.viewWidthSizable, .viewHeightSizable]
-		webview.autoresizingMask = [.viewWidthSizable, .viewHeightSizable]
+		view.autoresizingMask = [.width, .height]
+		webview.autoresizingMask = [.width, .height]
 #if STP
 		// scale-to-fit https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
 		webview._layoutMode = .dynamicSizeComputedFromViewScale
 #endif
 
-		bind(NSTitleBinding, to: webview, withKeyPath: "title", options: nil)
+		bind(NSBindingName.title, to: webview, withKeyPath: #keyPath(MPWebView.title), options: nil)
 		//backMenu.delegate = self
 		//forwardMenu.delegate = self
 
@@ -53,7 +53,7 @@ import WebKitPrivates
 	func contentView() -> NSView? { return webview }
 
 	override func performTextFinderAction(_ sender: Any?) {
-		if let control = sender as? NSMenuItem, let action = NSTextFinderAction(rawValue: control.tag) {
+		if let control = sender as? NSMenuItem, let action = NSTextFinder.Action(rawValue: control.tag) {
 			textFinder.performAction(action)
 		}
 	}
@@ -112,7 +112,7 @@ import WebKitPrivates
 		//view.removeConstraints(view.constraints)
 	}
 
-	deinit { unbind(NSTitleBinding) }
+	deinit { unbind(NSBindingName.title) }
 
 	override func cancelOperation(_ sender: Any?) { webview.stopLoading(sender) } // NSResponder: make Esc key stop page load
 }
@@ -174,13 +174,13 @@ extension WebViewControllerOSX { // AppGUI funcs
 		webview._layoutMode = .dynamicSizeComputedFromViewScale
 	}
 
-	func print(_ sender: AnyObject?) { warn(""); webview.print(sender) }
+	//func print(_ sender: AnyObject?) { warn(""); webview.print(sender) }
 
 	func highlightConstraints() { view.window?.visualizeConstraints(view.constraints) }
 
 	func replaceContentView() { view.window?.contentView = view }
 
-	func shareButtonClicked(_ sender: AnyObject?) {
+	@objc func shareButtonClicked(_ sender: AnyObject?) {
 		if let btn = sender as? NSView {
 			if let url = webview.url {
 				let sharer = NSSharingServicePicker(items: [url])
@@ -191,7 +191,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		}
 	}
 
-	func snapshotButtonClicked(_ sender: AnyObject?) {
+	@objc func snapshotButtonClicked(_ sender: AnyObject?) {
 		//guard if let btn = sender as? NSView else { }
 		return // WKWebViewSnappable can't link yet :-(
 		/*
@@ -204,7 +204,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		*/
 	}
 
-	func displayAlert(_ alert: NSAlert, _ completionHandler: @escaping (NSModalResponse) -> Void) {
+	func displayAlert(_ alert: NSAlert, _ completionHandler: @escaping (NSApplication.ModalResponse) -> Void) {
 	/* FIXME BIG TIME
 		make JS's modal alerts dismissable on tab change, like Safari does
 		see: https://developers.google.com/web/updates/2017/03/dialogs-policy

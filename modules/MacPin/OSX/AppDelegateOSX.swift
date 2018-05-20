@@ -48,7 +48,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	}
 
 	// handle URLs passed by open
-	func handleGetURLEvent(_ event: NSAppleEventDescriptor!, replyEvent: NSAppleEventDescriptor?) {
+	@objc func handleGetURLEvent(_ event: NSAppleEventDescriptor!, replyEvent: NSAppleEventDescriptor?) {
 		if let urlstr = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))!.stringValue {
 			warn("`\(urlstr)` -> AppScriptRuntime.shared.jsdelegate.launchURL()")
 			AppScriptRuntime.shared.exports.setObject(urlstr, forKeyedSubscript: "launchedWithURL" as NSString)
@@ -63,13 +63,13 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		alert.messageText = "Set HTTP(s) proxy"
 		alert.addButton(withTitle: "Update")
 		alert.informativeText = "Enter the proxy URL:"
-		alert.icon = Application.shared().applicationIconImage
+		alert.icon = Application.shared.applicationIconImage
 		let input = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
 		input.stringValue = UserDefaults.standard.string(forKey: "WebKit2HTTPProxy") ?? ""
 		input.isEditable = true
  		alert.accessoryView = input
  		guard let window = window else { return }
-		alert.beginSheetModal(for: window, completionHandler: { (response:NSModalResponse) -> Void in
+		alert.beginSheetModal(for: window, completionHandler: { (response: NSApplication.ModalResponse) -> Void in
 			UserDefaults.standard.set(input.stringValue, forKey: "WebKit2HTTPProxy")
 			UserDefaults.standard.set(input.stringValue, forKey: "WebKit2HTTPSProxy")
 			UserDefaults.standard.synchronize()
@@ -94,7 +94,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		NSUserNotificationCenter.default.delegate = self
 		let app = notification.object as? NSApplication
 		//let appname = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleName") ?? NSProcessInfo.processInfo().processName
-		let appname = NSRunningApplication.current().localizedName ?? ProcessInfo.processInfo.processName
+		let appname = NSRunningApplication.current.localizedName ?? ProcessInfo.processInfo.processName
 
 		app!.mainMenu = NSMenu()
 
@@ -129,11 +129,11 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		let findMenu = MenuItem("Find")
 		findMenu.submenu = NSMenu()
 		findMenu.submenu?.title = "Find"
-		findMenu.submenu?.addItem(MenuItem("Find...", "performTextFinderAction:", "f", [.command], tag: NSTextFinderAction.showFindInterface.rawValue)) //wvc
-		findMenu.submenu?.addItem(MenuItem("Find Next", "performTextFinderAction:", tag: NSTextFinderAction.nextMatch.rawValue)) //wvc
-		findMenu.submenu?.addItem(MenuItem("Find Previous", "performTextFinderAction:", tag: NSTextFinderAction.previousMatch.rawValue)) //wvc
-		findMenu.submenu?.addItem(MenuItem("Find and Replace...", "performTextFinderAction:", tag: NSTextFinderAction.showReplaceInterface.rawValue)) //wvc
-		findMenu.submenu?.addItem(MenuItem("Search within Selection", "performTextFinderAction:", tag: NSTextFinderAction.selectAllInSelection.rawValue)) //wvc
+		findMenu.submenu?.addItem(MenuItem("Find...", "performTextFinderAction:", "f", [.command], tag: NSTextFinder.Action.showFindInterface.rawValue)) //wvc
+		findMenu.submenu?.addItem(MenuItem("Find Next", "performTextFinderAction:", tag: NSTextFinder.Action.nextMatch.rawValue)) //wvc
+		findMenu.submenu?.addItem(MenuItem("Find Previous", "performTextFinderAction:", tag: NSTextFinder.Action.previousMatch.rawValue)) //wvc
+		findMenu.submenu?.addItem(MenuItem("Find and Replace...", "performTextFinderAction:", tag: NSTextFinder.Action.showReplaceInterface.rawValue)) //wvc
+		findMenu.submenu?.addItem(MenuItem("Search within Selection", "performTextFinderAction:", tag: NSTextFinder.Action.selectAllInSelection.rawValue)) //wvc
 		editMenu.submenu?.addItem(findMenu)
 		app!.mainMenu?.addItem(editMenu)
 
@@ -211,7 +211,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		app!.mainMenu?.addItem(dbgMenu)
 
 		windowController?.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
-		windowController?.window?.bind(NSTitleBinding, to: browserController, withKeyPath: "title", options: nil)
+		windowController?.window?.bind(NSBindingName.title, to: browserController, withKeyPath: #keyPath(BrowserViewController.title), options: nil)
 		windowController?.window?.makeKeyAndOrderFront(self)
 
 		NSAppleEventManager.shared().setEventHandler(self, andSelector: #selector(MacPinAppDelegateOSX.handleGetURLEvent(_:replyEvent:)), forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url schemes
@@ -302,7 +302,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		// NOPE, this can cause loops warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 		switch error {
 			case let error as URLError:
-				if let url = error.failingURL as? String {
+				if let url = error.failingURL?.absoluteString {
 					//error.errorUserInfo[NSLocalizedDescriptionKey] = "\(error.localizedDescription)\n\n\(url)" // add failed url to error message
 					return error
 				}
@@ -312,7 +312,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		}
 	}
 
-	public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplicationTerminateReply {
+	public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
 		warn()
 		windowController?.close() // kill the window if it still exists
 		windowController?.window = nil
@@ -343,7 +343,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 	// https://github.com/WebKit/webkit/commit/3e028543b95387e8ac73e9947a5cef4dd1ac90f2
 	public func application(_ theApplication: NSApplication, openFile filename: String) -> Bool {
 		warn(filename)
-		if let ftype = try? NSWorkspace.shared().type(ofFile: filename) {
+		if let ftype = try? NSWorkspace.shared.type(ofFile: filename) {
 			warn(ftype)
 			switch ftype {
 				// check file:s for spaces and urlescape them
@@ -405,8 +405,8 @@ extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 
 extension MacPinAppDelegateOSX: NSWindowRestoration {
 	// https://developer.apple.com/library/mac/documentation/General/Conceptual/MOSXAppProgrammingGuide/CoreAppDesign/CoreAppDesign.html#//apple_ref/doc/uid/TP40010543-CH3-SW35
-	public static func restoreWindow(withIdentifier identifier: String, state: NSCoder, completionHandler: @escaping (NSWindow?, Error?) -> Swift.Void) {
-		if let app = MacPinApp.shared().appDelegate, let window = app.window, identifier == "browser" {
+	public static func restoreWindow(withIdentifier identifier: NSUserInterfaceItemIdentifier, state: NSCoder, completionHandler: @escaping (NSWindow?, Error?) -> Void) {
+		if let app = MacPinApp.shared.appDelegate, let window = app.window, identifier.rawValue == "browser" {
 			completionHandler(window, nil)
 			//WKWebView._restoreFromSessionStateData ...
 		} else {

@@ -4,7 +4,7 @@
 
 import WebKit
 import WebKitPrivates
-import Async
+//import Async
 
 extension WebViewControllerOSX {
 
@@ -15,7 +15,7 @@ extension WebViewControllerOSX {
 		alert.informativeText = message
 		alert.icon = webview.favicon.icon
 		alert.alertStyle = .informational // .Warning .Critical
-		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler() }
+		displayAlert(alert) { (response: NSApplication.ModalResponse) -> Void in completionHandler() }
 	}
 
 	func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
@@ -24,8 +24,8 @@ extension WebViewControllerOSX {
 		alert.addButton(withTitle: "OK")
 		alert.addButton(withTitle: "Cancel")
 		alert.informativeText = message
-		alert.icon = NSApplication.shared().applicationIconImage
-		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler(response == NSAlertFirstButtonReturn ? true : false) }
+		alert.icon = NSApplication.shared.applicationIconImage
+		displayAlert(alert) { (response: NSApplication.ModalResponse) -> Void in completionHandler(response == .alertFirstButtonReturn ? true : false) }
 	}
 
 	func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String!) -> Void) {
@@ -33,12 +33,12 @@ extension WebViewControllerOSX {
 		alert.messageText = webView.title ?? ""
 		alert.addButton(withTitle: "Submit")
 		alert.informativeText = prompt
-		alert.icon = NSApplication.shared().applicationIconImage
+		alert.icon = NSApplication.shared.applicationIconImage
 		let input = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
 		input.stringValue = defaultText ?? ""
 		input.isEditable = true
  		alert.accessoryView = input
-		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler(input.stringValue) }
+		displayAlert(alert) { (response: NSApplication.ModalResponse) -> Void in completionHandler(input.stringValue) }
 	}
 
 	// JS window.beforeunload() handler
@@ -49,14 +49,14 @@ extension WebViewControllerOSX {
 		alert.addButton(withTitle: "Stay on Page")
 		alert.informativeText = "Are you sure you want to leave this page?" //message
 		// Safari 9.1+, Chrome 51+, & Firefox 44+ do not allow JS to customize the msgTxt. Thanks scammers.
-		alert.icon = NSApplication.shared().applicationIconImage
-		displayAlert(alert) { (response:NSModalResponse) -> Void in completionHandler(response == NSAlertFirstButtonReturn) }
+		alert.icon = NSApplication.shared.applicationIconImage
+		displayAlert(alert) { (response: NSApplication.ModalResponse) -> Void in completionHandler(response == .alertFirstButtonReturn) }
  }
 
 	func _webView(_ webView: WKWebView, printFrame: WKFrameInfo) {
 		warn("JS: `window.print();`")
 #if STP
-		let printer = webView._printOperation(with: NSPrintInfo.shared())
+		let printer = webView._printOperation(with: NSPrintInfo.shared)
 		printer?.showsPrintPanel = true
 		printer?.run()
 #endif
@@ -168,14 +168,14 @@ Global Trace Buffer (reverse chronological seconds):
 			completionHandler(.rejectProtectionSpace, nil)
 			return
 		}
-		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.url)]")
+		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.urlstr)]")
 
 		let alert = NSAlert()
 		alert.messageText = webView.title ?? ""
 		alert.addButton(withTitle: "Submit")
 		alert.addButton(withTitle: "Cancel")
 		alert.informativeText = "auth challenge"
-		alert.icon = NSApplication.shared().applicationIconImage
+		alert.icon = NSApplication.shared.applicationIconImage
 
 		let prompts = NSView(frame: NSMakeRect(0, 0, 200, 64))
 
@@ -197,9 +197,9 @@ Global Trace Buffer (reverse chronological seconds):
 
  		alert.accessoryView = prompts
 
-		//alert.beginSheetModalForWindow(webView.window!, completionHandler:{(response:NSModalResponse) -> Void in
-		displayAlert(alert) { (response:NSModalResponse) -> Void in
-			if response == NSAlertFirstButtonReturn {
+		//alert.beginSheetModalForWindow(webView.window!, completionHandler:{(response: NSApplication.ModalResponse) -> Void in
+		displayAlert(alert) { (response: NSApplication.ModalResponse) -> Void in
+			if response == .alertFirstButtonReturn {
 				completionHandler(.useCredential, URLCredential(
 					user: userbox.stringValue,
 					password: passbox.stringValue,
@@ -226,9 +226,12 @@ extension WebViewControllerOSX { // _WKDownloadDelegate
 		saveDialog.canCreateDirectories = true
 		saveDialog.nameFieldStringValue = filename
 		if let webview = download.originatingWebView, let window = webview.window {
-			NSApplication.shared().requestUserAttention(.informationalRequest)
-			saveDialog.beginSheetModal(for: window, completionHandler: { (choice: Int) -> Void in NSApp.stopModal(withCode: choice) })
-			if NSApp.runModal(for: window) != NSModalResponseAbort { if let url = saveDialog.url { return url.path } }
+			NSApplication.shared.requestUserAttention(.informationalRequest)
+			saveDialog.beginSheetModal(for: window) { (choice: NSApplication.ModalResponse) -> Void in
+				NSApp.stopModal(withCode: choice)
+				return
+			}
+			if NSApp.runModal(for: window) != .abort { if let url = saveDialog.url { return url.path } }
 		}
 		download.cancel()
 		return ""
@@ -249,10 +252,10 @@ extension WebViewControllerOSX { // HTML5 fullscreen
 	//  https://github.com/WebKit/webkit/search?q=fullScreenWindowController
 	// https://github.com/WebKit/webkit/blob/master/Source/WebCore/platform/mac/WebVideoFullscreenInterfaceMac.mm
 	func _webViewDidEnterFullscreen(_ webView: WKWebView) {
-		warn("JS <\(webView.url)>: `<video>.requestFullscreen(); // begun`")
+		warn("JS <\(webView.urlstr)>: `<video>.requestFullscreen(); // begun`")
 	}
 	func _webViewDidExitFullscreen(_ webView: WKWebView) {
-		warn("JS <\(webView.url)>: `<video>.requestFullscreen(); // finished`")
+		warn("JS <\(webView.urlstr)>: `<video>.requestFullscreen(); // finished`")
 	}
 }
 
@@ -291,9 +294,9 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 		let openDialog = NSOpenPanel()
 		openDialog.allowsMultipleSelection =  parameters.allowsMultipleSelection
 		if let window = webview.window {
-			NSApplication.shared().requestUserAttention(.informationalRequest)
+			NSApplication.shared.requestUserAttention(.informationalRequest)
 			openDialog.beginSheetModal(for: window) { (choice: NSApplication.ModalResponse) -> Void in
-				if choice == NSFileHandlingPanelOKButton { // .OK
+				if choice == .OK {
 					completionHandler(openDialog.urls as [NSURL]?)
 				} else {
 					completionHandler(nil)
