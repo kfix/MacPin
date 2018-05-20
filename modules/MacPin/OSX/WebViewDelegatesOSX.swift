@@ -65,13 +65,13 @@ extension WebViewControllerOSX {
 
 extension WebViewControllerOSX { // WebRTC prompts, auto-approving
 	//@available(OSX 10.13, *)
-	func _webView(_ webView: WKWebView!, requestUserMediaAuthorizationForDevices devices: _WKCaptureDevices, url: URL!, mainFrameURL: URL!, decisionHandler: ((Bool) -> Void)!) {
+	@objc func _webView(_ webView: WKWebView!, requestUserMediaAuthorizationForDevices devices: _WKCaptureDevices, url: URL!, mainFrameURL: URL!, decisionHandler: ((Bool) -> Void)!) {
 		warn()
 		decisionHandler(true)
 	}
 
 	@available(OSX 10.12.3, *)
-	func _webView(_ webView: WKWebView!, checkUserMediaPermissionForURL url: URL!, mainFrameURL: URL!, frameIdentifier: UInt, decisionHandler: ((String?, Bool) -> Void)!) {
+	@objc func _webView(_ webView: WKWebView!, checkUserMediaPermissionForURL url: URL!, mainFrameURL: URL!, frameIdentifier: UInt, decisionHandler: ((String?, Bool) -> Void)!) {
 		warn()
 		//decisionHandler(url.absoluteString, true)
 		decisionHandler("0x987654321", true)
