@@ -12,6 +12,7 @@ import AppKit
 	func switchToNextTab()
 	func switchToPreviousTab()
 	func closeTab(_ tab: AnyObject?)
+	func pushTab(_ tab: AnyObject)
 	func newTabPrompt()
 	func newIsolatedTabPrompt()
 	func newPrivateTabPrompt()

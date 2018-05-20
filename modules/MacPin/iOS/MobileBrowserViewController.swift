@@ -343,7 +343,7 @@ extension MobileBrowserViewController {
 	func newIsolatedTabPrompt() {}
 	func newPrivateTabPrompt() {}
 
-	func pushTab(_ webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerIOS(webview: webview)) } }
+	@objc func pushTab(_ webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerIOS(webview: webview)) } }
 
 	func addShortcut(_ title: String, _ obj: AnyObject?) {} // FIXME: populate bottom section of tabList with App shortcuts
 	// + Force Touch AppIcon menu?

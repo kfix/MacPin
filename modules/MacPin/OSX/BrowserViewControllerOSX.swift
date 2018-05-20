@@ -593,7 +593,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		revealOmniBox()
 	}
 
-	func pushTab(_ webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerOSX(webview: webview)) } }
+	@objc func pushTab(_ webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerOSX(webview: webview)) } }
 
 	func closeTab(_ tab: AnyObject?) {
 		switch (tab) {
