@@ -15,26 +15,6 @@ struct WeakThing<T: AnyObject> {
   }
 }
 
-// WK C API thunks for IconDatabase
-func faviconChanged(_ iconDatabase: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: UnsafeRawPointer) { // WKIconDatabaseDidChangeIconForPageURLCallback
-	warn()
-}
-// cannot convert value of type '(WKIconDatabaseRef, WKURLRef, UnsafeRawPointer) -> ()' to expected argument type 'WKIconDatabaseDidChangeIconForPageURLCallback!'
-func faviconsCleared(_ iconDatabase: WKIconDatabaseRef, clientInfo: UnsafeRawPointer) { //WKIconDatabaseDidRemoveAllIconsCallback
-	warn()
-}
-func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: UnsafeRawPointer) { // WKIconDatabaseIconDataReadyForPageURLCallback
-	let browser: BrowserViewControllerOSX = unsafeBitCast(clientInfo, to: BrowserViewControllerOSX.self) // translate pointer to browser instance
-	WKIconDatabaseRetainIconForURL(iconDB, pageURL)
-	let url = WKURLCopyCFURL(kCFAllocatorDefault, pageURL) as NSURL
-	for tab in browser.tabs.filter({ $0.url == url as URL}) {
-		//let iconurl = WKStringCopyCFString(CFAllocatorGetDefault().takeUnretainedValue(), WKURLCopyString(WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithUTF8CString(url)))) as NSString
-		let iconurl: NSURL = WKURLCopyCFURL(kCFAllocatorDefault, WKIconDatabaseCopyIconURLForPageURL(iconDB, pageURL))
-		// ^^ FIXME: EXEC_BAD_ACCS on disappeared tabs?
-		tab.favicon.url = iconurl
-	}
-}
-
 @objc class TabViewController: NSTabViewController {
 	required init?(coder: NSCoder) { super.init(coder: coder) } // required by NSCoder
 	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
@@ -342,22 +322,9 @@ func faviconReady(_ iconDB: WKIconDatabaseRef, pageURL: WKURLRef, clientInfo: Un
 
 class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
- 	// FIXME: not needed with STP v21: https://github.com/WebKit/webkit/commit/583510ef68c8aa56558c17263791b5cd8f762f99
-	/*
-	var iconClient = WKIconDatabaseClientV1(
-		base: WKIconDatabaseClientBase(),
-		didChangeIconForPageURL: nil, //faviconChanged
-		didRemoveAllIcons: nil, //faviconsCleared,
-		iconDataReadyForPageURL: nil //faviconReady as WKIconDatabaseIconDataReadyForPageURLCallback!
-	)
-	*/
-
 	convenience init() {
 		self.init(nibName: nil, bundle: nil)
 
-		// send browser all iconDB callbacks so it can update the tab.image's -> FavIcons
-		// internally, webcore has a delegation model for grabbing icon URLs: https://bugs.webkit.org/show_bug.cgi?id=136059#c1
-		//iconClient.base = WKIconDatabaseClientBase(version: 1, clientInfo: Unmanaged.passUnretained(self).toOpaque())
 		tabMenu.delegate = self
 
 		let center = NotificationCenter.default

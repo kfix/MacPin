@@ -69,13 +69,6 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 			warn("'\(url)'")
 			// check url against regex'd keys of MatchedAddressOptions
 			// or just call a JS delegate to do that?
-
-			if let webview = webView as? MPWebView, let iconDB = webview.iconDB { // pull icon from WebCore's IconDatabase if its already cached
-				if let wkurl = WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithCFURL(url as CFURL?)) {
-					WKIconDatabaseRetainIconForURL(iconDB, wkurl)
-					webview.favicon.url = WKURLCopyCFURL(kCFAllocatorDefault, wkurl) as NSURL
-				}
-			}
 		}
 #if os(iOS)
 		UIApplication.sharedApplication().networkActivityIndicatorVisible = true // use webview._networkRequestsInProgress ??
@@ -197,7 +190,6 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 
 	func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
 		//content starts arriving...I assume <body> has materialized in the DOM?
-		(webView as? MPWebView)?.scrapeIcon()
 	}
 
 	func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
@@ -292,7 +284,6 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		//let title = webView.title ?? String()
 		//let url = webView.URL ?? NSURL(string:"")!
 		//warn("\"\(title)\" [\(url)]")
-		(webView as? MPWebView)?.scrapeIcon()
 #if os(iOS)
 		UIApplication.sharedApplication().networkActivityIndicatorVisible = false
 #endif
@@ -376,12 +367,20 @@ extension WebViewController: _WKDownloadDelegate {
 
 // extensions WebViewController: WebsitePoliciesDelegate // FIXME: STP v20: per-site preferences: https://github.com/WebKit/webkit/commit/d9f6f7249630d7756e4b6ca572b29ac61d5c38d7
 
-extension WebViewController: _WKIconLoadingDelegate {
-	func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Swift.Void) -> Swift.Void) {
+@objc extension WebViewController: _WKIconLoadingDelegate {
+	@objc func webView(_ webView: WKWebView, shouldLoadIconWithParameters parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Void) -> Void) {
 		completionHandler() { data in
 			// data.length
-			warn("page (\(webView.url?.absoluteString) got icon from <- \(parameters.url.absoluteString)")
 			//parameters . mimeType iconType
+			switch parameters.iconType {
+				case .favicon:
+					warn("page (\(webView.url?.absoluteString) got favicon from <- \(parameters.url.absoluteString)")
+					if let webview = webView as? MPWebView {
+						//webview.favicon.url = parameters.url as NSURL
+						webview.favicon.data = data as NSData //skip the middleman
+					}
+				default: break
+			}
 		}
 	}
 }

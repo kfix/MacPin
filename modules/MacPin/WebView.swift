@@ -123,26 +123,6 @@ extension WKWebView {
 
 	var context: WKContextRef? = nil
 
-	// iconDB is going bye-bye: https://github.com/WebKit/webkit/commit/9a48388fe4e65e01969c475a1df0ed9b23c8bb43
-	var iconDB: WKIconDatabaseRef? = nil
-	/*
-	var iconClient: WKIconDatabaseClientV1? = WKIconDatabaseClientV1() {
-		didSet {
-			if let iconDB = iconDB, let context = context {
-				WKIconDatabaseClose(iconDB)
-				guard var iconClient = iconClient else { return }
-				//https://github.com/WebKit/webkit/blob/91700b336a0d0abf1be06c627e3f41281b2728a3/Source/WebCore/loader/icon/IconDatabase.cpp#L114 must close IconDB, setClient, and reopen
-			    WKIconDatabaseSetIconDatabaseClient(iconDB, &iconClient.base)
-				WKIconDatabaseCheckIntegrityBeforeOpening(iconDB)
-				WKIconDatabaseEnableDatabaseCleanup(iconDB)
-				"icondb.sqlite".withCString { sqdb in
-					WKContextSetIconDatabasePath(context, WKStringCreateWithUTF8CString(sqdb)) // is relative to CWD // should report success https://bugs.webkit.org/show_bug.cgi?id=117632
-				}
-		   }
-		}
-	}
-	*/
-
 #if STP
 	// a long lived thumbnail viewer should construct and store thumbviews itself, this is for convenient dumping
 	var thumbnail: _WKThumbnailView? {
@@ -302,7 +282,6 @@ extension WKWebView {
 		"https".withCString { https in
 			WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(https))
 		}
-		//self.iconDB = WKContextGetIconDatabase(context)
 	}
 
 	/*
@@ -358,7 +337,6 @@ extension WKWebView {
 	//func toString() -> String { return description } // $.browser.tabs[0].__proto__.toString = function(){ return this.title; }
 
 	deinit {
-		iconDB = nil
 		context = nil
 		warn(description)
 	}
@@ -441,35 +419,6 @@ extension WKWebView {
 	}
 
 	func scrapeIcon() { // extract icon location from current webpage and initiate retrieval
-
-		// this C SPI was scrapped in https://github.com/WebKit/webkit/commit/9a48388fe4e65e01969c475a1df0ed9b23c8bb43#diff-e43281f560648e1bddf2935b1d1b8b8b
-		if let iconDB = iconDB, iconDB != nil { // scrape icon from WebCore's IconDatabase
-			if let wkurl = WKIconDatabaseCopyIconURLForPageURL(iconDB, WKURLCreateWithCFURL(url as CFURL!)) {
-				WKIconDatabaseRetainIconForURL(iconDB, wkurl)
-				favicon.url = WKURLCopyCFURL(kCFAllocatorDefault, wkurl) as NSURL
-
-/*
-				let cgicon = WKIconDatabaseTryGetCGImageForURL(iconDB, wkurl, WKSize()).takeUnretainedValue()
-#if os(OSX)
-				favicon.icon = NSImage(CGImage: cgicon, size: NSZeroSize)
-				favicon.icon16 = NSImage(CGImage: cgicon, size: NSZeroSize)
-#elseif os(iOS)
-				favicon.icon = UIImage(CGImage: cgicon, size: UIZeroSize)
-#endif
-*/
-				/*
-				if let cgicon = WKIconDatabaseTryGetCGImageForURL(iconDB, wkurl, WKSize(32, 32)) as? Image where cgicon != nil {
-					favicon.icon = Image(CGImage: cgicon)
-				} else if let cgicon16 = WKIconDatabaseTryGetCGImageForURL(iconDB, wkurl, WKSize(16, 16)) as? Image where cgicon16 != nil {
-					favicon.icon16 = Image(CGImage: cgicon16)
-				}
-				if let wkdata = WKIconDatabaseCopyIconDataForPageURL(iconDB, wkurl) as? WKDataRef where wkdata != nil {
-					let bytes = WKDataGetBytes(wkdata)
-					favicon.data = NSData(bytes, bytes.length)
-				}
-				*/
-			}
-		} else { // scrape icon from JS DOM
 			evaluateJavaScript("if (icon = document.head.querySelector('link[rel$=icon]')) { icon.href };", completionHandler:{ [unowned self] (result: Any?, exception: Error?) -> Void in
 				if let href = result as? String { // got link for icon or apple-touch-icon from DOM
 					// FIXME: very rarely this crashes if a page closes/reloads itself during the update closure
@@ -479,7 +428,6 @@ extension WKWebView {
 					self.loadIcon(iconurlp.string!)
 				}
 			})
-		}
 	}
 
 	func loadIcon(_ icon: String) -> Bool {
