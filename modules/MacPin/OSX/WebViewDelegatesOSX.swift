@@ -40,49 +40,12 @@ extension WebViewControllerOSX {
  		alert.accessoryView = input
 		displayAlert(alert) { (response: NSApplication.ModalResponse) -> Void in completionHandler(input.stringValue) }
 	}
-
-	// JS window.beforeunload() handler
-	func _webView(_ webView: WKWebView!, runBeforeUnloadConfirmPanelWithMessage message: String!, initiatedByFrame frame: WKFrameInfo!, completionHandler: ((Bool) -> Void)!) {
-		let alert = NSAlert()
-		alert.messageText = webView.title ?? ""
-		alert.addButton(withTitle: "Leave Page")
-		alert.addButton(withTitle: "Stay on Page")
-		alert.informativeText = "Are you sure you want to leave this page?" //message
-		// Safari 9.1+, Chrome 51+, & Firefox 44+ do not allow JS to customize the msgTxt. Thanks scammers.
-		alert.icon = NSApplication.shared.applicationIconImage
-		displayAlert(alert) { (response: NSApplication.ModalResponse) -> Void in completionHandler(response == .alertFirstButtonReturn) }
- }
-
-	func _webView(_ webView: WKWebView, printFrame: WKFrameInfo) {
-		warn("JS: `window.print();`")
-#if STP
-		let printer = webView._printOperation(with: NSPrintInfo.shared)
-		printer?.showsPrintPanel = true
-		printer?.run()
-#endif
-	}
-}
-
-extension WebViewControllerOSX { // WebRTC prompts, auto-approving
-	//@available(OSX 10.13, *)
-	@objc func _webView(_ webView: WKWebView!, requestUserMediaAuthorizationForDevices devices: _WKCaptureDevices, url: URL!, mainFrameURL: URL!, decisionHandler: ((Bool) -> Void)!) {
-		warn()
-		decisionHandler(true)
-	}
-
-	@available(OSX 10.12.3, *)
-	@objc func _webView(_ webView: WKWebView!, checkUserMediaPermissionForURL url: URL!, mainFrameURL: URL!, frameIdentifier: UInt, decisionHandler: ((String?, Bool) -> Void)!) {
-		warn()
-		//decisionHandler(url.absoluteString, true)
-		decisionHandler("0x987654321", true)
-	}
-
 }
 
 extension WebViewControllerOSX {
 
 	// https://github.com/WebKit/webkit/commit/fa99fc8295905850b2b9444ba019a7250996ee7d
-	func webView(_ webView: WKWebView, didReceiveAuthenticationChallenge challenge: URLAuthenticationChallenge,
+	@objc func webView(_ webView: WKWebView, didReceiveAuthenticationChallenge challenge: URLAuthenticationChallenge,
 		completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
 
 /*
@@ -277,7 +240,7 @@ extension WebViewController { // _WKInputDelegate
 		warn()
 	}
 
-	func _webView(_ webView: WKWebView!, willSubmitFormValues values: [AnyHashable: Any]!, userObject: (NSSecureCoding & NSObjectProtocol)!, submissionHandler: (() -> Void)!) {
+	@objc func _webView(_ webView: WKWebView!, willSubmitFormValues values: [AnyHashable: Any]!, userObject: (NSSecureCoding & NSObjectProtocol)!, submissionHandler: (() -> Void)!) {
 		warn(values.description)
 		//userObject: https://github.com/WebKit/webkit/commit/c65916009f1e95f53f329ce3cfe69bf70616cc02#diff-776c38c9a3b2252729ea3ac028367308R1201
 		submissionHandler()
@@ -288,7 +251,7 @@ extension WebViewController { // _WKInputDelegate
 extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 	// https://bugs.webkit.org/show_bug.cgi?id=137759
 	// https://github.com/WebKit/webkit/blob/4b7052ab44fa581810188638d1fdf074e7d754ca/Tools/MiniBrowser/mac/WK2BrowserWindowController.m#L451
-	func webView(_ webView: WKWebView!, runOpenPanelWithParameters parameters: WKOpenPanelParameters!, initiatedByFrame frame: WKFrameInfo!, completionHandler: (([NSURL]?) -> Void)!) {
+	@objc func webView(_ webView: WKWebView!, runOpenPanelWithParameters parameters: WKOpenPanelParameters!, initiatedByFrame frame: WKFrameInfo!, completionHandler: (([NSURL]?) -> Void)!) {
 		warn("<input> file upload panel opening!")
 		//pop open a save Panel to dump data into file
 		let openDialog = NSOpenPanel()
@@ -306,8 +269,61 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 	}
 }
 
-/*
-	func _webView(_ webView: WKWebView!, requestGeolocationPermissionForFrame frame: WKFrameInfo!, decisionHandler: ((Bool) -> Void)!)
+@objc extension WebViewControllerOSX { // WKUIDelegatePrivate
 
-	func _webView(_ webView: WKWebView!, editorStateDidChange editorState: [AnyHashable : Any]!)
-*/
+	//@available(OSX 10.13.4, *, iOS 11.3)
+	@objc func _webView(_ webView: WKWebView!, requestGeolocationPermissionForFrame frame: WKFrameInfo!, decisionHandler: ((Bool) -> Void)!) {
+		warn(webView.url?.absoluteString ?? "")
+
+		decisionHandler(true)
+		// seems to be a no-op on OSX, still no wkgeolocationproviderosx ...
+
+		// so lets do some yucky hackery to polyfill+reload once for the life of the tab
+		if let mpwv = webView as? MPWebView, mpwv.preinject("shim_html5_geolocation") {
+			mpwv.subscribeTo("MacPinPollStates")
+			mpwv.subscribeTo("getGeolocation")
+			mpwv.subscribeTo("watchGeolocation")
+			mpwv.subscribeTo("deactivateGeolocation")
+			webView.reload() // hafta reload for the preinjection to happen
+		}
+	}
+
+	//func _webView(_ webView: WKWebView!, editorStateDidChange editorState: [AnyHashable : Any]!)
+	//func _webView(_ webView: WKWebView!, requestNotificationPermissionForSecurityOrigin securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!)
+
+	// func _webView(_ webView: WKWebView!, saveDataToFile data: Data!, suggestedFilename: String!, mimeType: String!, originatingURL url: URL!)
+
+	@available(OSX 10.13, *)
+	@objc func _webView(_ webView: WKWebView!, requestUserMediaAuthorizationFor devices: _WKCaptureDevices, url: URL!, mainFrameURL: URL!, decisionHandler: ((Bool) -> Void)!) {
+		warn(url.absoluteString)
+		decisionHandler(true)
+	}
+
+	@available(OSX 10.12.3, *)
+	@objc func _webView(_ webView: WKWebView!, checkUserMediaPermissionFor url: URL!, mainFrameURL: URL!, frameIdentifier: UInt, decisionHandler: ((String?, Bool) -> Void)!) {
+		warn(url.absoluteString)
+		//decisionHandler(url.absoluteString, true)
+		decisionHandler("0x987654321", true)
+	}
+
+	// JS window.beforeunload() handler
+	func _webView(_ webView: WKWebView!, runBeforeUnloadConfirmPanelWithMessage message: String!, initiatedByFrame frame: WKFrameInfo!, completionHandler: ((Bool) -> Void)!) {
+		let alert = NSAlert()
+		alert.messageText = webView.title ?? ""
+		alert.addButton(withTitle: "Leave Page")
+		alert.addButton(withTitle: "Stay on Page")
+		alert.informativeText = "Are you sure you want to leave this page?" //message
+		// Safari 9.1+, Chrome 51+, & Firefox 44+ do not allow JS to customize the msgTxt. Thanks scammers.
+		alert.icon = NSApplication.shared.applicationIconImage
+		displayAlert(alert) { (response: NSApplication.ModalResponse) -> Void in completionHandler(response == .alertFirstButtonReturn) }
+ }
+
+	func _webView(_ webView: WKWebView, printFrame: WKFrameInfo) {
+		warn("JS: `window.print();`")
+#if STP
+		let printer = webView._printOperation(with: NSPrintInfo.shared)
+		printer?.showsPrintPanel = true
+		printer?.run()
+#endif
+	}
+}

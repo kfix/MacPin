@@ -86,23 +86,25 @@ struct UIEdgeInsets;
 - (UIViewController *)_webView:(WKWebView *)webView previewViewControllerForAnimatedImageAtURL:(NSURL *)url defaultActions:(WK_ARRAY(_WKElementAction *) *)actions elementInfo:(_WKActivatedElementInfo *)elementInfo imageSize:(CGSize)imageSize WK2_AVAILABLE(NA, 9_0);
 - (UIViewController *)_presentingViewControllerForWebView:(WKWebView *)webView WK2_AVAILABLE(NA, WK_IOS_TBA);
 #else
-- (NSMenu *)_webView:(WKWebView *)webView contextMenu:(NSMenu *)menu forElement:(_WKContextMenuElementInfo *)element WK2_AVAILABLE(WK_MAC_TBA, NA);
-- (NSMenu *)_webView:(WKWebView *)webView contextMenu:(NSMenu *)menu forElement:(_WKContextMenuElementInfo *)element userInfo:(id <NSSecureCoding>)userInfo WK2_AVAILABLE(WK_MAC_TBA, NA);
+- (NSMenu *)_webView:(WKWebView *)webView contextMenu:(NSMenu *)menu forElement:(_WKContextMenuElementInfo *)element WK_API_AVAILABLE(macosx(10.12));
+- (NSMenu *)_webView:(WKWebView *)webView contextMenu:(NSMenu *)menu forElement:(_WKContextMenuElementInfo *)element userInfo:(id <NSSecureCoding>)userInfo WK_API_AVAILABLE(macosx(10.12));
 - (void)_webView:(WKWebView *)webView getContextMenuFromProposedMenu:(NSMenu *)menu forElement:(_WKContextMenuElementInfo *)element userInfo:(id <NSSecureCoding>)userInfo completionHandler:(void (^)(NSMenu *))completionHandler WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_showWebView:(WKWebView *)webView WK_API_AVAILABLE(macosx(10.13.4));
+- (void)_focusWebView:(WKWebView *)webView WK_API_AVAILABLE(macosx(10.13.4));
+- (void)_unfocusWebView:(WKWebView *)webView WK_API_AVAILABLE(macosx(10.13.4));
+- (void)_webViewDidScroll:(WKWebView *)webView WK_API_AVAILABLE(macosx(10.13.4));
+- (void)_webViewRunModal:(WKWebView *)webView WK_API_AVAILABLE(macosx(10.13.4));
+//- (void)_webView:(WKWebView *)webView takeFocus:(_WKFocusDirection)direction WK_API_AVAILABLE(macosx(10.13.4));
+- (void)_webView:(WKWebView *)webView didNotHandleWheelEvent:(NSEvent *)event WK_API_AVAILABLE(macosx(10.13.4));
 
-/*! @abstract Displays a file upload panel.
- @param webView The web view invoking the delegate method.
- @param parameters Parameters describing the file upload control.
- @param frame Information about the frame whose file upload control initiated this call.
- @param completionHandler The completion handler to call after open panel has been dismissed. Pass the selected URLs if the user chose OK, otherwise nil.
- If you do not implement this method, the web view will behave as if the user selected the Cancel button.
- */
-#ifdef STP
-- (void)webView:(WKWebView *)webView runOpenPanelWithParameters:(WKOpenPanelParameters *)parameters initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(WK_ARRAY(NSURL *) * WK_NULLABLE_SPECIFIER URLs))completionHandler WK2_AVAILABLE(WK_MAC_TBA, NA);
-//- (void)webView:(WKWebView *)webView runOpenPanelWithParameters:(WKOpenPanelParameters *)parameters initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(NSArray<NSURL *> * _Nullable URLs))completionHandler WK_API_AVAILABLE(macosx(10.12));
+- (void)_webView:(WKWebView *)webView saveDataToFile:(NSData *)data suggestedFilename:(NSString *)suggestedFilename mimeType:(NSString *)mimeType originatingURL:(NSURL *)url WK_API_AVAILABLE(macosx(10.13.4));
+- (CGFloat)_webViewHeaderHeight:(WKWebView *)webView WK_API_AVAILABLE(macosx(10.13.4));
+- (CGFloat)_webViewFooterHeight:(WKWebView *)webView WK_API_AVAILABLE(macosx(10.13.4));
 
-#endif
-#endif
+- (void)_webView:(WKWebView *)webView drawHeaderInRect:(CGRect)rect forPageWithTitle:(NSString *)title URL:(NSURL *)url WK_API_AVAILABLE(macosx(10.13.4));
+- (void)_webView:(WKWebView *)webView drawFooterInRect:(CGRect)rect forPageWithTitle:(NSString *)title URL:(NSURL *)url WK_API_AVAILABLE(macosx(10.13.4));
+- (void)_webView:(WKWebView *)webView requestNotificationPermissionForSecurityOrigin:(WKSecurityOrigin *)securityOrigin decisionHandler:(void (^)(BOOL))decisionHandler WK_API_AVAILABLE(macosx(10.13.4));
+#endif // !TARGET_OS_IPHONE
 
 
 - (void)_webView:(WKWebView *)webView requestUserMediaAuthorizationForDevices:(_WKCaptureDevices)devices url:(NSURL *)url mainFrameURL:(NSURL *)mainFrameURL decisionHandler:(void (^)(BOOL authorized))decisionHandler WK_API_AVAILABLE(macosx(10.13), ios(11.0));

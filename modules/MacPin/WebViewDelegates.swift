@@ -182,6 +182,33 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 					return
 				// https://developer.apple.com/reference/foundation/nsurlerror
 				case (NSURLErrorDomain, NSURLErrorCancelled) where !webView.isLoading: return // ignore stopLoading() and HTTP redirects
+				case (NSURLErrorDomain, Int(CFNetworkErrors.cfurlErrorServerCertificateUntrusted.rawValue)):
+					warn("invalid cert ... need to allow to bypass via allowInsecure & reload?")
+					displayError(error as NSError, self)
+					// error[_WKRecoveryAttempterErrorKey]: <WKReloadFrameErrorRecoveryAttempter>
+					// https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/ErrorHandlingCocoa/ErrorObjectsDomains/ErrorObjectsDomains.html#//apple_ref/doc/uid/TP40001806-CH202-BBCJHJIG
+					if (error as NSError).localizedRecoverySuggestion != nil {
+						let nserror = error as NSError
+						//let rcerror = error as? RecoverableError
+						warn("recoverable! `\(nserror.localizedRecoverySuggestion)` opts: [\(nserror.localizedRecoveryOptions)]")
+						// https://github.com/WebKit/webkit/blob/1c25b3b7d83b54a1421f187fa01efad7d4d1429a/Source/WebKit/UIProcess/Cocoa/WKReloadFrameErrorRecoveryAttempter.mm#L61
+						if let wkrcattempter = nserror.userInfo[_WKRecoveryAttempterErrorKey] {
+								warn("wkrecovering! \(wkrcattempter)")
+								//(wkrcattempter as! _WKErrorRecoveryAttempting).attemptRecovery()
+								// ^^ rebrowses and loops the error ...
+								// probably need to add error[NSErrorPeerCertificateChainKey] to the temp cert store for [NSErrorFailingURLKey]
+								// or else frobble webView to not care about SSL validity...
+							//}
+						}
+					}
+
+					//warn(String(describing: (error as NSError).recoveryAttempter))
+					//warn(String(describing: (error as NSError).localizedRecoveryOptions))
+					//	if options = nil , then OK is the only choice ...
+					//let underlyingError = (error as NSError).userInfo[NSUnderlyingErrorKey] as? Error ?? error
+					//displayError(underlyingError as NSError, self)
+					//attemptRecovery()
+					fallthrough
 				default:
 					displayError(error as NSError, self)
 			}
@@ -330,6 +357,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		//return nil //window.open() -> undefined
 	}
 
+
 	func webViewDidClose(_ webView: WKWebView) {
 		warn("JS <\(webView.urlstr)>: `window.close();`")
 		dismiss() // FIXME: need to ensure webView was window.open()'d by a JS script
@@ -383,4 +411,12 @@ extension WebViewController: _WKDownloadDelegate {
 			}
 		}
 	}
+}
+
+extension WebViewController: WKUIDelegatePrivate {
+	func _webView(_ webView: WKWebView!, requestNotificationPermissionFor securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
+		warn(webView.url?.absoluteString ?? "")
+	}
+
+	// @objc func _webView(_ webView: WKWebView!, createWebViewWithConfiguration configuration: WKWebViewConfiguration !, forNavigationAction navigationAction: WKNavigationAction!, windowFeatures: WKWindowFeatures!, completionHandler: ((WKWebView?) -> Void)!)
 }
