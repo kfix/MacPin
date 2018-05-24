@@ -28,7 +28,7 @@ extension WebViewControllerOSX {
 		displayAlert(alert) { (response: NSApplication.ModalResponse) -> Void in completionHandler(response == .alertFirstButtonReturn ? true : false) }
 	}
 
-	func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String!) -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
 		let alert = NSAlert()
 		alert.messageText = webView.title ?? ""
 		alert.addButton(withTitle: "Submit")
@@ -271,13 +271,20 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 
 @objc extension WebViewControllerOSX { // WKUIDelegatePrivate
 
-	//@available(OSX 10.13.4, *, iOS 11.3)
+	@available(OSX 10.13.4, *, iOS 11.3)
 	@objc func _webView(_ webView: WKWebView!, requestGeolocationPermissionForFrame frame: WKFrameInfo!, decisionHandler: ((Bool) -> Void)!) {
 		warn(webView.url?.absoluteString ?? "")
 
-		decisionHandler(true)
-		// seems to be a no-op on OSX, still no wkgeolocationproviderosx ...
+		//TODO: prompt for approval which could "unlock" the thunk that uiClient will fire after handler(). thunk actaully calls the C api to push approval
+		// if unapproved, handle(false) & return now
 
+		if let mpwv = webView as? MPWebView {
+			Geolocator.shared.subscribeToLocationEvents(webview: mpwv)
+			// this should warm up the locator
+			// FIXME: do this with Async?
+		}
+
+		/*
 		// so lets do some yucky hackery to polyfill+reload once for the life of the tab
 		if let mpwv = webView as? MPWebView, mpwv.preinject("shim_html5_geolocation") {
 			mpwv.subscribeTo("MacPinPollStates")
@@ -286,6 +293,9 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 			mpwv.subscribeTo("deactivateGeolocation")
 			webView.reload() // hafta reload for the preinjection to happen
 		}
+		*/
+
+		decisionHandler(true) // signal that we are done
 	}
 
 	//func _webView(_ webView: WKWebView!, editorStateDidChange editorState: [AnyHashable : Any]!)

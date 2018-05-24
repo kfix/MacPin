@@ -7,11 +7,10 @@ var delegate = {}; // our delegate to receive events from the webview app
 var mapsTab, maps = {
 	url: "https://maps.google.com",
 	postinject: [],
-	preinject: ['shim_html5_notifications', 'shim_html5_geolocation'],
+	preinject: ['shim_html5_notifications'],
 	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
 	allowsMagnification: false // lets gmaps JS handle pinch-zooms
 };
-if ($.app.platform == "OSX") maps.subscribeTo.push("MacPinPollStates", "getGeolocation", "watchGeolocation", "deactivateGeolocation");
 var mapsAlt = Object.assign({}, maps, {url: "https://www.google.com/maps/?authuser=1"});
 var mapsLite = Object.assign({}, maps, {url: "https://www.google.com/maps/?force=lite"});
 var mapsGL = Object.assign({}, maps, {url: "https://www.google.com/maps/preview/?force=webgl"});

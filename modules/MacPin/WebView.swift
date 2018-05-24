@@ -8,24 +8,6 @@ import WebKitPrivates
 import JavaScriptCore
 import UTIKit
 
-/*
-var globalIconClient = WKIconDatabaseClientV1(
-	base: WKIconDatabaseClientBase(version: 1, clientInfo: nil),
-	didChangeIconForPageURL: { (iconDatabase, pageURL, clientInfo) -> Void in
-		warn("changed thunk!")
-		return
-	},
-	didRemoveAllIcons: { (iconDatabase, clientInfo) -> Void in
-		warn("thunk!")
-		return
-	},
-	iconDataReadyForPageURL: { (iconDatabase, pageURL, clientInfo) -> Void in
-		warn("ready thunk!")
-		return
-	}
-)
-*/
-
 extension WKWebView {
 	@objc(url) var urlstr: String {
 		get { return url?.absoluteString ?? "" }
@@ -75,6 +57,12 @@ extension WKWebView {
 }
 
 @objc class MPWebView: WKWebView, WebViewScriptExports {
+
+	static let decidePolicyForGeolocationPermissionRequestCallBack: WKPageDecidePolicyForGeolocationPermissionRequestCallback = { page, frame, origin, permissionRequest, clientInfo in
+		// FIXME: prompt?
+		warn()
+		WKGeolocationPermissionRequestAllow(permissionRequest)
+	}
 
 	//@objc dynamic var isLoading: Bool
 	//@objc dynamic var estimatedProgress: Double
@@ -282,6 +270,13 @@ extension WKWebView {
 		"https".withCString { https in
 			WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(https))
 		}
+
+		var uiClient = WKPageUIClientV2()
+		uiClient.base.version = 2
+#if os(OSX)
+		uiClient.decidePolicyForGeolocationPermissionRequest = MPWebView.decidePolicyForGeolocationPermissionRequestCallBack
+#endif
+		WKPageSetPageUIClient(_pageRefForTransitionToWKWebView, &uiClient.base)
 	}
 
 	/*
@@ -410,6 +405,7 @@ extension WKWebView {
 		ProcessInfo.processInfo.endActivity(act)
 	}
 
+	@discardableResult
 	func loadURL(_ urlstr: String) -> Bool {
 		if let url = NSURL(string: urlstr) {
 			gotoURL(url as NSURL)
@@ -430,6 +426,7 @@ extension WKWebView {
 			})
 	}
 
+	@discardableResult
 	func loadIcon(_ icon: String) -> Bool {
 		if let url = NSURL(string: icon), !icon.isEmpty {
 			favicon.url = url
@@ -456,18 +453,25 @@ extension WKWebView {
 		styles.remove(at: idx)
 	}
 
+	@discardableResult
 	func style(_ css: String) -> Bool {
 		if !styles.contains(css) && loadUserStyleSheetFromBundle(css, webctl: configuration.userContentController, onlyForTop: false) { styles.append(css); return true }
 		return false
 	}
+
+	@discardableResult
 	func mainStyle(_ css: String) -> Bool {
 		if !styles.contains(css) && loadUserStyleSheetFromBundle(css, webctl: configuration.userContentController, onlyForTop: true) { styles.append(css); return true }
 		return false
 	}
+
+	@discardableResult
 	func preinject(_ script: String) -> Bool {
 		if !injected.contains(script) && loadUserScriptFromBundle(script, webctl: configuration.userContentController, inject: .atDocumentStart, onlyForTop: false) { injected.append(script); return true }
 		return false
 	}
+
+	@discardableResult
 	func postinject(_ script: String) -> Bool {
 		if !injected.contains(script) && loadUserScriptFromBundle(script, webctl: configuration.userContentController, inject: .atDocumentEnd, onlyForTop: false) { injected.append(script); return true }
 		return false

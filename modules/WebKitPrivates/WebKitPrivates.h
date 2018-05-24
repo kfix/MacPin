@@ -14,6 +14,7 @@
 #import "_WKFormInputSession.h"
 #import "_WKLinkIconParameters.h"
 #import "_WKIconLoadingDelegate.h"
+#import "_WKErrorRecoveryAttempting.h"
 #import "WKProcessPoolPrivate.h"
 #import "JSContext+Privates.h"
 #import "JSContextRefPrivate.h"
@@ -43,6 +44,10 @@
 //#import "WKUIDelegate+MediaStream.h"
 #endif
 #import "WKErrorRef.h"
+//#import "WKReloadFrameErrorRecoveryAttempter.h"
+#import "WKGeolocationPosition.h"
+#import "WKGeolocationPermissionRequest.h"
+#import "WKGeolocationManager.h"
 
 /* things to integrate:
 	Remote debuggers for app.js: https://github.com/WebKit/webkit/commit/a06b5fecb8e69eccdc7ee2a668868740750d260c
