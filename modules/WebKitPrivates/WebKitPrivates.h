@@ -45,9 +45,14 @@
 #endif
 #import "WKErrorRef.h"
 //#import "WKReloadFrameErrorRecoveryAttempter.h"
+
 #import "WKGeolocationPosition.h"
 #import "WKGeolocationPermissionRequest.h"
 #import "WKGeolocationManager.h"
+
+#import "WKNotificationPermissionRequest.h"
+#import "WKNotificationManager.h"
+#import "WKNotification.h"
 
 /* things to integrate:
 	Remote debuggers for app.js: https://github.com/WebKit/webkit/commit/a06b5fecb8e69eccdc7ee2a668868740750d260c

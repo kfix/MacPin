@@ -64,6 +64,12 @@ extension WKWebView {
 		WKGeolocationPermissionRequestAllow(permissionRequest)
 	}
 
+	static let decidePolicyForNotificationPermissionRequest: WKPageDecidePolicyForNotificationPermissionRequestCallback = { page, securityOrigin, permissionRequest, clientInfo in
+		warn()
+		WKNotificationPermissionRequestAllow(permissionRequest)
+		//WKNotificationPermissionRequestDeny(permissionRequest)
+	}
+
 	//@objc dynamic var isLoading: Bool
 	//@objc dynamic var estimatedProgress: Double
 
@@ -200,7 +206,6 @@ extension WKWebView {
 		}
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
 #if os(OSX)
-		//geolocationProvider = <GeolocationProviderMock>(context)
 		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
 		prefs._fullScreenEnabled = true
@@ -275,6 +280,7 @@ extension WKWebView {
 		uiClient.base.version = 2
 #if os(OSX)
 		uiClient.decidePolicyForGeolocationPermissionRequest = MPWebView.decidePolicyForGeolocationPermissionRequestCallBack
+		uiClient.decidePolicyForNotificationPermissionRequest = MPWebView.decidePolicyForNotificationPermissionRequest
 #endif
 		WKPageSetPageUIClient(_pageRefForTransitionToWKWebView, &uiClient.base)
 	}

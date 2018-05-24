@@ -41,7 +41,7 @@ extension NSObject: JSExport {
 // FIXME: AppScript needs a HandlerMethods enum instead of just tryFunc("unsafe-string")s everywhere....
 extension JSValue {
 	@discardableResult
-	func tryFunc (_ method: String, argv: [Any?]) -> Bool {
+	func tryFunc (_ method: String, argv: [Any]) -> Bool {
 		if self.isObject && self.hasProperty(method) {
 			warn("this.\(method) <- \(argv)")
 			let ret = self.invokeMethod(method, withArguments: argv)
@@ -422,12 +422,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	func postHTML5Notification(_ object: [String:AnyObject]) {
 		// object's keys conforming to:
 		//   https://developer.mozilla.org/en-US/docs/Web/API/notification/Notification
-
-		// there is an API for this in WebKit: http://playground.html5rocks.com/#simple_notifications
 		//  https://developer.apple.com/library/iad/documentation/AppleApplications/Conceptual/SafariJSProgTopics/Articles/SendingNotifications.html
-		//  but all my my WKWebView's report 2 (access denied) and won't display auth prompts
-		//  https://github.com/WebKit/webkit/search?q=webnotificationprovider  no api delegates in WK2 for notifications or geoloc yet
-		//  http://stackoverflow.com/questions/14237086/how-to-handle-html5-web-notifications-with-a-cocoa-webview
 #if os(OSX)
 		let note = NSUserNotification()
 		for (key, value) in object {

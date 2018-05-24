@@ -29,6 +29,8 @@ import JavaScriptCore
 			//webview._historyDelegate = self
 		}
 
+		UserNotifier.shared.subscribe(webview: webview)
+
 #if DEBUG
 		webview._diagnosticLoggingDelegate = self
 #endif
@@ -42,7 +44,7 @@ import JavaScriptCore
 	required init?(coder aDecoder: NSCoder) { super.init(coder: aDecoder) }
 	required init!(webview: MPWebView) {
 		super.init(nibName: nil, bundle: nil)
-		webview.UIDelegate = self //alert(), window.open(): see <platform>/WebViewDelegates
+		webview.uiDelegate = self //alert(), window.open(): see <platform>/WebViewDelegates
 		webview.navigationDelegate = self // allows/denies navigation actions: see WebViewDelegates
 #if DEBUG
 		webview._diagnosticLoggingDelegate = self

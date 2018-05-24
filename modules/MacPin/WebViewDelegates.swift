@@ -338,10 +338,10 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		if (windowFeatures.allowsResizing ?? 0) == 1 {
 			if let window = view.window {
 				let newframe = CGRect(
-					x: CGFloat(windowFeatures.x ?? window.frame.origin.x as NSNumber),
-					y: CGFloat(windowFeatures.y ?? window.frame.origin.y as NSNumber),
-					width: CGFloat(windowFeatures.width ?? window.frame.size.width as NSNumber),
-					height: CGFloat(windowFeatures.height ?? window.frame.size.height as NSNumber)
+					x: CGFloat(truncating: windowFeatures.x ?? window.frame.origin.x as NSNumber),
+					y: CGFloat(truncating: windowFeatures.y ?? window.frame.origin.y as NSNumber),
+					width: CGFloat(truncating: windowFeatures.width ?? window.frame.size.width as NSNumber),
+					height: CGFloat(truncating: windowFeatures.height ?? window.frame.size.height as NSNumber)
 				)
 				if !webView.isInFullScreenMode && (!window.styleMask.contains(.fullScreen)) {
 					warn("resizing window to match window.open() size parameters passed: origin,size[\(newframe)]")
@@ -395,8 +395,9 @@ extension WebViewController: _WKDownloadDelegate {
 
 // extensions WebViewController: WebsitePoliciesDelegate // FIXME: STP v20: per-site preferences: https://github.com/WebKit/webkit/commit/d9f6f7249630d7756e4b6ca572b29ac61d5c38d7
 
-@objc extension WebViewController: _WKIconLoadingDelegate {
-	@objc func webView(_ webView: WKWebView, shouldLoadIconWithParameters parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Void) -> Void) {
+extension WebViewController: _WKIconLoadingDelegate {
+	@objc(webView:shouldLoadIconWithParameters:completionHandler:) // give WK2 what it wants...
+	func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Void) -> Void) { // but swiftc insists on this ...
 		completionHandler() { data in
 			// data.length
 			//parameters . mimeType iconType
@@ -416,6 +417,8 @@ extension WebViewController: _WKDownloadDelegate {
 extension WebViewController: WKUIDelegatePrivate {
 	func _webView(_ webView: WKWebView!, requestNotificationPermissionFor securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
 		warn(webView.url?.absoluteString ?? "")
+		//FIXME: prompt
+		decisionHandler(true) // allow
 	}
 
 	// @objc func _webView(_ webView: WKWebView!, createWebViewWithConfiguration configuration: WKWebViewConfiguration !, forNavigationAction navigationAction: WKNavigationAction!, windowFeatures: WKWindowFeatures!, completionHandler: ((WKWebView?) -> Void)!)
