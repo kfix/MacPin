@@ -260,13 +260,8 @@ extension WKWebView {
 #if STP
 		_applicationNameForUserAgent = "Version/11.1 Safari/605.1.33"
 #else
-		_applicationNameForUserAgent = "Version/9.0 Safari/600.5.17"
+		_applicationNameForUserAgent = "Version/10.0 Safari/603.5.17"
 #endif
-#elseif os(iOS)
-		_applicationNameForUserAgent = "Version/8.0 Mobile/12F70 Safari/600.1.4"
-#endif
-		if let agent = agent { if !agent.isEmpty { _customUserAgent = agent } }
-
 		let context = WKPageGetContext(_pageRefForTransitionToWKWebView)
 		self.context = context
 		"http".withCString { http in
@@ -278,11 +273,13 @@ extension WKWebView {
 
 		var uiClient = WKPageUIClientV2()
 		uiClient.base.version = 2
-#if os(OSX)
 		uiClient.decidePolicyForGeolocationPermissionRequest = MPWebView.decidePolicyForGeolocationPermissionRequestCallBack
 		uiClient.decidePolicyForNotificationPermissionRequest = MPWebView.decidePolicyForNotificationPermissionRequest
-#endif
 		WKPageSetPageUIClient(_pageRefForTransitionToWKWebView, &uiClient.base)
+#elseif os(iOS)
+		_applicationNameForUserAgent = "Version/8.0 Mobile/12F70 Safari/600.1.4"
+#endif
+		if let agent = agent { if !agent.isEmpty { _customUserAgent = agent } }
 	}
 
 	/*
@@ -327,6 +324,7 @@ extension WKWebView {
 		}
 
 		if let url = url { gotoURL(url) } else { return nil }
+		//too bad I can't customize the JSValue of this construction before it is finalized in the JSContext ...
 	}
 
 	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
@@ -335,6 +333,8 @@ extension WKWebView {
 	}
 
 	override var description: String { return "<\(type(of: self))> `\(title ?? String())` [\(urlstr)]" }
+	// no way to customize the __proto__.toString() for the exported JS WebViews:
+	// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSWrapperMap.mm#L138 JSObject *objectWithCustomBrand
 	//func toString() -> String { return description } // $.browser.tabs[0].__proto__.toString = function(){ return this.title; }
 
 	deinit {
@@ -521,9 +521,11 @@ extension WKWebView {
 		})
 	}
 
-#if os(OSX)
-	// dragDestinationActionMaskForDraggingInfo -> WKDragDestinationActionAny https://github.com/WebKit/webkit/commit/5e1e5eab17cfded9ea9eaa9b46075b78d68575e4
+	//webview._getMainResourceDataWithCompletionHandler() { (data: Data?, err: Error?) -> Void in }
+	//webview._getContentsAsStringWithCompletionHandler() { (str: String?, err: Error?) -> Void in }
+	//webview._getApplicationManifestWithCompletionHandler() { (manifest: _WKApplicationManifest?) -> Void in }
 
+#if os(OSX)
 	// FIXME: unified save*()s like Safari does with a drop-down for "Page Source" & Web Archive, or auto-mime for single non-HTML asset
 	@objc func saveWebArchive() {
 		_getWebArchiveData() { [unowned self] (data: Data?, err: Error?) -> Void in
@@ -651,8 +653,13 @@ extension WKWebView {
 #if STP
 		// _printOperation not avail in 10.11.4's WebKit
 		let printer = _printOperation(with: NSPrintInfo.shared)
+		//let printer = _printOperation(with: NSPrintInfo.shared, forFrame: WKFrame)
 		printer?.showsPrintPanel = true
-		printer?.run()
+		if let window = self.window {
+			printer?.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
+		} else {
+			printer?.run()
+		}
 #endif
 	}
 
