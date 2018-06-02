@@ -33,6 +33,8 @@
 #import "WKURL.h"
 #import "WKURLCF.h"
 #import "WKData.h"
+#import "WKDragDestinationAction.h"
+#import "_WKApplicationManifest.h"
 #import "WKWebView+Privates.h"
 //#import "CFNetworkSPI.h"
 #ifdef STP

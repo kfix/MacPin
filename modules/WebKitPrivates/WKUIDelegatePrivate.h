@@ -29,12 +29,11 @@
 #if WK_API_ENABLED
 
 #import <WebKit/WKSecurityOrigin.h>
-#import "_WKActivatedElementInfo.h"
+#import <WebKitPrivates/_WKActivatedElementInfo.h>
 
 #ifdef STP
 #if 101100 >= __MAC_OS_X_VERSION_MAX_ALLOWED
-//#import <WebKit/WKOpenPanelParameters.h>
-#import "WKOpenPanelParameters.h"
+#import <WebKitPrivates/WKOpenPanelParameters.h>
 #endif
 #endif
 
@@ -61,11 +60,13 @@ struct UIEdgeInsets;
 
 - (void)_webViewClose:(WKWebView *)webView;
 - (void)_webViewFullscreenMayReturnToInline:(WKWebView *)webView;
-- (void)_webViewDidEnterFullscreen:(WKWebView *)webView WK2_AVAILABLE(10_11, 8_3);
-- (void)_webViewDidExitFullscreen:(WKWebView *)webView WK2_AVAILABLE(10_11, 8_3);
+- (void)_webViewDidEnterFullscreen:(WKWebView *)webView WK_API_AVAILABLE(macosx(10.11), ios(8.3));
+- (void)_webViewDidExitFullscreen:(WKWebView *)webView WK_API_AVAILABLE(macosx(10.11), ios(8.3));
+- (void)_webViewRequestPointerLock:(WKWebView *)webView WK_API_AVAILABLE(macosx(10.12.3));
+- (void)_webViewDidLosePointerLock:(WKWebView *)webView WK_API_AVAILABLE(macosx(10.12.3));
 
-- (void)_webView:(WKWebView *)webView imageOrMediaDocumentSizeChanged:(CGSize)size WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-- (NSDictionary *)_dataDetectionContextForWebView:(WKWebView *)webView WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+- (void)_webView:(WKWebView *)webView imageOrMediaDocumentSizeChanged:(CGSize)size WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+- (NSDictionary *)_dataDetectionContextForWebView:(WKWebView *)webView WK_API_AVAILABLE(macosx(10.12), ios(10.0));
 #if TARGET_OS_IPHONE
 - (BOOL)_webView:(WKWebView *)webView shouldIncludeAppLinkActionsForElement:(_WKActivatedElementInfo *)element WK2_AVAILABLE(NA, 9_0);
 - (NSArray *)_webView:(WKWebView *)webView actionsForElement:(_WKActivatedElementInfo *)element defaultActions:(WK_ARRAY(_WKElementAction *) *)defaultActions;
@@ -111,9 +112,9 @@ struct UIEdgeInsets;
 - (void)_webView:(WKWebView *)webView checkUserMediaPermissionForURL:(NSURL *)url mainFrameURL:(NSURL *)mainFrameURL frameIdentifier:(NSUInteger)frameIdentifier decisionHandler:(void (^)(NSString *salt, BOOL authorized))decisionHandler WK_API_AVAILABLE(macosx(10.12.3), ios(10.3));
 - (void)_webView:(WKWebView *)webView mediaCaptureStateDidChange:(_WKMediaCaptureState)state WK_API_AVAILABLE(macosx(10.13), ios(11.0));
 
-- (void)_webView:(WKWebView *)webView createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration forNavigationAction:(WKNavigationAction *)navigationAction windowFeatures:(WKWindowFeatures *)windowFeatures completionHandler:(void (^)(WKWebView *webView))completionHandler WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
+- (void)_webView:(WKWebView *)webView createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration forNavigationAction:(WKNavigationAction *)navigationAction windowFeatures:(WKWindowFeatures *)windowFeatures completionHandler:(void (^)(WKWebView *webView))completionHandler WK_API_AVAILABLE(macosx(10.13), ios(11.0));
 
-- (void)_webView:(WKWebView *)webView runBeforeUnloadConfirmPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(BOOL result))completionHandler WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
+- (void)_webView:(WKWebView *)webView runBeforeUnloadConfirmPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(BOOL result))completionHandler WK_API_AVAILABLE(macosx(10.13), ios(11.0));
 
 - (void)_webView:(WKWebView *)webView requestGeolocationPermissionForFrame:(WKFrameInfo *)frame decisionHandler:(void (^)(BOOL allowed))decisionHandler WK_API_AVAILABLE(macosx(10.13.4), ios(11.3));
 

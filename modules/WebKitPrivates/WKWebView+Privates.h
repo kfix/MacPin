@@ -46,7 +46,7 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 
 #import "WKBrowsingContextHandle.h"
 @class WKBrowsingContextHandle;
-
+@class _WKApplicationManifest;
 @class _WKIconLoadingDelegate;
 @class _WKThumbnailView;
 
@@ -94,11 +94,9 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 
 #ifdef STP
 @property (nonatomic, setter=_setDrawsBackground:) BOOL _drawsBackground;
-@property (nonatomic, weak, setter=_setInputDelegate:) id <_WKInputDelegate> _inputDelegate WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 // https://github.com/WebKit/webkit/commit/0dfc67a174b79a8a401cf6f60c02150ba27334e5
 - (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo; // prints top frame
 //- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-@property (strong, nonatomic, setter=_setInspectorAttachmentView:) NSView *_inspectorAttachmentView WK2_AVAILABLE(10_11, NA);
 
 // TODO: make Status Bar from NSTrackingArea's tooltips
 // https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/EventOverview/TrackingAreaObjects/TrackingAreaObjects.html#//apple_ref/doc/uid/10000060i-CH8-SW1
@@ -129,25 +127,31 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 - (void)_loadAlternateHTMLString:(NSString *)string baseURL:(NSURL *)baseURL forUnreachableURL:(NSURL *)unreachableURL;
 - (void)_getMainResourceDataWithCompletionHandler:(void (^)(NSData *, NSError *))completionHandler;
 - (void)_getWebArchiveDataWithCompletionHandler:(void (^)(NSData *, NSError *))completionHandler;
+- (void)_getContentsAsStringWithCompletionHandler:(void (^)(NSString *, NSError *))completionHandler WK_API_AVAILABLE(macosx(10.13), ios(11.0));
+- (void)_getApplicationManifestWithCompletionHandler:(void (^)(_WKApplicationManifest *))completionHandler WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
 @property (nonatomic, readonly) NSURL *_unreachableURL;
 @property (nonatomic, readonly) NSURL *_committedURL;
 @property (nonatomic, readonly) NSString *_MIMEType;
-@property (nonatomic, weak, setter=_setDiagnosticLoggingDelegate:) id <_WKDiagnosticLoggingDelegate> _diagnosticLoggingDelegate WK2_AVAILABLE(10_11, 9_0);
-//https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKFormDelegate.h
-@property (nonatomic, weak, setter=_setFormDelegate:) id <_WKFormDelegate> _formDelegate;
+@property (nonatomic, weak, setter=_setDiagnosticLoggingDelegate:) id <_WKDiagnosticLoggingDelegate> _diagnosticLoggingDelegate WK_API_AVAILABLE(macosx(10.11), ios(9.0));
+//https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKFormDelegate.h
+//@property (nonatomic, weak, setter=_setFormDelegate:) id <_WKFormDelegate> _formDelegate;
 
 @property (nonatomic, weak, setter=_setFindDelegate:) id <_WKFindDelegate> _findDelegate;
 - (void)_findString:(NSString *)string options:(_WKFindOptions)options maxCount:(NSUInteger)maxCount;
 - (void)_countStringMatches:(NSString *)string options:(_WKFindOptions)options maxCount:(NSUInteger)maxCount;
 - (void)_hideFindUI;
 
+@property (nonatomic, weak, setter=_setInputDelegate:) id <_WKInputDelegate> _inputDelegate WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+
 // Icon delegate
 // https://github.com/WebKit/webkit/commit/583510ef68c8aa56558c17263791b5cd8f762f99
 @property (nonatomic, weak, setter=_setIconLoadingDelegate:) id <_WKIconLoadingDelegate> _iconLoadingDelegate;
 
+@property (strong, nonatomic, setter=_setInspectorAttachmentView:) NSView *_inspectorAttachmentView WK_API_AVAILABLE(macosx(10.13.4));
+
 // https://github.com/WebKit/webkit/commit/cabc571fb1a8b5d599592662d4823af181f5dab3#diff-8e23aa6fa7b7953093696656facbb583
-@property (nonatomic, setter=_setThumbnailView:) _WKThumbnailView *_thumbnailView WK_API_AVAILABLE(macosx(WK_MAC_TBA));
-@property (nonatomic, setter=_setIgnoresAllEvents:) BOOL _ignoresAllEvents WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+@property (nonatomic, setter=_setThumbnailView:) _WKThumbnailView *_thumbnailView WK_API_AVAILABLE(macosx(10.13.4));
+@property (nonatomic, setter=_setIgnoresAllEvents:) BOOL _ignoresAllEvents WK_API_AVAILABLE(macosx(10.13.4));
 
 @property (nonatomic, setter=_setScrollPerformanceDataCollectionEnabled:) BOOL _scrollPerformanceDataCollectionEnabled WK_API_AVAILABLE(macosx(10.11), ios(9.0));
 @property (nonatomic, readonly) NSArray *_scrollPerformanceData WK_API_AVAILABLE(macosx(10.11), ios(9.0));

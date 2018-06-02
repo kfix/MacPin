@@ -301,7 +301,22 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 	//func _webView(_ webView: WKWebView!, editorStateDidChange editorState: [AnyHashable : Any]!)
 	//func _webView(_ webView: WKWebView!, requestNotificationPermissionForSecurityOrigin securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!)
 
-	// func _webView(_ webView: WKWebView!, saveDataToFile data: Data!, suggestedFilename: String!, mimeType: String!, originatingURL url: URL!)
+	// handler for PDFViewer's Save-to-File button (blobbed PDFs)
+	@objc func _webView(_ webView: WKWebView!, saveDataToFile data: Data!, suggestedFilename: String!, mimeType: String!, originatingURL url: URL!) {
+		warn(url.description)
+		//pop open a save Panel to dump data into file
+		let saveDialog = NSSavePanel()
+		saveDialog.canCreateDirectories = true
+		saveDialog.nameFieldStringValue = suggestedFilename
+		if let window = webview.window {
+			NSApplication.shared.requestUserAttention(.informationalRequest)
+			saveDialog.beginSheetModal(for: window) { (result: NSApplication.ModalResponse) -> Void in
+				if let url = saveDialog.url, result == .OK {
+					FileManager.default.createFile(atPath: url.path, contents: data, attributes: nil)
+				}
+			}
+		}
+	}
 
 	@available(OSX 10.13, *)
 	@objc func _webView(_ webView: WKWebView!, requestUserMediaAuthorizationFor devices: _WKCaptureDevices, url: URL!, mainFrameURL: URL!, decisionHandler: ((Bool) -> Void)!) {
@@ -336,4 +351,18 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 		printer?.run()
 #endif
 	}
+
+	//@objc func _webView(_ webView: WKWebView!, drawHeaderInRect rect: CGRect, forPageWithTitle title: String!, URL url: URL!) { warn(); }
+	// webview._webViewHeaderHeight
+	//@objc func _webView(_ webView: WKWebView!, drawFooterInRect rect: CGRect, forPageWithTitle title: String!, URL url: URL!) { warn(); }
+	// webview._webViewFooterHeight
+
+	@available(OSX 10.13, *, iOS 11.0)
+	@objc func webView(_ webView: WebView!, dragDestinationActionMaskForDraggingInfo draggingInfo: NSDraggingInfo!) -> Int {
+		warn()
+		return Int(WKDragDestinationAction.any.rawValue) // accept the drag
+		// .none .DHTML .edit .load
+	}
+	// @objc func _webView(_ webView: WKWebView!, getContextMenuFromProposedMenu menu: NSMenu!, forElement element: _WKContextMenuElementInfoQ, userInfo: Any!, completionHandler: ((NSMenu) -> Void)!) {}
+
 }
