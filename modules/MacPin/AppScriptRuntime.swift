@@ -2,9 +2,6 @@
 ///
 /// Creates a singleton-instance of JavaScriptCore for intepreting bundled javascripts to control a MacPin app
 
-// make a Globals struct with a member for each thing to expose under `$`: browser, app, WebView, etc..
-	// ES6 mods enabled for STP v21? https://github.com/WebKit/webkit/commit/fd763768344f941863054d03968d78dd388b8d15
-
 #if os(OSX)
 import AppKit
 import OSAKit
@@ -70,10 +67,29 @@ extension JSValue {
 			/*startingLineNumber:*/ Int32(1),
 			/*exception:*/ UnsafeMutablePointer(exception.jsValueRef)
 		) /*else { return nil }*/
+
 		if jsval != nil { return JSValue(jsValueRef: jsval, in: context) }
+		// else if exception.jsValueRef != nil { return exception.jsValueRef }
+		// http://ilya.puchka.me/extending-native-code-with-javascriptcore/
 		return nil
 	}
 
+}
+
+@objc protocol AppScriptConsoleExports: JSExport {
+	//var log: @convention(block) (String) -> Void { get }
+		// FIXME: imitate JSConsole or JSConsoleClient to intercept built-in console.* support instead of shimming blocks
+		// https://github.com/WebKit/webkit/commits/master/Source/JavaScriptCore/runtime/ConsoleTypes.h
+		// context.globalObject.consoleClient = bluh
+		// let console: JSObject = context.globalObject.objectForKeyedSubscript("console")
+		// console.invokeMethod("log", withArguments: ["hello console.log"])
+		// console.objectForKeyedSubscript("log") == JSFunction
+	func log(_ msg: String)
+}
+
+class AppScriptConsole: NSObject, AppScriptConsoleExports {
+	//let log: @convention(block) (String) -> Void = { msg in warn(msg) }
+	func log(_ msg: String) { warn(msg) }
 }
 
 @objc protocol AppScriptExports : JSExport { // '$.app'
@@ -105,10 +121,14 @@ extension JSValue {
 	func evalJXA(_ script: String)
 	func callJXALibrary(_ library: String, _ call: String, _ args: [AnyObject])
 #endif
+	var nativeModules: [String: Any] { get }
 }
 
 class AppScriptRuntime: NSObject, AppScriptExports  {
-	static let shared = AppScriptRuntime(global: "$") // create & export the singleton
+	static let legacyGlobal = "$" //sorry JQuery ...
+	static let legacyAppGlobal = "app" // => $.app
+	static let legacyAppFile = "app" // => site/app.js
+	static let shared = AppScriptRuntime(global: AppScriptRuntime.legacyGlobal) // create & export the singleton
 
 	var context = JSContext(virtualMachine: JSVirtualMachine())
 	var jsdelegate: JSValue
@@ -145,7 +165,14 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	//static func(extend: mountObj) { }
 
-	init(global: String = "$") { // FIXME: ever heard of jQuery?
+	var nativeModules: [String: Any] = [
+		"launchedWithURL": "",
+		"WebView": MPWebView.self,
+		"keychain": SSKeychain.self,
+		"console": AppScriptConsole()
+	]
+
+	init(global: String = AppScriptRuntime.legacyGlobal) {
 		context?.name = "AppScriptRuntime"
 		jsdelegate = JSValue(newObjectIn: context) //default property-less delegate obj // FIXME: #11 make an App() from ES6 class
 #if SAFARIDBG
@@ -160,29 +187,32 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		//context._debuggerRunLoop = CFRunLoopRef // FIXME: make a new thread for REPL and Web Inspector console eval()s
 
 		exports = JSValue(newObjectIn: context)
-		exports.setObject("", forKeyedSubscript: "launchedWithURL" as NSString) // FIXME: use context.currentArguments ?
-		//exports.setObject(GlobalUserScripts, forKeyedSubscript: "globalUserScripts")
-		// FIXME: make .extend methods for all MacPin classes that want to export constructors?
-		exports.setObject(MPWebView.self, forKeyedSubscript: "WebView" as NSString) // `new $.WebView({})` WebView -> [object MacPin.WebView]
-		exports.setObject(SSKeychain.self, forKeyedSubscript: "keychain" as NSString)
+		context?.globalObject.setObject(exports, forKeyedSubscript: global as NSString)
 		XMLHttpRequest().extend(context) // allows `new XMLHTTPRequest` for doing xHr's
 		//FIXME: extend Fetch API instead: https://facebook.github.io/react-native/docs/network.html
 
-		// set console.log to NSBlock that will call warn()
-		let logger: @convention(block) (String) -> Void = { msg in warn(msg) }
-		let console = JSValue(newObjectIn: context)
-		console?.setObject(unsafeBitCast(logger, to: AnyObject.self), forKeyedSubscript: "log" as NSString)
-		context?.globalObject.setObject(console, forKeyedSubscript: "console" as NSString) // overrides JSC's built-in
-
-		// FIXME: imitate JSConsole or JSConsoleClient to intercept built-in console.* support instead of shimming blocks
-		// https://github.com/WebKit/webkit/commits/master/Source/JavaScriptCore/runtime/ConsoleTypes.h
-		// context.globalObject.consoleClient = bluh
-		// let console: JSObject = context.globalObject.objectForKeyedSubscript("console")
-		// console.invokeMethod("log", withArguments: ["hello console.log"])
-		// console.objectForKeyedSubscript("log") == JSFunction
-
-		context?.globalObject.setObject(exports, forKeyedSubscript: global as NSString)
 		super.init()
+
+		let reccer: @convention(block) (String) -> Any = { [weak self] mod in return self!.nativeModules[mod] }
+		// implement Electrino's basic `require()` to import our native "modules"
+		context?.globalObject.setObject(reccer, forKeyedSubscript: "require" as NSString )
+		// JSC doesn't implement ES6 require like WK/WebCore does so we're free to overload it.
+
+		// TODO: check for site/macpin.js, which bootstraps any desired native mods from MP to the global namespace
+		//   if macpin.js doesn't exist, fall back to a legacy-compatible mapping for `$.*`:
+
+		// TODO: allow passing in state to the require('mod', ...state) (ie. launchedWithURL, globalUserScripts)
+
+		context?.evaluateScript("""
+			Object.assign(this, {
+				"console": require('console')
+			});
+			Object.assign(\(global), {
+				"launchedWithURL": require('launchedWithURL'),
+				"WebView": require('WebView'),
+				"keychain": require('keychain')
+			});
+		""")
 	}
 
 	override var description: String { return "<\(type(of: self))> [\(appPath)] `\(String(describing: context?.name))`" }
@@ -205,8 +235,15 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 */
 
 	func loadSiteApp() {
-		let app = (Bundle.main.object(forInfoDictionaryKey:"MacPin-AppScriptName") as? String) ?? "app"
-		context?.objectForKeyedSubscript("$").setObject(self, forKeyedSubscript: "app" as NSString)
+		let app = (Bundle.main.object(forInfoDictionaryKey:"MacPin-AppScriptName") as? String) ?? AppScriptRuntime.legacyAppFile
+		guard let gblExport = context?.objectForKeyedSubscript(AppScriptRuntime.legacyGlobal) else { return; }
+		let appExport = gblExport.objectForKeyedSubscript(AppScriptRuntime.legacyAppGlobal)
+		if let appExport = appExport, !appExport.isUndefined && !appExport.isNull {
+			// don't re-export if $.app is already exported
+		} else {
+			gblExport.setObject(self, forKeyedSubscript: AppScriptRuntime.legacyAppGlobal as NSString)
+			// https://bugs.swift.org/browse/SR-6476 can't do appExport = self
+		}
 
 		if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
 
@@ -269,6 +306,14 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				context?.evaluateScript("eval = null;") // Saaaaaaafe Plaaaaace
 #endif
 				//return jsdelegate.thisEval(script as String, sourceURL: scriptURL) // TODO: issue #11 - make `this` the delegate in app scripts, not the return
+				// or somehow implement ES6's `export` to allow explicit designation of objects to be exposed into the parent/requiring namespace
+				//   export is bound-in as an NSBlock to a new JSContext we'll evaluate the scriptFile within
+				//   the block will buffer up exported JSValues to a native dict-var
+				//     JSValue.name will define the key for exposure to parent
+				//   when evaluate completes, the dict can be merged/Object.assign()d into the globalContext
+				//     can JSValues be copied between JSContexts like that?
+				//       as long as the contexts have the same VM, yes
+				//     https://github.com/pojala/electrino/pull/5/files
 				return context?.evaluateScript(script as String, withSourceURL: scriptURL as URL?)
 			} else {
 				// hmm, using self.context for the syntax check seems to evaluate the contents anyways
