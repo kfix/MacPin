@@ -86,12 +86,15 @@ HistEvent _ev;
 - (NSString*) gets {
     // line includes the trailing newline
     int count;
+    NSString *nline;
+    NSCharacterSet *blanks = [NSCharacterSet whitespaceAndNewlineCharacterSet];
     const char* line = el_gets(_el, &count);
 
     if (count > 0) {
-        history(_hist, &_ev, H_ENTER, line);
-
-        return [NSString stringWithCString:line encoding:NSUTF8StringEncoding];
+        nline = [NSString stringWithCString:line encoding:NSUTF8StringEncoding];
+        if ([[nline stringByTrimmingCharactersInSet: blanks] length] > 0)
+            history(_hist, &_ev, H_ENTER, line); // push into history
+        return nline;
     }
 
     return nil;
