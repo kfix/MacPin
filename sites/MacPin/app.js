@@ -96,7 +96,8 @@ delegate.launchRepl = () => {
 		} catch(e) {
 			result = e;
 		}
-		var ret = delegate.REPLprint(result);
+		var ret = $.app.emit('printToREPL', result);
+		console.log(ret)
 		console.log(ret);
 		tab.evalJS(`window.dispatchEvent(new window.CustomEvent('returnREPL',{'detail':{'result': ${ret}}}));`);
 		tab.evalJS(`returnREPL('${escape(ret)}');`);
@@ -107,10 +108,9 @@ delegate.launchRepl = () => {
 	var cfgRepl = {
 		transparent: true,
 		url: 'file://'+ $.app.resourcePath + '/repl.html',
-		//handlers: ['evalREPL', 'closeREPL']
 		handlers: {
 			'evalREPL': [evalRepl, true, "hello", 42],
-			'closeREPL': closeRepl, //[closeREPL, false, "goodbye", 666 ],
+			'closeREPL': closeRepl,
 			'fooEvent': [(tab) => {console.log(tab.urlstr)}, 1],
 			'nullEvent': null
 		}
@@ -187,7 +187,9 @@ $.app.on('AppFinishedLaunching', (launchURLs) => {
 });
 
 $.app.loadAppScript(`file://${$.app.resourcePath}/app_injectTab.js`);
-$.app.loadAppScript(`file://${$.app.resourcePath}/app_repl.js`);
+if (! 'printToREPL' in $.app.eventCallbacks) {
+	$.app.loadAppScript(`file://${$.app.resourcePath}/app_repl.js`);
+}
 $.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
 
 delegate; //return this to macpin

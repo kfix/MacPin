@@ -123,6 +123,7 @@ class AppScriptConsole: NSObject, AppScriptConsoleExports {
 #endif
 	var nativeModules: [String: Any] { get }
 	@objc(eventCallbacks) var strEventCallbacks: [String: Array<JSValue>] { get } // app->js callbacks
+	@objc(emit::) func strEmit(_ eventName: String, _ args: Any) -> [JSValue]
 	func on(_ event: String, _ callback: JSValue) // installs handlers for app events
 	var messageHandlers: [String: [JSValue]] { get } // tab*app IPC callbacks
 }
@@ -519,9 +520,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		termiosREPL(
 			{ [unowned self] (line: String) -> Void in
 				let val = self.context?.evaluateScript(line)
-				if self.jsdelegate.isObject && self.jsdelegate.hasProperty("REPLprint") { // app.js will customize output
-					if let ret = self.jsdelegate.invokeMethod("REPLprint", withArguments: [val as Any]).toString() {
-						print(ret)
+				if let rets = self.emit(.printToREPL, val as Any) {
+					rets.forEach { ret in
+						if let retstr = ret?.toString() { print(retstr) }
 					}
 				} else { // no REPLprint handler, just eval and dump
 					print(val as Any)
@@ -596,14 +597,27 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	@discardableResult
-	func emit(_ event: AppScriptEvent, _ args: Any...) -> [JSValue?] { //varargs
-		warn(event.description)
-		let cbs = eventCallbacks[event, default: []]
-		if cbs.isEmpty {
+	func strEmit(_ eventName: String, _ args: Any) -> [JSValue] {
+		guard let event = AppScriptEvent(rawValue: eventName) else { return [] } // ignore invalid event names
+		guard let ret = emit(event, args)?.flatMap({$0 as? JSValue}) else { return [] }
+		warn("\(event) <- \(args) -> \(ret)")
+		return ret
+	}
+
+	@discardableResult
+	func emit(_ event: AppScriptEvent, _ args: Any...) -> [JSValue?]? { //varargs
+		return emit(event, args)
+	}
+
+	@discardableResult
+	func emit(_ event: AppScriptEvent, _ args: [Any]) -> [JSValue?]? {
+		if let cbs = eventCallbacks[event] {
+			return cbs.map { cb in cb.call(withArguments: args) }
+		} else if self.jsdelegate.isObject && self.jsdelegate.hasProperty(event.rawValue) {
 			self.jsdelegate.tryFunc(event.rawValue, argv: args) //compat with old stuff
 			return []
 		} else {
-			return cbs.map { cb in cb.call(withArguments: args) }
+			return nil
 		}
 	}
 
@@ -619,5 +633,6 @@ enum AppScriptEvent: String, CustomStringConvertible {
 		networkIsOffline, //url, tab
 		handleDragAndDroppedURLs, // urls -> Bool
 		decideNavigationForMIME, // mime, url, webview -> Bool
-		AppFinishedLaunching // url?
+		AppFinishedLaunching, // url?
+		printToREPL
 }
