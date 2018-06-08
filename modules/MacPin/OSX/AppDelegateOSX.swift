@@ -162,17 +162,17 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		let winMenu = NSMenuItem() //BrowserViewController and NSWindow funcs
 		winMenu.submenu = NSMenu()
 		winMenu.submenu?.title = "Window"
-		winMenu.submenu?.addItem(MenuItem("Enter URL", "revealOmniBox", "l", [.command])) //bc
-		winMenu.submenu?.addItem(MenuItem(nil, "toggleFullScreen:")) //bc
-		winMenu.submenu?.addItem(MenuItem(nil, "toggleToolbarShown:")) //bc
-		winMenu.submenu?.addItem(MenuItem("Toggle Titlebar", "toggleTitlebar")) //wc
+		winMenu.submenu?.addItem(MenuItem("Enter URL", #selector(BrowserViewControllerOSX.revealOmniBox), "l", [.command]))
+		winMenu.submenu?.addItem(MenuItem(nil, #selector(NSWindow.toggleFullScreen(_:))))
+		winMenu.submenu?.addItem(MenuItem(nil, #selector(NSWindow.toggleToolbarShown(_:))))
+		winMenu.submenu?.addItem(MenuItem("Toggle Titlebar", #selector(WindowController.toggleTitlebar)))
 		//winMenu.submenu?.addItem(MenuItem("Edit Toolbar", "runToolbarCustomizationPalette:"))
-		winMenu.submenu?.addItem(MenuItem("New Tab", "newTabPrompt", "t", [.command])) //bc
-		winMenu.submenu?.addItem(MenuItem("New Isolated Tab", "newIsolatedTabPrompt")) //bc
-		winMenu.submenu?.addItem(MenuItem("New Private Tab", "newPrivateTabPrompt", "t", [.control, .command])) //bc
-		winMenu.submenu?.addItem(MenuItem("Close Tab", "closeTab:", "w", [.command])) //bc
-		winMenu.submenu?.addItem(MenuItem("Show Next Tab", "selectNextTabViewItem:", String(format:"%c", NSTabCharacter), [.control])) //bc
-		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", "selectPreviousTabViewItem:", String(format:"%c", NSTabCharacter), [.control, .shift])) //bc
+		winMenu.submenu?.addItem(MenuItem("New Tab", #selector(BrowserViewControllerOSX.newTabPrompt), "t", [.command]))
+		winMenu.submenu?.addItem(MenuItem("New Isolated Tab", #selector(BrowserViewControllerOSX.newIsolatedTabPrompt)))
+		winMenu.submenu?.addItem(MenuItem("New Private Tab", #selector(BrowserViewControllerOSX.newPrivateTabPrompt), "t", [.control, .command]))
+		winMenu.submenu?.addItem(MenuItem("Close Tab", #selector(BrowserViewControllerOSX.closeTab(_:)), "w", [.command]))
+		winMenu.submenu?.addItem(MenuItem("Show Next Tab", #selector(NSTabView.selectNextTabViewItem(_:)), String(format:"%c", NSTabCharacter), [.control]))
+		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", #selector(NSTabView.selectPreviousTabViewItem(_:)), String(format:"%c", NSTabCharacter), [.control, .shift]))
 		app!.mainMenu?.addItem(winMenu)
 
 		let tabListMenu = NSMenuItem(title: "Tabs", action: nil, keyEquivalent: "")
@@ -210,6 +210,9 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 #endif
 		app!.mainMenu?.addItem(dbgMenu)
 
+		// https://developer.apple.com/documentation/appkit/nsappearancecustomization/choosing_a_specific_appearance_for_your_app#2993819
+		// NSApp.appearance = NSAppearance(named: .darkAqua) // NSApp.effectiveAppearance
+
 		windowController?.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
 		windowController?.window?.bind(NSBindingName.title, to: browserController, withKeyPath: #keyPath(BrowserViewController.title), options: nil)
 		windowController?.window?.makeKeyAndOrderFront(self)
@@ -230,7 +233,8 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 
 		browserController.extend(AppScriptRuntime.shared.exports)
 		AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
-		AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
+		//AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
+		AppScriptRuntime.shared.emit(.AppFinishedLaunching, "launched with this url")
 
 		if let default_html = Bundle.main.url(forResource: "default", withExtension: "html") {
 			warn("loading initial page from app bundle: \(default_html)")
@@ -247,7 +251,12 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 			switch (arg) {
 				case "-i" where isatty(1) == 1:
 					 //open a JS console on the terminal, if present
-					if let repl_js = Bundle.main.url(forResource: "app_repl", withExtension: "js") { AppScriptRuntime.shared.loadAppScript(repl_js.description); }
+					//AppScriptRuntime.shared.eventCallbacks[.printToREPL, default: []]
+					if AppScriptRuntime.shared.eventCallbacks[.printToREPL, default: []].isEmpty {
+						if let repl_js = Bundle.main.url(forResource: "app_repl", withExtension: "js") {
+							AppScriptRuntime.shared.loadAppScript(repl_js.description)
+						}
+					}
 					AppScriptRuntime.shared.REPL()
 					// would like to natively implement a simple remote console for webkit-using osx apps, Valence only targets IOS-usbmuxd based stuff.
 					// https://www.webkit.org/blog/1875/announcing-remote-debugging-protocol-v1-0/
@@ -272,7 +281,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 					}
 					// ooh, pretty: https://github.com/Naituw/WBWebViewConsole
 					// https://github.com/Naituw/WBWebViewConsole/blob/master/WBWebViewConsole/Views/WBWebViewConsoleInputView.m
-				case let isurl where !launched && (arg.hasPrefix("http:") || arg.hasPrefix("https:") || arg.hasPrefix("about:") || arg.hasPrefix("file:")):
+				case let _ where !launched && (arg.hasPrefix("http:") || arg.hasPrefix("https:") || arg.hasPrefix("about:") || arg.hasPrefix("file:")):
 					warn("launched: \(launched) -> \(arg)")
 					application(NSApp, openFile: arg) // LS will openFile AND argv.append() fully qualified URLs
 				default:

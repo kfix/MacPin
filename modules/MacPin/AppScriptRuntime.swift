@@ -600,7 +600,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	func strEmit(_ eventName: String, _ args: Any) -> [JSValue] {
 		guard let event = AppScriptEvent(rawValue: eventName) else { return [] } // ignore invalid event names
 		guard let ret = emit(event, args)?.flatMap({$0 as? JSValue}) else { return [] }
-		warn("\(event) <- \(args) -> \(ret)")
+		//warn("\(event) <- \(args) -> \(ret)")
 		return ret
 	}
 
