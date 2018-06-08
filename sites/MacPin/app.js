@@ -87,6 +87,7 @@ delegate.img2data = function(tab) {
 
 delegate.testAS = function(tab) { $.app.callJXALibrary('test', 'doTest', Array.prototype.slice.call(arguments)); };
 
+//$.app.on('launchRepl', () => {
 delegate.launchRepl = () => {
 	var evalRepl = (tab, msg) => {
 		var command = msg;
@@ -95,9 +96,9 @@ delegate.launchRepl = () => {
 			result = eval(command);
 		} catch(e) {
 			result = e;
+			console.log(e);
 		}
 		var ret = $.app.emit('printToREPL', result);
-		console.log(ret)
 		console.log(ret);
 		tab.evalJS(`window.dispatchEvent(new window.CustomEvent('returnREPL',{'detail':{'result': ${ret}}}));`);
 		tab.evalJS(`returnREPL('${escape(ret)}');`);
@@ -187,7 +188,7 @@ $.app.on('AppFinishedLaunching', (launchURLs) => {
 });
 
 $.app.loadAppScript(`file://${$.app.resourcePath}/app_injectTab.js`);
-if (! 'printToREPL' in $.app.eventCallbacks) {
+if (!('printToREPL' in $.app.eventCallbacks)) {
 	$.app.loadAppScript(`file://${$.app.resourcePath}/app_repl.js`);
 }
 $.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);

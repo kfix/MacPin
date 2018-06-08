@@ -307,7 +307,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				// FIXME: assumes last script loaded is the source file of *all* thrown errors, which is not always true
 #if DEBUG
 #else
-				context?.evaluateScript("eval = null;") // Saaaaaaafe Plaaaaace
+				//context?.evaluateScript("eval = null;") // Saaaaaaafe Plaaaaace
 #endif
 				//return jsdelegate.thisEval(script as String, sourceURL: scriptURL) // TODO: issue #11 - make `this` the delegate in app scripts, not the return
 				// or somehow implement ES6's `export` to allow explicit designation of objects to be exposed into the parent/requiring namespace
