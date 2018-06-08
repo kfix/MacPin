@@ -32,6 +32,7 @@ delegate.launchURL = function(url) {
 			$.browser.tabSelected = new $.WebView({url: url}); //FIXME: retains???!
 	}
 };
+// $.app.on('launchURL', (url) => new $.WebView({url: url}));
 
 delegate.networkIsOffline = function(url, tab) {
 	console.log(`Could not navigate to ${url} - network is offline!`);
@@ -86,7 +87,49 @@ delegate.img2data = function(tab) {
 
 delegate.testAS = function(tab) { $.app.callJXALibrary('test', 'doTest', Array.prototype.slice.call(arguments)); };
 
-delegate.AppFinishedLaunching = function() {
+delegate.launchRepl = () => {
+	var evalRepl = (tab, msg) => {
+		var command = msg;
+		var result;
+		try {
+			result = eval(command);
+		} catch(e) {
+			result = e;
+		}
+		var ret = delegate.REPLprint(result);
+		console.log(ret);
+		tab.evalJS(`window.dispatchEvent(new window.CustomEvent('returnREPL',{'detail':{'result': ${ret}}}));`);
+		tab.evalJS(`returnREPL('${escape(ret)}');`);
+	};
+
+	var closeRepl = (tab, msg) => tab.close();
+
+	var cfgRepl = {
+		transparent: true,
+		url: 'file://'+ $.app.resourcePath + '/repl.html',
+		//handlers: ['evalREPL', 'closeREPL']
+		handlers: {
+			'evalREPL': [evalRepl, true, "hello", 42],
+			'closeREPL': closeRepl, //[closeREPL, false, "goodbye", 666 ],
+			'fooEvent': [(tab) => {console.log(tab.urlstr)}, 1],
+			'nullEvent': null
+		}
+	};
+
+	$.browser.tabSelected = new $.WebView(cfgRepl)
+}
+
+/*
+ var geniusBarsNearMe() {
+	// https://locate.apple.com/sales/?pt=4&lat=37&lon=-122.5 cupertino
+	//   /service/
+	//  add a lat/lon prop to $.app so we can fudge links
+	//  https://developer.apple.com/maps/mapkitjs/
+	//  https://developer.apple.com/documentation/mapkitjs
+}
+*/
+
+$.app.on('AppFinishedLaunching', (launchURLs) => {
 	//$.browser.unhideApp();
 
 	$.browser.addShortcut('MacPin @ GitHub', 'http://github.com/kfix/MacPin');
@@ -97,6 +140,10 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('resizeMyBrowser', 'http://resizemybrowser.com');
 	$.browser.addShortcut('File Upload test', 'https://mdn.github.io/learning-area/html/forms/file-examples/simple-file.html');
 	$.browser.addShortcut('WebRTC effect test', 'https://webkit.org/blog-files/webrtc/pc-with-effects/index.html');
+	$.browser.addShortcut('WebRTC samples', 'https://webrtc.github.io/samples/');
+	$.browser.addShortcut('WebRTC recorder', 'https://www.webrtc-experiment.com/RecordRTC/');
+	$.browser.addShortcut('Geolocation test', 'https://onury.io/geolocator/?content=examples');
+	$.browser.addShortcut('Notification test', 'https://ttsvetko.github.io/HTML5-Desktop-Notifications/');
 
 	// http://user-agents.me
 	$.browser.addShortcut('UA: Safari 11 Mac', ["setAgent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/604.1.29 (KHTML, like Gecko) Version/11.0 Safari/604.1.129"]);
@@ -130,33 +177,14 @@ delegate.AppFinishedLaunching = function() {
 	//$.browser.addShortcut('HTML5 editor -> preview', editorPreview);
 	//editorPreview should find editor tab (passed by ref?) and render its source
 
-	var repl = {
-		transparent: true,
-		url: 'file://'+ $.app.resourcePath + '/repl.html',
-		handlers: ['evalREPL', 'closeREPL']
-	};
-	$.browser.addShortcut('MacPin/app.js debugging REPL', repl);
+	//$.browser.addShortcut('MacPin/app.js debugging REPL', cfgRepl);
+	//  WebView.init ends up with WebViewInitProps.handlers: <__NSFrozenDictionaryM>
+	$.browser.addShortcut('MacPin/app.js debugging REPL', ['launchRepl']);
+	//$.browser.addShortcut('REPL by-ref', {call: delegate.launchRepl}); // WIP
+
 	if ($.app.platform === "OSX") $.app.changeAppIcon(`file://${$.app.resourcePath}/icon.png`);
 	$.browser.tabSelected = new $.WebView({url: 'http://github.com/kfix/MacPin'});
-};
-
-delegate.evalREPL = function(tab, msg) {
-	var command = msg;
-	var result;
-	try {
-		result = eval(command);
-	} catch(e) {
-		result = e;
-	}
-	var ret = delegate.REPLprint(result);
-	console.log(ret);
-	tab.evalJS(`window.dispatchEvent(new window.CustomEvent('returnREPL',{'detail':{'result': ${ret}}}));`);
-	tab.evalJS(`returnREPL('${escape(ret)}');`);
-};
-
-delegate.closeREPL = function(tab, msg) {
-	tab.close();
-};
+});
 
 $.app.loadAppScript(`file://${$.app.resourcePath}/app_injectTab.js`);
 $.app.loadAppScript(`file://${$.app.resourcePath}/app_repl.js`);

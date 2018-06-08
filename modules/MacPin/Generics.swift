@@ -271,3 +271,27 @@ func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2:
 
 //@objc protocol JSArray: JSExport { func push(newElement: AnyObject) }
 //extension ContiguousArray: JSArray { mutating func push(newElement: T) { append(newElement) } }
+
+// https://stackoverflow.com/a/49588446/3878712
+#if swift(>=4.2)
+#else
+public protocol CaseIterable {
+    associatedtype AllCases: Collection where AllCases.Element == Self
+    static var allCases: AllCases { get }
+}
+extension CaseIterable where Self: Hashable {
+    static var allCases: [Self] {
+        return [Self](AnySequence { () -> AnyIterator<Self> in
+            var raw = 0
+            return AnyIterator {
+                let current = withUnsafeBytes(of: &raw) { $0.load(as: Self.self) }
+                guard current.hashValue == raw else {
+                    return nil
+                }
+                raw += 1
+                return current
+            }
+        })
+    }
+}
+#endif

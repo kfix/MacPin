@@ -122,6 +122,9 @@ class AppScriptConsole: NSObject, AppScriptConsoleExports {
 	func callJXALibrary(_ library: String, _ call: String, _ args: [AnyObject])
 #endif
 	var nativeModules: [String: Any] { get }
+	@objc(eventCallbacks) var strEventCallbacks: [String: Array<JSValue>] { get } // app->js callbacks
+	func on(_ event: String, _ callback: JSValue) // installs handlers for app events
+	var messageHandlers: [String: [JSValue]] { get } // tab*app IPC callbacks
 }
 
 class AppScriptRuntime: NSObject, AppScriptExports  {
@@ -572,4 +575,49 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
+	var eventCallbacks: [AppScriptEvent: Array<JSValue>] = [:]
+	var strEventCallbacks: [String: Array<JSValue>] {
+		get {
+			return Dictionary(uniqueKeysWithValues:
+				zip(
+					eventCallbacks.keys.map({$0.rawValue}),
+					eventCallbacks.values
+				)
+			)
+		}
+	}
+
+	@discardableResult
+	func on(_ eventName: String, _ callback: JSValue) { // installs handlers for app events
+		guard let ev = AppScriptEvent(rawValue: eventName) else { return } // ignore invalid event names
+		warn(ev.description)
+		eventCallbacks[ev, default: []] += [callback]
+		warn(eventCallbacks[ev, default: []].description)
+	}
+
+	@discardableResult
+	func emit(_ event: AppScriptEvent, _ args: Any...) -> [JSValue?] { //varargs
+		warn(event.description)
+		let cbs = eventCallbacks[event, default: []]
+		if cbs.isEmpty {
+			self.jsdelegate.tryFunc(event.rawValue, argv: args) //compat with old stuff
+			return []
+		} else {
+			return cbs.map { cb in cb.call(withArguments: args) }
+		}
+	}
+
+	var messageHandlers: [String: [JSValue]] = [:]
+}
+
+enum AppScriptEvent: String, CustomStringConvertible {
+	var description: String { return "\(type(of: self)).\(self.rawValue)" }
+
+	/* legacy MacPin event names */
+	case openInChrome, // tab
+		launchURL, // url
+		networkIsOffline, //url, tab
+		handleDragAndDroppedURLs, // urls -> Bool
+		decideNavigationForMIME, // mime, url, webview -> Bool
+		AppFinishedLaunching // url?
 }

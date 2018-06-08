@@ -15,8 +15,18 @@ extension WKWebView {
 	}
 }
 
+enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
+	var description: String { return "\(type(of: self)).\(self.rawValue)" }
+
+	/* legacy MacPin event names */
+	case url, agent, icon, // String
+	transparent, isolated, privacy = "private", allowsMagnification, allowsRecording, // Bool
+	preinject, postinject, style, subscribeTo, // [String]
+	handlers // {} ~> [String: [JSValue]]
+}
+
 @objc protocol WebViewScriptExports: JSExport { // $.WebView & $.browser.tabs[WebView]
-	init?(object: [String:AnyObject]) //> new WebView({url: 'http://example.com'});
+	init?(object: JSValue)
 	// can only JSExport one init*() func!
 	// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/tests/testapi.mm
 	// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSWrapperMap.mm#L412
@@ -56,19 +66,23 @@ extension WKWebView {
 	//var snapshotURL: String { get } // gets a data:// of the WKThumbnailView
 }
 
-@objc class MPWebView: WKWebView, WebViewScriptExports {
+
+struct IconCallbacks {
 
 	static let decidePolicyForGeolocationPermissionRequestCallBack: WKPageDecidePolicyForGeolocationPermissionRequestCallback = { page, frame, origin, permissionRequest, clientInfo in
 		// FIXME: prompt?
 		warn()
 		WKGeolocationPermissionRequestAllow(permissionRequest)
 	}
-
 	static let decidePolicyForNotificationPermissionRequest: WKPageDecidePolicyForNotificationPermissionRequestCallback = { page, securityOrigin, permissionRequest, clientInfo in
 		warn()
 		WKNotificationPermissionRequestAllow(permissionRequest)
 		//WKNotificationPermissionRequestDeny(permissionRequest)
 	}
+
+}
+
+@objc class MPWebView: WKWebView, WebViewScriptExports {
 
 	//@objc dynamic var isLoading: Bool
 	//@objc dynamic var estimatedProgress: Double
@@ -273,8 +287,8 @@ extension WKWebView {
 
 		var uiClient = WKPageUIClientV2()
 		uiClient.base.version = 2
-		uiClient.decidePolicyForGeolocationPermissionRequest = MPWebView.decidePolicyForGeolocationPermissionRequestCallBack
-		uiClient.decidePolicyForNotificationPermissionRequest = MPWebView.decidePolicyForNotificationPermissionRequest
+		uiClient.decidePolicyForGeolocationPermissionRequest = IconCallbacks.decidePolicyForGeolocationPermissionRequestCallBack
+		uiClient.decidePolicyForNotificationPermissionRequest = IconCallbacks.decidePolicyForNotificationPermissionRequest
 		WKPageSetPageUIClient(_pageRefForTransitionToWKWebView, &uiClient.base)
 #elseif os(iOS)
 		_applicationNameForUserAgent = "Version/8.0 Mobile/12F70 Safari/600.1.4"
@@ -288,25 +302,93 @@ extension WKWebView {
 	}
 	*/
 
+	convenience required init?(object: JSValue) {
+		// consuming JSValue so we can perform custom/recursive conversion instead of JSExport's stock WrapperMap
+		// https://stackoverflow.com/a/36120929/3878712
+
+		if object.isString { // new WebView("http://webkit.org");
+			guard let urlstr = object.toString(), let url = NSURL(string: urlstr) else { return nil }
+			self.init(url: url)
+		} else if object.isObject { // new WebView({url: "http://webkit.org", transparent: true, ... });
+			var props: [WebViewInitProps: Any] = [:]
+
+			for prop in WebViewInitProps.allCases {
+				if object.hasProperty(prop.rawValue) {
+					guard let jsval = object.forProperty(prop.rawValue) else { warn("no value for \(prop)!"); continue }
+					switch prop {
+						case .url, .agent, .icon where jsval.isString:
+							props[prop] = jsval.toString()
+						case .transparent, .isolated, .privacy, .allowsMagnification, .allowsRecording where jsval.isBoolean:
+							props[prop] = jsval.toBool()
+						case .preinject, .postinject, .style, .subscribeTo where jsval.isArray:
+							props[prop] = jsval.toArray().flatMap { $0 as? String }
+						case .handlers where jsval.isObject:
+							var handlers: [String: [JSValue]] = [:]
+							let handlerNames = jsval.toDictionary().keys.flatMap({$0 as? String})
+							warn(handlerNames.description)
+							for name in handlerNames {
+								guard let hval = jsval.objectForKeyedSubscript(name) else { warn("no handler for \(name)!"); continue }
+								if hval.isArray { // array of handler funcs (hopefully) was passed
+									guard let hval = hval.invokeMethod("slice", withArguments: [0]) else { continue }// dup the array so pop() won't mutate the original
+									// for handler in hval.toArray() { // -> Any .. not useful
+									guard let numHandlers = hval.forProperty("length").toNumber() as? Int, numHandlers > 0 else { continue }
+									for num in 1...numHandlers { // C-Loop ftw
+										//guard let handler = hvals.atIndex(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
+										//guard let handler = hval.objectAtIndexedSubscript(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
+										// JSC BUG: dict-of-array contained functions are `undefined` when pulled with atIndex/objAtIndexSub
+										guard let handler = hval.invokeMethod("pop", withArguments: []) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
+
+										if !handler.isNull && !handler.isUndefined && handler.hasProperty("call") {
+											handlers[name, default: []].append(handler)
+										}
+									}
+								} else if !hval.isNull && !hval.isUndefined && hval.hasProperty("call") { // a single handler func was passed
+									handlers[name, default: []].append(hval)
+								}
+							}
+							props[prop] = handlers
+						default:
+							warn("unhandled init prop: \(prop.rawValue)")
+					}
+				}
+			}
+
+			self.init(props: props)
+		} else {
+			return nil
+		}
+	}
+
 	convenience required init?(object: [String:AnyObject]) {
+		// this is just for addShortcut() & gotoShortcut(), I think ...
+		var props: [WebViewInitProps: Any] = [:]
+		for (key, value) in object {
+			// convert all stringish keys for enum conformance
+			guard let prop = WebViewInitProps(rawValue: key) else { warn(key); continue }
+			props[prop] = value
+		}
+		self.init(props: props)
+	}
+
+	convenience required init?(props: [WebViewInitProps: Any]) {
 		// check for isolated pre-init
-		if let isolated = object["isolated"] as? Bool {
+		if let isolated = props[.isolated] as? Bool {
 			self.init(config: nil, isolated: isolated)
-		} else if let privacy = object["private"] as? Bool {
+		} else if let privacy = props[.privacy] as? Bool {
 			// a private tab would imply isolation, not sweating lack of isolated+private corner case
 			self.init(config: nil, privacy: privacy)
 		} else {
 			self.init(config: nil)
 		}
 		var url = NSURL(string: "about:blank")
-		for (key, value) in object {
+		for (key, value) in props {
 			switch value {
-				case let urlstr as String where key == "url": url = NSURL(string: urlstr)
-				case let agent as String where key == "agent": _customUserAgent = agent
-				case let icon as String where key == "icon": loadIcon(icon)
-				case let magnification as Bool where key == "allowsMagnification": allowsMagnification = magnification
-				case let recordable as Bool where key == "allowsRecording": _mediaCaptureEnabled = recordable
-				case let transparent as Bool where key == "transparent":
+				case let urlstr as String where key == .url: url = NSURL(string: urlstr)
+				case let agent as String where key == .agent: _customUserAgent = agent
+				case let icon as String where key == .icon: loadIcon(icon)
+				case let magnification as Bool where key == .allowsMagnification: allowsMagnification = magnification
+				case let recordable as Bool where key == .allowsRecording: _mediaCaptureEnabled = recordable
+				case let transparent as Bool where key == .transparent:
 #if os(OSX)
 #if STP
 					_drawsBackground = !transparent
@@ -314,12 +396,13 @@ extension WKWebView {
 					_drawsTransparentBackground = transparent
 #endif
 #endif
-				case let value as [String] where key == "preinject": for script in value { preinject(script) }
-				case let value as [String] where key == "postinject": for script in value { postinject(script) }
-				case let value as [String] where key == "style": for css in value { style(css) }
-				case let value as [String] where key == "handlers": for handler in value { addHandler(handler) } //FIXME kill
-				case let value as [String] where key == "subscribeTo": for handler in value { subscribeTo(handler) }
-				default: warn("unhandled param: `\(key): \(value)`")
+				case let value as [String] where key == .preinject: for script in value { preinject(script) }
+				case let value as [String] where key == .postinject: for script in value { postinject(script) }
+				case let value as [String] where key == .style: for css in value { style(css) }
+				case let value as [String] where key == .handlers: for handler in value { addHandler(handler) } //FIXME kill delegate.`handlerStr` indirect-str-refs
+				case let value as [String: [JSValue]] where key == .handlers: addHandlers(value)
+				case let value as [String] where key == .subscribeTo: for handler in value { subscribeTo(handler) }
+				default: warn("unhandled param: `<\(type(of: key))>\(key): <\(type(of: value))>\(value)`")
 			}
 		}
 
@@ -490,6 +573,26 @@ extension WKWebView {
 	}
 
 	func addHandler(_ handler: String) { configuration.userContentController.add(AppScriptRuntime.shared, name: handler) } //FIXME kill
+
+	func addHandlers(_ handlerMap: [String: [JSValue]]) {
+		for (eventName, handlers) in handlerMap {
+			//warn("\(eventName) => \(type(of: handlers))\(handlers)")
+			var cbs = AppScriptRuntime.shared.messageHandlers[eventName, default: []]
+
+			for hd in handlers {
+				if !hd.isNull && !hd.isUndefined && !cbs.contains(hd) && hd.hasProperty("call") {
+					warn("\(eventName) += \(type(of: hd)) \(hd)")
+					cbs.append(hd)
+				} else { warn("handler for \(eventName) not a callable! <= \(hd)") }
+			}
+
+			guard !cbs.isEmpty else { continue }
+			AppScriptRuntime.shared.messageHandlers[eventName] = cbs
+			// BUG? cross-tab event broadcasting done thru .shared[eventName] ...
+			configuration.userContentController.add(AppScriptRuntime.shared, name: eventName)
+		}
+	}
+
 	func subscribeTo(_ handler: String) {
 		configuration.userContentController.removeScriptMessageHandler(forName: handler)
 		configuration.userContentController.add(AppScriptRuntime.shared, name: handler)
