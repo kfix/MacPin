@@ -1,13 +1,48 @@
 <html>
 <head>
 	<title>MacPin REPL: app.js</title>
+	<style>
+	:root {
+		overflow: hidden;
+	}
+
+	#output, #command {
+		font-family: Monaco;
+		font-size: 9pt;
+		box-sizing: border-box;
+		width: 100%;
+		background-color: inherit;
+	}
+	#output {
+		height: 98%;
+		color: lime;
+	}
+
+	-webkit-keyframes autofill {
+		to {
+			color: #666;
+			background: transparent;
+		}
+	}
+
+	#command {
+		/*
+			-webkit-animation-name: autofill;
+			-webkit-animation-fill-mode: both;
+		https://bugs.chromium.org/p/chromium/issues/detail?id=46543
+		*/
+		background-image: none !important;
+		background: transparent !important;
+		background-color: inherit !important;
+	}
+	</style>
 </head>
 <body>
-	<form id="repl" onsubmit="return false;">
-		<textarea id="output" placeholder="//output will appear here" readonly cols=80 rows=25 style="font-family:Monaco;"></textarea>
+	<form id="repl" onsubmit="return false;" autocomplete="off">
+		<textarea id="output" placeholder="//output will appear here" readonly cols=80 rows=50 ></textarea>
 		<br />
-		<input id="command" type="search" placeholder="Enter command" size=80 autofocus autosave="macpin.repl" required style="font-family:Monaco;">
-		<input type="submit" value="Execute">
+		<input id="command" type="search" placeholder="Enter command..." size=80 autofocus autosave="macpin.repl" required>
+		<!-- <input type="submit" value="Execute"> -->
 	</form>
 	<script>
 		var outbox = document.getElementById('output');
@@ -19,10 +54,10 @@
 			outbox.value += '>> ' + command + '\n';
 			webkit.messageHandlers.evalREPL.postMessage(command);
 		}
-		function returnREPL(result) {
+		function returnREPL(result, exception) {
 			//outbox.value += e.detail.result;
 			//result = JSON.parse(result);
-			outbox.value += unescape(result) + '\n';
+			outbox.value += `${unescape(exception ? exception : result)}\n`;
 			outbox.scrollTop = outbox.scrollHeight; //autoscroll to bottom
 		}
 		document.addEventListener('submit', evalREPL, true);

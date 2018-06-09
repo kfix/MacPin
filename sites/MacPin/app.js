@@ -91,17 +91,19 @@ delegate.testAS = function(tab) { $.app.callJXALibrary('test', 'doTest', Array.p
 delegate.launchRepl = () => {
 	var evalRepl = (tab, msg) => {
 		var command = msg;
-		var result;
+		var result, exception;
 		try {
-			result = eval(command);
+			result = eval(command); // <- line pointer marks right here
 		} catch(e) {
-			result = e;
+			exception = e;
+			result = e; // printToREPL will make a line pointer object
 			console.log(e);
 		}
 		var ret = $.app.emit('printToREPL', result);
 		console.log(ret);
-		tab.evalJS(`window.dispatchEvent(new window.CustomEvent('returnREPL',{'detail':{'result': ${ret}}}));`);
-		tab.evalJS(`returnREPL('${escape(ret)}');`);
+		let exfil = `returnREPL('${escape(ret)}', ${(exception) ? `'${escape(exception)}'` : 'null'});`;
+		//console.log(exfil); // use base64 instead of urlencode??
+		tab.evalJS(exfil);
 	};
 
 	var closeRepl = (tab, msg) => tab.close();
