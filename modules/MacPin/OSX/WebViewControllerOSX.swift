@@ -99,6 +99,7 @@ import WebKitPrivates
 		//webview.resizeSubviewsWithOldSize(CGSizeZero)
 		if webview != nil { // vc's still in hierarchy can be asked to layout after view is deinit'd
 			webview._inspectorAttachmentView = webview
+			// BUG: got a SIGSEGV for this ^^
 		}
 		super.viewWillLayout()
 	}
@@ -112,7 +113,10 @@ import WebKitPrivates
 		//view.removeConstraints(view.constraints)
 	}
 
-	deinit { unbind(NSBindingName.title) }
+	deinit {
+		unbind(NSBindingName.title)
+		Geolocator.shared.unsubscribeFromLocationEvents(webview: webview)
+	}
 
 	override func cancelOperation(_ sender: Any?) { webview.stopLoading(sender) } // NSResponder: make Esc key stop page load
 }
@@ -149,6 +153,8 @@ extension WebViewControllerOSX { // AppGUI funcs
 		//webview.magnification -= factor
 		textZoom(factor)
 		return
+
+		/*
 		let oldScale = webview._viewScale
 		let scale = oldScale + CGFloat(factor) // * page/magnification scale
 		guard let window = view.window else {return}
@@ -158,6 +164,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		window.setFrame(NSMakeRect(oldFrame.origin.x, oldFrame.origin.y - (newFrameSize.height - oldFrame.size.height), newFrameSize.width, newFrameSize.height), display: true)
 		//view.frame = NSMakeRect(oldFrame.origin.x, oldFrame.origin.y - (newFrameSize.height - oldFrame.size.height), newFrameSize.width, newFrameSize.height)
 		webview._viewScale = scale
+		*/
 	}
 	func textZoomIn() { textZoom(0.2) }
 	func textZoomOut() { textZoom(-0.2) }
@@ -191,17 +198,21 @@ extension WebViewControllerOSX { // AppGUI funcs
 		}
 	}
 
+	@available(OSX 10.13, *, iOS 11)
+	//#STP_21
 	@objc func snapshotButtonClicked(_ sender: AnyObject?) {
-		//guard if let btn = sender as? NSView else { }
-		return // WKWebViewSnappable can't link yet :-(
-		/*
-		guard let thumb = webview.thumbnail else { return }
-		var poprect = view.bounds
+		warn()
+		guard let btn = sender as? NSView else { return }
+		guard let thumb = _WKThumbnailView( // make a custom webview.thumbnail
+			frame: CGRect(origin: CGPoint(x: 0, y: 0), size: webview.bounds.size.applying(CGAffineTransform(scaleX: 0.15, y: 0.15))),
+			from: webview as WKWebView
+		) else { return }
+
+		var poprect = btn.bounds
 		let snap = NSViewController()
 		snap.view = thumb
 		poprect.size.height -= snap.view.frame.height + 12 // make room at the top to stuff the popover
-		presentViewController(snap, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSRectEdge.MaxY, behavior: NSPopoverBehavior.Transient)
-		*/
+		presentViewController(snap, asPopoverRelativeTo: poprect, of: btn, preferredEdge: NSRectEdge.maxY, behavior: NSPopover.Behavior.transient)
 	}
 
 	func displayAlert(_ alert: NSAlert, _ completionHandler: @escaping (NSApplication.ModalResponse) -> Void) {

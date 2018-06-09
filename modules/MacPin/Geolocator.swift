@@ -76,7 +76,13 @@ class Geolocator: NSObject  {
 		WKGeolocationManagerSetProvider(WKContextGetGeolocationManager(webview.context), &geoProvider.base)
 	}
 
-	//func unsubscribeFromLocationEvents(webview: MPWebView) {}
+	func unsubscribeFromLocationEvents(webview: MPWebView) {
+		//if subscribers.contains(webview) { subscribers.removeAll(where: {$0 == webview}) } // xc10
+		if subscribers.contains(webview) { subscribers = subscribers.flatMap({$0 != webview ? $0 : nil}) }
+		if subscribers.isEmpty && CLLocationManager.locationServicesEnabled() {
+			manager.stopUpdatingLocation()
+		}
+	}
 
 }
 
