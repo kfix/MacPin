@@ -62,7 +62,7 @@ extension JSValue {
 		/*guard*/ let jsval = JSEvaluateScript(
 			/*ctx:*/ context.jsGlobalContextRef,
 			/*script:*/ JSStringCreateWithCFString(code as CFString),
-			/*thisObject:*/ nil,
+			/*thisObject:*/ JSValueToObject(context.jsGlobalContextRef, self.jsValueRef, nil),
 			/*sourceURL:*/ source ?? nil,
 			/*startingLineNumber:*/ Int32(1),
 			/*exception:*/ UnsafeMutablePointer(exception.jsValueRef)
@@ -627,12 +627,12 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 enum AppScriptEvent: String, CustomStringConvertible {
 	var description: String { return "\(type(of: self)).\(self.rawValue)" }
 
-	/* legacy MacPin event names */
-	case openInChrome, // tab
+	case /* legacy MacPin event names */
 		launchURL, // url
 		networkIsOffline, //url, tab
+		handleClickedNotification, // title, subtitle, message, idstr
 		handleDragAndDroppedURLs, // urls -> Bool
 		decideNavigationForMIME, // mime, url, webview -> Bool
 		AppFinishedLaunching, // url?
-		printToREPL
+		printToREPL // result
 }
