@@ -3,13 +3,20 @@ export
 #^ export all the variables
 builddir			?= build
 
-# Safari Technology Preview required
+# Safari Technology Preview assumed
+# 10.13's WebKit.framework has most of the early STP features implemented...
+#   not iconDelegate!  should version the var: STP_57
+#   can then use shell to suss out the installed STP.app version and build with -D STP_58 -D SF_12
+#   when a major osx/safari release goes out corresponding to an earlier STP, will s/STP_58/SF_12 *.swift
 STP 				:= 1
+
+SWFTFLAGS			?= -suppress-warnings
+SWCCFLAGS			?= -Wno-unreachable-code
 
 # scan modules/ and define cross: target and vars: outdir, platform, arch, sdk, target, objs, execs, statics, incdirs, libdirs, linklibs, frameworks
 archs_macosx		?= x86_64
 # ^ supporting Yosemite+ only, so don't bother with 32-bit builds
-archs_iphonesimulator	?= i386 x86_64
+archs_iphonesimulator	?= x86_64
 
 archs_iphoneos		?= arm64
 target_ver_OSX		?= 10.13
@@ -24,7 +31,14 @@ ifneq ($(xcode),)
 xcrun				?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcrun
 xcs					?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcode-select
 endif
+
+usage help:
+	@printf '\nusage:\tmake <target>\n\ntargets:\n%s'
+	@printf '\t%s\n' reinstall uninstall test test.app stpdoc sites/*
+
 include eXcode.mk
+mk := $(firstword $(MAKEFILE_LIST))
+$(info [$(mk)])
 
 # now layout the MacPin .apps to generate
 macpin				:= MacPin
@@ -60,8 +74,8 @@ appdir				:= $(outdir)/apps
 appnames			= $(patsubst $(macpin_sites)/%,%.app,$(wildcard $(macpin_sites)/*))
 gen_apps			= $(patsubst $(macpin_sites)/%,$(appdir)/%.app,$(wildcard $(macpin_sites)/*))
 #gen_action_exts	= $(patsubst %,$(appdir)/%.appex,$(apps))
-$(info Buildable MacPin apps:)
-$(foreach app,$(gen_apps), $(info $(app)) )
+
+$(info $(macpin_sites)/ => $(installdir))
 
 ifeq (,$(filter $(arch),$(archs_macosx)))
 # only intel platforms have libedit so only those execs can have terminal CLIs
@@ -234,10 +248,11 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.
 	[ ! -n "$(wildcard $(outdir)/Frameworks/*.dylib)" ] || cp -a $(outdir)/Frameworks $@/
 	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/
 	rsync -av --exclude='Library/' $(macpin_sites)/$*/ $@
-	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@ $@/SwiftSupport/*.dylib
-	-codesign --display -r- --verbose=4 --deep --entitlements :- $@
-	-spctl -vvvv --raw --assess --type execute $@
-	-asctl container acl list -file $@
+	#[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@ $@/SwiftSupport/*.dylib
+	#-codesign --display -r- --verbose=4 --deep --entitlements :- $@
+	-codesign --display $@
+	#-spctl -vvvv --raw --assess --type execute $@
+	#-asctl container acl list -file $@
 	@touch $@
 endif
 
@@ -249,6 +264,9 @@ $(appdir)/%/PlugIns/ActionExtension.appex: $(appdir)/%/PlugIns/ActionExtension.a
 	#/usr/libexec/PlistBuddy -c 'merge $(macpin_sites)/$*/appex.share.plist :NSExtension' -c save $@/Contents/Info.plist
 	#-codesign -s - -f --entitlements entitlements.plist $@ && codesign -dv $@
 	#-asctl container acl list -file $@
+
+# https://developer.apple.com/documentation/networkextension/neappproxyprovider
+$(appdir)/%/PlugIns/AppProxy.appex: $(appdir)/%/PlugIns/AppProxy.appex/Info.plist $(icons)/%.icns
 
 ifeq ($(sdk),iphonesimulator)
 install:
@@ -335,7 +353,7 @@ endif
 
 # need to gen static html with https://github.com/realm/jazzy
 doc stpdoc: $(execs) $(objs)
-	for i in $(build_mods) WebKit WebKitPrivates; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -swift-version $(swiftver) -Xfrontend -color-diagnostics -deprecated-integrated-repl; done
+	for i in $(build_mods) WebKit WebKitPrivates; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -swift-version $(swiftver) -suppress-warnings -Xfrontend -color-diagnostics -deprecated-integrated-repl; done
 	#xcrun swift-ide-test -print-module -source-filename /dev/null -print-regular-comments -module-to-print Prompt
 	#xcrun swift-ide-test -sdk "$(sdkpath)" -source-filename=. -print-module -module-to-print="Prompt" -synthesize-sugar-on-types -module-print-submodules -print-implicit-attrs
 
@@ -374,11 +392,14 @@ release:
 	@exit 1
 endif
 
+wk_symbols:
+	symbols /System/Library/Frameworks/WebKit.framework/Versions/A/WebKit | less
+
 stp_symbols:
 	symbols /Applications/Safari\ Technology\ Preview.app/Contents/Frameworks/WebKit.framework/Versions/A/WebKit | less
 
 stp_jsc:
-	/Applications/Safari\ Technology\ Preview.app/Contents/Frameworks/JavaScriptCore.framework/Resources/jsc
+	/Applications/Safari\ Technology\ Preview.app/Contents/Frameworks/JavaScriptCore.framework/Resources/jsc -i
 
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist
 .PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics stp_symbols stp_jsc

@@ -8,7 +8,8 @@
 # run make and resulting targets will be printed
 # depend on those targets in your Makefile to generate .apps
 
-eXcode := $(lastword $(MAKEFILE_LIST))
+eXmk := $(lastword $(MAKEFILE_LIST))
+$(info [$(eXmk)])
 
 # Cross-Compilation via Recursive Make Madness
 ########################
@@ -66,7 +67,8 @@ endef
 ifeq (0,$(MAKELEVEL))
 # this is the parent invocation of make
 allarches	=
-cross: ; @echo [$(eXcode)] Finished target $@: $^
+
+cross: ; @echo [$(eXmk)] Finished target $@: $^
 $(foreach platform,$(platforms), \
 	$(foreach sdk,$(sdks_$(platform)), \
 		$(foreach arch,$(archs_$(sdk)), \
@@ -78,10 +80,10 @@ $(foreach platform,$(platforms), \
 else
 # we are in a submake
 endif
-$(info [$(eXcode)] $$(platform) := $(platform))
-$(info [$(eXcode)] $$(arch) := $(arch))
-$(info [$(eXcode)] $$(sdk) := $(sdk))
-$(info [$(eXcode)] $$(target) := $(target))
+#$(info [$(eXmk)] $$(platform) := $(platform))
+#$(info [$(eXmk)] $$(arch) := $(arch))
+#$(info [$(eXmk)] $$(sdk) := $(sdk))
+#$(info [$(eXmk)] $$(target) := $(target))
 ###########################
 
 # This is some poetry to figure out what in modules/* is compilable to objects, libraries, and executables
@@ -99,34 +101,34 @@ incdirs				:= -I modules
 
 #find all modules with compilable source code
 build_mods			:= $(sort $(filter-out %/$(platform),$(patsubst modules/%/,%,$(dir $(wildcard modules/*/*.m modules/*/$(platform)/*.m modules/*/*.swift modules/*/$(platform)/*.swift modules/*/*.mm modules/*/$(platform)/*.mm)))))
-$(info [$(eXcode)] $$(build_mods) (compilable modules): $(build_mods))
+$(info modules/ => $(build_mods))
 
 #modules with compilable main() routines that can be built into executables
 exec_mods			:= $(sort $(patsubst %/$(platform),%,$(patsubst modules/%/,%,$(dir $(wildcard modules/*/main.swift modules/*/$(platform)/main.swift)))))
 exec_mods			:= $(sort $(exec_mods) $(patsubst %/$(platform),%,$(patsubst modules/%/,%,$(dir $(shell grep -l -s -e ^@NSApplicationMain -e ^@UIApplicationMain modules/*/*.swift modules/*/$(platform)/*.swift)))))
 execs				:= $(exec_mods:%=$(outdir)/exec/%)
-$(info [$(eXcode)] $$(execs) (executables available to assemble): $(execs))
+#$(info [$(eXmk)] $$(execs) (executables available to assemble): $(execs))
 
 #assume modules that ship executables will not need to be made into intermediate objects nor libraries
 build_mods			:= $(filter-out $(exec_mods),$(build_mods))
 
 # any modules left should be built into static libraries
 statics				:= $(patsubst %,$(outdir)/obj/lib%.a,$(build_mods:modules/%=%))
-$(info [$(eXcode)] $$(statics) (static libraries available to build): $(statics))
+#$(info [$(eXmk)] $$(statics) (static libraries available to build): $(statics))
 #statics:	$(statics);
 
 dynamics			:= $(patsubst %,$(outdir)/Frameworks/lib%.dylib,$(build_mods:modules/%=%))
-$(info [$(eXcode)] $$(dynamics) (dynamic libraries available to build): $(dynamics))
+#$(info [$(eXmk)] $$(dynamics) (dynamic libraries available to build): $(dynamics))
 #dynamics:	$(dynamics);
 
 #objs				:= $(patsubst %,$(outdir)/obj/%.o,$(build_mods:modules/%=%))
-#$(info $(eXcode) - Objects available to build: $(objs))
+#$(info $(eXmk) - Objects available to build: $(objs))
 
 updates				:= $(patsubst %,$(outdir)/swup/%,$(exec_mods:modules/%=%))
-$(info [$(eXcode)] $$(updates) (swift modules available to update): $(updates))
+#$(info [$(eXmk)] $$(updates) (swift modules available to update): $(updates))
 
 #libs				:= $(patsubst %,$(outdir)/Frameworks/lib%.dylib,$(build_mods:modules/%=%))
-#$(info $(eXcode) - Libraries available to build: $(libs))
+#$(info $(eXmk) - Libraries available to build: $(libs))
 ###########################
 
 # llvm scaffolding
@@ -146,10 +148,11 @@ sdkpath				:= $(shell $(xcrun) --show-sdk-path --sdk $(sdk))
 # https://github.com/apple/swift/blob/master/include/swift/Option/FrontendOptions.td
 # https://github.com/apple/swift/blob/master/docs/Diagnostics.md
 # https://www.bignerdranch.com/blog/build-log-groveling-for-fun-and-profit-manual-swift-continued/
-swiftc				:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swiftc -swift-version $(swiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
-swift-update		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swift-update -swift-version $(nextswiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
+swflags				:= $(SWFTFLAGS) $(SWCCFLAGS:%=-Xcc %) -swift-version $(swiftver) -target $(arch)-$(target_$(platform)) $(swflags) -Xfrontend -color-diagnostics $(verbose)
+swiftc				:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swiftc $(swflags)
+swift-update		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swift-update $(swflags)
 # https://github.com/apple/swift/tree/master/lib/Migrator
-swift-migrate		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swiftc -update-code -swift-version $(nextswiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
+swift-migrate		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swiftc -update-code $(swflags)
 clang				:= $(xcrun) -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platform)) $(verbose)
 clangpp				:= $(xcrun) -sdk $(sdk) clang++ -fmodules -fcxx-modules -std=c++11 -stdlib=libc++ -target $(arch)-$(target_$(platform)) $(verbose)
 #-fobj-arc
@@ -163,9 +166,13 @@ os_frameworks		:= -F $(sdkpath)/System/Library/Frameworks -L $(sdkpath)/System/L
 frameworks			:= -F $(outdir)/Frameworks
 swiftlibdir			:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift/$(sdk) $(shell $(xcs) -p)/Toolchains/$(swifttoolchain).xctoolchain/usr/lib/swift/$(sdk)))
 swiftstaticdir		:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift_static/$(sdk) $(shell $(xcs) -p)/Toolchains/$(swifttoolchain).xctoolchain/usr/lib/swift_static/$(sdk)))
-$(info [$(eXcode)] compiling against $(sdkpath))
-$(info [$(eXcode)] swift libraries: $(swiftlibdir) $(swiftstaticdir))
-$(info [$(eXcode)] swiftc version: $(shell $(swiftc) --version))
+$(info $(platform) sdk:)
+$(info =>    $(sdkpath))
+$(info swiftlibs:)
+$(info =>    $(swiftlibdir))
+$(info =>    $(swiftstaticdir))
+$(info swiftc:)
+$(info =>    $(shell $(swiftc) --version))
 ifeq ($(platform),OSX)
 clang += -mmacosx-version-min=$(target_ver_OSX)
 else ifeq ($(platform),iOS)
@@ -189,6 +196,9 @@ endef
 #^ my hope is that Swift will eventually become a system framework when Apple starts using it to build iOS/OSX system apps ...
 #  https://forums.developer.apple.com/message/9714
 #  http://mjtsai.com/blog/2015/06/12/swift-libraries-not-included-in-ios-9-or-el-capitan/
+# 10.13: /System/Library/PrivateFrameworks/Swift/*.dylib for Apple's apps, ABI not vendorable until Swift5
+#  https://blog.timac.org/2017/1115-state-of-swift-ios11-1-macos10-13/
+#   https://github.com/apple/swift/blob/master/docs/ABIStabilityManifesto.md https://swift.org/abi-stability/
 
 $(outdir)/exec/%.dSYM: $(outdir)/exec/%
 	dsymutil $<
