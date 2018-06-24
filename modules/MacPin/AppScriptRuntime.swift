@@ -291,7 +291,7 @@ struct AppScriptGlobals {
 		//staticFunctions: functions.withUnsafeBufferPointer { $0.baseAddress }, // works *sometimes*
 		//staticFunctions: UnsafeBufferPointer(start: functions, count: functions.count).baseAddress, // never works
 		//staticFunctions: functions, // is supposed to work
-		//staticFunctions: nil,
+		staticFunctions: nil,
 		/* callbacks: nil==Object.<callback> */
 		initialize: initialize, finalize: finalize,
 		hasProperty: nil, getProperty: nil, setProperty: nil, deleteProperty: nil,
