@@ -15,10 +15,20 @@
 // https://github.com/substack/object-inspect/blob/master/index.js
 //
 // https://github.com/deecewan/browser-util-inspect/blob/master/index.js
+let inspect = require(`file://${$.app.resourcePath}/browser-util-inspect.js`);
 //
 // https://github.com/Automattic/util-inspect
 
-$.app.on('printToREPL', (result) => {
+Object.defineProperty(this, "allThis", {
+	configurable: true,
+	enumerable: true,
+	get: function () {
+		let thee = (this) ? this : window;
+		return Object.assign({},...Object.getOwnPropertyNames(thee).filter( (pn) => (!pn.startsWith("allThis")) ).map( (pn) => ( {[pn]: thee[pn]}) ));
+	}
+});
+
+$.app.on('printToREPL', (result, colorize) => {
 
 	function vtype(obj) {
       // JS world doesn't have a solid convention to get bare type names for *any* given object. pathetic.
@@ -129,6 +139,8 @@ $.app.on('printToREPL', (result) => {
 		return v;
 	}
 
+	let description = inspect(result, {showHidden: true, colors: colorize});
+/*
 	var description;
 	try {
 		description = JSON.stringify(result, function (k,v) { //replacer func
@@ -141,6 +153,7 @@ $.app.on('printToREPL', (result) => {
 	} catch(e) {
 		description = `((JSON.stringify failed: ${e}))`;
 	}
+*/
 	if (description) description = description.replace(/\\t/g, "\t").replace(/\\n/g, "\n")
 	var rtype = vtype(result);
 	if (rtype == 'Function') description = REPLdump(result);

@@ -96,14 +96,15 @@ delegate.launchRepl = () => {
 		var command = msg;
 		var result, exception;
 		try {
+			// need to rebind this to window
 			result = eval_copy(command); // <- line pointer marks right here
 		} catch(e) {
 			exception = e;
 			result = e; // printToREPL will make a line pointer object
 			try { console.log(e); } catch(e) { }
 		}
-		var ret = $.app.emit('printToREPL', result);
-		try { console.log(ret); } catch(e) { }
+		var ret = $.app.emit('printToREPL', result, false);
+		//try { console.log(ret); } catch(e) { }
 		let exfil = `returnREPL('${escape(ret)}', ${(exception) ? `'${escape(exception)}'` : 'null'});`;
 		//console.log(exfil); // use base64 instead of urlencode??
 		tab.evalJS(exfil);
@@ -199,7 +200,7 @@ $.app.on('AppFinishedLaunching', (launchURLs) => {
 	delegate.launchRepl();
 });
 
-let {injectTab} = require(`file://${$.app.resourcePath}/app_injectTab.js`);
+let injectTab = require(`file://${$.app.resourcePath}/app_injectTab.js`);
 if (!('printToREPL' in $.app.eventCallbacks)) {
 	$.app.loadAppScript(`file://${$.app.resourcePath}/app_repl.js`);
 }

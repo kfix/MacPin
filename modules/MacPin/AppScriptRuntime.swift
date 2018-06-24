@@ -206,7 +206,7 @@ struct AppScriptGlobals {
 				let this = JSValueToObject(contxt, exports, nil)
 
 				if let ret = JSScriptEvaluate(contxt, script, this, &exception) {
-					return exports!
+					return JSObjectGetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString), nil)
 				} else if !JSValueIsUndefined(contxt, exception) {
 					return exception!
 				}
@@ -440,7 +440,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			// FIXME: script code could be loaded from anywhere, exploitable?
 			warn("\(scriptURL): read")
 
-			let exception = JSValue()
+			var exception = JSValue()
 
 			if JSCheckScriptSyntax(
 				/*ctx:*/ context.jsGlobalContextRef,
@@ -676,7 +676,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		termiosREPL(
 			{ [unowned self] (line: String) -> Void in
 				let val = self.context.evaluateScript(line)
-				if let rets = self.emit(.printToREPL, val as Any) {
+				if let rets = self.emit(.printToREPL, val as Any, true) { //handler, expression, colorize
 					rets.forEach { ret in
 						if let retstr = ret?.toString() { print(retstr) }
 					}
