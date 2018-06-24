@@ -18,6 +18,8 @@
 #import "WKProcessPoolPrivate.h"
 #import "JSContext+Privates.h"
 #import "JSContextRefPrivate.h"
+#import "JSRemoteInspector.h"
+#import "JSScriptRefPrivate.h"
 #import "WKPage.h"
 #import "WKFrame.h"
 #import "WKInspectorPrivateMac.h"

@@ -1,6 +1,6 @@
 /// MacPin AppScript Runtime
 ///
-/// Creates a singleton-instance of JavaScriptCore for intepreting bundled javascripts to control a MacPin app
+/// Creates a singleton-instance of JavaScriptCore for intepreting javascript bundles controlling MacPin
 
 #if os(OSX)
 import AppKit
@@ -11,8 +11,7 @@ import UIKit
 
 import Foundation
 import JavaScriptCore // https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
-// https://developer.apple.com/library/mac/documentation/General/Reference/APIDiffsMacOSX10_10SeedDiff/modules/JavaScriptCore.html
-// https://github.com/WebKit/webkit/blob/master/Source/WebCore/bridge/objc/objc_class.mm
+import WebKitPrivates
 
 import XMLHTTPRequest // https://github.com/Lukas-Stuehrk/XMLHTTPRequest
 
@@ -21,7 +20,7 @@ import Prompt // https://github.com/neilpa/swift-libedit
 #endif
 
 import UserNotificationPrivates
-import SSKeychain // https://github.com/soffes/sskeychain
+//import SSKeychain // https://github.com/soffes/sskeychain
 
 /*
 
@@ -34,6 +33,15 @@ extension NSObject: JSExport {
 }
 
 */
+
+extension JSContext {
+	func injectGlobal(property: String, function: JSObjectCallAsFunctionCallback!) {
+		let globalObj = JSContextGetGlobalObject(self.jsGlobalContextRef)
+		let jsfunc = JSObjectMakeFunctionWithCallback(self.jsGlobalContextRef, JSStringCreateWithCFString(property as CFString), function)
+    	JSObjectSetProperty(self.jsGlobalContextRef, globalObj, JSStringCreateWithCFString(property as CFString), jsfunc, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+	}
+
+}
 
 // FIXME: AppScript needs a HandlerMethods enum instead of just tryFunc("unsafe-string")s everywhere....
 extension JSValue {
@@ -56,40 +64,51 @@ extension JSValue {
 	}
 
 	@discardableResult
-	func thisEval(_ code: String, sourceURL: String? = nil, exception: JSValue = JSValue()) -> JSValue? {
-		let source: JSStringRef?
-		if let urlstr = sourceURL { source = JSStringCreateWithCFString(urlstr as CFString) } else { source = nil }
-		/*guard*/ let jsval = JSEvaluateScript(
+	func thisEval(_ code: String, sourceURL: String? = nil) -> JSValue {
+		var excRef = JSValue().jsValueRef
+		var source: JSStringRef? = nil
+		if let sourceURL = sourceURL { source = JSStringCreateWithCFString(sourceURL as CFString) }
+		if let jsval = JSEvaluateScript(
 			/*ctx:*/ context.jsGlobalContextRef,
 			/*script:*/ JSStringCreateWithCFString(code as CFString),
 			/*thisObject:*/ JSValueToObject(context.jsGlobalContextRef, self.jsValueRef, nil),
 			/*sourceURL:*/ source ?? nil,
-			/*startingLineNumber:*/ Int32(1),
-			/*exception:*/ UnsafeMutablePointer(exception.jsValueRef)
-		) /*else { return nil }*/
-
-		if jsval != nil { return JSValue(jsValueRef: jsval, in: context) }
-		// else if exception.jsValueRef != nil { return exception.jsValueRef }
-		// http://ilya.puchka.me/extending-native-code-with-javascriptcore/
-		return nil
+			/*startingLineNumber:*/ 1,
+			/*exception:*/ &excRef
+		) {
+			return JSValue(jsValueRef: jsval, in: context)
+		} else if let excValue = JSValue(jsValueRef: excRef, in: context), excValue.hasProperty("sourceURL") { // "message"
+			return excValue
+		}
+		return JSValue(nullIn: context) // exception
 	}
 
 }
 
 @objc protocol AppScriptConsoleExports: JSExport {
-	//var log: @convention(block) (String) -> Void { get }
-		// FIXME: imitate JSConsole or JSConsoleClient to intercept built-in console.* support instead of shimming blocks
-		// https://github.com/WebKit/webkit/commits/master/Source/JavaScriptCore/runtime/ConsoleTypes.h
-		// context.globalObject.consoleClient = bluh
-		// let console: JSObject = context.globalObject.objectForKeyedSubscript("console")
-		// console.invokeMethod("log", withArguments: ["hello console.log"])
-		// console.objectForKeyedSubscript("log") == JSFunction
 	func log(_ msg: String)
 }
 
 class AppScriptConsole: NSObject, AppScriptConsoleExports {
-	//let log: @convention(block) (String) -> Void = { msg in warn(msg) }
-	func log(_ msg: String) { warn(msg) }
+	static func extend(_ context: JSContext, _ natives: String) {
+		// https://github.com/facebook/react-native/blob/d01ab66b47a173a62eef6261e2415f0619fefcbb/Libraries/Core/InitializeCore.js#L62
+		// https://github.com/facebook/react-native/blob/d01ab66b47a173a62eef6261e2415f0619fefcbb/Libraries/Core/ExceptionsManager.js#L110
+		// https://github.com/facebook/react-native/blob/d01ab66b47a173a62eef6261e2415f0619fefcbb/Libraries/Utilities/RCTLog.js
+		context.evaluateScript("""
+			console._logOriginal = console.log.bind(console);
+			console.log = (...args) => {
+				console._logOriginal.apply(console, args);
+				\(natives).log(args);
+			}
+			console.log("\(natives) hooked");
+		""")
+	}
+
+	func log(_ msg: String) {
+		// https://github.com/facebook/react-native/blob/da7873563bff945086a70306cc25fa4c048bb84b/React/CxxBridge/RCTJSCHelpers.mm
+		warn(msg)
+		// console.log => undefined
+	}
 }
 
 @objc protocol AppScriptExports : JSExport { // '$.app'
@@ -116,16 +135,169 @@ class AppScriptConsole: NSObject, AppScriptConsoleExports {
 	func doesAppExist(_ appstr: String) -> Bool
 	func pathExists(_ path: String) -> Bool
 	func loadAppScript(_ urlstr: String) -> JSValue?
+	func loadCommonJSScript(_ urlstr: String) -> JSValue
 	// static func // exported as global JS func
 #if DEBUG
 	func evalJXA(_ script: String)
 	func callJXALibrary(_ library: String, _ call: String, _ args: [AnyObject])
+	@objc(reload) func loadSiteApp()
 #endif
-	var nativeModules: [String: Any] { get }
 	@objc(eventCallbacks) var strEventCallbacks: [String: Array<JSValue>] { get } // app->js callbacks
 	@objc(emit::) func strEmit(_ eventName: String, _ args: Any) -> [JSValue]
 	func on(_ event: String, _ callback: JSValue) // installs handlers for app events
 	var messageHandlers: [String: [JSValue]] { get } // tab*app IPC callbacks
+}
+
+struct AppScriptGlobals {
+	// global codes for using JavaScriptCore C-APIs
+
+	@discardableResult
+	static func loadCommonJSScript(urlstr: String, ctx: JSContextRef, cls: JSClassRef? = nil) -> JSValueRef {
+		// loosely impl node-ish require(scriptname, ...state) -> module.exports
+		// http://www.commonjs.org/specs/modules/1.0/
+		// TODO: RequirJS mandates add'l define() http://requirejs.org/docs/commonjs.html
+
+		// actually importing things from npm would require a lot of node shims
+		// https://github.com/swittk/Node-JS-for-JavascriptCore/blob/master/Node/JSNodeEventEmitter.m
+		// https://github.com/nodejs/node-v0.x-archive/issues/5132#issuecomment-15432598 CommonJS is ded
+
+		if let scriptURL = NSURL(string: urlstr), let script = try? NSString(contentsOf: scriptURL as URL, encoding: String.Encoding.utf8.rawValue), let sourceURL = scriptURL.absoluteString {
+			// FIXME: script code could be loaded from anywhere, exploitable?
+			warn("\(scriptURL): read")
+
+			let contextGroup = JSContextGetGroup(ctx)
+
+			let jsErrorMsg = JSStringCreateWithCFString("" as CFString)
+			var errorLine = Int32(0)
+			let script = JSScriptCreateFromString(
+				contextGroup,
+				JSStringCreateWithCFString(urlstr as CFString),
+				/*startingLineNumber:*/ 1,
+				/*script:*/ JSStringCreateWithCFString(script as CFString),
+				/*errorMessage*/ UnsafeMutablePointer(jsErrorMsg),
+				/*errorLine*/ &errorLine
+			)
+
+			if errorLine == 0 {
+				warn("\(scriptURL): syntax checked ok")
+
+				let contxt = JSGlobalContextCreateInGroup(contextGroup, cls)
+				JSGlobalContextSetName(contxt, JSStringCreateWithCFString(urlstr as CFString))
+
+				let globalObj = JSContextGetGlobalObject(contxt)
+				var exception = JSValueMakeUndefined(contxt)
+
+				// https://nodejs.org/api/modules.html#modules_module_exports
+				let module = JSObjectMake(contxt, nil, nil)
+				let exports = JSObjectMake(contxt, nil, nil)
+				JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString), exports, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+				JSObjectSetProperty(contxt, globalObj, JSStringCreateWithCFString("module" as CFString), module, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+
+				// https://nodejs.org/api/modules.html#modules_exports_shortcut
+				JSEvaluateScript(contxt, JSStringCreateWithUTF8CString("""
+					Object.defineProperty(this, "exports", {
+						get: function () {
+							return module.exports;
+						}
+					});
+				"""), nil, nil, 1, nil)
+
+				// `this === module.exports` per https://stackoverflow.com/a/30894970/3878712
+				let this = JSValueToObject(contxt, exports, nil)
+
+				if let ret = JSScriptEvaluate(contxt, script, this, &exception) {
+					return exports!
+				} else if !JSValueIsUndefined(contxt, exception) {
+					return exception!
+				}
+			} else {
+				warn("bad syntax: \(scriptURL) @ \(errorLine)")
+				let errMessage = JSStringCopyCFString(kCFAllocatorDefault, jsErrorMsg) as String
+				warn(errMessage)
+			} // or pop open the script source-code in a new tab and highlight the offender
+		}
+		warn("\(urlstr): could not be read")
+		return JSValueMakeNull(ctx)
+	}
+
+//ES6 async imports of .mjs?
+// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/runtime/JSGlobalObjectFunctions.cpp#L782
+// https://github.com/WebKit/webkit/blob/310778e7d2a10e8ba10b22a62b6949b9071f7415/Source/JavaScriptCore/runtime/JSGlobalObject.cpp#L779
+// https://github.com/WebKit/webkit/blob/6e18e26e3a8dc8527949110b403bb943070a07bc/Source/JavaScriptCore/jsc.cpp#L786
+// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/runtime/JSModuleLoader.cpp
+// https://github.com/WebKit/webkit/blob/c340b151a8adc98e719539174aa13386d46e0851/Source/WebCore/bindings/js/ScriptModuleLoader.cpp
+//  will need to reimpl ASG in a .cxx to expose those JSC:: goodies
+//	https://github.com/tris-foundation/javascript/blob/master/Sources/CV8/c_v8.cpp
+//	https://karhm.com/JavaScriptCore_C_API/
+
+	static let cjsrequire: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
+		// https://developer.apple.com/documentation/javascriptcore/jsobjectcallasfunctioncallback
+		// called as `thisObject.function(args);` within ctx
+
+		if argc > 0 {
+			if let args = args, JSValueIsString(ctx, args[0]) {
+				let globalObjClass = JSClassCreate(&globalClassDef)
+				let url = JSStringCopyCFString(kCFAllocatorDefault, JSValueToStringCopy(ctx, args[0], nil)) as String
+				return loadCommonJSScript(urlstr: url, ctx: ctx!, cls: globalObjClass)
+			}
+		}
+
+		return JSValueMakeNull(ctx) // generates an exception
+	}
+
+	static let nativeModules: [String: Any] = [
+		"console":			AppScriptConsole(),
+		//"fetch":			JSFetch.self,
+		//"keychain":			SSKeychain.self,
+		"launchedWithURL":	"",
+		"WebView":			MPWebView.self,
+	]
+	static let modSpace = "_nativeModules"
+
+	static let functions: [JSStaticFunction] = [
+		JSStaticFunction(name: "require", callAsFunction: cjsrequire,
+			attributes: JSPropertyAttributes(kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete)),
+		JSStaticFunction(name: nil, callAsFunction: nil, attributes: 0) // req'd terminator
+    ] // doesn't seem to identically mmap to C-array-of-structs ...
+
+	static let values: [JSStaticValue] = [
+		//JSStaticValue(name: "nativeModules", getProperty: nil, setProperty: nil, attributes: 0),
+		JSStaticValue(name: nil, getProperty: nil, setProperty: nil, attributes: 0) // req'd terminator
+    ]
+
+	static let initialize: JSObjectInitializeCallback = { ctx, obj in
+		warn("context created")
+		let context = JSContext(jsGlobalContextRef: ctx)!
+		// this[Symbol.toStringTag] = "app"; this => [object app]
+
+		context.injectGlobal(property: "require", function: cjsrequire)
+		context.globalObject.setObject(nativeModules, forKeyedSubscript: modSpace as NSString)
+		AppScriptConsole.extend(context, "\(modSpace).console")
+		// retain(obj)
+	}
+
+	static let finalize: JSObjectFinalizeCallback = { obj in
+		warn("context freed")
+		// release(obj)
+	}
+
+	// https://developer.apple.com/documentation/javascriptcore/jsclassdefinition
+	static var globalClassDef = JSClassDefinition(
+		version: 0, attributes: JSClassAttributes(kJSClassAttributeNoAutomaticPrototype), // shows all Object.protos but not my custom func
+		//version: 0, attributes: JSClassAttributes(kJSClassAttributeNone), // only shows my custom func in the proto, none from Object
+		className: "MPGlobalObject", parentClass: nil, // nil==Object()
+		//staticValues: values.withUnsafeBufferPointer { $0.baseAddress }, // works *sometimes*
+		staticValues: nil, /* BUG: cannot get consistently working pointer */
+		//staticFunctions: functions.withUnsafeBufferPointer { $0.baseAddress }, // works *sometimes*
+		//staticFunctions: UnsafeBufferPointer(start: functions, count: functions.count).baseAddress, // never works
+		//staticFunctions: functions, // is supposed to work
+		//staticFunctions: nil,
+		/* callbacks: nil==Object.<callback> */
+		initialize: initialize, finalize: finalize,
+		hasProperty: nil, getProperty: nil, setProperty: nil, deleteProperty: nil,
+		getPropertyNames: nil, callAsFunction: nil, callAsConstructor: nil,
+		hasInstance: nil, convertToType: nil
+	)
 }
 
 class AppScriptRuntime: NSObject, AppScriptExports  {
@@ -134,7 +306,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	static let legacyAppFile = "app" // => site/app.js
 	static let shared = AppScriptRuntime(global: AppScriptRuntime.legacyGlobal) // create & export the singleton
 
-	var context = JSContext(virtualMachine: JSVirtualMachine())
+	var contextGroup = JSContextGroupCreate()
+	var context: JSContext
 	var jsdelegate: JSValue
 	let exports: JSValue
 
@@ -169,57 +342,52 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	//static func(extend: mountObj) { }
 
-	var nativeModules: [String: Any] = [
-		"launchedWithURL": "",
-		"WebView": MPWebView.self,
-		"keychain": SSKeychain.self,
-		"console": AppScriptConsole()
-	]
+	let globalObjClass = JSClassCreate(&AppScriptGlobals.globalClassDef)
 
 	init(global: String = AppScriptRuntime.legacyGlobal) {
-		context?.name = "AppScriptRuntime"
-		jsdelegate = JSValue(newObjectIn: context) //default property-less delegate obj // FIXME: #11 make an App() from ES6 class
+		//AppScriptGlobals.ptrFunctions.initialize(from: AppScriptGlobals.functions)
+		//AppScriptGlobals.ptrValues.initialize(from: AppScriptGlobals.values)
+
+		// lets create the global context with a custom-classed globalObj
+		// all app-scripts and cjs-mods will get their own contexts when evaluated, but within the same context-group
+		//  app-scripts will also have the `$.app` namespace mounted for run-time checks ($.app.platform)
+		context = JSContext(jsGlobalContextRef: JSGlobalContextCreateInGroup(contextGroup, globalObjClass))
+
+		jsdelegate = JSValue(newObjectIn: context) //default property-less delegate obj
+
 #if SAFARIDBG
 		// https://github.com/WebKit/webkit/commit/e9f4a5ef360d47b719f7391fe02d28ff1e63fc7://github.com/WebKit/webkit/commit/e9f4a5ef360d47b719f7391fe02d28ff1e63fc7e
 		// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSContextPrivate.h
-		context?._remoteInspectionEnabled = true
-		//context.logToSystemConsole = true
+		context._remoteInspectionEnabled = true
+		// http://asciiwwdc.com/2014/sessions/512  https://developer.apple.com/videos/play/wwdc2014/512/
+		//context.logToSystemConsole = true // console.*(...) => `CONSOLE LOG ...`
 #else
-		context?._remoteInspectionEnabled = false
+		context._remoteInspectionEnabled = false
 		//context.logToSystemConsole = false
 #endif
 		//context._debuggerRunLoop = CFRunLoopRef // FIXME: make a new thread for REPL and Web Inspector console eval()s
+		JSRemoteInspectorSetLogToSystemConsole(false)
 
 		exports = JSValue(newObjectIn: context)
-		context?.globalObject.setObject(exports, forKeyedSubscript: global as NSString)
+		context.globalObject.setObject(exports, forKeyedSubscript: global as NSString)
 		XMLHttpRequest().extend(context) // allows `new XMLHTTPRequest` for doing xHr's
 		//FIXME: extend Fetch API instead: https://facebook.github.io/react-native/docs/network.html
 
 		super.init()
+		context.name = "\(self.name) \(self.description)"
 
-		let reccer: @convention(block) (String) -> Any = { [weak self] mod in return self!.nativeModules[mod] }
-		// implement Electrino's basic `require()` to import our native "modules"
-		context?.globalObject.setObject(reccer, forKeyedSubscript: "require" as NSString )
-		// JSC doesn't implement ES6 require like WK/WebCore does so we're free to overload it.
-
-		// TODO: check for site/macpin.js, which bootstraps any desired native mods from MP to the global namespace
-		//   if macpin.js doesn't exist, fall back to a legacy-compatible mapping for `$.*`:
-
-		// TODO: allow passing in state to the require('mod', ...state) (ie. launchedWithURL, globalUserScripts)
-
-		context?.evaluateScript("""
-			Object.assign(this, {
-				"console": require('console')
-			});
+		context.evaluateScript("""
 			Object.assign(\(global), {
-				"launchedWithURL": require('launchedWithURL'),
-				"WebView": require('WebView'),
-				"keychain": require('keychain')
+				launchedWithURL: \(AppScriptGlobals.modSpace).launchedWithURL
+				, WebView: \(AppScriptGlobals.modSpace).WebView
 			});
+			let window = this; // https://github.com/nodejs/node/issues/1043
+			let global = this; // https://github.com/browserify/insert-module-globals/pull/48#issuecomment-186291413
 		""")
+		//JSFetch.provideToContext(context: self.context!, hostURL: "")
 	}
 
-	override var description: String { return "<\(type(of: self))> [\(appPath)] `\(String(describing: context?.name))`" }
+	override var description: String { return "<\(type(of: self))> [\(appPath)]" }
 
 	func sleep(_ secs: Int) {
 		let delayTime = DispatchTime.now() + DispatchTimeInterval.seconds(secs)
@@ -238,9 +406,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 */
 
-	func loadSiteApp() {
+	@objc func loadSiteApp() {
 		let app = (Bundle.main.object(forInfoDictionaryKey:"MacPin-AppScriptName") as? String) ?? AppScriptRuntime.legacyAppFile
-		guard let gblExport = context?.objectForKeyedSubscript(AppScriptRuntime.legacyGlobal) else { return; }
+		guard let gblExport = context.objectForKeyedSubscript(AppScriptRuntime.legacyGlobal) else { return; }
 		let appExport = gblExport.objectForKeyedSubscript(AppScriptRuntime.legacyAppGlobal)
 		if let appExport = appExport, !appExport.isUndefined && !appExport.isNull {
 			// don't re-export if $.app is already exported
@@ -248,29 +416,16 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			gblExport.setObject(self, forKeyedSubscript: AppScriptRuntime.legacyAppGlobal as NSString)
 			// https://bugs.swift.org/browse/SR-6476 can't do appExport = self
 		}
+		//appExport.setObject(context.globalObject.loadCommonJSScript, forKeyedSubscript: "loadCommonJSScript" as NSString)
+
+		context.evaluateScript("""
+			window.addEventListener =
+				\(AppScriptRuntime.legacyGlobal).\(AppScriptRuntime.legacyAppGlobal).on.bind(\(AppScriptRuntime.legacyGlobal).\(AppScriptRuntime.legacyAppGlobal));
+		""")
 
 		if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
-
-			// make thrown exceptions popup an nserror displaying the file name and error type
-			// FIXME: doesn't print actual text of throwing code
-			// Safari Web Inspector <-> JSContext seems to get an actual source-map
-			context?.exceptionHandler = { context, exception in
-				let line = exception?.forProperty("line").toNumber()
-				let column = exception?.forProperty("column").toNumber()
-				let stack = exception?.forProperty("stack").toString()
-				let message = exception?.forProperty("message").toString()
-				let error = NSError(domain: "MacPin", code: 4, userInfo: [
-					NSURLErrorKey: context?.name as Any,
-					NSLocalizedDescriptionKey: "JS Exception @ \(line ?? -1):\(column ?? -1): \(message ?? "?")\n\(stack ?? "?")"
-					// exception seems to be Error.toString(). I want .message|line|column|stack too
-				])
-				displayError(error) // FIXME: would be nicer to pop up an inspector pane or tab to interactively debug this
-				context?.exception = exception //default in JSContext.mm
-				return // gets returned to evaluateScript()?
-			}
-
 			if let jsval = loadAppScript(app_js.description) {
-				if jsval.isObject { // FIXME: #11 - if JSValueIsInstanceOfConstructor(context.JSGlobalContextRef, jsval.JSValueRef, context.objectForKeyedSubscript("App").JSValueRef, nil)
+				if jsval.isObject { // FIXME: #11 - if JSValueIsInstanceOfConstructor(context.jsGlobalContextRef, jsval.JSValueRef, context.objectForKeyedSubscript("App").JSValueRef, nil)
 					warn("\(app_js) loaded as AppScriptRuntime.shared.jsdelegate")
 					jsdelegate = jsval // TODO: issue #11 - make `this` the delegate in app scripts, not the return
 
@@ -279,36 +434,24 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		}
 	}
 
-	// FIXME: ES6 modules? context.evaluateScript("import ...") or "System.load()";
 	@discardableResult
 	func loadAppScript(_ urlstr: String) -> JSValue? {
 		if let scriptURL = NSURL(string: urlstr), let script = try? NSString(contentsOf: scriptURL as URL, encoding: String.Encoding.utf8.rawValue), let sourceURL = scriptURL.absoluteString {
 			// FIXME: script code could be loaded from anywhere, exploitable?
 			warn("\(scriptURL): read")
 
-			// JSBase.h
-			//func JSCheckScriptSyntax(ctx: JSContextRef, script: JSStringRef, sourceURL: JSStringRef, startingLineNumber: Int32, exception: UnsafeMutablePointer<JSValueRef>) -> Bool
-			//func JSEvaluateScript(ctx: JSContextRef, script: JSStringRef, thisObject: JSObjectRef, sourceURL: JSStringRef, startingLineNumber: Int32, exception: UnsafeMutablePointer<JSValueRef>) -> JSValueRef
-			// could make this == $ ...
-			// https://github.com/facebook/react-native/blob/master/React/Executors/RCTContextExecutor.m#L304
-			// https://github.com/facebook/react-native/blob/0fbe0913042e314345f6a033a3681372c741466b/React/Executors/RCTContextExecutor.m#L175
-
 			let exception = JSValue()
 
 			if JSCheckScriptSyntax(
-				/*ctx:*/ context?.jsGlobalContextRef,
+				/*ctx:*/ context.jsGlobalContextRef,
 				/*script:*/ JSStringCreateWithCFString(script as CFString),
 				/*sourceURL:*/ JSStringCreateWithCFString(sourceURL as CFString),
-				/*startingLineNumber:*/ Int32(1),
+				/*startingLineNumber:*/ 1,
 				/*exception:*/ UnsafeMutablePointer(exception.jsValueRef)
 			) {
 				warn("\(scriptURL): syntax checked ok")
-				context?.name = "\(context?.name ?? "js(??)") <\(urlstr)>"
-				// FIXME: assumes last script loaded is the source file of *all* thrown errors, which is not always true
-#if DEBUG
-#else
-				//context?.evaluateScript("eval = null;") // Saaaaaaafe Plaaaaace
-#endif
+				//context.name = "\(context.name ?? "js(??)") <\(urlstr)>"
+
 				//return jsdelegate.thisEval(script as String, sourceURL: scriptURL) // TODO: issue #11 - make `this` the delegate in app scripts, not the return
 				// or somehow implement ES6's `export` to allow explicit designation of objects to be exposed into the parent/requiring namespace
 				//   export is bound-in as an NSBlock to a new JSContext we'll evaluate the scriptFile within
@@ -318,7 +461,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				//     can JSValues be copied between JSContexts like that?
 				//       as long as the contexts have the same VM, yes
 				//     https://github.com/pojala/electrino/pull/5/files
-				return context?.evaluateScript(script as String, withSourceURL: scriptURL as URL?)
+				return context.evaluateScript(script as String, withSourceURL: scriptURL as URL?)
 			} else {
 				// hmm, using self.context for the syntax check seems to evaluate the contents anyways
 				// need to make a throwaway dupe of it
@@ -336,6 +479,18 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			} // or pop open the script source-code in a new tab and highlight the offender
 		}
 		return nil
+	}
+
+	@discardableResult
+	func loadCommonJSScript(_ urlstr: String) -> JSValue {
+		// just a bridgeable-wrapper for JSContext.loadCommonJSScript
+		return JSValue(jsValueRef: AppScriptGlobals.loadCommonJSScript(urlstr: urlstr, ctx: context.jsGlobalContextRef, cls: globalObjClass), in: context)
+	}
+
+	func resetStates() {
+		jsdelegate = JSValue(nullIn: context)
+		eventCallbacks = [:] // FIXME: retain printToREPL ?
+		messageHandlers = [:]
 	}
 
 	func doesAppExist(_ appstr: String) -> Bool {
@@ -423,6 +578,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
+	// TOIMPL: https://electronjs.org/docs/api/notification extend a Notification() shim
 	@objc(postNotification::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?) {
 #if os(OSX)
 		let note = NSUserNotification()
@@ -519,12 +675,15 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 		termiosREPL(
 			{ [unowned self] (line: String) -> Void in
-				let val = self.context?.evaluateScript(line)
+				let val = self.context.evaluateScript(line)
 				if let rets = self.emit(.printToREPL, val as Any) {
 					rets.forEach { ret in
 						if let retstr = ret?.toString() { print(retstr) }
 					}
 				} else { // no REPLprint handler, just eval and dump
+					// FIXME: instead of waiting on the events returns, expose a repl object to the runtime that can be replaced
+					//  if replaced with a callable func, we will print(`repl.writer(result)`)
+					//   https://nodejs.org/dist/latest/docs/api/repl.html#repl_customizing_repl_output
 					print(val as Any)
 				}
 			},
@@ -589,8 +748,14 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	@discardableResult
+	// addEventListener is functionally the same
 	func on(_ eventName: String, _ callback: JSValue) { // installs handlers for app events
-		guard let ev = AppScriptEvent(rawValue: eventName) else { return } // ignore invalid event names
+		guard let ev = AppScriptEvent(rawValue: eventName),
+			!callback.isNull && !callback.isUndefined &&
+			!eventCallbacks[ev, default: []].contains(callback) && callback.hasProperty("call") else {
+				warn("invalid event name or uncallable object supplied")
+				return
+		}
 		warn(ev.description)
 		eventCallbacks[ev, default: []] += [callback]
 		warn(eventCallbacks[ev, default: []].description)
@@ -635,4 +800,6 @@ enum AppScriptEvent: String, CustomStringConvertible {
 		decideNavigationForMIME, // mime, url, webview -> Bool
 		AppFinishedLaunching, // url?
 		printToREPL // result
+
+// TOIMPL: https://electronjs.org/docs/api/app#events
 }

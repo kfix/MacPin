@@ -1,6 +1,7 @@
 import JavaScriptCore
 import AppKit
 
+// https://electronjs.org/docs/api/browser-window
 @objc protocol BrowserViewControllerJS: JSExport { // '$.browser' in app.js
 	var defaultUserAgent: String? { get set } // full UA used for any new tab without explicit UA specified
 	var isFullscreen: Bool { get set }
@@ -8,11 +9,11 @@ import AppKit
 	var tabSelected: AnyObject? { get set }
     //var matchedAddressOptions: [String:String] { get set }
 	var tabs: [MPWebView] { get set }
+	// https://bugs.swift.org/browse/SR-6476 support $.browser[N] for accessing tabs?
 	func close()
 	func switchToNextTab()
 	func switchToPreviousTab()
 	func closeTab(_ tab: AnyObject?)
-	func pushTab(_ tab: AnyObject)
 	func newTabPrompt()
 	func newIsolatedTabPrompt()
 	func newPrivateTabPrompt()
