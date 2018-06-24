@@ -87,20 +87,23 @@ delegate.img2data = function(tab) {
 
 delegate.testAS = function(tab) { $.app.callJXALibrary('test', 'doTest', Array.prototype.slice.call(arguments)); };
 
+if (eval != null)
+	var eval_copy = eval; // global eval is wiped after app.js is started ...
+
 //$.app.on('launchRepl', () => {
 delegate.launchRepl = () => {
 	var evalRepl = (tab, msg) => {
 		var command = msg;
 		var result, exception;
 		try {
-			result = eval(command); // <- line pointer marks right here
+			result = eval_copy(command); // <- line pointer marks right here
 		} catch(e) {
 			exception = e;
 			result = e; // printToREPL will make a line pointer object
-			console.log(e);
+			try { console.log(e); } catch(e) { }
 		}
 		var ret = $.app.emit('printToREPL', result);
-		console.log(ret);
+		try { console.log(ret); } catch(e) { }
 		let exfil = `returnREPL('${escape(ret)}', ${(exception) ? `'${escape(exception)}'` : 'null'});`;
 		//console.log(exfil); // use base64 instead of urlencode??
 		tab.evalJS(exfil);
@@ -120,6 +123,10 @@ delegate.launchRepl = () => {
 	};
 
 	$.browser.tabSelected = new $.WebView(cfgRepl)
+	// https://github.com/remy/jsconsole is much prettier than my repl.html ...
+	//    https://github.com/remy/jsconsole/blob/master/public/inject.html
+	//    https://github.com/remy/jsconsole/blob/1e3a1ecc86b7da1abe6c1e2e6c018184a19f4b37/public/js/remote.js
+	// https://nodejs.org/api/repl.html
 }
 
 /*
@@ -145,6 +152,8 @@ $.app.on('AppFinishedLaunching', (launchURLs) => {
 	$.browser.addShortcut('WebRTC effect test', 'https://webkit.org/blog-files/webrtc/pc-with-effects/index.html');
 	$.browser.addShortcut('WebRTC samples', 'https://webrtc.github.io/samples/');
 	$.browser.addShortcut('WebRTC recorder', 'https://www.webrtc-experiment.com/RecordRTC/');
+	$.browser.addShortcut('WebRTC test', 'https://webrtc.test.org');
+	// window.AudioContext = window.AudioContext || window.webkitAudioContext;
 	$.browser.addShortcut('Geolocation test', 'https://onury.io/geolocator/?content=examples');
 	$.browser.addShortcut('Notification test', 'https://ttsvetko.github.io/HTML5-Desktop-Notifications/');
 
@@ -186,13 +195,19 @@ $.app.on('AppFinishedLaunching', (launchURLs) => {
 	//$.browser.addShortcut('REPL by-ref', {call: delegate.launchRepl}); // WIP
 
 	if ($.app.platform === "OSX") $.app.changeAppIcon(`file://${$.app.resourcePath}/icon.png`);
-	$.browser.tabSelected = new $.WebView({url: 'http://github.com/kfix/MacPin'});
+	//$.browser.tabSelected = new $.WebView({url: 'http://github.com/kfix/MacPin'});
+	delegate.launchRepl();
 });
 
-$.app.loadAppScript(`file://${$.app.resourcePath}/app_injectTab.js`);
+let {injectTab} = require(`file://${$.app.resourcePath}/app_injectTab.js`);
 if (!('printToREPL' in $.app.eventCallbacks)) {
 	$.app.loadAppScript(`file://${$.app.resourcePath}/app_repl.js`);
 }
 $.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
+
+// https://www.lucidchart.com/techblog/2018/02/14/javascriptcore-the-holy-grail-of-cross-platform/
+//$.app.loadAppScript(`file://${$.app.resourcePath}/fetchURL.js`);
+//$.app.loadAppScript(`file://${$.app.resourcePath}/fetchDeps.js`);
+//var fetch = require('fetch').fetch;
 
 delegate; //return this to macpin
