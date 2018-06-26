@@ -52,7 +52,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		if let urlstr = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))!.stringValue {
 			warn("`\(urlstr)` -> AppScriptRuntime.shared.jsdelegate.launchURL()")
 			AppScriptRuntime.shared.exports.setObject(urlstr, forKeyedSubscript: "launchedWithURL" as NSString)
-			AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr as NSString)
+			AppScriptRuntime.shared.emit(.launchURL, urlstr)
 			//replyEvent == ??
 		}
 		//replyEvent == ??
@@ -79,9 +79,20 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 }
 
-extension MacPinAppDelegateOSX: ApplicationDelegate {
+@objc extension MacPinAppDelegateOSX: ApplicationDelegate {
 
-	public func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { return browserController.tabMenu }
+	//@available(macOS, obsoleted: 10.13, message: "High Sierra is on drugs!")
+	public func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
+		warn()
+		if #available(OSX 10.13, iOS 11, *) {
+			// high sierra seems to cache a *copy* of the tabMenu (containing tabviewitems holding refs to webViews' props) thru NSCopying
+			//	until its clicked on *or* until it garbage-collect itself every minute or so
+			// causes webview to be retained after close, beacuse the copied menu is stale after tabs are closed and the master menu is updated
+			return nil
+		} else {
+			return browserController.tabMenu
+		}
+	}
 
 	public func applicationShouldOpenUntitledFile(_ app: NSApplication) -> Bool { return false }
 
@@ -101,7 +112,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		let appMenu = NSMenuItem()
 		appMenu.submenu = NSMenu()
 		appMenu.submenu?.addItem(MenuItem("About \(appname)", "orderFrontStandardAboutPanel:"))
-		appMenu.submenu?.addItem(MenuItem("Restart \(appname)", "loadSiteApp"))
+		appMenu.submenu?.addItem(MenuItem("Restart \(appname)", #selector(AppScriptRuntime.loadSiteApp)))
 		appMenu.submenu?.addItem(NSMenuItem.separator())
 		appMenu.submenu?.addItem(MenuItem("Hide \(appname)", "hide:", "h", [.command]))
 		appMenu.submenu?.addItem(MenuItem("Hide Others", "hideOtherApplications:", "H", [.command, .shift]))
@@ -231,10 +242,24 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		}
 */
 
+/*
+        NSSetUncaughtExceptionHandler { (exception) in
+            let source:String = exception.callStackSymbols[4]
+            let separatorSet = CharacterSet(charactersIn: " -[]+?,")
+            var array:[String] = source.components(separatedBy: separatorSet)
+            array = array.filter({ $0 != "" })
+            let exceptionStr:String = array[3];
+            let exceptionArr=exceptionStr.split(separator: "\\d+")
+            print("filename : \(exceptionArr[2])")
+            print("method : \(exceptionArr[3])")
+        }
+*/
+
 		browserController.extend(AppScriptRuntime.shared.exports)
 		AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
 		//AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
 		AppScriptRuntime.shared.emit(.AppFinishedLaunching, "launched with this url")
+		AppScriptRuntime.shared.context.evaluateScript("eval = null;") // security thru obscurity
 
 		if let default_html = Bundle.main.url(forResource: "default", withExtension: "html") {
 			warn("loading initial page from app bundle: \(default_html)")
@@ -250,7 +275,30 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		for (idx, arg) in CommandLine.arguments.dropFirst().enumerated() {
 			switch (arg) {
 				case "-i" where isatty(1) == 1:
-					 //open a JS console on the terminal, if present
+
+#if !(SAFARIDBG)
+	// runtime check possible to confirm active remote inspector?
+
+			// make thrown exceptions popup an nserror displaying the file name and error type,
+			//   which will be shunted to console.log
+			AppScriptRuntime.shared.context.exceptionHandler = { context, exception in
+				let line = exception?.forProperty("line").toNumber()
+				let column = exception?.forProperty("column").toNumber()
+				let stack = exception?.forProperty("stack").toString()
+				let message = exception?.forProperty("message").toString()
+				let error = NSError(domain: "MacPin", code: 4, userInfo: [
+					NSURLErrorKey: context?.name as Any,
+					NSLocalizedDescriptionKey: "JS Exception @ \(line ?? -1):\(column ?? -1): \(message ?? "?")\n\(stack ?? "?")"
+					// exception seems to be Error.toString(). I want .message|line|column|stack too
+				])
+				displayError(error) // FIXME: would be nicer to pop up an inspector pane or tab to interactively debug this
+				context?.exception = exception //default in JSContext.mm
+				return // gets returned to evaluateScript()?
+			}
+			// if you don't set the exception handler, JSC will directly pass them to console.* so they could bubble up to the Inspector
+#endif
+
+					//open a JS console on the terminal, if present
 					//AppScriptRuntime.shared.eventCallbacks[.printToREPL, default: []]
 					if AppScriptRuntime.shared.eventCallbacks[.printToREPL, default: []].isEmpty {
 						if let repl_js = Bundle.main.url(forResource: "app_repl", withExtension: "js") {
@@ -328,6 +376,7 @@ extension MacPinAppDelegateOSX: ApplicationDelegate {
 		windowController = nil // deinit the wc
 		window = nil // deinit the window
 		browserController.unextend(AppScriptRuntime.shared.exports)
+		AppScriptRuntime.shared.resetStates()
 		//browserController.close() // kill any zombie tabs -- causes lock-loop?
 		// unfocus app?
 #if arch(x86_64) || arch(i386)
@@ -400,6 +449,8 @@ extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 	public func userNotificationCenter(_ center: NSUserNotificationCenter, didActivate notification: NSUserNotification) {
 		warn("user clicked notification")
 
+		//if ! (AppScriptRuntime.shared.emit(.handleClickedNotification,
+		//....) ?? []).flatMap().isEmpty
 		if AppScriptRuntime.shared.jsdelegate.tryFunc("handleClickedNotification",
 			(notification.title ?? "") as NSString, (notification.subtitle ?? "") as NSString,
 			(notification.informativeText ?? "") as NSString, (notification.identifier ?? "") as NSString) {
