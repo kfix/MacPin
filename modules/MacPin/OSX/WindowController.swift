@@ -16,6 +16,8 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			window.backgroundColor = NSColor.white
 			window.isOpaque = true
 			window.hasShadow = true
+			//window.ignoresMouseEvents = false
+			//window.acceptsMouseMovedEvents = false
 			window.titleVisibility = .hidden
 			if appearance == "Dark" {
 				window.appearance = NSAppearance(named: NSAppearance.Name.vibrantDark) // match overall system dark-mode
@@ -80,11 +82,18 @@ class WindowController: NSWindowController, NSWindowDelegate {
 
 	override func windowTitle(forDocumentDisplayName displayName: String) -> String { warn(displayName); return window?.title ?? displayName }
 
-	func windowShouldClose(_ sender: Any) -> Bool {
+	//func windowDidBecomeKey(_ notification: Notification) { warn(obj: notification); }
+
+	func windowShouldClose(_ sender: NSWindow) -> Bool {
 		warn()
 		return true
 	}
-	func windowWillClose(_ notification: Notification) { warn() } // window was closed by red stoplight button
+	func windowWillClose(_ notification: Notification) {
+		warn()
+		warn(obj: self)
+	} // window was closed by red stoplight button
+
+	override func noResponder(for eventSelector: Selector) { warn(obj: eventSelector); }
 
 	deinit { warn(description) }
 

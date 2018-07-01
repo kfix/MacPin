@@ -7,6 +7,7 @@ import WebKit
 extension WKWebView {
 	@objc override open func setValue(_ value: Any?, forUndefinedKey key: String) {
 		if key != "URL" { super.setValue(value, forUndefinedKey: key) } //prevents URLbox from trying to directly rewrite webView.URL
+		// copy by ref?
 	}
 }
 
@@ -24,6 +25,8 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			drawsBackground = false
 			textColor = NSColor.labelColor
 		}
+		isSelectable = true
+		isEditable = true
 	}
 
 	override func draw(_ dirtyRect: NSRect) {
@@ -41,6 +44,17 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 		}
 		super.draw(dirtyRect)
 	}
+
+	// NSControl
+	override func validateProposedFirstResponder(_ responder: NSResponder, for event: NSEvent?) -> Bool {
+		//warn(event?.description ?? "")
+		//warn(obj: responder)
+		//warn(obj: event)
+		return true
+	}
+
+	// NSTextDelegate
+	//override func textShouldBeginEditing(_ textObject: NSText) -> Bool { warn(); return true } //allow editing
 }
 /* iOS progbar: http://stackoverflow.com/questions/29410849/unable-to-display-subview-added-to-wkwebview?rq=1
         webview?.addObserver(self, forKeyPath: "estimatedProgress", options: .New, context: nil)
@@ -57,18 +71,21 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	@objc weak var webview: MPWebView? = nil {
 		didSet { //KVC to copy updates to webviews url & title (user navigations, history.pushState(), window.title=)
 			if let wv = webview {
+				warn()
 				view.bind(NSBindingName.toolTip, to: wv, withKeyPath: #keyPath(MPWebView.title), options: nil)
 				view.bind(NSBindingName.value, to: wv, withKeyPath: #keyPath(MPWebView.url), options: nil)
 				view.bind(NSBindingName.fontBold, to: wv, withKeyPath: #keyPath(MPWebView.hasOnlySecureContent), options: nil)
+// TODO: mimic Safari UX for SSL sites: https://www.globalsign.com/en/blog/how-to-view-ssl-certificate-details/#safari
 				view.bind(NSBindingName("isLoading"), to: wv, withKeyPath: #keyPath(MPWebView.isLoading), options: nil)
 				view.bind(NSBindingName("progress"), to: wv, withKeyPath: #keyPath(MPWebView.estimatedProgress), options: nil)
-				nextResponder = wv
+				view.nextResponder = wv // passthru uncaptured selectors from omnibox tf to webview
 				view.nextKeyView = wv
 			}
 		}
 		willSet(newwv) {
 			if let _ = webview {
-				nextResponder = nil
+				// we had one already set, so unwind all its entanglements
+				view.nextResponder = nil
 				view.nextKeyView = nil
 				view.unbind(NSBindingName.toolTip)
 				view.unbind(NSBindingName.value)
@@ -85,7 +102,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 
 	func popup(_ webview: MPWebView?) {
 		guard let webview = webview else { return }
-		MacPinApp.shared.appDelegate?.browserController.tabSelected = webview
+		MacPinApp.shared.appDelegate?.browserController.tabSelected = webview // EWW
 	}
 
 	/*
@@ -148,6 +165,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 		if let tf = view as? NSTextField, let url = validateURL(tf.stringValue, fallback: { [unowned self] (urlstr: String) -> NSURL? in
 			if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr as NSString, self.webview!) { return nil } // app.js did its own thing FIXME: it should be able to return URL<->NSURL
 			if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedKeywords", urlstr as NSString, self.webview!) { return nil } // app.js did its own thing
+			// FIXME: emit()->wait() events here instead
 			return searchForKeywords(urlstr)
 		}){
 			if let wv = webview { // FIXME: Selector(gotoURL:) to nextResponder
@@ -155,8 +173,13 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 				warn(url.description)
 				wv.gotoURL(url)
 				cancelOperation(self)
-			} else { // tab-less browser window ...
-				parent?.addChildViewController(WebViewControllerOSX(webview: MPWebView(url: url))) // is parentVC the toolbar or contentView VC??
+			} else if let parent = parent { // tab-less browser window ...
+				parent.addChildViewController(WebViewControllerOSX(webview: MPWebView(url: url))) // is parentVC the toolbar or contentView VC??
+			} else if let presenter = presenting { // urlbox is a popover/sheet ...
+				presenter.addChildViewController(WebViewControllerOSX(webview: MPWebView(url: url)))
+				// need parent of the presenter?
+			} else {
+				warn("no webviews-tabs and no parentVC ... WTF!!")
 			}
 		} else {
 			warn("invalid url was requested!")
@@ -166,6 +189,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	}
 
 	override func cancelOperation(_ sender: Any?) {
+		warn()
 		view.resignFirstResponder() // relinquish key focus to webview
 		presenting?.dismissViewController(self) //if a thoust art a popover, close thyself
 	}
@@ -173,14 +197,12 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	deinit { webview = nil; representedObject = nil }
 }
 
-extension OmniBoxController { //NSControl
+extension OmniBoxController: NSTextFieldDelegate { //NSControl
 	//func controlTextDidBeginEditing(_ obj: NSNotification)
 	//func controlTextDidChange(_ obj: NSNotification)
 	//func controlTextDidEndEditing(_ obj: NSNotification)
 }
 
-extension OmniBoxController: NSTextFieldDelegate {
-	//func textShouldBeginEditing(textObject: NSText) -> Bool { return true } //allow editing
 	/*
 		replace textvalue with URL value, might be bound to title
 		"smart search" behavior:
@@ -190,19 +212,21 @@ extension OmniBoxController: NSTextFieldDelegate {
 		then extract the first query param, decode, and set the text value to that
 	*/
 
+/*
+
 	//func textDidChange(aNotification: NSNotification)
-	func textShouldEndEditing(_ textObject: NSText) -> Bool { //user attempting to focus out of field
+	@objc func textShouldEndEditing(_ textObject: NSText) -> Bool { //user attempting to focus out of field
 		if let _ = validateURL(textObject.string) { return true } //allow focusout
 		warn("invalid url entered: \(textObject.string)")
 		return false //NSBeep()s, keeps focus
 	}
 	//func textDidEndEditing(aNotification: NSNotification) {	}
-}
+*/
 
-extension OmniBoxController: NSControlTextEditingDelegate {
+@objc extension OmniBoxController: NSControlTextEditingDelegate {
 //func control(_ control: NSControl, isValidObject obj: AnyObject) -> Bool
 //func control(_ control: NSControl, didFailToFormatString string: String, errorDescription error: String?) -> Bool
-//func control(_ control: NSControl, textShouldBeginEditing fieldEditor: NSText) -> Bool
+	func control(_ control: NSControl, textShouldBeginEditing fieldEditor: NSText) -> Bool { warn(); return true }
 //func control(_ control: NSControl, textShouldEndEditing fieldEditor: NSText) -> Bool
 //func control(_ control: NSControl, textView textView: NSTextView, completions words: [String], forPartialWordRange charRange: NSRange, indexOfSelectedItem index: UnsafeMutablePointer<Int>) -> [String]
 

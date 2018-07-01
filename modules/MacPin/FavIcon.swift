@@ -26,7 +26,7 @@ let NSImageNameApplicationIcon = "icon"
 	}
 #endif
 
-	var data: NSData? = nil {
+	weak var data: NSData? = nil {
 		didSet {
 			if let data = data, let img = IconImage(data: data as Data) {
 				self.icon = img

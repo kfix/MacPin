@@ -46,7 +46,14 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 				default: break
 			}
 
-			if jsdelegate.hasProperty(message.name) {
+			if let cbs = messageHandlers[message.name] {
+				for cb in cbs {
+					warn("\(message.name) cb:`<\(type(of: cb))>`")
+					//if let cb = cb as? JSValue {
+						cb.call(withArguments: [webView, message.body])
+					//}
+				}
+			} else if jsdelegate.hasProperty(message.name) {
 				warn("forwarding webkit.messageHandlers.\(message.name) to jsdelegate.\(message.name)(webview,msg)")
 				jsdelegate.invokeMethod(message.name, withArguments: [webView, message.body])
 			} else {
@@ -76,6 +83,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 	}
 
 	func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+		//navigationAction ._originalURL ._userInitiated ._canHandleRequest 13+:._isRedirect 11+:._shouldOpenExternalSchemes 11+:._shouldOpenAppLinks
 		if let url = navigationAction.request.url, let scheme = url.scheme {
 			switch scheme {
 				case "data": fallthrough
@@ -226,7 +234,11 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		//let len = navigationResponse.response.expectedContentLength
 		//let enc = navigationResponse.response.textEncodingName
 
-		if jsdelegate.tryFunc("decideNavigationForMIME", mime as NSString, url.absoluteString as NSString, webView) { decisionHandler(.cancel); return } //FIXME perf hit?
+		if navigationResponse.isForMainFrame && jsdelegate.tryFunc("decideNavigationForMIME", mime as NSString, url.absoluteString as NSString, webView) {
+			// runtime claims to have handled the situation, so abort the webview's load
+			decisionHandler(.cancel)
+			return
+		}
 
 		// if explicitly attached as file, download it
 		if let httpResponse = navigationResponse.response as? HTTPURLResponse {
@@ -398,14 +410,13 @@ extension WebViewController: _WKDownloadDelegate {
 extension WebViewController: _WKIconLoadingDelegate {
 	@objc(webView:shouldLoadIconWithParameters:completionHandler:) // give WK2 what it wants...
 	func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Void) -> Void) { // but swiftc insists on this ...
-		completionHandler() { data in
+		completionHandler() { [unowned webView] data in
 			// data.length
 			//parameters . mimeType iconType
 			switch parameters.iconType {
 				case .favicon:
-					warn("page (\(webView.url?.absoluteString) got favicon from <- \(parameters.url.absoluteString)")
+					warn("page (\(webView.url?.absoluteString ?? "") got favicon from <- \(parameters.url?.absoluteString ?? "")")
 					if let webview = webView as? MPWebView {
-						//webview.favicon.url = parameters.url as NSURL
 						webview.favicon.data = data as NSData //skip the middleman
 					}
 				default: break

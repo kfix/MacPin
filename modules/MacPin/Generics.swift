@@ -17,12 +17,13 @@ import UIKit
 #if arch(x86_64) || arch(i386)
 import Async // https://github.com/duemunk/Async
 import Prompt // https://github.com/neilpa/swift-libedit
+// https://github.com/onevcat/Rainbow
 var prompter: Async? = nil
 #endif
 
 func warn(_ msg: String = String(), function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
 	// https://github.com/swisspol/XLFacility ?
-	FileHandle.standardError.write("[\(NSDate())] <\(file):\(line):\(column)> [\(function)] \(msg)\n".data(using: String.Encoding.utf8)!)
+	FileHandle.standardError.write("[\(NSDate())] <\(file):\(line):\(column)> [\(function)] \(msg)\n".data(using: .utf8)!)
 #if WARN2NSLOG
 	NSLog("<\(file):\(line):\(column)> [\(function)] \(msg)")
 	//FIXME timestamp?
@@ -36,6 +37,13 @@ func warn(_ msg: String = String(), function: StaticString = #function, file: St
 #if SYSLOG
 	// http://stackoverflow.com/questions/33194791/how-can-i-use-syslog-in-swift
 #endif
+}
+
+func warn(obj: Any, function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
+	// handles chunky objdumps
+	var out = ""
+	dump(obj, to: &out, name: nil, indent: 0, maxDepth: Int.max, maxItems: Int.max)
+	warn(out, function: function, file: file, line: line, column: column)
 }
 
 /*
@@ -242,11 +250,11 @@ func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2:
 #if arch(x86_64) || arch(i386)
 	prompter = Async.background {
 	//prompter = DispatchQueue(label: "prompter").global(qos: .background).async(execute: {
-		let prompt = Prompt(argv0: CommandLine.unsafeArgv[0], prompt: "\(ps1)[\(ps2)]:> ")
+		let prompt = Prompt(argv0: CommandLine.unsafeArgv[0], prompt: "% ")
 		while (true) {
 		    if let line = prompt?.gets() { // R: blocks here until Enter pressed
 				if !line.hasPrefix("\n") {
-					print("| ") // result prefix
+					//print("| ") // result prefix
 					eval?(line) // E:, P:
 					//println() //newline
 				}
@@ -258,7 +266,9 @@ func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2:
 			// L: command dispatched, restart loop
 		}
 		// prompt loop killed, dealloc'd?
-		NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
+		//NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
+		//warn("restarting REPL!")
+		//termiosREPL(eval, ps1: ps1, ps2: ps2, abort: abort) //restart!
 	}
 #else
 	print("Prompt() not available on this device.")

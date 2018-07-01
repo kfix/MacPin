@@ -59,6 +59,7 @@ import WebKitPrivates
 	}
 
 	override func viewWillAppear() { // window popping up with this tab already selected & showing
+		layout()
 		super.viewWillAppear() // or tab switching into view as current selection
 	}
 
@@ -76,7 +77,13 @@ import WebKitPrivates
 		}
 	}
 
+	override func viewWillDisappear() {
+		warn()
+		super.viewWillDisappear()
+	}
+
 	override func viewDidDisappear() {
+		warn()
 		super.viewDidDisappear()
 	}
 
@@ -97,9 +104,9 @@ import WebKitPrivates
 
 	override func viewWillLayout() {
 		//webview.resizeSubviewsWithOldSize(CGSizeZero)
-		if webview != nil { // vc's still in hierarchy can be asked to layout after view is deinit'd
+		if webview != nil && view.window != nil { // vc's still in hierarchy can be asked to layout after view is deinit'd
 			webview._inspectorAttachmentView = webview
-			// BUG: got a SIGSEGV for this ^^
+			// BUG: sometimes get SIGSEGVs for this when JS is adding the viewcontroller....defer this to another delegate method?
 		}
 		super.viewWillLayout()
 	}
@@ -114,8 +121,12 @@ import WebKitPrivates
 	}
 
 	deinit {
+		//warn()
+		textFinder.client = nil
+		webview._inspectorAttachmentView = nil
 		unbind(NSBindingName.title)
 		Geolocator.shared.unsubscribeFromLocationEvents(webview: webview)
+		// super.deinit is implicit here
 	}
 
 	override func cancelOperation(_ sender: Any?) { webview.stopLoading(sender) } // NSResponder: make Esc key stop page load
@@ -137,10 +148,12 @@ extension WebViewControllerOSX: NSMenuDelegate {
 extension WebViewControllerOSX { // AppGUI funcs
 
 	override func dismiss() {
+		warn()
 		webview._inspectorAttachmentView = nil
+		textFinder.client = nil
 		//webview.iconClient = nil
 		//view?.removeFromSuperviewWithoutNeedingDisplay()
-		//super.dismiss()
+		super.dismiss()
 	}
 
 	@objc func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }  // WKPageForceRepaint(webview.topFrame?.pageRef, 0, didForceRepaint);

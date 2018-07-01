@@ -18,12 +18,13 @@ struct WeakThing<T: AnyObject> {
 @objc class TabViewController: NSTabViewController {
 	required init?(coder: NSCoder) { super.init(coder: coder) } // required by NSCoder
 	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
-
+	let startPage = URL(string: "about:blank")!
 	let omnibox = OmniBoxController() // we could & should only present one of these at a time
 	lazy var tabPopBtn = NSPopUpButton(frame: NSRect(x:0, y:0, width:400, height:24), pullsDown: false)
 	@objc let tabMenu = NSMenu() // list of all active web tabs
 	@objc dynamic var shortcutsMenu = NSMenu()
 	//lazy var tabFlow = TabFlowController()
+	lazy var sidebar = TabGridController(tvc: self)
 	/*
 	lazy var tabFlow: NSCollectionView = {
 		var grid = NSCollectionView()
@@ -42,6 +43,7 @@ struct WeakThing<T: AnyObject> {
 		case OmniBox		= "Search or Go To URL"
 		case Share			= "Share URL"
 		case Snapshot		= "Snapshot"
+		case Sidebar		= "Sidebar"
 		case NewTab			= "Open New Tab"
 		case CloseTab		= "Close Tab"
 		case SelectedTab	= "Selected Tab"
@@ -72,20 +74,27 @@ struct WeakThing<T: AnyObject> {
 	}
 
 	override func insertTabViewItem(_ tab: NSTabViewItem, at: Int) {
+		warn()
 		if let view = tab.view {
 			tab.initialFirstResponder = view
 			if let wvc = tab.viewController as? WebViewController {
-				// FIXME: set tab.observer.onTitleChanged & onURLchanged & onProgressChanged closures instead of KVO bindings
+				tab.initialFirstResponder = wvc.webview
 				tab.bind(NSBindingName.label, to: wvc.webview, withKeyPath: #keyPath(MPWebView.title), options: nil)
 				tab.bind(NSBindingName.toolTip, to: wvc.webview, withKeyPath: #keyPath(MPWebView.title), options: nil)
-				tab.bind(NSBindingName.image, to: wvc.webview.favicon, withKeyPath: #keyPath(FavIcon.icon), options: nil)
+				//tab.bind(NSBindingName.image, to: wvc.favicon, withKeyPath: #keyPath(FavIcon.icon), options: nil) // retains wvc forever
+				tab.bind(NSBindingName.image, to: wvc.webview.favicon, withKeyPath: #keyPath(FavIcon.icon), options: nil) // sometimes retains webview for a minute
 			}
+		} else {
+			warn("no view for tabviewitem!!")
 		}
 		super.insertTabViewItem(tab, at: at)
 	}
 
+	//@objc override func addTabViewItem(_ tab: NSTabViewItem) {}
+		// I think NSTabViewController uses insertTVI(:at:) exclusively ...
+
 	override func removeTabViewItem(_ tab: NSTabViewItem) {
-		if tab.view != nil {
+		if let view = tab.view {
 			tab.initialFirstResponder = nil
 			if tab.viewController is WebViewController {
 				tab.unbind(NSBindingName.label)
@@ -95,23 +104,33 @@ struct WeakThing<T: AnyObject> {
 			tab.label = ""
 			tab.toolTip = nil
 			tab.image = nil
+			if let webview = omnibox.webview, webview.isDescendant(of: view) {
+				warn("deretaining omnibox!")
+				omnibox.webview = nil
+			}
 		}
 		if let wvc = tab.viewController as? WebViewControllerOSX {
 			wvc.dismiss() // remove retainers
 		}
 
 		super.removeTabViewItem(tab)
+		//tab.viewController = nil
 	}
 
-	override func tabView(_ tabView: NSTabView, willSelect tabViewItem: NSTabViewItem?) {
-		super.tabView(tabView, willSelect: tabViewItem)
-		omnibox.webview = tabViewItem?.view?.subviews.first as? MPWebView
-	}
+	//override func tabView(_ tabView: NSTabView, shouldSelect tabViewItem: NSTabViewItem?) -> Bool { return true }
+
+	//override func tabView(_ tabView: NSTabView, willSelect tabViewItem: NSTabViewItem?) {
+	//	super.tabView(tabView, willSelect: tabViewItem)
+	//}
 
 	override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
 		super.tabView(tabView, didSelect: tabViewItem)
-		if let window = self.view.window, let view = tabViewItem?.view {
-			window.makeFirstResponder(view) // steal app focus to whatever the tab represents
+		if let window = self.view.window, let view = tabViewItem?.view, let ifr = tabViewItem?.initialFirstResponder, let frv = window.firstResponder as? NSView {
+			//warn("focus is on `\(frv)`")
+			if !frv.isDescendant(of: omnibox.view) && !frv.isDescendant(of: view) {
+				window.makeFirstResponder(ifr) // steal app focus to whatever the tab represents
+				//warn("focus moved to `\(window.firstResponder)`")
+			}
 		}
 	}
 
@@ -133,6 +152,7 @@ struct WeakThing<T: AnyObject> {
 			NSToolbarItem.Identifier(rawValue: BrowserButtons.OmniBox.rawValue),
 			NSToolbarItem.Identifier(rawValue: BrowserButtons.Share.rawValue),
 			NSToolbarItem.Identifier(rawValue: BrowserButtons.Snapshot.rawValue),
+			NSToolbarItem.Identifier(rawValue: BrowserButtons.Sidebar.rawValue),
 			NSToolbarItem.Identifier(rawValue: BrowserButtons.NewTab.rawValue),
 			NSToolbarItem.Identifier(rawValue: BrowserButtons.CloseTab.rawValue),
 			NSToolbarItem.Identifier(rawValue: BrowserButtons.SelectedTab.rawValue),
@@ -146,9 +166,12 @@ struct WeakThing<T: AnyObject> {
 
 	override func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
 		let tabs = super.toolbarDefaultItemIdentifiers(toolbar)
+		// TODO: make a custom item view for tab buttons so we can impl on-hover/alt-click actions
 		return [
 			NSToolbarItem.Identifier(rawValue: BrowserButtons.Share.rawValue),
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.NewTab.rawValue)
+			NSToolbarItem.Identifier(rawValue: BrowserButtons.NewTab.rawValue),
+			//NSToolbarItem.Identifier(rawValue: BrowserButtons.Snapshot.rawValue),
+			//NSToolbarItem.Identifier(rawValue: BrowserButtons.Sidebar.rawValue)
 		] + tabs + [
 			NSToolbarItem.Identifier(rawValue: BrowserButtons.OmniBox.rawValue)
 			// [NSToolbarFlexibleSpaceItemIdentifier]
@@ -181,7 +204,12 @@ struct WeakThing<T: AnyObject> {
 					btn.action = #selector(WebViewControllerOSX.shareButtonClicked(_:))
 					return ti
 
-					case .Snapshot:
+				case .Sidebar:
+					btn.image = NSImage(named: NSImage.Name.touchBarSidebarTemplate)
+					btn.action = #selector(BrowserViewControllerOSX.sidebarButtonClicked(_:))
+					return ti
+
+				case .Snapshot:
 					btn.image = NSImage(named: NSImage.Name.quickLookTemplate)
 					btn.action = #selector(WebViewControllerOSX.snapshotButtonClicked(_:))
 					return ti
@@ -242,6 +270,7 @@ struct WeakThing<T: AnyObject> {
 					ti.view = flag ? tabPopBtn : NSPopUpButton()
 					return ti
 
+
 				case .TabList:
 					btn.image = NSImage(named: NSImage.Name(rawValue: "ToolbarButtonTabOverviewTemplate.pdf"))
 					//btn.action = #selector(BrowserViewControllerOSX.tabListButtonClicked(sender:))
@@ -301,14 +330,19 @@ struct WeakThing<T: AnyObject> {
 	override func viewDidAppear() {
 		super.viewDidAppear()
 		if let window = view.window, let toolbar = window.toolbar {
-			//if #available(OSX 10.11, *) {
-			if ProcessInfo().isOperatingSystemAtLeast(OperatingSystemVersion(majorVersion: 10, minorVersion: 11, patchVersion: 0)) &&
-					// FIXME: toolbar delegation broken on El Capitan http://www.openradar.me/22348095
-				!ProcessInfo().isOperatingSystemAtLeast(OperatingSystemVersion(majorVersion: 10, minorVersion: 11, patchVersion: 2)) {
-					// fixed in 10.11.2 final https://forums.developer.apple.com/thread/14237#88260
-			} else {
+
+			// NStvc's toolbar delegation was broken on 10.11.[01] http://www.openradar.me/22348095
+			// https://docs.swift.org/swift-book/LanguageGuide/ControlFlow.html#ID523
+			if #available(OSX 10.11.2, *) {
+				// fixed in 10.11.2 final https://forums.developer.apple.com/thread/14237#88260
+				toolbar.delegate = self
+			} else if #available(OSX 10.11, *) {
+				// thems the breaks
+			} else if #available(OSX 10.10, *) {
 				toolbar.delegate = self
 			}
+
+			// http://robin.github.io/cocoa/mac/2016/03/28/title-bar-and-toolbar-showcase/
 			toolbar.allowsUserCustomization = true
 			toolbar.displayMode = .iconOnly
 			toolbar.sizeMode = .small //favicons are usually 16*2
@@ -322,6 +356,9 @@ struct WeakThing<T: AnyObject> {
 
 class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
+	@objc dynamic var tabsArray = [WebViewController]()
+	//var tabsController = NSArrayController()
+
 	convenience init() {
 		self.init(nibName: nil, bundle: nil)
 
@@ -330,29 +367,88 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		let center = NotificationCenter.default
 		let mainQueue = OperationQueue.main
 		var token: NSObjectProtocol?
-		token = center.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: mainQueue) { (note) in //object: self.view.window?
+		token = center.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: mainQueue) { [weak self] (note) in //object: self.view.window?
 			//warn("window closed notification!")
 			center.removeObserver(token!) // prevent notification loop by close()
+			warn(obj: self)
 		}
-		center.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: mainQueue) { (note) in //object: self.view.window?
+		center.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: mainQueue) { [weak self] (note) in //object: self.view.window?
 			//warn("application closed notification!")
 		}
 
+		//tabsController.automaticallyRearrangesObjects = false
+		//tabsController.entityName = "foo"
+
+		view.window?.initialFirstResponder = omnibox.view
+		view.window?.makeFirstResponder(omnibox.view)
 	}
 
 	deinit { warn(description) }
 	override var description: String { return "<\(type(of: self))> `\(title ?? String())`" }
 
 	func extend(_ mountObj: JSValue) {
-		let browser = JSValue(object: self, in: mountObj.context)
-		let helpers = // some helper code to smooth out some rough edges & wrinkles in the JSExported API
-			"Object.assign(this, {" +
-				"pushTab: function(tab) { this.tabs = this.tabs.concat(tab); }," +
-				"popTab: function(tab) { if (this.tabs.indexOf(tab) != -1) this.tabs = this.tabs.splice(this.tabs.indexOf(tab), 1)}" +
-			"})"
-		browser?.thisEval(helpers)
+		let browser = JSValue(object: self, in: mountObj.context)!
+		// some helper code to smooth out some rough edges & wrinkles in the JSExported API
+		// this.tabs: Proxy wrapper actively assigns `fn()`s results back to their originating
+			// properties so JSC<=>ObjC bridging can forward the changes to native classes' properties
+		let helpers = """
+			Object.defineProperty(this, 'tabs', {
+				get: function () {
+					let backer = "_tabs"; // the ObjC bridged native property's exported name
+					let propThis = this;
+					return new Proxy(this[backer], {
+						getMutator: function (source, fn) {
+							return new Proxy(source[fn], {
+								apply: function(target, thisArg, args) {
+									let mutant = source.slice(); // needs to be a copy
+									let ret = mutant[fn].apply(mutant, args); // mutate the copy
+									Reflect.set(thisArg, backer, mutant); // replace the source
+									mutant = null; // allow GC on our copied refs
+									return ret;
+								}
+							});
+						},
+						get: function(target, property, receiver) {
+							if (property == "inspect") return () => target;
+
+							// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/prototype#Mutator_methods
+							if (["copyWithin", "fill", "pop", "push", "reverse", "shift", "sort", "splice", "unshift"].includes(property))
+								return this.getMutator(target, property).bind(propThis);
+
+							return Reflect.get(...arguments); // passthru
+						}
+						/*
+						set: function(target, property, value, receiver) {
+							console.log(`Set [${property}] to ${value.inspect()}`);
+							return Reflect.set(...arguments); // passthru
+						}
+						*/
+					});
+				}
+			});
+		"""
+		browser.thisEval(helpers)
 		mountObj.setValue(browser, forProperty: "browser")
 	}
+
+/*
+	static func exportClass(_ mountObj: JSValue) {
+		// make MacPin.BrowserWindow() constructable by using shellcode to declare a class-wrapper then use JSC-api to set
+		//   the class' prototype's prototype (JS can haz double-pointers too!) to the native-exported browser class. phew!
+		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes#Sub_classing_with_extends 3rd example
+		let clazz = mountObj.thisEval("""
+			class BrowserWindow {
+				constructor () {}
+			}
+			return BrowserWindow;
+		""").jsValueRef
+		let ctx = mountObj.context.jsGlobalContextRef
+		let exportedType =  JSValue(object: BrowserControllerOSX.self, in: mountObj.context).jsValueRef // bridged Self
+		JSObjectSetPrototype(ctx, JSGetPrototypeOf(ctx, clazz), exportedType)
+		//  =~= Object.setPrototypeOf(BrowserWindow.prototype, <MacPin.BrowserControllerOSXPrototype> );
+	}
+*/
+
 	func unextend(_ mountObj: JSValue) {
 		let browser = JSValue(nullIn: mountObj.context)
 		mountObj.setValue(browser, forProperty: "browser")
@@ -374,69 +470,62 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		set(bool) { if bool != isToolbarShown { view.window!.toggleToolbarShown(nil) } }
 	}
 
-	// really needs to be a NSHashTable or weaked swift Set
-	// http://stackoverflow.com/questions/24127587/how-do-i-declare-an-array-of-weak-references-in-swift
-	// https://lists.swift.org/pipermail/swift-evolution/Week-of-Mon-20151207/001581.html
-	//var tabs: [WeakThing<MPWebView>] = [] {
-
-/*
-	var tabs: [MPWebView] = [] {
-		willSet { // allow `$.browser.tabs = $.browser.tabs.slice(0)` to work by diffing newValue against childViewControllers
-			warn()
-			for webview in tabs { //removals
-				if !newValue.contains(webview) {
-					if let wvc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === webview }).first as? WebViewControllerOSX {
-						wvc.removeFromParentViewController()
-						// FIXME: not deiniting
-					}
-				}
-			}
-		}
-		didSet {
-			warn()
-			for webview in tabs { //additions
-				if !oldValue.contains(webview) {
-					childViewControllers.append(WebViewControllerOSX(webview: webview))
-				}
-			}
+	subscript(idx: Int) -> MPWebView {
+		get { return self.tabs[idx] }
+		set {
+			var newTabs = self.tabs
+			newTabs[idx] = newValue
+			self.tabs = newTabs
 		}
 	}
-*/
+
 	var tabs: [MPWebView] {
-		// FIXME: .count broken?
-		// objc computed properties get added to JSContext as, not getter/setters
 		get {
+			//return children.flatMap({ $0 as? WebViewControllerOSX }).flatMap({ $0.webview }) // xc10
 			return childViewControllers.flatMap({ $0 as? WebViewControllerOSX }).flatMap({ $0.webview })
-			// returns mutable *copy*, which is why .push() can't work: https://opensource.apple.com/source/JavaScriptCore/JavaScriptCore-7537.77.1/API/JSValue.mm
+			// returns mutable *copy* array, which is why JS .push() doesn't invoke the setter below: https://developer.apple.com/documentation/javascriptcore/jsvalue
+			// > NSArray objects or Swift arrays become JavaScript arrays and vice versa, with elements recursively copied and converted.
+			//  https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSValue.mm
+			//return tabViewItems.flatMap({ $0.viewController as? WebViewControllerOSX }).flatMap({ $0.webview })
 		}
 
 		set {
-			// allow `$.browser.tabs = $.browser.tabs.slice(0)` to work by diffing newValue against childViewControllers
-			// FIXME: crashes if you pass in a non [MPWebView] array from JS
-			for webview in tabs { //removals
-				if !newValue.contains(webview) {
-					if let wvc = childViewControllers.flatMap({ $0 as? WebViewControllerOSX }).filter({ $0.webview === webview }).first {
-						wvc.removeFromParentViewController()
-						// ^ webview doesn't have a backref to its controller
-						//childViewControllers.remove(wvc)
-						/*
-						dispatch_sync(dispatch_get_main_queue(), {
-							wvc.removeFromParentViewController()
-						})
-						*/
+			let newWebs: [MPWebView] = newValue.flatMap({ $0 as? MPWebView })
+
+			DispatchQueue.main.async {
+				// upsert existing tabs as needed with new webviews
+				for (idx, webview) in newWebs.enumerated() {
+					warn("setting #\(idx)")
+					if idx >= self.tabViewItems.endIndex {
+						// insert
+						self.childViewControllers.append(WebViewControllerOSX(webview: webview))
+					} else if let ro = self.childViewControllers[idx].representedObject as? MPWebView, ro == webview {
+						warn("no-op at #\(idx)")
+					} else {
+						// update
+						let nwvc = WebViewControllerOSX(webview: webview)
+						//self.insertChild(nwvc, at: idx+1) //xc10
+						self.insertChildViewController(nwvc, at: idx+1) //push
+
+						//self.removeChild(at: idx) //xc10
+						self.removeChildViewController(at: idx) //pop
+						// NSTVI will automatically set selectedTabViewItemIndex=idx+1
+					}
+				}
+
+				// then do a delete pass of excess tabs
+				if self.tabViewItems.count > newWebs.count {
+					for (idx, _) in self.tabViewItems[newWebs.endIndex ..< self.tabViewItems.endIndex].enumerated() {
+						// delete
+						let shifted = idx + newWebs.endIndex
+						//self.removeChild(at: shifted) //xc10
+						self.removeChildViewController(at: shifted)
 					}
 				}
 			}
-			for webview in newValue { //additions
-				if !tabs.contains(webview) {
-					childViewControllers.append(WebViewControllerOSX(webview: webview))
-					/*
-					dispatch_sync(dispatch_get_main_queue(), {
-						//self.addChildViewController(WebViewControllerOSX(webview: webview))
-					})
-					*/
-				}
-			}
+
+			// assuming tabs was set thru JS, lets trigger a garbage collect so we don't have lingering WebViews
+			JSGarbageCollect(AppScriptRuntime.shared.context.jsGlobalContextRef)
 		}
 	}
 
@@ -450,8 +539,15 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		set(obj) {
 			switch (obj) {
 				case let vc as NSViewController:
-					if tabViewItem(for: vc) == nil { childViewControllers.append(vc) } // add the given vc as a child if it isn't already
-					tabView.selectTabViewItem(tabViewItem(for: vc))
+					if self.tabViewItem(for: vc) == nil {
+						DispatchQueue.main.async {
+							self.childViewControllers.append(vc) // add the given vc as a child if it isn't already
+						}
+					}
+					DispatchQueue.main.async {
+						self.tabView.selectTabViewItem(self.tabViewItem(for: vc))
+					}
+					prepareTab(vc)
 				case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
 					self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
 					//FIXME: a backref in the wv to wvc would be helpful
@@ -462,24 +558,28 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		}
 	}
 
+	override func addChildViewController(_ childViewController: NSViewController) {
+		warn()
+		super.addChildViewController(childViewController)
+	}
 
 	override func insertChildViewController(_ childViewController: NSViewController, at index: Int) {
 		warn("#\(index)")
 		super.insertChildViewController(childViewController, at: index)
+		//tabsController.insert(childViewController, atArrangedObjectIndex: index)
 
-		if let wvc = childViewController as? WebViewController {
+		if let _ = childViewController as? WebViewController {
 			//let gridItem = tabFlow.newItemForRepresentedObject(wvc)
 			//gridItem.imageView = wv.favicon.icon
 			//gridItem.textField = wv.title
 
-			// set the browser as the new webview's iconClient
-			//wvc.webview.iconClient = iconClient
 			// FIXME: should only do this once per unique processPool, tabs.filter( { $0.configuration.processProol == wvc.webview.configuration.processPool } ) ??
 		}
 	}
 
 	@objc func menuSelectedTab(_ sender: AnyObject?) {
-		if let mi = sender as? NSMenuItem, let ti = mi.representedObject as? NSTabViewItem { tabView.selectTabViewItem(ti) }
+		warn()
+		if let mi = sender as? NSMenuItem, let tidx = mi.representedObject as? Int { selectedTabViewItemIndex = tidx }
 	}
 
 /*
@@ -508,6 +608,8 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	override func removeChildViewController(at index: Int) {
 		warn("#\(index)")
 		super.removeChildViewController(at: index)
+		// if index was the currentselected, NSTVC will reselect to the left if this was the last controller, else to the right
+		//tabsController.remove(atArrangedObjectIndex: index)
 	}
 
 	override func presentViewController(_ viewController: NSViewController, animator: NSViewControllerPresentationAnimator) {
@@ -517,18 +619,52 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	override func transition(from fromViewController: NSViewController, to toViewController: NSViewController,
 		options: NSViewController.TransitionOptions, completionHandler completion: (() -> Void)?) {
+		warn()
+		// BUG?: func not called for [tab#0] ... there is no vc to transition away from ...
 
 		super.transition(from: fromViewController, to: toViewController,
 			options: options, completionHandler: completion)
 
 		//view.layer?.addSublayer(toViewController.view.layer?)
 
+		prepareTab(toViewController)
+	}
+
+	func prepareTab(_ viewController: NSViewController) {
 		if let window = view.window {
-			window.makeFirstResponder(toViewController.view) // steal app focus to whatever the tab represents
-			warn("focus is on `\(view.window?.firstResponder)`")
+			if let webview = viewController.representedObject as? MPWebView {
+				omnibox.webview = webview
+				window.initialFirstResponder = omnibox.view
+				if webview.url == startPage {
+					// check for isLoaded too?
+					// for pageless tabs (about:blank), we should focus on the omnibox, like Safari...
+					// brand new tabs don't have init'd webview yet, so this check will fail
+					revealOmniBox()
+					//warn("represented!")
+				} else { // isLoaded, isLoading
+					window.makeFirstResponder(webview)
+					// omni should be next Responder, but keyFocus should be on the webview
+					//omnibox.view.resignFirstResponder()
+					//window.selectNextKeyView(nil)
+				}
+				warn("webview prepared!")
+			} else { // steal app focus to whatever the tab represents
+				warn("making plain view first responder!!!")
+				window.makeFirstResponder(viewController.view)
+			}
+			// warn("focus is on `\(view.window?.firstResponder)`")
+		} else {
+			warn("headless app???")
+			// I think some app.js's start so fast and create and tabSelected their webviews before the window is even up...
+			//    responder chain ends up being broke until one clicks into the webview
 		}
 
 		//warn("browser title is now `\(title ?? String())`")
+	}
+
+	@objc override func viewDidAppear() {
+		super.viewDidAppear()
+		warn()
 	}
 
     //var matchedAddressOptions: [String:String] { //alias to global singleton from WebViewDelegates
@@ -538,31 +674,31 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	//MARK: menu & shortcut selectors
 
-	func switchToPreviousTab() { tabView.selectPreviousTabViewItem(self) }
-	func switchToNextTab() { tabView.selectNextTabViewItem(self) }
+	@objc func switchToPreviousTab() { tabView.selectPreviousTabViewItem(self) }
+	@objc func switchToNextTab() { tabView.selectNextTabViewItem(self) }
 
-	func loadSiteApp() { AppScriptRuntime.shared.loadSiteApp() }
-	func editSiteApp() { NSWorkspace.shared.openFile(Bundle.main.resourcePath!) }
+	@objc func loadSiteApp() { AppScriptRuntime.shared.loadSiteApp() }
+	@objc func editSiteApp() { NSWorkspace.shared.openFile(Bundle.main.resourcePath!) }
 
-	func newTabPrompt() {
-		//tabSelected = WebViewControllerOSX(url: NSURL(string: "about:blank")!)
-		tabSelected = MPWebView(url: NSURL(string: "about:blank")!)
+	@objc func newTabPrompt() {
+		//tabSelected = WebViewControllerOSX(url: startPage)
+		tabSelected = MPWebView(url: startPage)
 		revealOmniBox()
 	}
 
-	func newIsolatedTabPrompt() {
-		tabSelected = MPWebView(url: NSURL(string: "about:blank")!, agent: nil, isolated: true)
+	@objc func newIsolatedTabPrompt() {
+		tabSelected = MPWebView(url: startPage, agent: nil, isolated: true)
 		revealOmniBox()
 	}
 
-	func newPrivateTabPrompt() {
-		tabSelected = MPWebView(url: NSURL(string: "about:blank")!, agent: nil, isolated: true, privacy: true)
+	@objc func newPrivateTabPrompt() {
+		tabSelected = MPWebView(url: startPage, agent: nil, isolated: true, privacy: true)
 		revealOmniBox()
 	}
 
-	@objc func pushTab(_ webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerOSX(webview: webview)) } }
+	//@objc func pushTab(_ webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerOSX(webview: webview)) } }
 
-	func closeTab(_ tab: AnyObject?) {
+	@objc func closeTab(_ tab: AnyObject?) {
 		switch (tab) {
 			case let vc as NSViewController:
 				guard let ti = tabViewItem(for: vc) else { break } // not a loaded tab
@@ -585,9 +721,11 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	}
 
 	@objc func revealOmniBox() {
+		warn()
 		if omnibox.view.window != nil {
 			// if omnibox is already visible somewhere in the window, move key focus there
 			view.window?.makeFirstResponder(omnibox.view)
+			warn("omniboxed! \(omnibox.view)")
 		} else {
 			//let omnibox = OmniBoxController(webViewController: self)
 			// otherwise, present it as a sheet or popover aligned under the window-top/toolbar
@@ -596,6 +734,51 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			poprect.size.height -= omnibox.preferredContentSize.height + 12 // make room at the top to stuff the popover
 			presentViewController(omnibox, asPopoverRelativeTo: poprect, of: view, preferredEdge: NSRectEdge.maxY, behavior: NSPopover.Behavior.transient)
 		}
+	}
+
+	@objc func sidebarButtonClicked(_ tab: AnyObject?) {
+		warn()
+		if self.sidebar.presenting != nil {
+			dismissViewController(self.sidebar)
+		} else {
+
+			//DispatchQueue.main.async() {
+				/*
+				let tgv = self.sidebar.view
+					tgv.frame = //view.bounds
+						CGRect(
+							x: 0, //self.view.bounds.origin.x,
+							y: 0, //self.view.bounds.origin.y,
+							width: 200,
+							height: self.view.frame.size.height // - statusHeight - toolBar.frame.size.height)
+					self.view.addSubview(tgv, positioned: .above, relativeTo: self.view)
+					)
+				*/
+			//}
+			presentViewControllerAsModalWindow(self.sidebar)
+			//presentViewControllerAsSheet(self.sidebar)
+			return
+		}
+
+		switch (tab) {
+			case let vc as NSViewController:
+				guard let ti = tabViewItem(for: vc) else { break } // not a loaded tab
+
+			case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
+				guard let vc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first else { break }
+				guard let ti = tabViewItem(for: vc) else { break } // not a loaded tab
+				//DispatchQueue.main.async() { self.removeTabViewItem(ti) }
+				return
+			//case let js as JSValue: guard let wv = js.toObjectOfClass(MPWebView.self) { self.tabSelected = wv } //custom bridging coercion
+			default:
+				// sender from a MenuItem?
+				break
+		}
+	}
+
+	override func insertTabViewItem(_ tab: NSTabViewItem, at: Int) {
+		super.insertTabViewItem(tab, at: at)
+		menuNeedsUpdate(tabMenu)
 	}
 
 	override func removeTabViewItem(_ tab: NSTabViewItem) {
@@ -608,9 +791,23 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 		if tabView.tabViewItems.count == 0 {
 			// no more tabs? close the window and app, like Safari
+			// FIXME: check for "protection" before defenestrating
 			omnibox.webview = nil //retains last webview
 			view.window?.windowController?.close() // kicks off automatic app termination
 		}
+	}
+
+	override func tabView(_ tabView: NSTabView, willSelect tabViewItem: NSTabViewItem?) {
+		super.tabView(tabView, willSelect: tabViewItem)
+		warn()
+		//omnibox.webview = tabViewItem?.view?.subviews.first as? MPWebView
+		// FIXME: hokey reference to webview, can't get a ref to the tabViewItem?.viewController?
+		if let vc = tabViewItem?.viewController { prepareTab(vc) }
+	}
+
+	override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
+		super.tabView(tabView, didSelect: tabViewItem)
+		menuNeedsUpdate(tabMenu)
 	}
 
 	func focusOnBrowser() {  // un-minimizes app, switches to its screen/space, and steals key focus to the window
@@ -651,15 +848,19 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		switch (obj) {
 			//case is String: fallthrough
 			//case is [String:AnyObject]: fallthrough
-            //case is [String]: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: obj))
-            case let str as String: mi = MenuItem(title, "gotoShortcut:", target: self, represents: str as NSString)
-            case let dict as [String:AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: NSDictionary(dictionary: dict))
-            case let arr as [AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: NSArray(array: arr))
+			//case is [String]: shortcutsMenu.addItem(MenuItem(title, "gotoShortcut:", target: self, represents: obj))
+			case let str as String: mi = MenuItem(title, "gotoShortcut:", target: self, represents: str as NSString)
+			//case let jsobj as [String: JSValue]:
+			//	mi = MenuItem(title, "gotoShortcut:", target: self, represents: jsobj)
+			//		jsobj can't be coerced to AnyObject
+			case let dict as [String: AnyObject]:
+				mi = MenuItem(title, "gotoShortcut:", target: self, represents: NSDictionary(dictionary: dict, copyItems: true))
+			case let arr as [AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: NSArray(array: arr))
 			default:
 				warn("invalid shortcut object type!")
 				return
 		}
-        shortcutsMenu.addItem(mi)
+		shortcutsMenu.addItem(mi)
 		mi.parent?.isHidden = false
 	}
 
@@ -669,7 +870,11 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 				case let urlstr as String: AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr as NSString)
 				// FIXME: fire event in jsdelegate if string, only NSURLs should do launchURL
 				case let dict as [String:AnyObject]: tabSelected = MPWebView(object: dict) // FIXME: do a try here
+				case let dict as [WebViewInitProps:AnyObject]: tabSelected = MPWebView(props: dict) // FIXME: do a try here
+				case let jsobj as [String: JSValue]:
+					warn("\(jsobj)")
 				case let arr as [AnyObject?] where arr.count > 0 && arr.first is String?:
+					// FIXME: funcs (arr[0]) should be passed in by ref, and not un-strung and hoisted from `delegate`
 					var args = Array(arr.dropFirst()).map({ $0! })
 					if let wv = tabSelected as? MPWebView { args.append(wv) }
 					AppScriptRuntime.shared.jsdelegate.tryFunc((arr.first as! String), argv: args)
@@ -680,7 +885,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 }
 
 extension BrowserViewControllerOSX: NSMenuDelegate {
-	func menuHasKeyEquivalent(_ menu: NSMenu, for event: NSEvent, target: AutoreleasingUnsafeMutablePointer<AnyObject?>?, action: UnsafeMutablePointer<Selector?>?) -> Bool {
+	func menuHasKeyEquivalent(_ menu: NSMenu, for event: NSEvent, target: AutoreleasingUnsafeMutablePointer<AnyObject?>, action: UnsafeMutablePointer<Selector?>) -> Bool {
 		return false // no numeric index shortcuts for tabz (unlike Safari)
 	}
 
@@ -690,14 +895,18 @@ extension BrowserViewControllerOSX: NSMenuDelegate {
 			//	warn(menu.title)
 			case "Tabs":
 				menu.removeAllItems()
-				for tab in tabViewItems {
-					let mi = NSMenuItem(title: tab.label, action:#selector(menuSelectedTab(_:)), keyEquivalent:"")
-					mi.toolTip = tab.toolTip
-					mi.image = tab.image
-					mi.image?.size = NSSize(width: 16, height: 16)
-					mi.representedObject = tab
+				for (idx, tab) in tabViewItems.enumerated() {
+					guard let toolTip = tab.toolTip else { continue }
+					let mi = NSMenuItem(title: String(tab.label), action:#selector(menuSelectedTab(_:)), keyEquivalent:"")
+					mi.toolTip = String(toolTip)
+					if let image = tab.image {
+						mi.image = image.copy() as! NSImage
+						mi.image?.size = NSSize(width: 16, height: 16)
+					}
+					mi.representedObject = idx
 					mi.target = self
-					mi.state = (tab.tabState == .selectedTab) ? .on : .off
+					mi.state = (selectedTabViewItemIndex == idx) ? .on : .off
+					//mi.state = (tab.tabState == .selectedTab) ? .on : .off
 					menu.addItem(mi)
 				}
 			default: return

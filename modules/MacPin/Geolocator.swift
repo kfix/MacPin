@@ -3,8 +3,7 @@ import CoreLocation
 import WebKit
 import WebKitPrivates
 
-class Geolocator: NSObject  {
-
+struct GeolocationCallbacks {
 	// thunks for WebKit geolocation C APIs
 	static let setEnableHighAccuracyCallback: WKGeolocationProviderSetEnableHighAccuracyCallback = { manager, enable, clientInfo in
 		// https://github.com/WebKit/webkit/blob/2d04a55b4031d09c912c4673d3e753357b383071/Tools/TestWebKitAPI/Tests/WebKit/Geolocation.cpp#L68
@@ -30,12 +29,15 @@ class Geolocator: NSObject  {
 		//Geolocator.shared.manager.stopUpdatingLocation()
 		// FIXME: should unsubscribe the caller so Geol'r can choose to stop if no subscribers remain
 	}
+}
+
+class Geolocator: NSObject  {
 
 	var geoProvider = WKGeolocationProviderV1(
 		base: WKGeolocationProviderBase(),
-		startUpdating: Geolocator.startUpdatingCallback,
-		stopUpdating: Geolocator.stopUpdatingCallback,
-		setEnableHighAccuracy: Geolocator.setEnableHighAccuracyCallback
+		startUpdating: GeolocationCallbacks.startUpdatingCallback,
+		stopUpdating: GeolocationCallbacks.stopUpdatingCallback,
+		setEnableHighAccuracy: GeolocationCallbacks.setEnableHighAccuracyCallback
 	)
 
 	static let shared = Geolocator() // create & export the singleton
@@ -46,7 +48,15 @@ class Geolocator: NSObject  {
 		}
 	}
 
-	var subscribers: [MPWebView] = []
+	var subscribers: [MPWebView] = [] {
+		didSet {
+			if subscribers.isEmpty {
+				manager.stopUpdatingLocation()
+				warn("stopped updates")
+			}
+			warn(subscribers.count.description)
+		}
+	}
 
 #if os(OSX)
 	override init() {
@@ -74,16 +84,19 @@ class Geolocator: NSObject  {
 
 		// https://github.com/WebKit/webkit/blob/827d99acfeb79537ec9ce26f4bb5a438ba2f5463/Tools/TestWebKitAPI/Tests/WebKitCocoa/UIDelegate.mm#L144
 		WKGeolocationManagerSetProvider(WKContextGetGeolocationManager(webview.context), &geoProvider.base)
+		// skipping this did not fix post-nav retain cycle
+		manager.startUpdatingLocation()
 	}
 
 	func unsubscribeFromLocationEvents(webview: MPWebView) {
-		//if subscribers.contains(webview) { subscribers.removeAll(where: {$0 == webview}) } // xc10
-		if subscribers.contains(webview) { subscribers = subscribers.flatMap({$0 != webview ? $0 : nil}) }
-		if subscribers.isEmpty && CLLocationManager.locationServicesEnabled() {
-			manager.stopUpdatingLocation()
-		}
+		warn()
+		//subscribers.removeAll(where: {$0 == webview}) } // xc10
+		subscribers = subscribers.flatMap({$0 != webview ? $0 : nil})
 	}
 
+	deinit {
+		warn(subscribers.count.description)
+	}
 }
 
 extension Geolocator: CLLocationManagerDelegate {
@@ -106,7 +119,6 @@ extension Geolocator: CLLocationManagerDelegate {
 			//case CLAuthorizationStatus.NotDetermined:
 			default:
 				warn()
-				manager.startUpdatingLocation()
 		}
 	}
 }

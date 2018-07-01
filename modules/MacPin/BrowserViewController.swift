@@ -8,7 +8,7 @@ import AppKit
 	var isToolbarShown: Bool { get set }
 	var tabSelected: AnyObject? { get set }
     //var matchedAddressOptions: [String:String] { get set }
-	var tabs: [MPWebView] { get set }
+	@objc(_tabs) var tabs: [MPWebView] { get set }
 	// https://bugs.swift.org/browse/SR-6476 support $.browser[N] for accessing tabs?
 	func close()
 	func switchToNextTab()

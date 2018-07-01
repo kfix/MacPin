@@ -2,9 +2,7 @@ import Foundation
 import WebKit
 import WebKitPrivates
 
-class UserNotifier: NSObject  {
-	static let shared = UserNotifier() // create & export the singleton
-
+struct NotificationCallbacks {
 	// thunks for WebKit user notification C APIs
 
 	static let showCallback: WKNotificationProviderShowCallback = { page, notification, clientInfo in
@@ -53,23 +51,30 @@ class UserNotifier: NSObject  {
 
 	static let clearCallback: WKNotificationProviderClearNotificationsCallback = { notificationIDs, clientInfo in
 		warn("clear")
+		// only happens for new about:blank tabs that are closed and deinit'd
+		// all active tabs are being retained post-close and not clearing ...
 	}
+}
+
+class UserNotifier: NSObject  {
+	static let shared = UserNotifier() // create & export the singleton
 
 	// https://github.com/WebKit/webkit/blob/5277f6fb92b0c03958265d24a7692142f7bdeaf8/Tools/WebKitTestRunner/WebNotificationProvider.cpp
 	var notificationProvider = WKNotificationProviderV0(
 		base: WKNotificationProviderBase(),
-		show: UserNotifier.showCallback,
-		cancel: UserNotifier.cancelCallback,
-		didDestroyNotification: UserNotifier.destroyCallback,
-		addNotificationManager: UserNotifier.addCallback,
-		removeNotificationManager: UserNotifier.removeCallback,
-		notificationPermissions: nil, // UserNotifier.permissionsCallback,
-		clearNotifications: UserNotifier.clearCallback
+		show: NotificationCallbacks.showCallback,
+		cancel: NotificationCallbacks.cancelCallback,
+		didDestroyNotification: NotificationCallbacks.destroyCallback,
+		addNotificationManager: NotificationCallbacks.addCallback,
+		removeNotificationManager: NotificationCallbacks.removeCallback,
+		notificationPermissions: nil, // NotificationCallbacks.permissionsCallback,
+		clearNotifications: NotificationCallbacks.clearCallback
 	)
 
 	func subscribe(webview: MPWebView) {
 		warn()
 		WKNotificationManagerSetProvider(WKContextGetNotificationManager(webview.context), &notificationProvider.base)
+		// skipping this doesn't fix the post-nav retain cycle ...
 	}
 
 }
