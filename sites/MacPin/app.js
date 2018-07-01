@@ -8,6 +8,9 @@
 
 var delegate = {}; // our delegate to receive events from the webview app
 
+var gitTab = new WebView({url: 'http://github.com/kfix/MacPin'});
+//var gooTab = new WebView({url: "http://google.com"})
+
 delegate.openInChrome = function(tab) {
 	console.log(`app.js: opening (${tab.url}) in chrome`);
 	switch ($.app.platform) {
@@ -47,7 +50,7 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 			if (response) {
 				var tab = new $.WebView({url: url});
 				//$.browser.tabSelected = tab;
-				$.browser.pushTab(tab);
+				$.browser.tabs.push(tab);
 				ret = true;
 			}
 		})
@@ -91,19 +94,18 @@ if (eval != null)
 	var eval_copy = eval; // global eval is wiped after app.js is started ...
 
 //$.app.on('launchRepl', () => {
-delegate.launchRepl = () => {
+delegate.launchRepl = function() {
 	var evalRepl = (tab, msg) => {
 		var command = msg;
 		var result, exception;
 		try {
-			// need to rebind this to window
 			result = eval_copy(command); // <- line pointer marks right here
 		} catch(e) {
 			exception = e;
 			result = e; // printToREPL will make a line pointer object
 			try { console.log(e); } catch(e) { }
 		}
-		var ret = $.app.emit('printToREPL', result, false);
+		var ret = $.app.emit('printToREPL', result, false); // handler, expr, colorize
 		//try { console.log(ret); } catch(e) { }
 		let exfil = `returnREPL('${escape(ret)}', ${(exception) ? `'${escape(exception)}'` : 'null'});`;
 		//console.log(exfil); // use base64 instead of urlencode??
@@ -123,12 +125,15 @@ delegate.launchRepl = () => {
 		}
 	};
 
-	$.browser.tabSelected = new $.WebView(cfgRepl)
+	$.browser.tabSelected = new WebView(cfgRepl)
 	// https://github.com/remy/jsconsole is much prettier than my repl.html ...
 	//    https://github.com/remy/jsconsole/blob/master/public/inject.html
 	//    https://github.com/remy/jsconsole/blob/1e3a1ecc86b7da1abe6c1e2e6c018184a19f4b37/public/js/remote.js
 	// https://nodejs.org/api/repl.html
+	// https://www.npmjs.com/package/react-console-component
 }
+//delegate.launchRepl = delegate.launchRepl.bind(this);
+//^ ensures this == global scope when eval() from remoted inputs
 
 /*
  var geniusBarsNearMe() {
@@ -197,6 +202,7 @@ $.app.on('AppFinishedLaunching', (launchURLs) => {
 
 	if ($.app.platform === "OSX") $.app.changeAppIcon(`file://${$.app.resourcePath}/icon.png`);
 	//$.browser.tabSelected = new $.WebView({url: 'http://github.com/kfix/MacPin'});
+	$.browser.tabSelected = gitTab;
 	delegate.launchRepl();
 });
 

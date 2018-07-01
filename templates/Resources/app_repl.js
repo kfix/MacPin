@@ -28,7 +28,7 @@ Object.defineProperty(this, "allThis", {
 	}
 });
 
-$.app.on('printToREPL', (result, colorize) => {
+$.app.on('printToREPL', function (result, colorize) {
 
 	function vtype(obj) {
       // JS world doesn't have a solid convention to get bare type names for *any* given object. pathetic.
@@ -39,6 +39,7 @@ $.app.on('printToREPL', (result, colorize) => {
 
 	  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/toStringTag
       // http://2ality.com/2015/09/well-known-symbols-es6.html#symboltostringtag-string
+      // STP 59 haz Symbol.prototype.description: this[Symbol.toStringTag].description
 	  if (vt == 'Object') {
 	    if ('length' in obj && 'slice' in obj && 'number' == typeof obj.length) {
 	      return 'Array';

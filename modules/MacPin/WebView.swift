@@ -33,6 +33,10 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 
 	var title: String? { get }
 	@objc(url)var urlstr: String { get set }
+	var description: String { get }
+	func inspect() -> String
+	// https://nodejs.org/api/util.html#util_custom_inspection_functions_on_objects
+
 	var transparent: Bool { get set }
 	var userAgent: String { get set }
 	var allowsMagnification: Bool { get set }
@@ -44,6 +48,9 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	var injected: [String] { get }
 	var styles: [String] { get }
 	static var MatchedAddressOptions: [String:String] { get set }
+
+	// methods are exported as non-enumerable (but configurable) JS props by JSC
+	//   https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSWrapperMap.mm#L258
 	@objc(evalJS::) func evalJS(_ js: String, callback: JSValue?)
 	@objc(asyncEvalJS:::) func asyncEvalJS(_ js: String, delay: Int, callback: JSValue?)
 	func loadURL(_ urlstr: String) -> Bool
@@ -129,7 +136,7 @@ struct IconCallbacks {
 		//   registerProtocolClass(NSURLSessionConfiguration) <- that could let you configure ad-hoc CFProxySupport dictionaries: http://stackoverflow.com/a/28101583/3878712
 		// NSURLSessionConfiguration ? https://www.objc.io/issues/5-ios7/from-nsurlconnection-to-nsurlsession/
 
-	var context: WKContextRef? = nil
+	var context: WKContextRef { get { return WKPageGetContext(_pageRefForTransitionToWKWebView) } }
 
 #if STP
 	// a long lived thumbnail viewer should construct and store thumbviews itself, this is for convenient dumping
@@ -220,7 +227,7 @@ struct IconCallbacks {
 		}
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
 #if os(OSX)
-		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
+		//prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
 		prefs._fullScreenEnabled = true
 
@@ -276,8 +283,6 @@ struct IconCallbacks {
 #else
 		_applicationNameForUserAgent = "Version/10.0 Safari/603.5.17"
 #endif
-		let context = WKPageGetContext(_pageRefForTransitionToWKWebView)
-		self.context = context
 		"http".withCString { http in
 			WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(http)) // FIXME: makeInsecure() toggle!
 		}
@@ -289,7 +294,19 @@ struct IconCallbacks {
 		uiClient.base.version = 2
 		uiClient.decidePolicyForGeolocationPermissionRequest = IconCallbacks.decidePolicyForGeolocationPermissionRequestCallBack
 		uiClient.decidePolicyForNotificationPermissionRequest = IconCallbacks.decidePolicyForNotificationPermissionRequest
+		//uiClient.showPage: WKPageUIClientCallback!
+		//uiClient.close: WKPageUIClientCallback!
+		//uiClient.takeFocus: WKPageTakeFocusCallback!
+		//uiClient.focus: WKPageFocusCallback!
+		//uiClient.unfocus: WKPageUnfocusCallback!
+
+		// https://developer.mozilla.org/en-US/docs/Web/API/Window/status
+		// https://developer.mozilla.org/en-US/docs/Web/API/Window/statusbar
+		//uiClient.setStatusText: WKPageSetStatusTextCallback!
+		//statusBarIsVisible: WKPageGetStatusBarIsVisibleCallback!
+		//setStatusBarIsVisible: WKPageSetStatusBarIsVisibleCallback!
 		WKPageSetPageUIClient(_pageRefForTransitionToWKWebView, &uiClient.base)
+
 #elseif os(iOS)
 		_applicationNameForUserAgent = "Version/8.0 Mobile/12F70 Safari/600.1.4"
 #endif
@@ -307,7 +324,7 @@ struct IconCallbacks {
 		// https://stackoverflow.com/a/36120929/3878712
 
 		if object.isString { // new WebView("http://webkit.org");
-			guard let urlstr = object.toString(), let url = NSURL(string: urlstr) else { return nil }
+			guard let urlstr = object.toString(), let url = URL(string: urlstr) else { return nil }
 			self.init(url: url)
 		} else if object.isObject { // new WebView({url: "http://webkit.org", transparent: true, ... });
 			var props: [WebViewInitProps: Any] = [:]
@@ -411,17 +428,18 @@ struct IconCallbacks {
 	}
 
 	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
+		self.init(url: url as URL, agent: agent, isolated: isolated, privacy: privacy)
+	}
+
+	convenience required init(url: URL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
 		self.init(config: nil, agent: agent, isolated: isolated, privacy: privacy)
 		gotoURL(url)
 	}
 
 	override var description: String { return "<\(type(of: self))> `\(title ?? String())` [\(urlstr)]" }
-	// no way to customize the __proto__.toString() for the exported JS WebViews:
-	// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSWrapperMap.mm#L138 JSObject *objectWithCustomBrand
-	//func toString() -> String { return description } // $.browser.tabs[0].__proto__.toString = function(){ return this.title; }
+	func inspect() -> String { return "`\(title ?? String())` [\(urlstr)]" }
 
 	deinit {
-		context = nil
 		warn(description)
 	}
 
@@ -481,25 +499,27 @@ struct IconCallbacks {
 		}
 	}
 
-	func gotoURL(_ url: NSURL) {
+	func gotoURL(_ url: NSURL) { gotoURL(url as URL) }
+	func gotoURL(_ url: URL) {
 		let act = ProcessInfo.processInfo.beginActivity(options: [ProcessInfo.ActivityOptions.userInitiated, ProcessInfo.ActivityOptions.idleSystemSleepDisabled], reason: "browsing begun")
-		guard #available(OSX 10.11, iOS 9.1, *) else { load(URLRequest(url: url as URL)); return }
-		guard url.scheme == "file" else { load(URLRequest(url: url as URL)); return }
-		if let readURL = url.deletingLastPathComponent {
-		//if let readURL = url.baseURL {
-		//if let readURL = url.URLByDeletingPathExtension {
+		if url.scheme == "file", #available(OSX 10.11, iOS 9.1, *) {
+			let readURL = url.deletingLastPathComponent()
 			warn("Bypassing CORS: \(readURL)")
 			loadFileURL(url as URL, allowingReadAccessTo: readURL)
+		} else {
+			load(URLRequest(url: url))
 		}
 		ProcessInfo.processInfo.endActivity(act)
 	}
 
 	@discardableResult
 	func loadURL(_ urlstr: String) -> Bool {
-		if let url = NSURL(string: urlstr) {
-			gotoURL(url as NSURL)
+		if let url = URL(string: urlstr) {
+			gotoURL(url)
 			return true
 		}
+		warn("ILLEGAL URL! \(url)") // getting SIGILLd by incomplete URLs:
+		// $.browser.tabs[0].loadURL("www.example.com")
 		return false // tell JS we were given a malformed URL
 	}
 

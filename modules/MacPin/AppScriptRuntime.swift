@@ -383,7 +383,15 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			});
 			let window = this; // https://github.com/nodejs/node/issues/1043
 			let global = this; // https://github.com/browserify/insert-module-globals/pull/48#issuecomment-186291413
+			// \(AppScriptGlobals.modSpace).WebView.prototype.toString = function() { return this.description; };
+			Object.assign(this, {
+				WebView: \(AppScriptGlobals.modSpace).WebView
+			});
 		""")
+		// customize the __proto__.toString() for the exported JS WebViews:
+		// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSWrapperMap.mm#L138 JSObject *objectWithCustomBrand
+		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/toString
+
 		//JSFetch.provideToContext(context: self.context!, hostURL: "")
 	}
 
@@ -676,15 +684,36 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		termiosREPL(
 			{ [unowned self] (line: String) -> Void in
 				let val = self.context.evaluateScript(line)
+
+				if self.context.exception != nil {
+					if let str = self.context.exception.toString()
+					, let typ = self.context.exception.forProperty("name").toString()
+					, let msg = self.context.exception.forProperty("message").toString()
+					, let det = self.context.exception.toDictionary() {
+						print("\(str)")
+						//warn(obj: det) // stack of error
+						//if str == "SyntaxError: Unexpected end of script" => Prompt.readNextLine?
+					}
+					self.context.exception = nil // we've handled this
+				}
+
 				if let rets = self.emit(.printToREPL, val as Any, true) { //handler, expression, colorize
 					rets.forEach { ret in
 						if let retstr = ret?.toString() { print(retstr) }
 					}
-				} else { // no REPLprint handler, just eval and dump
+				} else if let val = val as? JSValue { // no REPLprint handler, just eval and dump
 					// FIXME: instead of waiting on the events returns, expose a repl object to the runtime that can be replaced
 					//  if replaced with a callable func, we will print(`repl.writer(result)`)
 					//   https://nodejs.org/dist/latest/docs/api/repl.html#repl_customizing_repl_output
-					print(val as Any)
+					//	 https://nodejs.org/dist/latest/docs/api/repl.html#repl_custom_evaluation_functions
+					print(val)
+					// !val.isUndefined, self.context.assigntoKey("_", val)
+						// https://nodejs.org/dist/latest/docs/api/repl.html#repl_assignment_of_the_underscore_variable
+					// return val??  then abort(val) could do something special?
+				} else {
+					// TODO: support multi-line input
+					//	https://nodejs.org/dist/latest/docs/api/repl.html#repl_recoverable_errors
+					print("null [not-bridged]")
 				}
 			},
 			ps1: #file,
@@ -692,6 +721,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			abort: { () -> Void in
 				// EOF'd by Ctrl-D
 #if os(OSX)
+				warn("got EOF from stdin, stopping app")
 				//NSProcessInfo.processInfo().enableAutomaticTermination("REPL")
 				ProcessInfo.processInfo.enableSuddenTermination()
 				NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()

@@ -19,7 +19,7 @@ class MacPinApp: Application {
 			return super.delegate as? MacPinAppDelegate
 		}
 		set {
-			super.delegate = newValue as? ApplicationDelegate
+			super.delegate = newValue as ApplicationDelegate?
 		}
 	}
 }

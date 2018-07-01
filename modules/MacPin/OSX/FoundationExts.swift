@@ -146,9 +146,10 @@ extension NSPasteboard {
 
 // show an NSError to the user, attaching it to any given view
 func displayError(_ error: NSError, _ vc: NSViewController? = nil) {
-	warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
+	//let underlyingError = (error as NSError).userInfo[NSUnderlyingErrorKey] as? Error ?? error
 	DispatchQueue.main.async() { // don't lock up other threads on modally-presented errors
 		if Darwin.isatty(Int32(0)) == 0 { // don't popup these modal alerts if REPL() is active on STDIN!
+			warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
 			if let window = vc?.view.window {
 				// display it as a NSPanel sheet
 				vc?.view.presentError(error, modalFor: window, delegate: nil, didPresent: nil, contextInfo: nil)
@@ -157,6 +158,17 @@ func displayError(_ error: NSError, _ vc: NSViewController? = nil) {
 			} else {
 				NSApplication.shared.presentError(error)
 			}
+		} else { // do a more detailed dump on STDOUT
+			let userInfo = error.userInfo
+			//let callStackSymbols = (userInfo[UnanticipatedErrorRecoveryAttempter.ReturnAddressesKey] as? [UInt]).map { symbolsForCallStack(addresses: $0).joined(separator: "\n") } ?? NSLocalizedString("(Call stack unavailable)",  comment: "")
+			let localizedDescription = error.localizedDescription
+			let localizedRecoverySuggestion = error.localizedRecoverySuggestion ?? ""
+			let applicationName = (Bundle.main.infoDictionary?[kCFBundleNameKey as String] as? String) ?? ProcessInfo.processInfo.processName
+			let applicationVersion = (Bundle.main.infoDictionary?[kCFBundleVersionKey as String] as? String) ?? NSLocalizedString("(App version unavailable)",  comment: "")
+			let locales = Locale.preferredLanguages.joined(separator: ", ")
+			//let machineInfo = "\(Sysctl.machine)/\(Sysctl.model), \(ProcessInfo.processInfo.operatingSystemVersionString)"
+
+			warn("\(applicationName)/\(applicationVersion), \(locales)\n\n\(localizedDescription)\n\(localizedRecoverySuggestion)\n\n\(error.domain): \(error.code). \(userInfo)") //\n\n\(callStackSymbols)")
 		}
 	}
 }
@@ -188,6 +200,11 @@ func askToOpenURL(_ url: NSURL?) { //uti: UTIType? = nil
 		alert.beginSheetModal(for: window, completionHandler:{(response: NSApplication.ModalResponse) -> Void in
 			if response == .alertFirstButtonReturn { wk.open(url as URL) }
  		})
+		return
+	} else if let urlstr = url?.absoluteString, urlstr.hasPrefix("x-macpin:") {
+		// tabs/1/snapshot
+		// bundle/fs/app.js
+		warn(urlstr)
 		return
 	}
 

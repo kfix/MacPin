@@ -19,7 +19,7 @@ const char* prompter(EditLine *e) {
 }
 const char * historypath;
 
-struct termios ttyopts;
+struct termios ttyopts; // are these sane by default?
 
 void exceptionHandler(NSException *exception) {
     // app crashed mid-prompt, so lets restore the term
@@ -30,7 +30,18 @@ void exceptionHandler(NSException *exception) {
 void signalHandler(int sig) {
     // app crashed mid-prompt, so lets restore the term
 	//term.c_oflag &= ~ECHO // `stty echo`
-    tcsetattr(1, TCSANOW, &ttyopts);
+	// howto `stty sane` ??
+    //el_reset(_el); // make tty sane
+   	/* Use defaults of <sys/ttydefaults.h> for base settings */
+   	// https://github.com/freebsd/freebsd/blob/master/sys/sys/ttydefaults.h
+   	// https://github.com/freebsd/freebsd/blob/master/bin/stty/key.c#L258
+	ttyopts.c_iflag |= TTYDEF_IFLAG; // input
+	//ttyopts.c_iflag |= (BRKINT | ICRNL | IMAXBEL);
+	ttyopts.c_oflag |= TTYDEF_OFLAG; // output
+	//ttyopts.c_lflag |= TTYDEF_LFLAG; // local
+	ttyopts.c_lflag = TTYDEF_LFLAG | (ECHOKE|ECHOE|ECHOK|ECHOPRT|ECHOCTL|ALTWERASE|TOSTOP|NOFLSH);
+	ttyopts.c_cflag |= TTYDEF_CFLAG; // control
+    tcsetattr(1, TCSANOW, &ttyopts); // TCSADRAIN, TCSAFLUSH
     signal(sig, SIG_DFL); // uninstall sighandler
     return;
 }
@@ -59,10 +70,10 @@ HistEvent _ev;
     }
 
     //NSSetUncaughtExceptionHandler(&exceptionHandler);
-    signal(SIGABRT, signalHandler);
+    signal(SIGABRT, signalHandler);	// BPT/Trap NSException
     signal(SIGILL, signalHandler);
-    signal(SIGSEGV, signalHandler);
-    signal(SIGFPE, signalHandler);
+    signal(SIGSEGV, signalHandler);	// EXC_BAD_ACCESS
+    signal(SIGFPE, signalHandler);	// EXC_BAD_ACCESS
     signal(SIGBUS, signalHandler);
     signal(SIGPIPE, signalHandler);
     return self;

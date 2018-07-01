@@ -11,7 +11,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	var window: Window?
 
 	var effectController = EffectViewController()
-	var windowController: WindowController?
+	var windowController: WindowController? // optional so app can run "headless" if desired
 
 	override init() {
 		// gotta set these before MacPin()->NSWindow()
@@ -342,11 +342,14 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 		//dispatch_sync(dispatch_get_main_queue(), {
 		//dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), {
+		DispatchQueue.main.async {
 			// JS tab additions are done on background queue -- wait for them to flush out
-			//if self.browserController.tabs.count < 1 { self.browserController.newTabPrompt() } //don't allow a tabless state
+			if self.browserController.tabs.count < 1 { self.browserController.newTabPrompt() } //don't allow a tabless state
+		}
 		//})
 
-		//warn("focus is on `\(windowController.window?.firstResponder)`")
+		windowController?.window?.makeFirstResponder(browserController.view)
+		warn("focus is on `\(windowController?.window?.firstResponder)`")
 
     }
 
