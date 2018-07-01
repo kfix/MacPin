@@ -1,3 +1,4 @@
+console.log(`require()d ${module.uri}`);
 module.exports = function(script, init, pre, tab) {
 	if (pre ? tab.preinject(script) : tab.postinject(script)) {
 		tab.evalJS('window.location.reload(false);'); // must reload page after injection

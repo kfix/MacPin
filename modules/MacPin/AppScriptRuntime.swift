@@ -166,12 +166,13 @@ struct AppScriptGlobals {
 			warn("\(scriptURL): read")
 
 			let contextGroup = JSContextGetGroup(ctx)
+			let jsurl = JSStringCreateWithCFString(urlstr as CFString)
 
 			let jsErrorMsg = JSStringCreateWithCFString("" as CFString)
 			var errorLine = Int32(0)
 			let script = JSScriptCreateFromString(
 				contextGroup,
-				JSStringCreateWithCFString(urlstr as CFString),
+				jsurl,
 				/*startingLineNumber:*/ 1,
 				/*script:*/ JSStringCreateWithCFString(script as CFString),
 				/*errorMessage*/ UnsafeMutablePointer(jsErrorMsg),
@@ -188,9 +189,11 @@ struct AppScriptGlobals {
 				var exception = JSValueMakeUndefined(contxt)
 
 				// https://nodejs.org/api/modules.html#modules_module_exports
+				// https://github.com/requirejs/requirejs/issues/89
 				let module = JSObjectMake(contxt, nil, nil)
 				let exports = JSObjectMake(contxt, nil, nil)
 				JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString), exports, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+				JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("uri" as CFString), JSValueMakeString(contxt, jsurl), JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 				JSObjectSetProperty(contxt, globalObj, JSStringCreateWithCFString("module" as CFString), module, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 
 				// https://nodejs.org/api/modules.html#modules_exports_shortcut
