@@ -81,17 +81,12 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 @objc extension MacPinAppDelegateOSX: ApplicationDelegate {
 
-	//@available(macOS, obsoleted: 10.13, message: "High Sierra is on drugs!")
 	public func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
 		warn()
-		if #available(OSX 10.13, iOS 11, *) {
 			// high sierra seems to cache a *copy* of the tabMenu (containing tabviewitems holding refs to webViews' props) thru NSCopying
 			//	until its clicked on *or* until it garbage-collect itself every minute or so
 			// causes webview to be retained after close, beacuse the copied menu is stale after tabs are closed and the master menu is updated
-			return nil
-		} else {
-			return browserController.tabMenu
-		}
+		return browserController.tabMenu
 	}
 
 	public func applicationShouldOpenUntitledFile(_ app: NSApplication) -> Bool { return false }
