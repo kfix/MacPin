@@ -13,6 +13,15 @@ STP 				:= 1
 SWFTFLAGS			?= -suppress-warnings
 SWCCFLAGS			?= -Wno-unreachable-code
 
+#WEB_INSPECTOR_SERVER	:=	127.0.0.1:9222
+# https://blogs.igalia.com/dpino/2015/11/22/Architecture-of-the-Web-Inspector/
+# seems like the javascriptcore on Mac is using XPC (REMOTE_INSPECTOR) so we can't make the frontend usable over http :-(
+#   https://lists.webkit.org/pipermail/webkit-dev/2014-June/026634.html
+#   https://blogs.igalia.com/carlosgc/2017/05/03/webkitgtk-remote-debugging-in-2-18/
+#   https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/inspector/remote/cocoa/RemoteInspectorCocoa.mm
+#   https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/inspector/remote/cocoa/RemoteInspectorXPCConnection.mm
+# could use this osascript to auto-open Safarie Remote Debugger: https://gist.github.com/Thinkscape/8538321
+
 # scan modules/ and define cross: target and vars: outdir, platform, arch, sdk, target, objs, execs, statics, incdirs, libdirs, linklibs, frameworks
 archs_macosx		?= x86_64
 # ^ supporting Yosemite+ only, so don't bother with 32-bit builds
@@ -92,7 +101,8 @@ endif
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly stp $(gen_apps): $(execs)
-doc test apirepl tabrepl test.app test.ios stp stp.app: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
+doc test apirepl tabrepl test.app test.ios dbg dbg.app stp stp.app: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
+#-D WK2LOG
 
 ifeq ($(STP),1)
 stpwebkitdir			:= $(wildcard /Applications/Safari\ Technology\ Preview.app/Contents/Frameworks)
@@ -110,7 +120,7 @@ swift += -D STP -Xcc -DSTP
 #env += DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
 endif
 
-test apirepl tabrepl test.app test.ios stp stp.app: | $(execs:%=%.dSYM)
+test apirepl tabrepl test.app dbg dbg.app test.ios stp stp.app: | $(execs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))
 codesign :=
@@ -120,7 +130,7 @@ codesign := yes
 else ifeq ($(appsig),-)
 codesign := yes
 else ifneq ($(appsig),)
-test test.app stp stp.app release: appsig := -
+test test.app dbg dbg.app stp stp.app release: appsig := -
 endif
 
 reinstall: allapps uninstall install
@@ -311,7 +321,7 @@ uninstall: $(wildcard $(appnames:%=$(installdir)/%))
 
 stp test:
 	#-defaults delete $(macpin)
-	($< -i http://browsingtest.appspot.com)
+	($< -i http://browsingtest.appspot.com) #|| { echo $$?; [ -t 1 ] && stty sane; }
 
 apirepl: ; ($< -i)
 tabrepl: ; ($< -t)
@@ -320,11 +330,13 @@ stp.app test.app: $(appdir)/$(macpin).app
 	#banner ':-}' | open -a $$PWD/$^ -f
 	#-defaults delete $(template_bundle_id).$(macpin)
 	#(open $^) &
-	($^/Contents/MacOS/$(macpin) -i)
+	($^/Contents/MacOS/$(macpin) -i) #|| { echo $$?; [ -t 1 ] && stty sane; }
 # https://github.com/WebKit/webkit/blob/master/Tools/Scripts/webkitdirs.pm
 
 # debug: $(appdir)/test.app
 # http://stackoverflow.com/questions/24715891/access-a-swift-repl-in-cocoa-programs
+dbg.app: $(appdir)/$(macpin).app
+	lldb -f $^/Contents/MacOS/$(macpin) -- -i #|| { echo $$?; [ -t 1 ] && stty sane; }
 
 # make cross test.ios
 # .crash: https://developer.apple.com/library/ios/technotes/tn2151/_index.html
@@ -353,7 +365,7 @@ endif
 
 # need to gen static html with https://github.com/realm/jazzy
 doc stpdoc: $(execs) $(objs)
-	for i in $(build_mods) WebKit WebKitPrivates; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -swift-version $(swiftver) -suppress-warnings -Xfrontend -color-diagnostics -deprecated-integrated-repl; done
+	{ for i in $(build_mods) WebKit WebKitPrivates JavaScriptCore; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -swift-version $(swiftver) -suppress-warnings -Xfrontend -color-diagnostics -deprecated-integrated-repl; done ;} | { [ -t 1 ] && less || cat; }
 	#xcrun swift-ide-test -print-module -source-filename /dev/null -print-regular-comments -module-to-print Prompt
 	#xcrun swift-ide-test -sdk "$(sdkpath)" -source-filename=. -print-module -module-to-print="Prompt" -synthesize-sugar-on-types -module-print-submodules -print-implicit-attrs
 
@@ -399,6 +411,7 @@ stp_symbols:
 	symbols /Applications/Safari\ Technology\ Preview.app/Contents/Frameworks/WebKit.framework/Versions/A/WebKit | less
 
 stp_jsc:
+	JSC_useDollarVM=1 JSC_reportCompileTimes=true JSC_logHeapStatisticsAtExit=true \
 	/Applications/Safari\ Technology\ Preview.app/Contents/Frameworks/JavaScriptCore.framework/Resources/jsc -i
 
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist
