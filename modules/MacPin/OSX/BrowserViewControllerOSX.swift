@@ -82,7 +82,7 @@ struct WeakThing<T: AnyObject> {
 				tab.bind(NSBindingName.label, to: wvc.webview, withKeyPath: #keyPath(MPWebView.title), options: nil)
 				tab.bind(NSBindingName.toolTip, to: wvc.webview, withKeyPath: #keyPath(MPWebView.title), options: nil)
 				//tab.bind(NSBindingName.image, to: wvc.favicon, withKeyPath: #keyPath(FavIcon.icon), options: nil) // retains wvc forever
-				tab.bind(NSBindingName.image, to: wvc.webview.favicon, withKeyPath: #keyPath(FavIcon.icon), options: nil) // sometimes retains webview for a minute
+				tab.bind(NSBindingName.image, to: wvc.webview.favicon, withKeyPath: #keyPath(FavIcon.icon), options: nil)
 			}
 		} else {
 			warn("no view for tabviewitem!!")
@@ -95,17 +95,12 @@ struct WeakThing<T: AnyObject> {
 
 	override func removeTabViewItem(_ tab: NSTabViewItem) {
 		if let view = tab.view {
-			tab.initialFirstResponder = nil
 			if tab.viewController is WebViewController {
 				tab.unbind(NSBindingName.label)
 				tab.unbind(NSBindingName.toolTip)
 				tab.unbind(NSBindingName.image)
 			}
-			tab.label = ""
-			tab.toolTip = nil
-			tab.image = nil
 			if let webview = omnibox.webview, webview.isDescendant(of: view) {
-				warn("deretaining omnibox!")
 				omnibox.webview = nil
 			}
 		}
@@ -113,8 +108,13 @@ struct WeakThing<T: AnyObject> {
 			wvc.dismiss() // remove retainers
 		}
 
+		tab.initialFirstResponder = nil
+		tab.label = ""
+		tab.toolTip = nil
+		tab.image = nil
+		//tab.viewController = nil // attempt to insert nil object from objects[0]
+
 		super.removeTabViewItem(tab)
-		//tab.viewController = nil
 	}
 
 	//override func tabView(_ tabView: NSTabView, shouldSelect tabViewItem: NSTabViewItem?) -> Bool { return true }
@@ -370,7 +370,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		token = center.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: mainQueue) { [weak self] (note) in //object: self.view.window?
 			//warn("window closed notification!")
 			center.removeObserver(token!) // prevent notification loop by close()
-			warn(obj: self)
+			//warn(obj: self)
 		}
 		center.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: mainQueue) { [weak self] (note) in //object: self.view.window?
 			//warn("application closed notification!")
@@ -579,7 +579,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	@objc func menuSelectedTab(_ sender: AnyObject?) {
 		warn()
-		if let mi = sender as? NSMenuItem, let tidx = mi.representedObject as? Int { selectedTabViewItemIndex = tidx }
+		if let mi = sender as? NSMenuItem { selectedTabViewItemIndex = mi.tag }
 	}
 
 /*
@@ -903,7 +903,7 @@ extension BrowserViewControllerOSX: NSMenuDelegate {
 						mi.image = image.copy() as! NSImage
 						mi.image?.size = NSSize(width: 16, height: 16)
 					}
-					mi.representedObject = idx
+					mi.tag = idx
 					mi.target = self
 					mi.state = (selectedTabViewItemIndex == idx) ? .on : .off
 					//mi.state = (tab.tabState == .selectedTab) ? .on : .off

@@ -227,7 +227,7 @@ struct IconCallbacks {
 		}
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
 #if os(OSX)
-		//prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
+		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
 		prefs._fullScreenEnabled = true
 
@@ -255,13 +255,15 @@ struct IconCallbacks {
 		//prefs._loadsImagesAutomatically = true // STP v20: https://github.com/WebKit/webkit/commit/326fc529da43b4a028a3a1644edb2198d23ecb68
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
-		//if let privacy = privacy { if privacy { configuration.websiteDataStore = WKWebsiteDataStore.nonPersistentDataStore() } }
-		if let isolated = isolated {
-			if isolated {
-				configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
-			} else {
-				configuration.processPool = config?.processPool ?? (MPWebView.self.sharedWebProcessPool)!
+		if let privacy = privacy, privacy {
+			if #available(OSX 10.11, iOS 9, *) {
+				configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
 			}
+		}
+		if let isolated = isolated, isolated {
+			configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
+		} else {
+			configuration.processPool = config?.processPool ?? (MPWebView.self.sharedWebProcessPool)!
 		}
 
 		self.init(frame: CGRect.zero, configuration: configuration)
@@ -775,13 +777,15 @@ struct IconCallbacks {
 	@objc func printWebView(_ sender: AnyObject?) {
 #if STP
 		// _printOperation not avail in 10.11.4's WebKit
-		let printer = _printOperation(with: NSPrintInfo.shared)
 		//let printer = _printOperation(with: NSPrintInfo.shared, forFrame: WKFrame)
-		printer?.showsPrintPanel = true
+		guard let printer = _printOperation(with: NSPrintInfo.shared) else { return }
+		// nil is returned if page contains encrypted/secured PDF, and maybe other qualms
+
+		printer.showsPrintPanel = true
 		if let window = self.window {
-			printer?.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
+			printer.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
 		} else {
-			printer?.run()
+			printer.run()
 		}
 #endif
 	}
