@@ -9,8 +9,6 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 	var browserController: BrowserViewController = BrowserViewControllerOSX()
 	var window: Window?
-
-	var effectController = EffectViewController()
 	var windowController: WindowController? // optional so app can run "headless" if desired
 
 	override init() {
@@ -38,12 +36,6 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 		//browserController.title = nil
 		//browserController.canPropagateSelectedChildViewControllerTitle = true
-		let win = NSWindow(contentViewController: effectController)
-		windowController = WindowController(window: win)
-		effectController.view.addSubview(browserController.view)
-		browserController.view.frame = effectController.view.bounds
-		self.window = win
-
 		super.init()
 	}
 
@@ -101,6 +93,14 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		let app = notification.object as? NSApplication
 		//let appname = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleName") ?? NSProcessInfo.processInfo().processName
 		let appname = NSRunningApplication.current.localizedName ?? ProcessInfo.processInfo.processName
+
+		browserController.extend(AppScriptRuntime.shared.exports) // expose our default browser instance early on, because legacy
+		BrowserViewControllerOSX.self.exportSelf(AppScriptRuntime.shared.context.globalObject) // & the type for self-setup
+
+		AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
+
+		AppScriptRuntime.shared.emit(.AppWillFinishLaunching, self)
+		// BUG?: browserController may be replaced by this, but we should to wait on the events to return
 
 		app!.mainMenu = NSMenu()
 
@@ -188,7 +188,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 		// Tuck these under the app menu?
 		let shortcutsMenu = NSMenuItem(title: "Shortcuts", action: nil, keyEquivalent: "")
-		shortcutsMenu.isHidden = true // not shown until $.browser.addShortcut(foo, url) is called
+		shortcutsMenu.isHidden = !(browserController.shortcutsMenu.numberOfItems > 0)
 		shortcutsMenu.submenu = browserController.shortcutsMenu
 		shortcutsMenu.submenu?.title = "Shortcuts"
 		app!.mainMenu?.addItem(shortcutsMenu)
@@ -219,9 +219,11 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		// https://developer.apple.com/documentation/appkit/nsappearancecustomization/choosing_a_specific_appearance_for_your_app#2993819
 		// NSApp.appearance = NSAppearance(named: .darkAqua) // NSApp.effectiveAppearance
 
+		/*
 		windowController?.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
 		windowController?.window?.bind(NSBindingName.title, to: browserController, withKeyPath: #keyPath(BrowserViewController.title), options: nil)
 		windowController?.window?.makeKeyAndOrderFront(self)
+		*/
 
 		NSAppleEventManager.shared().setEventHandler(self, andSelector: #selector(MacPinAppDelegateOSX.handleGetURLEvent(_:replyEvent:)), forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url schemes
 	}
@@ -250,10 +252,8 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
         }
 */
 
-		browserController.extend(AppScriptRuntime.shared.exports)
-		AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
-		//AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
 		AppScriptRuntime.shared.emit(.AppFinishedLaunching, "launched with this url")
+
 		AppScriptRuntime.shared.context.evaluateScript("eval = null;") // security thru obscurity
 
 		if let default_html = Bundle.main.url(forResource: "default", withExtension: "html") {
@@ -342,6 +342,10 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 			if self.browserController.tabs.count < 1 { self.browserController.newTabPrompt() } //don't allow a tabless state
 		}
 		//})
+
+		// showtime!
+		windowController = browserController.present()
+		window = windowController?.window
 
 		windowController?.window?.makeFirstResponder(browserController.view)
 		warn("focus is on `\(windowController?.window?.firstResponder)`")

@@ -98,7 +98,13 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 
 	required init?(coder: NSCoder) { super.init(coder: coder) }
 	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
-	override func loadView() { view = urlbox } // NIBless
+	override func loadView() { //view = urlbox } // NIBless
+		if DispatchQueue.getSpecific(key: mainQueueKey) == mainQueueValue {
+			view = urlbox
+		} else {
+			DispatchQueue.main.sync { view = urlbox }
+		}
+	}
 
 	func popup(_ webview: MPWebView?) {
 		guard let webview = webview else { return }
@@ -115,7 +121,14 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 
 	convenience init() {
 		self.init(nibName:nil, bundle:nil)
-		preferredContentSize = CGSize(width: 600, height: 24) //app hangs on view presentation without this!
+
+		if DispatchQueue.getSpecific(key: mainQueueKey) == mainQueueValue {
+			preferredContentSize = CGSize(width: 600, height: 24) //app hangs on view presentation without this!
+		} else {
+			DispatchQueue.main.sync {
+				preferredContentSize = CGSize(width: 600, height: 24) //app hangs on view presentation without this!
+			}
+		}
 	}
 
 	override func viewDidLoad() {

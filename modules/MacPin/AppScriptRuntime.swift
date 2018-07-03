@@ -140,7 +140,7 @@ class AppScriptConsole: NSObject, AppScriptConsoleExports {
 #if DEBUG
 	func evalJXA(_ script: String)
 	func callJXALibrary(_ library: String, _ call: String, _ args: [AnyObject])
-	@objc(reload) func loadSiteApp()
+	@objc(reload) func loadSiteApp() -> Bool
 #endif
 	@objc(eventCallbacks) var strEventCallbacks: [String: Array<JSValue>] { get } // app->js callbacks
 	@objc(emit::) func strEmit(_ eventName: String, _ args: Any) -> [JSValue]
@@ -232,6 +232,9 @@ struct AppScriptGlobals {
 //  will need to reimpl ASG in a .cxx to expose those JSC:: goodies
 //	https://github.com/tris-foundation/javascript/blob/master/Sources/CV8/c_v8.cpp
 //	https://karhm.com/JavaScriptCore_C_API/
+// could also require() in SystemJS.import: https://github.com/systemjs/systemjs/blob/master/docs/module-formats.md
+//   would need a native-hooked transpile() func to babel out the import statements from the filetexts to require()ese
+//      https://github.com/babel/babel/tree/master/packages/babel-parser
 
 	static let cjsrequire: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
 		// https://developer.apple.com/documentation/javascriptcore/jsobjectcallasfunctioncallback
@@ -417,9 +420,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 */
 
-	@objc func loadSiteApp() {
+	@objc func loadSiteApp() -> Bool {
 		let app = (Bundle.main.object(forInfoDictionaryKey:"MacPin-AppScriptName") as? String) ?? AppScriptRuntime.legacyAppFile
-		guard let gblExport = context.objectForKeyedSubscript(AppScriptRuntime.legacyGlobal) else { return; }
+		guard let gblExport = context.objectForKeyedSubscript(AppScriptRuntime.legacyGlobal) else { return false; }
 		let appExport = gblExport.objectForKeyedSubscript(AppScriptRuntime.legacyAppGlobal)
 		if let appExport = appExport, !appExport.isUndefined && !appExport.isNull {
 			// don't re-export if $.app is already exported
@@ -439,10 +442,12 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				if jsval.isObject { // FIXME: #11 - if JSValueIsInstanceOfConstructor(context.jsGlobalContextRef, jsval.JSValueRef, context.objectForKeyedSubscript("App").JSValueRef, nil)
 					warn("\(app_js) loaded as AppScriptRuntime.shared.jsdelegate")
 					jsdelegate = jsval // TODO: issue #11 - make `this` the delegate in app scripts, not the return
-
+					return true
 				}
 			}
 		}
+
+		return false
 	}
 
 	@discardableResult
@@ -831,7 +836,8 @@ enum AppScriptEvent: String, CustomStringConvertible {
 		handleClickedNotification, // title, subtitle, message, idstr
 		handleDragAndDroppedURLs, // urls -> Bool
 		decideNavigationForMIME, // mime, url, webview -> Bool
-		AppFinishedLaunching, // url?
+		AppWillFinishLaunching, // app, url?
+		AppFinishedLaunching, // app, url?
 		printToREPL // result
 
 // TOIMPL: https://electronjs.org/docs/api/app#events

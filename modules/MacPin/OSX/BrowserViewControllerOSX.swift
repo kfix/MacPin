@@ -22,7 +22,7 @@ struct WeakThing<T: AnyObject> {
 	let omnibox = OmniBoxController() // we could & should only present one of these at a time
 	lazy var tabPopBtn = NSPopUpButton(frame: NSRect(x:0, y:0, width:400, height:24), pullsDown: false)
 	@objc let tabMenu = NSMenu() // list of all active web tabs
-	@objc dynamic var shortcutsMenu = NSMenu()
+	@objc let shortcutsMenu = NSMenu()
 	//lazy var tabFlow = TabFlowController()
 	lazy var sidebar = TabGridController(tvc: self)
 	/*
@@ -383,20 +383,55 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		view.window?.makeFirstResponder(omnibox.view)
 	}
 
+	convenience required init?(object: JSValue) {
+		// consuming JSValue so we can perform custom/recursive conversion instead of JSExport's stock WrapperMap
+		// https://stackoverflow.com/a/36120929/3878712
+
+	/*
+		if object.isString { // new WebView("http://webkit.org");
+			guard let urlstr = object.toString(), let url = URL(string: urlstr) else { return nil }
+			self.init(url: url)
+		} else if object.isObject { // new WebView({url: "http://webkit.org", transparent: true, ... });
+			var props: [WebViewInitProps: Any] = [:]
+
+			for prop in WebViewInitProps.allCases {
+				// will want to consume tabs:[MPWebView]
+	*/
+		self.init()
+
+		//if DispatchQueue.getSpecific(key: mainQueueKey) == mainQueueValue {
+		//DispatchQueue.main.sync { self.present() }
+	}
+
+	func present() -> WindowController {
+		// do AppDelegatey UI things
+		var effectController = EffectViewController()
+		let win = NSWindow(contentViewController: effectController)
+		let windowController = WindowController(window: win)
+
+		effectController.view.addSubview(view)
+		view.frame = effectController.view.bounds
+		windowController.window?.initialFirstResponder = view // should defer to selectedTab.initialFirstRepsonder
+		windowController.window?.bind(NSBindingName.title, to: self, withKeyPath: #keyPath(BrowserViewController.title), options: nil)
+		windowController.window?.makeKeyAndOrderFront(self)
+		return windowController
+	}
+
+
 	deinit { warn(description) }
 	override var description: String { return "<\(type(of: self))> `\(title ?? String())`" }
 
 	func extend(_ mountObj: JSValue) {
 		let browser = JSValue(object: self, in: mountObj.context)!
-		// some helper code to smooth out some rough edges & wrinkles in the JSExported API
+		// mixin some helper code to smooth out some rough edges & wrinkles in the JSExported API
 		// this.tabs: Proxy wrapper actively assigns `fn()`s results back to their originating
 			// properties so JSC<=>ObjC bridging can forward the changes to native classes' properties
 		let helpers = """
 			Object.defineProperty(this, 'tabs', {
 				get: function () {
 					let backer = "_tabs"; // the ObjC bridged native property's exported name
-					let propThis = this;
 					return new Proxy(this[backer], {
+						parent: this,
 						getMutator: function (source, fn) {
 							return new Proxy(source[fn], {
 								apply: function(target, thisArg, args) {
@@ -413,7 +448,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 							// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/prototype#Mutator_methods
 							if (["copyWithin", "fill", "pop", "push", "reverse", "shift", "sort", "splice", "unshift"].includes(property))
-								return this.getMutator(target, property).bind(propThis);
+								return this.getMutator(target, property).bind(this.parent);
 
 							return Reflect.get(...arguments); // passthru
 						}
@@ -431,23 +466,71 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		mountObj.setValue(browser, forProperty: "browser")
 	}
 
-/*
-	static func exportClass(_ mountObj: JSValue) {
-		// make MacPin.BrowserWindow() constructable by using shellcode to declare a class-wrapper then use JSC-api to set
-		//   the class' prototype's prototype (JS can haz double-pointers too!) to the native-exported browser class. phew!
-		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes#Sub_classing_with_extends 3rd example
-		let clazz = mountObj.thisEval("""
-			class BrowserWindow {
-				constructor () {}
-			}
-			return BrowserWindow;
-		""").jsValueRef
-		let ctx = mountObj.context.jsGlobalContextRef
-		let exportedType =  JSValue(object: BrowserControllerOSX.self, in: mountObj.context).jsValueRef // bridged Self
-		JSObjectSetPrototype(ctx, JSGetPrototypeOf(ctx, clazz), exportedType)
-		//  =~= Object.setPrototypeOf(BrowserWindow.prototype, <MacPin.BrowserControllerOSXPrototype> );
+	static func exportSelf(_ mountObj: JSValue, _ name: String = "Browser") {
+		let bridgedClass = JSValue(object: BrowserViewControllerOSX.self, in: mountObj.context) // ObjC-bridged Self
+		//mountObj.setObject(bridgedClass, forKeyedSubscript: name as NSString) // direct export
+
+		// make MacPin.BrowserWindow() constructable with a wrapping ES6 class
+		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes#Sub_classing_with_extends
+		let classWrapper = bridgedClass?.thisEval("""
+			(class \(name) extends this {
+
+				constructor(name) {
+					//console.log(`constructing [${new.target}]!`)
+					super()
+					Object.setPrototypeOf(this, \(name).prototype) // WTF do I have to do this, Mr. Extends?
+					//this.extend(this) // mixin .tabs
+				}
+				static doHicky(txt) { console.log(`doHicky: ${txt}`); }
+				foo(txt) { console.log(`foo: ${txt}`); }
+				//inspect(depth, options) { return this.__proto__; }
+				//static get [Symbol.species]() { return this; }
+				//get [Symbol.toStringTag]() { return "\(name)"; }
+				//[util.inspect.custom](depth, options) {}
+
+				get tabs() {
+					let backerKey = "_tabs"; // the ObjC bridged native property's exported name
+					return new Proxy(this[backerKey], {backerKey, instance: this, ...{ // ES7 obj-spread-merge FTW
+						getMutator: function (source, fn) {
+							return new Proxy(source[fn], {backerKey: this.backerKey, ...{
+								apply: function(target, thisArg, args) {
+									let mutant = source.slice(); // needs to be a copy
+									let ret = mutant[fn].apply(mutant, args); // mutate the copy
+									Reflect.set(thisArg, this.backerKey, mutant); // replace the source
+									mutant = null; // allow GC on our copied refs
+									return ret;
+								}
+							}});
+						},
+						get: function(target, property, receiver) {
+							if (property == "inspect") return () => target;
+
+							// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/prototype#Mutator_methods
+							if (["copyWithin", "fill", "pop", "push", "reverse", "shift", "sort", "splice", "unshift"].includes(property))
+								return this.getMutator(target, property).bind(this.instance);
+
+							return Reflect.get(...arguments); // passthru
+						}
+						/*
+						set: function(target, property, value, receiver) {
+							console.log(`Set [${property}] to ${value.inspect()}`);
+							return Reflect.set(...arguments); // passthru
+						}
+						*/
+					}}); // Proxy({handler})
+				} // get tabs
+
+			})
+		""")
+
+		//Object.defineProperty(win2, "__proto__", { writable: true, value: $.BrowserWindow } )
+
+		//let wrapObj = JSValueToObject(mountObj.context.jsGlobalContextRef, classWrapper.jsValueRef, nil)
+		//JSObjectSetPrototype(jsGlobalContextRef, wrapObj, classWrapper.jsValueRef)
+		// Object.setPrototypeOf($.BrowserWindow, $.NBrowserWindow)
+
+		mountObj.setObject(classWrapper, forKeyedSubscript: name as NSString)
 	}
-*/
 
 	func unextend(_ mountObj: JSValue) {
 		let browser = JSValue(nullIn: mountObj.context)

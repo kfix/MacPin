@@ -3,6 +3,7 @@ import AppKit
 
 // https://electronjs.org/docs/api/browser-window
 @objc protocol BrowserViewControllerJS: JSExport { // '$.browser' in app.js
+	init?(object: JSValue)
 	var defaultUserAgent: String? { get set } // full UA used for any new tab without explicit UA specified
 	var isFullscreen: Bool { get set }
 	var isToolbarShown: Bool { get set }
@@ -29,8 +30,10 @@ import AppKit
 	var view: View { get }
 	var title: String? { get set }
 #if os(OSX)
+	func present() -> WindowController
 	var tabMenu: NSMenu { get } // FIXME: cross-plat menuitem enumerable
 	var shortcutsMenu: NSMenu { get } // FIXME: cross-plat menuitem enumerable
 #endif
 	var childViewControllers: [ViewController] { get set }
+	static func exportSelf(_ mountObj: JSValue, _ name: String)
 }
