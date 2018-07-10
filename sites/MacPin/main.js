@@ -99,7 +99,9 @@ let testAS = function(tab) { app.callJXALibrary('test', 'doTest', Array.prototyp
 if (eval != null)
 	var eval_copy = eval; // global eval is wiped after app.js is started ...
 
-let launchRepl = function() {
+let replTab;
+// var-decl needed to retain the tab, which is "dropped" & deinit()d in a proxied-push() if not bound to a persistent scope
+let launchRepl = () => {
 	var evalRepl = (tab, msg) => {
 		var command = msg;
 		var result, exception;
@@ -130,14 +132,17 @@ let launchRepl = function() {
 		}
 	};
 
-	browser.tabSelected = new WebView(cfgRepl)
+	replTab = new WebView(cfgRepl);
+	console.log(`selecting ${replTab.url}`);
+	browser.tabSelected = replTab;
+
 	// https://github.com/remy/jsconsole is much prettier than my repl.html ...
 	//    https://github.com/remy/jsconsole/blob/master/public/inject.html
 	//    https://github.com/remy/jsconsole/blob/1e3a1ecc86b7da1abe6c1e2e6c018184a19f4b37/public/js/remote.js
 	// https://nodejs.org/api/repl.html
 	// https://www.npmjs.com/package/react-console-component
 	// https://github.com/replit-archive/jq-console
-}
+};
 
 /*
  var geniusBarsNearMe() {
@@ -208,8 +213,16 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 
 	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
 	console.log(app.browserController);
+
+	// lets flex tab management flows a bit
+	launchRepl(); // late-create a WebView and select it
+
+	// shuffle the _tabs using the tabs Proxy
 	browser.tabs.push(ntpTab);
-	launchRepl();
+	browser.tabs.reverse(); // selection will change to the pushed tab that was flipped #0
+
+	console.log(`reselecting ${replTab.url}`);
+	browser.tabSelected = replTab;
 });
 
 app.on('AppFinishedLaunching', (launchURLs) => {

@@ -22,18 +22,6 @@ import Prompt // https://github.com/neilpa/swift-libedit
 import UserNotificationPrivates
 //import SSKeychain // https://github.com/soffes/sskeychain
 
-/*
-
-extension NSObject: JSExport {
-	static func extend2js(mountObj: JSValue, helpers: String? = nil) { // for constructors
-		let classinstance = JSValue(object: self.type, inContext: mountObj.context)
-		if let helpers = helpers { classinstance.thisEval(helpers) }
-		mountObj.setValue(classinstance, forProperty: className)
-	}
-}
-
-*/
-
 // FIXME: AppScript needs a HandlerMethods enum instead of just tryFunc("unsafe-string")s everywhere....
 extension JSValue {
 	@discardableResult
@@ -130,13 +118,15 @@ struct AppScriptGlobals {
 		// https://github.com/swittk/Node-JS-for-JavascriptCore/blob/master/Node/JSNodeEventEmitter.m
 		// https://github.com/nodejs/node-v0.x-archive/issues/5132#issuecomment-15432598 CommonJS is ded
 
+		// TODO: caching, loop-prevention
+
 		if let mods = mods, urlstr == "@MacPin" { // export our native objects & classes
 			let exports = JSObjectMake(ctx, nil, nil)!
 			for (k, v) in mods {
 				if let jsv = v as? JSValue { // mod-obj is pre-bridged
 					//warn("export of `\(k)`, pre-bridged type!")
 					JSObjectSetProperty(ctx, exports, JSStringCreateWithCFString(k as CFString), jsv.jsValueRef, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
-				// TODO: check for simple-jack types with dedicated JSValue inits
+				// TODO: check for simple-jack types havining dedicated JSValue(type:, in:)inits
 				} else if v is JSExport, let bridged = JSValue(object: v, in: JSContext(jsGlobalContextRef: ctx)) {
 					// AVAST: thar be crashes heere*. gARRRbage Collection run amuk!
 
@@ -237,11 +227,6 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		}
 		warn("\(urlstr): could not be read")
 		return JSValueMakeNull(ctx)
-	}
-
-	static let legacyenv: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
-		//injectGlobal(ctx: ctx!, property: "$", value: legacyGlobals)
-		return JSValueMakeNull(ctx) // generates an exception
 	}
 
 //ES6 async imports of .mjs?
@@ -486,21 +471,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	override var description: String { return "<\(type(of: self))> [\(appPath)]" }
 
 	func sleep(_ secs: Int) {
-		let delayTime = DispatchTime.now() + DispatchTimeInterval.seconds(secs)
-		DispatchQueue.main.asyncAfter(deadline: delayTime){} // .main doesn't work when run from REPL!
-		//NSThread.sleepForTimeInterval(secs)
+		Thread.sleep(forTimeInterval: TimeInterval(secs))
 	}
-
-/*
-	func delay(delay:Double, closure:()->()) {
-		dispatch_after(
-			dispatch_time(
-				DISPATCH_TIME_NOW,
-				Int64(delay * Double(NSEC_PER_SEC))
-			),
-		dispatch_get_main_queue(), closure)
-	}
-*/
 
 	@objc func loadSiteApp() -> Bool {
 		let app = (Bundle.main.object(forInfoDictionaryKey:"MacPin-AppScriptName") as? String) ?? AppScriptRuntime.legacyAppFile
@@ -787,7 +759,6 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		termiosREPL(
 			{ [unowned self] (line: String) -> Void in
 				let val = self.context.evaluateScript(line)
-
 				if self.context.exception != nil {
 					if let str = self.context.exception.toString()
 					, let typ = self.context.exception.forProperty("name").toString()
@@ -908,7 +879,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	@discardableResult
-	func emit(_ event: AppScriptEvent, _ args: [Any]) -> [JSValue?]? {
+	func emit(_ event: AppScriptEvent, _ args: [Any] = []) -> [JSValue?]? {
 		if let cbs = eventCallbacks[event] {
 			return cbs.map { cb in cb.call(withArguments: args) }
 		} else if self.jsdelegate.isObject && self.jsdelegate.hasProperty(event.rawValue) {
@@ -940,6 +911,7 @@ enum AppScriptEvent: String, CustomStringConvertible {
 		AppWillFinishLaunching, // AppUI
 		AppFinishedLaunching, // url...
 		printToREPL, // result
+		tabTransparencyToggled, // transparent, tab
 
 		// WKNavigationDelegate
 		decideNavigationForURL,

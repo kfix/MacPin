@@ -57,27 +57,25 @@ struct WeakThing<T: AnyObject> {
 	var cornerRadius = CGFloat(0.0) // increment above 0.0 to put nice corners on the window FIXME userDefaults
 
 	@objc func close() { // close all tabs
-		DispatchQueue.main.async() { //AppScriptRuntime needs this
-			self.omnibox.webview = nil
-			self.view.window?.makeFirstResponder(nil)
+		self.omnibox.webview = nil
+		self.view.window?.makeFirstResponder(nil)
 
-			self.tabViewItems.forEach { // quickly close any remaining tabs
-				//dismissViewController($0.viewController?)
-				$0.view?.removeFromSuperviewWithoutNeedingDisplay()
-				self.removeTabViewItem($0)
-			}
-			// last webview should be released and deinit'd now
-
-			// FIXME: dispatch a browserClose notification
-			self.view.window?.windowController?.close() // kicks off automatic app termination
+		self.tabViewItems.forEach { // quickly close any remaining tabs
+			//dismissViewController($0.viewController?)
+			$0.view?.removeFromSuperviewWithoutNeedingDisplay()
+			self.removeTabViewItem($0)
 		}
+		// last webview should be released and deinit'd now
+
+		// FIXME: dispatch a browserClose notification
+		self.view.window?.windowController?.close() // kicks off automatic app termination
 	}
 
 	override func insertTabViewItem(_ tab: NSTabViewItem, at: Int) {
 		warn()
 		if let view = tab.view {
 			tab.initialFirstResponder = view
-			if let wvc = tab.viewController as? WebViewController {
+			if let wvc = tab.viewController as? WebViewController, wvc.webview.isDescendant(of: view) {
 				tab.initialFirstResponder = wvc.webview
 				tab.bind(NSBindingName.label, to: wvc.webview, withKeyPath: #keyPath(MPWebView.title), options: nil)
 				tab.bind(NSBindingName.toolTip, to: wvc.webview, withKeyPath: #keyPath(MPWebView.title), options: nil)
@@ -359,6 +357,32 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	@objc dynamic var tabsArray = [WebViewController]()
 	//var tabsController = NSArrayController()
 
+	lazy var windowController: WindowController = {
+		var effectController = EffectViewController()
+		let win = NSWindow(contentViewController: effectController)
+
+		let wc = WindowController(window: win)
+		wc.window?.initialFirstResponder = self.view // should defer to selectedTab.initialFirstRepsonder
+		//wc.window?.initialFirstResponder = omnibox.view // crashy! must put a nil somewhere in the responder chain...
+		wc.window?.bind(NSBindingName.title, to: self, withKeyPath: #keyPath(BrowserViewController.title), options: nil)
+		effectController.view.addSubview(self.view)
+		self.view.frame = effectController.view.bounds
+		return wc
+	}()
+
+	func present() -> WindowController {
+		warn()
+		if let win = self.windowController.window { // inits window
+			win.makeKeyAndOrderFront(self)
+			if self.selectedTabViewItemIndex > -1 {
+				let vc = childViewControllers[selectedTabViewItemIndex]
+				self.prepareTab(vc) // retroactively prep current Tab (JS may have made some headlessly)
+			}
+		}
+
+		return windowController
+	}
+
 	convenience init() {
 		self.init(nibName: nil, bundle: nil)
 
@@ -378,9 +402,6 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 		//tabsController.automaticallyRearrangesObjects = false
 		//tabsController.entityName = "foo"
-
-		view.window?.initialFirstResponder = omnibox.view
-		view.window?.makeFirstResponder(omnibox.view)
 	}
 
 	convenience required init?(object: JSValue) {
@@ -402,23 +423,6 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		//if DispatchQueue.getSpecific(key: mainQueueKey) == mainQueueValue {
 		//DispatchQueue.main.sync { self.present() }
 	}
-
-	func present() -> WindowController {
-		warn()
-		var effectController = EffectViewController()
-		let win = NSWindow(contentViewController: effectController)
-		let windowController = WindowController(window: win)
-
-		DispatchQueue.main.async {
-			effectController.view.addSubview(self.view)
-			self.view.frame = effectController.view.bounds
-			windowController.window?.initialFirstResponder = self.view // should defer to selectedTab.initialFirstRepsonder
-			windowController.window?.bind(NSBindingName.title, to: self, withKeyPath: #keyPath(BrowserViewController.title), options: nil)
-			windowController.window?.makeKeyAndOrderFront(self)
-		}
-		return windowController
-	}
-
 
 	deinit { warn(description) }
 	override var description: String { return "<\(type(of: self))> `\(title ?? String())`" }
@@ -591,7 +595,6 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	Fatal error: NSArray element failed to match the Swift Array Element type
 */
 
-			DispatchQueue.main.async {
 				// upsert existing tabs as needed with new webviews
 				for (idx, webview) in newWebs.enumerated() {
 					warn("setting #\(idx)")
@@ -621,7 +624,6 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 						self.removeChildViewController(at: shifted)
 					}
 				}
-			}
 
 			// assuming tabs was set thru JS, lets trigger a garbage collect so we don't have lingering WebViews
 			JSGarbageCollect(AppScriptRuntime.shared.context.jsGlobalContextRef)
@@ -639,16 +641,18 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			switch (obj) {
 				case let vc as NSViewController:
 					if self.tabViewItem(for: vc) == nil {
-						DispatchQueue.main.async {
-							self.childViewControllers.append(vc) // add the given vc as a child if it isn't already
+						self.childViewControllers.append(vc) // add the given vc as a child if it isn't already
+					}
+					if let tvi = self.tabViewItem(for: vc) {
+						let idx = self.tabView.indexOfTabViewItem(tvi)
+						warn(idx.description)
+						if idx != Int.max && idx > -1 {
+							self.selectedTabViewItemIndex = idx
+							prepareTab(vc)
 						}
 					}
-					DispatchQueue.main.async {
-						self.tabView.selectTabViewItem(self.tabViewItem(for: vc))
-					}
-					prepareTab(vc)
 				case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
-					self.tabSelected = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
+					self.tabSelected = self.childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
 					//FIXME: a backref in the wv to wvc would be helpful
 				//case let js as JSValue: guard let wv = js.toObjectOfClass(MPWebView.self) { self.tabSelected = wv } //custom bridging coercion
 				default:
@@ -664,6 +668,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	override func insertChildViewController(_ childViewController: NSViewController, at index: Int) {
 		warn("#\(index)")
+		//If a child view controller has a different parent when you call this method, the child is first be removed from its existing parent by calling the child’s removeFromParent() method.
 		super.insertChildViewController(childViewController, at: index)
 		//tabsController.insert(childViewController, atArrangedObjectIndex: index)
 
@@ -730,27 +735,29 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	}
 
 	func prepareTab(_ viewController: NSViewController) {
+		guard let webview = viewController.representedObject as? MPWebView else {
+			warn("making plain view first responder!!!")
+			view.window?.makeFirstResponder(viewController.view)
+			return
+		}
+
+		omnibox.webview = webview
+
 		if let window = view.window {
-			if let webview = viewController.representedObject as? MPWebView {
-				omnibox.webview = webview
-				window.initialFirstResponder = omnibox.view
-				if webview.url == startPage {
-					// check for isLoaded too?
-					// for pageless tabs (about:blank), we should focus on the omnibox, like Safari...
-					// brand new tabs don't have init'd webview yet, so this check will fail
-					revealOmniBox()
-					//warn("represented!")
-				} else { // isLoaded, isLoading
-					window.makeFirstResponder(webview)
-					// omni should be next Responder, but keyFocus should be on the webview
-					//omnibox.view.resignFirstResponder()
-					//window.selectNextKeyView(nil)
-				}
-				warn("webview prepared!")
-			} else { // steal app focus to whatever the tab represents
-				warn("making plain view first responder!!!")
-				window.makeFirstResponder(viewController.view)
+			window.initialFirstResponder = omnibox.view
+			if webview.url == startPage {
+				// check for isLoaded too?
+				// for pageless tabs (about:blank), we should focus on the omnibox, like Safari...
+				// brand new tabs don't have init'd webview yet, so this check will fail
+				revealOmniBox()
+				//warn("represented!")
+			} else { // isLoaded, isLoading
+				window.makeFirstResponder(webview)
+				// omni should be next Responder, but keyFocus should be on the webview
+				//omnibox.view.resignFirstResponder()
+				//window.selectNextKeyView(nil)
 			}
+			warn("visible webview prepared!")
 			// warn("focus is on `\(view.window?.firstResponder)`")
 		} else {
 			warn("headless app???")
@@ -801,12 +808,12 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		switch (tab) {
 			case let vc as NSViewController:
 				guard let ti = tabViewItem(for: vc) else { break } // not a loaded tab
-				DispatchQueue.main.async() { self.removeTabViewItem(ti) }
+				removeTabViewItem(ti)
 				return
 			case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
 				guard let vc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first else { break }
 				guard let ti = tabViewItem(for: vc) else { break } // not a loaded tab
-				DispatchQueue.main.async() { self.removeTabViewItem(ti) }
+				removeTabViewItem(ti)
 				return
 			//case let js as JSValue: guard let wv = js.toObjectOfClass(MPWebView.self) { self.tabSelected = wv } //custom bridging coercion
 			default:
@@ -816,7 +823,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 		// close currently selected tab
 		if selectedTabViewItemIndex == -1 { return } // no tabs? bupkiss!
-		DispatchQueue.main.async() { self.removeChildViewController(at: self.selectedTabViewItemIndex) }
+		removeChildViewController(at: selectedTabViewItemIndex)
 	}
 
 	@objc func revealOmniBox() {

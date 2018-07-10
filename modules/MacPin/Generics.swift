@@ -43,7 +43,7 @@ func warn(obj: Any?, function: StaticString = #function, file: StaticString = #f
 	// handles chunky objdumps
 	var out = ""
 	guard let obj = obj else { warn("nil"); return } //force unwrap obj
-	dump(obj, to: &out, name: nil, indent: 0, maxDepth: Int.max, maxItems: Int.max)
+	dump(obj, to: &out, name: nil, indent: 0, maxDepth: Int.max, maxItems: Int.max) // a nil further down the tree will cause a seg!
 	warn(out, function: function, file: file, line: line, column: column)
 }
 
@@ -135,6 +135,28 @@ func loadUserStyleSheetFromBundle(_ basename: String, webctl: WKUserContentContr
 	}
 	return true
 }
+
+// https://github.com/dequin-cl/WKContentRuleExample/blob/master/Filtering%20WkView/ViewController.swift#L49
+@available(OSX 10.13, iOS 11, *)
+func loadUserBlockListFromBundle(_ basename: String, webctl: WKUserContentController, onlyForTop: Bool = true, error: NSErrorPointer = nil) -> Bool {
+	if let jsonUrl = Bundle.main.url(forResource: basename, withExtension: "json"), !basename.isEmpty {
+		warn("loading block list: \(jsonUrl)")
+		WKContentRuleListStore.default().compileContentRuleList(
+			forIdentifier: basename,
+			encodedContentRuleList: (try? NSString(contentsOf: jsonUrl, encoding: String.Encoding.utf8.rawValue) as String) ?? ""
+		) { (ruleList, error) in // https://stackoverflow.com/a/48084455/3878712
+			if let ruleList = ruleList {
+				webctl.add(ruleList)
+			} else if let error = error {
+				return
+			}
+		}
+	} else {
+		return false
+	}
+	return true
+}
+
 
 func validateURL(_ urlstr: String, fallback: ((String) -> NSURL?)? = nil) -> NSURL? {
 	// apply fuzzy logic like WK1: https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
@@ -256,7 +278,12 @@ func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2:
 		    if let line = prompt?.gets() { // R: blocks here until Enter pressed
 				if !line.hasPrefix("\n") {
 					//print("| ") // result prefix
-					eval?(line) // E:, P:
+
+					DispatchQueue.main.sync {
+						// JS can mutate native UI objects that are not BG-thread-safe
+						eval?(line) // E:, P:
+					}
+
 					//println() //newline
 				}
 		    } else { // stdin closed or EOF'd

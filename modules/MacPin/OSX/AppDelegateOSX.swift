@@ -221,6 +221,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 				self.browserController.extend(AppScriptRuntime.shared.exports) // expose our default browser instance early on, because legacy
 				BrowserController.self.exportSelf(AppScriptRuntime.shared.context.globalObject) // & the type for self-setup
 				AppScriptRuntime.shared.exports.setObject(MPWebView.self, forKeyedSubscript: "WebView" as NSString) // because legacy
+				AppScriptRuntime.shared.exports.setObject("", forKeyedSubscript: "launchedWithURL" as NSString)
 				AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
 			}
 
@@ -232,8 +233,6 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 			self.tabListMenu.submenu?.title = "Tabs"
 			self.tabListMenu.isHidden = false
 			AppScriptRuntime.shared.context.evaluateScript("eval = null;") // security thru obscurity
-
-			self.windowController = self.browserController.present()
 
 			AppScriptRuntime.shared.emit(.AppFinishedLaunching, "launched with this url") // FIXME: provide real URLs
 		}
@@ -322,10 +321,13 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		booter.main { // booter's JS tab additions are done on background queue -- wait for them to flush out
 			if self.browserController.tabs.count < 1 { self.browserController.newTabPrompt() } //don't allow a tabless state
 
-			if let window = self.windowController?.window {
+			self.windowController = self.browserController.present()
+
+			if let wc = self.windowController, let window = wc.window, let fr = window.firstResponder {
 				// window.makeFirstResponder(self.browserController.view)
 				// scripts may have already added tabs which would have changed win's responders
-				warn("focus is on `\(window.firstResponder)`")
+				warn("focus is on: `\(fr)`")
+				//warn(obj: fr) // crashes if any nils are in the responder chain!
 			}
 		}
 
@@ -389,7 +391,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 				//case "public.folder":
 				case "com.apple.web-internet-location": //.webloc http://stackoverflow.com/questions/146575/crafting-webloc-file
 					if let webloc = NSDictionary(contentsOfFile: filename), let urlstr = webloc.value(forKey: "URL") as? String {
-						if AppScriptRuntime.shared.jsdelegate.tryFunc("handleDragAndDroppedURLs", NSArray(array: [urlstr])) {
+						if AppScriptRuntime.shared.anyHandled(.handleDragAndDroppedURLs, [urlstr]) {
 					 		return true  // app.js indicated it handled drag itself
 						} else if let url = validateURL(urlstr) {
 							browserController.tabSelected = MPWebView(url: url)
@@ -404,7 +406,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 				case "com.netscape.javascript-source": //.js
 					warn(filename)
 					AppScriptRuntime.shared.loadAppScript("file://\(filename)")
-					AppScriptRuntime.shared.jsdelegate.tryFunc("AppFinishedLaunching")
+					AppScriptRuntime.shared.emit(.AppFinishedLaunching)
 					return true
 				// FIXME: make a custom .macpinjs ftype
 				// when opened, offer to edit, test, or package as MacPin app

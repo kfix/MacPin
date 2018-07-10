@@ -5,9 +5,8 @@
 "use strict";
 
 const {app, BrowserWindow, WebView} = require('@MacPin');
-let browser = new BrowserWindow();
 
-var slackTab, slack = {
+let slackTab, slack = {
 	url: 'https://slack.com/ssb/',
 	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Slack_SSB/2.0.3', // MacGap app
 	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleWebKit/537.36 (KHTML, like Gecko) AtomShell/2.5.2 Chrome/53.0.2785.143 Electron/1.4.15 Safari/537.36 MacAppStore/16.5.0 Slack_SSB/2.5.2', // new Electron app (env SLACK_DEVELOPER_MENU=true)
@@ -15,7 +14,7 @@ var slackTab, slack = {
 };
 slackTab = new WebView(slack); // get it started early
 
-var delegate = {}; // our delegate to receive events from the webview app
+let browser = new BrowserWindow();
 
 app.messageHandlers["receivedHTML5DesktopNotification"] = (tab, note) => {
 	console.log(Date() + ' [posted HTML5 notification] ' + note);
@@ -33,6 +32,7 @@ app.on('handleClickedNotification', (title, subtitle, msg, id) => {
 app.on('networkIsOffline', (url, tab) => {
 	// Slack.app might be set to start at boot but wifi lags behind
 	// so this is crazy, but here's my number, so call me maybe?
+	console.log("reloading from offline!");
 	slackTab.loadURL(slack.url);
 });
 
@@ -57,7 +57,7 @@ app.on('receivedRedirectionToURL', (url, tab) => {
 				tab.allowAnyRedir = false; // we are back home
 				// if login was success, navigate to team page
 				host = url.split('/')[2]
-				redir = `${scheme}://${host}/`
+				let redir = `${scheme}://${host}/`
 				console.log(`redirecting from ${url} to ${redir}!`);
 				tab.gotoURL(redir);
 				return true; //tell webkit that we handled this
@@ -83,7 +83,7 @@ let clicker = (url, tab) => {
 			if (alwaysAllowRedir) break; //user override
 			if ((host == "slack-redir.net") && path.startsWith("link?url=")) {
 				// stripping obnoxious redirector
-				redir = decodeURIComponent(path.slice(9));
+				let redir = decodeURIComponent(path.slice(9));
 				//$.app.openURL(`$(scheme):$(redir)`);
 				app.openURL(redir); //pop all external links to system browser
 				return true; //tell webkit to do nothing
@@ -149,11 +149,10 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut('Enable Redirection to external domains', [true], toggleRedirection);
 	// FIXME add themes: https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99  DrewML/Theming-Slack-OSX.md
 	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
+	//browser.tabSelected = slackTab; // no key-focus, omnibox blank
 });
 
 app.on('AppFinishedLaunching', (launchURLs) => {
 	//slackTab.asyncEvalJS(`document.location = document.querySelectorAll('.btn')[1].href ? document.querySelectorAll('.btn')[1].href : document.location;`, 3); // try logging into the first signed-in team
-	browser.tabSelected = slackTab;
+	browser.tabSelected = slackTab; // no key-focus, omnibox populated
 });
-
-true;

@@ -48,6 +48,10 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	// var userLabel // allow to be initiated with a trackable tag
 	var injected: [String] { get }
 	var styles: [String] { get }
+	var blockLists: [String] { get }
+		//WKContentRuleListStore.default().getAvailableContentRuleListIdentifiers(_ completionHandler: (([String]?)
+		// https://trac.webkit.org/changeset/213696/webkit
+		// https://developer.apple.com/library/archive/documentation/Extensions/Conceptual/ContentBlockingRules/CreatingRules/CreatingRules.html
 	static var MatchedAddressOptions: [String:String] { get set }
 
 	// methods are exported as non-enumerable (but configurable) JS props by JSC
@@ -112,6 +116,7 @@ struct IconCallbacks {
 	var injected: [String] = [] //list of script-names already loaded
 	var styles: [String] = [] //list of css-names already loaded
 	// cachedUserScripts: [UserScript] // are pushed/popped from the contentController by navigation delegates depending on URL being visited
+	var blockLists: [String] = []
 
 	//let jsdelegate = AppScriptRuntime.shared.jsdelegate
 	// race condition? seems to hit a phantom JSContext/JSValue that doesn't represent the delegate!?
@@ -192,9 +197,9 @@ struct IconCallbacks {
 #endif
 			AppScriptRuntime.shared.emit(.tabTransparencyToggled, transparent as AnyObject, self)
 			evalJS("window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(transparent)}}));")
-			needsDisplay = true
 			WKPageForceRepaint(_pageRefForTransitionToWKWebView, nil, {error, void in warn()} as WKPageForceRepaintFunction )
 			//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
+			needsDisplay = true // queue the whole frame for rerendering
 		}
 	}
 
@@ -553,6 +558,14 @@ struct IconCallbacks {
 		if let url = NSURL(string: icon), !icon.isEmpty {
 			favicon.url = url
 			return true
+		}
+		return false
+	}
+
+	@discardableResult
+	func blockList(_ json: String) -> Bool {
+		if #available(OSX 10.13, iOS 11, *) {
+			if !blockLists.contains(json) && loadUserBlockListFromBundle(json, webctl: configuration.userContentController, onlyForTop: false) { blockLists.append(json); return true }
 		}
 		return false
 	}
