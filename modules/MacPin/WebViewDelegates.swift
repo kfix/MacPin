@@ -97,7 +97,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 					decisionHandler(.cancel)
 			}
 
-			if jsdelegate.tryFunc("decideNavigationForURL", url.absoluteString as NSString, webView) { decisionHandler(.cancel); return }
+			if AppScriptRuntime.shared.anyHandled(.decideNavigationForURL, url.absoluteString as NSString, webView) { decisionHandler(.cancel); return }
 
 			switch navigationAction.navigationType {
 				case .linkActivated:
@@ -108,13 +108,13 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 						else if modkeys.contains(.command) { popup(webView.clone(url as NSURL?)) } // cmd-click pops open a new tab
 						else if modkeys.contains(.command) { popup(MPWebView(url: url as NSURL, agent: webView._customUserAgent)) } // shift-click pops open a new tab w/ new session state
 						// FIXME: same keymods should work with Enter in omnibox controller
-						else if !jsdelegate.tryFunc("decideNavigationForClickedURL", url.absoluteString as NSString, webView) { // allow override from JS
+						else if !AppScriptRuntime.shared.anyHandled(.decideNavigationForClickedURL, url.absoluteString as NSString, webView) { // allow override from JS
 							if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
 							popup(webView.clone(url as NSURL?))
 						}
 #elseif os(iOS)
 					// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/ios/WKActionSheetAssistant.mm
-					if !jsdelegate.tryFunc("decideNavigationForClickedURL", url.absoluteString as NSString, webView) { // allow override from JS
+					if !AppScriptRuntime.shared.anyHandled(.decideNavigationForClickedURL, url.absoluteString as NSString, webView) { // allow override from JS
 						if navigationAction.targetFrame != nil { fallthrough } // tapped in_frame target link
 						popup(webView.clone(url as NSURL?))  // out of frame target link
 					}
@@ -155,7 +155,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 	func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
 		guard let url = webView.url else { return }
 		warn("~> [\(url)]")
-		jsdelegate.tryFunc("receivedRedirectionToURL", url.absoluteString as NSString, webView)
+		AppScriptRuntime.shared.anyHandled(.receivedRedirectionToURL, url.absoluteString as NSString, webView)
 	}
 
 	func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { //error returned by webkit when loading content
@@ -181,7 +181,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 					// URL never appears in the address bar if it was the primary addr
 					// this should not be the case. it should show struck-through or red or italic or something.
 					// or SOS bonk noises
-					jsdelegate.tryFunc("networkIsOffline", url.absoluteString as NSString, webView)
+					AppScriptRuntime.shared.anyHandled(.networkIsOffline, url.absoluteString as NSString, webView)
 				case(NSPOSIXErrorDomain, 1): // Operation not permitted
 					warn("Sandboxed?")
 					//fallthrough
@@ -234,7 +234,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		//let len = navigationResponse.response.expectedContentLength
 		//let enc = navigationResponse.response.textEncodingName
 
-		if navigationResponse.isForMainFrame && jsdelegate.tryFunc("decideNavigationForMIME", mime as NSString, url.absoluteString as NSString, webView) {
+		if navigationResponse.isForMainFrame && AppScriptRuntime.shared.anyHandled(.decideNavigationForMIME, mime as NSString, url.absoluteString as NSString, webView) {
 			// runtime claims to have handled the situation, so abort the webview's load
 			decisionHandler(.cancel)
 			return
@@ -249,7 +249,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 			if let headers = httpResponse.allHeaderFields as? [String: String], let url = httpResponse.url {
 				let cookies = HTTPCookie.cookies(withResponseHeaderFields: headers, for: url)
 				//let cookies = NSHTTPCookie._parsedCookiesWithResponseHeaderFields(headers, forURL: url) //ElCap
-				for cookie in cookies { jsdelegate.tryFunc("receivedCookie", webView, cookie.name as NSString, cookie.value as NSString) }
+				for cookie in cookies { AppScriptRuntime.shared.anyHandled(.receivedCookie, webView, cookie.name as NSString, cookie.value as NSString) }
 				//FUTURE: API for this https://github.com/WebKit/webkit/commit/a01fab49a9571e9bcf6703b30dadf5419d87bc11
 
 				if let cd = headers["Content-Disposition"], cd.hasPrefix("attachment") {
@@ -263,7 +263,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		}
 
 		if !navigationResponse.canShowMIMEType {
-			if !jsdelegate.tryFunc("handleUnrenderableMIME", mime as NSString, url.description as NSString, fn as NSString, webView) {
+			if !AppScriptRuntime.shared.anyHandled(.handleUnrenderableMIME, mime as NSString, url.absoluteString as NSString, fn as NSString, webView) {
 				//let uti = UTI(MIMEType: mime)
 				warn("cannot render requested MIME-type:\(mime) @ \(url)")
 				// if scheme is not http|https && askToOpenURL(url)
@@ -343,7 +343,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		// RDAR? would like the tgt string to be passed here
 
 		warn("JS <\(srcurl)>: `window.open(\(openurl), \(tgt?.absoluteString ?? ""));`")
-		if jsdelegate.tryFunc("decideWindowOpenForURL", openurl.description as NSString, webView) { return nil }
+		if AppScriptRuntime.shared.anyHandled(.decideWindowOpenForURL, openurl.absoluteString as NSString, webView) { return nil }
 		let wv = MPWebView(config: configuration, agent: webView._customUserAgent)
 		popup(wv)
 #if os(OSX)
@@ -364,7 +364,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 #endif
 		//if !tgt.description.isEmpty { evalJS("window.name = '\(tgt)';") }
 		if !openurl.description.isEmpty { wv.gotoURL(openurl as NSURL) } // this should be deferred with a timer so all chained JS calls on the window.open() instanciation can finish executing
-		jsdelegate.tryFunc("DidWindowOpenForURL", openurl.absoluteString as NSString, wv, webView) // allow app.js to tweak any created windows
+		AppScriptRuntime.shared.anyHandled(.didWindowOpenForURL, openurl.absoluteString as NSString, wv, webView)
 		return wv // window.open() -> Window()
 		//return nil //window.open() -> undefined
 	}

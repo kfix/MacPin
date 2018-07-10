@@ -38,6 +38,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	// https://nodejs.org/api/util.html#util_custom_inspection_functions_on_objects
 
 	var transparent: Bool { get set }
+	var caching: Bool { get set }
 	var userAgent: String { get set }
 	var allowsMagnification: Bool { get set }
 	var allowsRecording: Bool { get set }
@@ -170,6 +171,11 @@ struct IconCallbacks {
 	}
 #endif
 
+	var caching: Bool {
+		get { return !WKPageGetResourceCachingDisabled(_pageRefForTransitionToWKWebView) }
+		set { WKPageSetResourceCachingDisabled(_pageRefForTransitionToWKWebView, !newValue) }
+	}
+
 	var transparent: Bool {
 		get {
 #if STP
@@ -184,17 +190,14 @@ struct IconCallbacks {
 #else
 			_drawsTransparentBackground = transparent
 #endif
-			//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
- 			// so frobble frame size to make content reflow & re-colorize
-			setFrameSize(NSSize(width: frame.size.width, height: frame.size.height - 1)) //needed to fully redraw w/ dom-reflow or reload!
-			AppScriptRuntime.shared.jsdelegate.tryFunc("tabTransparencyToggled", transparent as AnyObject, self)
-			evalJS("window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(transparent)}}));" +
-				"document.head.appendChild(document.createElement('style')).remove();") //force redraw in case event didn't
-				//"window.scrollTo();")
-			setFrameSize(NSSize(width: frame.size.width, height: frame.size.height + 1))
+			AppScriptRuntime.shared.emit(.tabTransparencyToggled, transparent as AnyObject, self)
+			evalJS("window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(transparent)}}));")
 			needsDisplay = true
+			WKPageForceRepaint(_pageRefForTransitionToWKWebView, nil, {error, void in warn()} as WKPageForceRepaintFunction )
+			//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
 		}
 	}
+
 #elseif os(iOS)
 	var transparent = false // no overlaying MacPin apps upon other apps in iOS, so make it a no-op
 	var allowsMagnification = true // not exposed on iOS WebKit, make it no-op
@@ -324,10 +327,14 @@ struct IconCallbacks {
 	convenience required init?(object: JSValue) {
 		// consuming JSValue so we can perform custom/recursive conversion instead of JSExport's stock WrapperMap
 		// https://stackoverflow.com/a/36120929/3878712
+		//guard let object = jsobject else { warn("no config object given!"); return nil} // JS can dump a nil on us
 
 		if object.isString { // new WebView("http://webkit.org");
-			guard let urlstr = object.toString(), let url = URL(string: urlstr) else { return nil }
-			self.init(url: url)
+			if let urlstr = object.toString(), let url = URL(string: urlstr) {
+				self.init(url: url)
+			} else {
+				self.init(url: URL(string: "about:blank")!)
+			}
 		} else if object.isObject { // new WebView({url: "http://webkit.org", transparent: true, ... });
 			var props: [WebViewInitProps: Any] = [:]
 
@@ -373,12 +380,15 @@ struct IconCallbacks {
 			}
 
 			self.init(props: props)
-		} else {
-			return nil
+		} else { // isUndefined, isNull
+			// returning nil will actually SIGSEGV
+			//warn(obj: object)
+			self.init(url: URL(string: "about:blank")!)
 		}
 	}
 
-	convenience required init?(object: [String:AnyObject]) {
+	convenience required init?(object: [String:AnyObject]?) {
+		guard let object = object else { warn("no config object given!"); return nil} // JS can dump a nil on us
 		// this is just for addShortcut() & gotoShortcut(), I think ...
 		var props: [WebViewInitProps: Any] = [:]
 		for (key, value) in object {
@@ -426,7 +436,6 @@ struct IconCallbacks {
 		}
 
 		if let url = url { gotoURL(url) } else { return nil }
-		//too bad I can't customize the JSValue of this construction before it is finalized in the JSContext ...
 	}
 
 	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
@@ -437,6 +446,8 @@ struct IconCallbacks {
 		self.init(config: nil, agent: agent, isolated: isolated, privacy: privacy)
 		gotoURL(url)
 	}
+
+	//convenience required init(){ warn("no props init!"); self.init() }
 
 	override var description: String { return "<\(type(of: self))> `\(title ?? String())` [\(urlstr)]" }
 	func inspect() -> String { return "`\(title ?? String())` [\(urlstr)]" }
@@ -651,6 +662,10 @@ struct IconCallbacks {
 	//webview._getApplicationManifestWithCompletionHandler() { (manifest: _WKApplicationManifest?) -> Void in }
 
 #if os(OSX)
+	@objc func reloadWithoutContentBlockers() {
+		WKPageReloadWithoutContentBlockers(_pageRefForTransitionToWKWebView)
+	}
+
 	// FIXME: unified save*()s like Safari does with a drop-down for "Page Source" & Web Archive, or auto-mime for single non-HTML asset
 	@objc func saveWebArchive() {
 		_getWebArchiveData() { [unowned self] (data: Data?, err: Error?) -> Void in
@@ -726,7 +741,6 @@ struct IconCallbacks {
 
 	// try to accept DnD'd links from other browsers more gracefully than default WebKit behavior
 	// this mess ain't funny: https://hsivonen.fi/kesakoodi/clipboard/
-	// https://webkit.org/blog/8170/clipboard-api-improvements/
 	override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
 		if sender.draggingSource() == nil { //dragged from external application
 			let pboard = sender.draggingPasteboard()
@@ -736,11 +750,12 @@ struct IconCallbacks {
 			} else {
 				pboard.dump()
 				pboard.normalizeURLDrag() // *cough* Trello! *cough*
+				//^^ no longer needed? https://webkit.org/blog/8170/clipboard-api-improvements/
 				pboard.dump()
 			}
 
 			if let urls = pboard.readObjects(forClasses: [NSURL.self], options: nil) {
-				if AppScriptRuntime.shared.jsdelegate.tryFunc("handleDragAndDroppedURLs", NSArray(array: urls.map({($0 as! NSURL).description}))) {
+				if AppScriptRuntime.shared.anyHandled(.handleDragAndDroppedURLs, urls.map({($0 as! NSURL).description})) {
 			 		return true  // app.js indicated it handled drag itself
 				}
 			}
@@ -748,6 +763,7 @@ struct IconCallbacks {
 
 		return super.performDragOperation(sender)
 		// if current page doesn't have HTML5 DnD event observers, webview will just navigate to URL dropped in
+		//  hmm, 10.13 does not open drags by default ...
 	}
 
 /*

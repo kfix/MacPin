@@ -1,5 +1,5 @@
 /* eslint-env es6 */
-delegate.enDarken = function(tab) {
+module.exports = function(tab) {
 	let idx = tab.styles.indexOf('enDarken');
 	(idx >= 0) ? tab.popStyle(idx) : tab.style('enDarken');
 	return;

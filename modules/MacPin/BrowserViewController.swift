@@ -21,19 +21,31 @@ import AppKit
 	func focusOnBrowser()
 	func unhideApp()
 	func bounceDock()
-	func addShortcut(_ title: String, _ obj: AnyObject?)
 	func extend(_ mountObj: JSValue)
 	func unextend(_ mountObj: JSValue)
+
+	// shortcuts & menu surface in Electron is more fully featured but complex
+	// https://github.com/electron/electron/blob/master/docs/api/global-shortcut.md
+	// https://github.com/electron/electron/blob/master/docs/api/menu.md#notes-on-macos-application-menu
+	func addShortcut(_ title: String, _ obj: AnyObject?, _ cb: JSValue?)
+
+	func present() -> WindowController
 }
 
 @objc protocol BrowserViewController: BrowserViewControllerJS {
 	var view: View { get }
 	var title: String? { get set }
 #if os(OSX)
-	func present() -> WindowController
 	var tabMenu: NSMenu { get } // FIXME: cross-plat menuitem enumerable
 	var shortcutsMenu: NSMenu { get } // FIXME: cross-plat menuitem enumerable
 #endif
 	var childViewControllers: [ViewController] { get set }
 	static func exportSelf(_ mountObj: JSValue, _ name: String)
 }
+
+
+#if os(OSX)
+typealias BrowserController = BrowserViewControllerOSX
+#elseif(iOS)
+typealias BrowserController = BrowserViewControllerIOS
+#endif

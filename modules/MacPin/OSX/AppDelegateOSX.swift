@@ -3,6 +3,7 @@ import ObjectiveC
 import WebKitPrivates
 import Darwin
 //import Bookmarks
+import Async
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
 open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
@@ -10,6 +11,10 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	var browserController: BrowserViewController = BrowserViewControllerOSX()
 	var window: Window?
 	var windowController: WindowController? // optional so app can run "headless" if desired
+
+	// FIXME: these menus are singletons for the App, but should really be tied to windows ....
+	let shortcutsMenu = NSMenuItem(title: "Shortcuts", action: nil, keyEquivalent: "")
+	let tabListMenu = NSMenuItem(title: "Tabs", action: nil, keyEquivalent: "")
 
 	override init() {
 		// gotta set these before MacPin()->NSWindow()
@@ -43,7 +48,6 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	@objc func handleGetURLEvent(_ event: NSAppleEventDescriptor!, replyEvent: NSAppleEventDescriptor?) {
 		if let urlstr = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))!.stringValue {
 			warn("`\(urlstr)` -> AppScriptRuntime.shared.jsdelegate.launchURL()")
-			AppScriptRuntime.shared.exports.setObject(urlstr, forKeyedSubscript: "launchedWithURL" as NSString)
 			AppScriptRuntime.shared.emit(.launchURL, urlstr)
 			//replyEvent == ??
 		}
@@ -89,25 +93,18 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	//public func finishLaunching() { super.finishLaunching() } // app activates, NSOpen files opened
 
 	public func applicationWillFinishLaunching(_ notification: Notification) { // dock icon bounces, also before self.openFile(foo.bar) is called
+		warn()
 		NSUserNotificationCenter.default.delegate = self
 		let app = notification.object as? NSApplication
 		//let appname = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleName") ?? NSProcessInfo.processInfo().processName
 		let appname = NSRunningApplication.current.localizedName ?? ProcessInfo.processInfo.processName
-
-		browserController.extend(AppScriptRuntime.shared.exports) // expose our default browser instance early on, because legacy
-		BrowserViewControllerOSX.self.exportSelf(AppScriptRuntime.shared.context.globalObject) // & the type for self-setup
-
-		AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
-
-		AppScriptRuntime.shared.emit(.AppWillFinishLaunching, self)
-		// BUG?: browserController may be replaced by this, but we should to wait on the events to return
 
 		app!.mainMenu = NSMenu()
 
 		let appMenu = NSMenuItem()
 		appMenu.submenu = NSMenu()
 		appMenu.submenu?.addItem(MenuItem("About \(appname)", "orderFrontStandardAboutPanel:"))
-		appMenu.submenu?.addItem(MenuItem("Restart \(appname)", #selector(AppScriptRuntime.loadSiteApp)))
+		appMenu.submenu?.addItem(MenuItem("Restart \(appname)", #selector(AppScriptRuntime.loadMainScript)))
 		appMenu.submenu?.addItem(NSMenuItem.separator())
 		appMenu.submenu?.addItem(MenuItem("Hide \(appname)", "hide:", "h", [.command]))
 		appMenu.submenu?.addItem(MenuItem("Hide Others", "hideOtherApplications:", "H", [.command, .shift]))
@@ -181,16 +178,11 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", #selector(NSTabView.selectPreviousTabViewItem(_:)), String(format:"%c", NSTabCharacter), [.control, .shift]))
 		app!.mainMenu?.addItem(winMenu)
 
-		let tabListMenu = NSMenuItem(title: "Tabs", action: nil, keyEquivalent: "")
-		tabListMenu.submenu = browserController.tabMenu
-		tabListMenu.submenu?.title = "Tabs"
+		tabListMenu.isHidden = true
 		app!.mainMenu?.addItem(tabListMenu)
 
 		// Tuck these under the app menu?
-		let shortcutsMenu = NSMenuItem(title: "Shortcuts", action: nil, keyEquivalent: "")
-		shortcutsMenu.isHidden = !(browserController.shortcutsMenu.numberOfItems > 0)
-		shortcutsMenu.submenu = browserController.shortcutsMenu
-		shortcutsMenu.submenu?.title = "Shortcuts"
+		shortcutsMenu.isHidden = true
 		app!.mainMenu?.addItem(shortcutsMenu)
 
 /*
@@ -219,16 +211,32 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		// https://developer.apple.com/documentation/appkit/nsappearancecustomization/choosing_a_specific_appearance_for_your_app#2993819
 		// NSApp.appearance = NSAppearance(named: .darkAqua) // NSApp.effectiveAppearance
 
-		/*
-		windowController?.window?.initialFirstResponder = browserController.view // should defer to selectedTab.initialFirstRepsonder
-		windowController?.window?.bind(NSBindingName.title, to: browserController, withKeyPath: #keyPath(BrowserViewController.title), options: nil)
-		windowController?.window?.makeKeyAndOrderFront(self)
-		*/
-
 		NSAppleEventManager.shared().setEventHandler(self, andSelector: #selector(MacPinAppDelegateOSX.handleGetURLEvent(_:replyEvent:)), forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url schemes
 	}
 
     public func applicationDidFinishLaunching(_ notification: Notification) { //dock icon stops bouncing
+		warn()
+		let booter = Async.main {
+			if !AppScriptRuntime.shared.loadMainScript() { // load main.js, if present
+				self.browserController.extend(AppScriptRuntime.shared.exports) // expose our default browser instance early on, because legacy
+				BrowserController.self.exportSelf(AppScriptRuntime.shared.context.globalObject) // & the type for self-setup
+				AppScriptRuntime.shared.exports.setObject(MPWebView.self, forKeyedSubscript: "WebView" as NSString) // because legacy
+				AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
+			}
+
+			AppScriptRuntime.shared.emit(.AppWillFinishLaunching, self) // allow JS to replace our browserController
+			self.shortcutsMenu.submenu = self.browserController.shortcutsMenu // update the menu from browserController
+			self.shortcutsMenu.submenu?.title = "Shortcuts" // FIXME: allow JS to customize title?
+			self.shortcutsMenu.isHidden = !(self.browserController.shortcutsMenu.numberOfItems > 0)
+			self.tabListMenu.submenu = self.browserController.tabMenu
+			self.tabListMenu.submenu?.title = "Tabs"
+			self.tabListMenu.isHidden = false
+			AppScriptRuntime.shared.context.evaluateScript("eval = null;") // security thru obscurity
+
+			self.windowController = self.browserController.present()
+
+			AppScriptRuntime.shared.emit(.AppFinishedLaunching, "launched with this url") // FIXME: provide real URLs
+		}
 
 /*
 		http://stackoverflow.com/a/13621414/3878712
@@ -252,9 +260,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
         }
 */
 
-		AppScriptRuntime.shared.emit(.AppFinishedLaunching, "launched with this url")
 
-		AppScriptRuntime.shared.context.evaluateScript("eval = null;") // security thru obscurity
 
 		if let default_html = Bundle.main.url(forResource: "default", withExtension: "html") {
 			warn("loading initial page from app bundle: \(default_html)")
@@ -270,28 +276,6 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		for (idx, arg) in CommandLine.arguments.dropFirst().enumerated() {
 			switch (arg) {
 				case "-i" where isatty(1) == 1:
-
-#if !(SAFARIDBG)
-	// runtime check possible to confirm active remote inspector?
-
-			// make thrown exceptions popup an nserror displaying the file name and error type,
-			//   which will be shunted to console.log
-			AppScriptRuntime.shared.context.exceptionHandler = { context, exception in
-				let line = exception?.forProperty("line").toNumber()
-				let column = exception?.forProperty("column").toNumber()
-				let stack = exception?.forProperty("stack").toString()
-				let message = exception?.forProperty("message").toString()
-				let error = NSError(domain: "MacPin", code: 4, userInfo: [
-					NSURLErrorKey: context?.name as Any,
-					NSLocalizedDescriptionKey: "JS Exception @ \(line ?? -1):\(column ?? -1): \(message ?? "?")\n\(stack ?? "?")"
-					// exception seems to be Error.toString(). I want .message|line|column|stack too
-				])
-				displayError(error) // FIXME: would be nicer to pop up an inspector pane or tab to interactively debug this
-				context?.exception = exception //default in JSContext.mm
-				return // gets returned to evaluateScript()?
-			}
-			// if you don't set the exception handler, JSC will directly pass them to console.* so they could bubble up to the Inspector
-#endif
 
 					//open a JS console on the terminal, if present
 					//AppScriptRuntime.shared.eventCallbacks[.printToREPL, default: []]
@@ -335,20 +319,15 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 		//NSApp.setServicesProvider(ServiceOSX())
 
-		//dispatch_sync(dispatch_get_main_queue(), {
-		//dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), {
-		DispatchQueue.main.async {
-			// JS tab additions are done on background queue -- wait for them to flush out
+		booter.main { // booter's JS tab additions are done on background queue -- wait for them to flush out
 			if self.browserController.tabs.count < 1 { self.browserController.newTabPrompt() } //don't allow a tabless state
+
+			if let window = self.windowController?.window {
+				// window.makeFirstResponder(self.browserController.view)
+				// scripts may have already added tabs which would have changed win's responders
+				warn("focus is on `\(window.firstResponder)`")
+			}
 		}
-		//})
-
-		// showtime!
-		windowController = browserController.present()
-		window = windowController?.window
-
-		windowController?.window?.makeFirstResponder(browserController.view)
-		warn("focus is on `\(windowController?.window?.firstResponder)`")
 
     }
 
@@ -377,7 +356,6 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		windowController?.window = nil
 		windowController = nil // deinit the wc
 		window = nil // deinit the window
-		browserController.unextend(AppScriptRuntime.shared.exports)
 		AppScriptRuntime.shared.resetStates()
 		//browserController.close() // kill any zombie tabs -- causes lock-loop?
 		// unfocus app?

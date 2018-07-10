@@ -404,16 +404,18 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	}
 
 	func present() -> WindowController {
-		// do AppDelegatey UI things
+		warn()
 		var effectController = EffectViewController()
 		let win = NSWindow(contentViewController: effectController)
 		let windowController = WindowController(window: win)
 
-		effectController.view.addSubview(view)
-		view.frame = effectController.view.bounds
-		windowController.window?.initialFirstResponder = view // should defer to selectedTab.initialFirstRepsonder
-		windowController.window?.bind(NSBindingName.title, to: self, withKeyPath: #keyPath(BrowserViewController.title), options: nil)
-		windowController.window?.makeKeyAndOrderFront(self)
+		DispatchQueue.main.async {
+			effectController.view.addSubview(self.view)
+			self.view.frame = effectController.view.bounds
+			windowController.window?.initialFirstResponder = self.view // should defer to selectedTab.initialFirstRepsonder
+			windowController.window?.bind(NSBindingName.title, to: self, withKeyPath: #keyPath(BrowserViewController.title), options: nil)
+			windowController.window?.makeKeyAndOrderFront(self)
+		}
 		return windowController
 	}
 
@@ -467,12 +469,17 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	}
 
 	static func exportSelf(_ mountObj: JSValue, _ name: String = "Browser") {
-		let bridgedClass = JSValue(object: BrowserViewControllerOSX.self, in: mountObj.context) // ObjC-bridged Self
-		//mountObj.setObject(bridgedClass, forKeyedSubscript: name as NSString) // direct export
+		// get ObjC-bridged wrapping of Self
+		let wrapper = BrowserViewControllerOSX.self.wrapSelf(mountObj.context, name)
+		mountObj.setObject(wrapper, forKeyedSubscript: name as NSString)
+	}
 
+	static func wrapSelf(_ context: JSContext, _ name: String = "Browser") -> JSValue {
 		// make MacPin.BrowserWindow() constructable with a wrapping ES6 class
 		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes#Sub_classing_with_extends
-		let classWrapper = bridgedClass?.thisEval("""
+
+		let bridgedClass = JSValue(object: BrowserViewControllerOSX.self, in: context) // ObjC-bridged Self
+		guard let wrapper = bridgedClass?.thisEval("""
 			(class \(name) extends this {
 
 				constructor(name) {
@@ -521,7 +528,9 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 				} // get tabs
 
 			})
-		""")
+		"""), !wrapper.isUndefined else {
+			return JSValue(undefinedIn: context)
+		}
 
 		//Object.defineProperty(win2, "__proto__", { writable: true, value: $.BrowserWindow } )
 
@@ -529,7 +538,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		//JSObjectSetPrototype(jsGlobalContextRef, wrapObj, classWrapper.jsValueRef)
 		// Object.setPrototypeOf($.BrowserWindow, $.NBrowserWindow)
 
-		mountObj.setObject(classWrapper, forKeyedSubscript: name as NSString)
+		return wrapper // returns a JSValue that we can mount elsewhere
 	}
 
 	func unextend(_ mountObj: JSValue) {
@@ -573,7 +582,14 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		}
 
 		set {
-			let newWebs: [MPWebView] = newValue.flatMap({ $0 as? MPWebView })
+			let newWebs: [MPWebView] = (newValue as! Array<Any>).flatMap({ $0 as? MPWebView })
+/*
+% let {WebView: wv} = require("@MacPin")
+% new wv({url: "http://google.com"})
+	[MacPin.MPWebView] = `` [http://google.com/]
+% $.browser.tabs.push(wv)
+	Fatal error: NSArray element failed to match the Swift Array Element type
+*/
 
 			DispatchQueue.main.async {
 				// upsert existing tabs as needed with new webviews
@@ -809,13 +825,15 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			// if omnibox is already visible somewhere in the window, move key focus there
 			view.window?.makeFirstResponder(omnibox.view)
 			warn("omniboxed! \(omnibox.view)")
-		} else {
+		} else if view.window != nil {
 			//let omnibox = OmniBoxController(webViewController: self)
 			// otherwise, present it as a sheet or popover aligned under the window-top/toolbar
 			//presentViewControllerAsSheet(omnibox) // modal, yuck
 			var poprect = view.bounds
 			poprect.size.height -= omnibox.preferredContentSize.height + 12 // make room at the top to stuff the popover
 			presentViewController(omnibox, asPopoverRelativeTo: poprect, of: view, preferredEdge: NSRectEdge.maxY, behavior: NSPopover.Behavior.transient)
+		} else {
+			warn("headless browser?? no window to sheet/popover omnibox into!")
 		}
 	}
 
@@ -922,7 +940,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	func bounceDock() { NSApplication.shared.requestUserAttention(.informationalRequest) } //Critical keeps bouncing
 
-	func addShortcut(_ title: String, _ obj: AnyObject?) {
+	func addShortcut(_ title: String, _ obj: AnyObject?, _ cb: JSValue?) {
 		if title.isEmpty {
 			warn("title not provided")
 			return
@@ -938,7 +956,9 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			//		jsobj can't be coerced to AnyObject
 			case let dict as [String: AnyObject]:
 				mi = MenuItem(title, "gotoShortcut:", target: self, represents: NSDictionary(dictionary: dict, copyItems: true))
-			case let arr as [AnyObject]: mi = MenuItem(title, "gotoShortcut:", target: self, represents: NSArray(array: arr))
+			case let arr as [AnyObject]:
+				guard let cb = cb, let narr: [AnyObject] = [cb] + arr else { warn("no callback func provided for array!"); fallthrough }
+				mi = MenuItem(title, "gotoShortcut:", target: self, represents: narr)
 			default:
 				warn("invalid shortcut object type!")
 				return
@@ -950,18 +970,30 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	@objc func gotoShortcut(_ sender: AnyObject?) {
 		if let shortcut = sender as? NSMenuItem {
 			switch (shortcut.representedObject) {
-				case let urlstr as String: AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", urlstr as NSString)
-				// FIXME: fire event in jsdelegate if string, only NSURLs should do launchURL
+				case let urlstr as String: AppScriptRuntime.shared.emit(.launchURL, urlstr as NSString)
+				// FIXME: fire event in jsdelegate if string, only validated-and-bridged NSURLs should do launchURL
 				case let dict as [String:AnyObject]: tabSelected = MPWebView(object: dict) // FIXME: do a try here
 				case let dict as [WebViewInitProps:AnyObject]: tabSelected = MPWebView(props: dict) // FIXME: do a try here
 				case let jsobj as [String: JSValue]:
 					warn("\(jsobj)")
 				case let arr as [AnyObject?] where arr.count > 0 && arr.first is String?:
 					// FIXME: funcs (arr[0]) should be passed in by ref, and not un-strung and hoisted from `delegate`
-					var args = Array(arr.dropFirst()).map({ $0! })
+					var args = Array(arr.dropFirst()).map({ $0! }) // filters nils....buggish?
 					if let wv = tabSelected as? MPWebView { args.append(wv) }
 					AppScriptRuntime.shared.jsdelegate.tryFunc((arr.first as! String), argv: args)
-				default: warn("invalid shortcut object type!")
+				case let arr as [AnyObject?] where arr.count > 0 && arr.first is JSValue:
+					guard let callback = arr.first! as? JSValue, // we may have a JS func-ref to call here ...
+					!callback.isNull && !callback.isUndefined && callback.hasProperty("call") else {
+						warn("leading value is uncallable")
+						warn(obj: arr.first!)
+						fallthrough
+					}
+					var args = Array(arr.dropFirst()).map({ $0! }) // filters nils....buggish?
+					if let wv = tabSelected as? MPWebView { args.append(wv) }
+					callback.call(withArguments: args)
+				default:
+					warn("invalid shortcut object type!")
+					warn(obj: shortcut.representedObject)
 			}
 		}
 	}

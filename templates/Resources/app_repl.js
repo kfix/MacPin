@@ -3,6 +3,9 @@
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
 
+(() => { // ES6 IIFE to protecc global scowpe
+const {app} = require("@MacPin");
+
 // helpers to stringify JS outputs to REPL from seeDebugger.js
 // also refer to:
 //   http://stackoverflow.com/questions/34914397/why-doesnt-console-log-work-in-the-jsc-environment-but-it-works-in-safaris-deb
@@ -15,7 +18,7 @@
 // https://github.com/substack/object-inspect/blob/master/index.js
 //
 // https://github.com/deecewan/browser-util-inspect/blob/master/index.js
-let inspect = require(`file://${$.app.resourcePath}/browser-util-inspect.js`);
+let inspect = require(`file://${app.resourcePath}/browser-util-inspect.js`);
 //
 // https://github.com/Automattic/util-inspect
 
@@ -28,7 +31,7 @@ Object.defineProperty(this, "allThis", {
 	}
 });
 
-$.app.on('printToREPL', function (result, colorize) {
+app.on('printToREPL', function (result, colorize) {
 
 	function vtype(obj) {
       // JS world doesn't have a solid convention to get bare type names for *any* given object. pathetic.
@@ -163,3 +166,5 @@ $.app.on('printToREPL', function (result, colorize) {
 	var ret = `[${rtype}] = ${description}`;
 	return ret;
 });
+
+})(); //-ES6 IIFE

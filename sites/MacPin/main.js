@@ -6,28 +6,32 @@
 */
 "use strict";
 
-var delegate = {}; // our delegate to receive events from the webview app
+// https://github.com/electron/electron-quick-start/blob/master/main.js
+const {app, BrowserWindow, WebView} = require('@MacPin');
+let injectTab = require(`file://${app.resourcePath}/app_injectTab.js`);
+let enDarken = require(`file://${app.resourcePath}/enDarken.js`);
 
-var gitTab = new WebView({url: 'http://github.com/kfix/MacPin'});
+var ntpTab = new WebView("file:///usr/share/doc/ntp/index.html");
+//var gitTab = new WebView({url: 'http://github.com/kfix/MacPin'});
 //var gooTab = new WebView({url: "http://google.com"})
 
-let browser = new Browser();
+let browser = new BrowserWindow();
 
-delegate.openInChrome = function(tab) {
+let openInChrome = function(tab) {
 	console.log(`app.js: opening (${tab.url}) in chrome`);
-	switch ($.app.platform) {
+	switch (app.platform) {
 		case "OSX":
-			$.app.openURL(tab.url, "com.google.Chrome");
+			app.openURL(tab.url, "com.google.Chrome");
 			break;
 		case "iOS":
-			$.app.openURL(tab.url,
+			app.openURL(tab.url,
 				tab.url.startsWith("https://") ? "googlechromes" : "googlechrome");
 			break;
 	}
 };
 
 // handles cmd-line and LaunchServices openURL()s
-delegate.launchURL = function(url) {
+app.on('launchURL', (url) => {
 	console.log("app.js: launching " + url);
 	var comps = url.split(':'),
 		scheme = comps.shift(),
@@ -36,19 +40,19 @@ delegate.launchURL = function(url) {
 		default:
 			browser.tabSelected = new WebView({url: url}); //FIXME: retains???!
 	}
-};
-// $.app.on('launchURL', (url) => new $.WebView({url: url}));
+});
+// app.on('launchURL', (url) => new $.WebView({url: url}));
 
-delegate.networkIsOffline = function(url, tab) {
+app.on('networkIsOffline', (url, tab) => {
 	console.log(`Could not navigate to ${url} - network is offline!`);
-}
+});
 
 // handles all URLs drag-and-dropped into MacPin.
-delegate.handleDragAndDroppedURLs = function(urls) {
+app.on('handleDragAndDroppedURLs', (urls) => {
 	var ret = false;
 	console.log(urls);
 	for (let url of urls) {
-		$.browser.tabSelected.evalJS(`confirm('Open a new tab for: ${url}');`, function(response) {
+		browser.tabSelected.evalJS(`confirm('Open a new tab for: ${url}');`, function(response) {
 			if (response) {
 				var tab = new WebView({url: url});
 				//$.browser.tabSelected = tab;
@@ -58,25 +62,25 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 		})
 	}
 	return ret;
-};
+});
 
-delegate.decideNavigationForMIME = function(mime, url, webview) {
+app.on('decideNavigationForMIME', (mime, url, webview) => {
 	console.log(`${mime} : ${url}`);
 	switch (mime) {
 		case 'audio/mpegurl': // m3u8
 		case 'application/x-mpegurl':
 		case 'application/vnd.apple.mpegurl':
 			// FIXME: ensure url is for main frame
-			webview.loadURL('file://' + $.app.resourcePath + '/media_player.html?src=' + url); // FIXME: urldecode(url)
+			webview.loadURL('file://' + app.resourcePath + '/media_player.html?src=' + url); // FIXME: urldecode(url)
 			return true;
 		default:
 			break;
 	}
 	return false;
-}
+});
 
-delegate.setAgent = function(agent, tab) { tab.userAgent = agent; };
-delegate.img2data = function(tab) {
+let setAgent = function(agent, tab) { tab.userAgent = agent; };
+let img2data = function(tab) {
 	if (!tab) tab = browser.tabSelected;
 	tab.evalJS(`
 		var img = document.images[0];
@@ -90,13 +94,12 @@ delegate.img2data = function(tab) {
 	`)
 };
 
-delegate.testAS = function(tab) { $.app.callJXALibrary('test', 'doTest', Array.prototype.slice.call(arguments)); };
+let testAS = function(tab) { app.callJXALibrary('test', 'doTest', Array.prototype.slice.call(arguments)); };
 
 if (eval != null)
 	var eval_copy = eval; // global eval is wiped after app.js is started ...
 
-//$.app.on('launchRepl', () => {
-delegate.launchRepl = function() {
+let launchRepl = function() {
 	var evalRepl = (tab, msg) => {
 		var command = msg;
 		var result, exception;
@@ -107,7 +110,7 @@ delegate.launchRepl = function() {
 			result = e; // printToREPL will make a line pointer object
 			try { console.log(e); } catch(e) { }
 		}
-		var ret = $.app.emit('printToREPL', result, false); // handler, expr, colorize
+		var ret = app.emit('printToREPL', result, false); // handler, expr, colorize
 		//try { console.log(ret); } catch(e) { }
 		let exfil = `returnREPL('${escape(ret)}', ${(exception) ? `'${escape(exception)}'` : 'null'});`;
 		//console.log(exfil); // use base64 instead of urlencode??
@@ -118,7 +121,7 @@ delegate.launchRepl = function() {
 
 	var cfgRepl = {
 		transparent: true,
-		url: 'file://'+ $.app.resourcePath + '/repl.html',
+		url: 'file://'+ app.resourcePath + '/repl.html',
 		handlers: {
 			'evalREPL': [evalRepl, true, "hello", 42],
 			'closeREPL': closeRepl,
@@ -133,9 +136,8 @@ delegate.launchRepl = function() {
 	//    https://github.com/remy/jsconsole/blob/1e3a1ecc86b7da1abe6c1e2e6c018184a19f4b37/public/js/remote.js
 	// https://nodejs.org/api/repl.html
 	// https://www.npmjs.com/package/react-console-component
+	// https://github.com/replit-archive/jq-console
 }
-//delegate.launchRepl = delegate.launchRepl.bind(this);
-//^ ensures this == global scope when eval() from remoted inputs
 
 /*
  var geniusBarsNearMe() {
@@ -147,7 +149,7 @@ delegate.launchRepl = function() {
 }
 */
 
-$.app.on('AppWillFinishLaunching', (app) => {
+app.on('AppWillFinishLaunching', (AppUI) => {
 	//browser.unhideApp();
 
 	browser.addShortcut('MacPin @ GitHub', 'http://github.com/kfix/MacPin');
@@ -166,25 +168,25 @@ $.app.on('AppWillFinishLaunching', (app) => {
 	browser.addShortcut('Notification test', 'https://ttsvetko.github.io/HTML5-Desktop-Notifications/');
 
 	// http://user-agents.me
-	browser.addShortcut('UA: Safari 11 Mac', ["setAgent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/604.1.29 (KHTML, like Gecko) Version/11.0 Safari/604.1.129"]);
-	browser.addShortcut('UA: Safari 8 Mac', ["setAgent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/600.6.3 (KHTML, like Gecko) Version/8.0.6 Safari/600.6.3"]);
-	browser.addShortcut('UA: iPhone', ["setAgent", "Mozilla/5.0 (iPhone; CPU iPhone OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"]);
-	browser.addShortcut('UA: iPad', ["setAgent", "Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"]);
-	browser.addShortcut('UA: iPod Touch', ["setAgent", "Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"]);
-	browser.addShortcut('UA: Mac Chrome 29', ["setAgent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.57 Safari/537.36"]);
-	browser.addShortcut('UA: Mac Firefox 23', ["setAgent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:23.0) Gecko/20100101 Firefox/23.0"]);
-	browser.addShortcut('UA: IE 10', ["setAgent", "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Win64; x64; Trident/6.0)"]);
+	browser.addShortcut('UA: Safari 11 Mac', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/604.1.29 (KHTML, like Gecko) Version/11.0 Safari/604.1.129"], setAgent);
+	browser.addShortcut('UA: Safari 8 Mac', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/600.6.3 (KHTML, like Gecko) Version/8.0.6 Safari/600.6.3"], setAgent);
+	browser.addShortcut('UA: iPhone', ["Mozilla/5.0 (iPhone; CPU iPhone OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"], setAgent);
+	browser.addShortcut('UA: iPad', ["Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"], setAgent);
+	browser.addShortcut('UA: iPod Touch', ["Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"], setAgent);
+	browser.addShortcut('UA: Mac Chrome 29', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.57 Safari/537.36"], setAgent);
+	browser.addShortcut('UA: Mac Firefox 23', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:23.0) Gecko/20100101 Firefox/23.0"], setAgent);
+	browser.addShortcut('UA: IE 10', ["Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Win64; x64; Trident/6.0)"], setAgent);
 
-	browser.addShortcut('see.js console', ['injectTab', 'seeDebugger', 'see.init();', false]); // http://davidbau.com/archives/2013/04/19/debugging_locals_with_seejs.html
-	browser.addShortcut('Simulate TouchEvents', ['injectTab', 'thumbs', '', false]); // http://mwbrooks.github.io/thumbs.js/
-	browser.addShortcut('Log DnDs to console', ['injectTab', 'dnd', '', false]);
-	browser.addShortcut('pop-open 1st image as data:// URL', ['img2data']);
-	browser.addShortcut('Paint It Black', ['enDarken']);
-	browser.addShortcut('test AppleScript', ['testAS', "whooo", '1']);
+	browser.addShortcut('see.js console', ['seeDebugger', 'see.init();', false], injectTab); // http://davidbau.com/archives/2013/04/19/debugging_locals_with_seejs.html
+	browser.addShortcut('Simulate TouchEvents', ['thumbs', '', false], injectTab); // http://mwbrooks.github.io/thumbs.js/
+	browser.addShortcut('Log DnDs to console', ['dnd', '', false], injectTab);
+	browser.addShortcut('pop-open 1st image as data:// URL', [], img2data);
+	browser.addShortcut('Paint It Black', [], enDarken);
+	browser.addShortcut('test AppleScript', ["whooo", '1'], testAS);
 
 	// a dual-mode REPL like this loaded in another browser would be nice: http://reality.hk/2014/01/12/building-a-ios-ruby-repl/
 
-	if ($.app.doesAppExist("com.google.Chrome")) browser.addShortcut('Open in Chrome', ['openInChrome']);
+	if (app.doesAppExist("com.google.Chrome")) browser.addShortcut('Open in Chrome', [], openInChrome);
 
 	var editor = {
 		transparent: true,
@@ -199,31 +201,25 @@ $.app.on('AppWillFinishLaunching', (app) => {
 
 	//browser.addShortcut('MacPin/app.js debugging REPL', cfgRepl);
 	//  WebView.init ends up with WebViewInitProps.handlers: <__NSFrozenDictionaryM>
-	browser.addShortcut('MacPin/app.js debugging REPL', ['launchRepl']);
-	//browser.addShortcut('REPL by-ref', {call: delegate.launchRepl}); // WIP
+	browser.addShortcut('MacPin/app.js debugging REPL', [], launchRepl);
 
-	if ($.app.platform === "OSX") $.app.changeAppIcon(`file://${$.app.resourcePath}/icon.png`);
+	if (app.platform === "OSX") app.changeAppIcon(`file://${app.resourcePath}/icon.png`);
 	//browser.tabSelected = new $.WebView({url: 'http://github.com/kfix/MacPin'});
 
-	app.browserController = browser; // make sure main app menu can get at our shortcuts
+	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
 	console.log(app.browserController);
-	browser.tabs.push(gitTab);
-	delegate.launchRepl();
+	browser.tabs.push(ntpTab);
+	launchRepl();
 });
 
-$.app.on('AppFinishedLaunching', (launchURLs) => {
+app.on('AppFinishedLaunching', (launchURLs) => {
 	console.log(launchURLs);
+	if (!('printToREPL' in app.eventCallbacks)) {
+		app.loadAppScript(`file://${app.resourcePath}/app_repl.js`);
+	}
 });
-
-let injectTab = require(`file://${$.app.resourcePath}/app_injectTab.js`);
-if (!('printToREPL' in $.app.eventCallbacks)) {
-	$.app.loadAppScript(`file://${$.app.resourcePath}/app_repl.js`);
-}
-$.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
 
 // https://www.lucidchart.com/techblog/2018/02/14/javascriptcore-the-holy-grail-of-cross-platform/
 //$.app.loadAppScript(`file://${$.app.resourcePath}/fetchURL.js`);
 //$.app.loadAppScript(`file://${$.app.resourcePath}/fetchDeps.js`);
 //var fetch = require('fetch').fetch;
-
-delegate; //return this to macpin

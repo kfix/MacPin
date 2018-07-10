@@ -8,7 +8,6 @@ import WebKitPrivates
 import JavaScriptCore
 
 @objc class WebViewController: ViewController { //, WebViewControllerScriptExports {
-	var jsdelegate: JSValue { get { return AppScriptRuntime.shared.jsdelegate } }
 	@objc unowned var webview: MPWebView
 	//lazy var observer: WebViewObserver = {WebViewObserver(obserbee: self.webview)}()
 

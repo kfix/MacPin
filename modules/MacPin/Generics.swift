@@ -39,9 +39,10 @@ func warn(_ msg: String = String(), function: StaticString = #function, file: St
 #endif
 }
 
-func warn(obj: Any, function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
+func warn(obj: Any?, function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
 	// handles chunky objdumps
 	var out = ""
+	guard let obj = obj else { warn("nil"); return } //force unwrap obj
 	dump(obj, to: &out, name: nil, indent: 0, maxDepth: Int.max, maxItems: Int.max)
 	warn(out, function: function, file: file, line: line, column: column)
 }

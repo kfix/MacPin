@@ -2,36 +2,41 @@
 /*eslint-env builtins*/
 /*eslint-env es6*/
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
-//"use strict";
+"use strict";
 
-// official Slack.app uses MacGap
+const {app, BrowserWindow, WebView} = require('@MacPin');
+let browser = new BrowserWindow();
 
 var slackTab, slack = {
 	url: 'https://slack.com/ssb/',
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
 	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Slack_SSB/2.0.3', // MacGap app
 	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleWebKit/537.36 (KHTML, like Gecko) AtomShell/2.5.2 Chrome/53.0.2785.143 Electron/1.4.15 Safari/537.36 MacAppStore/16.5.0 Slack_SSB/2.5.2', // new Electron app (env SLACK_DEVELOPER_MENU=true)
-	preinject: ['shim_html5_notifications'],
 	postinject: ['slack_notifications'] //, 'styler']
 };
-$.browser.tabSelected = slackTab = new $.WebView(slack);
+slackTab = new WebView(slack); // get it started early
 
 var delegate = {}; // our delegate to receive events from the webview app
 
-delegate.receivedHTML5DesktopNotification = function(tab, note) {
+app.messageHandlers["receivedHTML5DesktopNotification"] = (tab, note) => {
 	console.log(Date() + ' [posted HTML5 notification] ' + note);
 	//tag: "mid.1434908822690:d3b8b216631a1b8625"
-	$.app.postHTML5Notification(note);
+	app.postHTML5Notification(note);
 };
 
-delegate.handleClickedNotification = function(title, subtitle, msg, id) {
+app.on('handleClickedNotification', (title, subtitle, msg, id) => {
 	console.log("JS: opening notification for: "+ [title, subtitle, msg, id]);
-	$.browser.tabSelected = slackTab;
+	browser.tabSelected = slackTab;
 	//slackTab.evalJS();
 	return true;
-};
+});
 
-delegate.receivedRedirectionToURL = function(url, tab) {
+app.on('networkIsOffline', (url, tab) => {
+	// Slack.app might be set to start at boot but wifi lags behind
+	// so this is crazy, but here's my number, so call me maybe?
+	slackTab.loadURL(slack.url);
+});
+
+app.on('receivedRedirectionToURL', (url, tab) => {
 	var comps = url.split('/'),
 		scheme = comps.shift();
 	comps.shift();
@@ -63,9 +68,9 @@ delegate.receivedRedirectionToURL = function(url, tab) {
 		default:
 			return false; // tell webkit that we did not handle this
 	}
-};
+});
 
-delegate.decideNavigationForClickedURL = function(url, tab) {
+let clicker = (url, tab) => {
 	console.log(`(click)navigation-delegating ${url} ...`);
 	var comps = url.split('/'),
 		scheme = comps.shift();
@@ -80,7 +85,7 @@ delegate.decideNavigationForClickedURL = function(url, tab) {
 				// stripping obnoxious redirector
 				redir = decodeURIComponent(path.slice(9));
 				//$.app.openURL(`$(scheme):$(redir)`);
-				$.app.openURL(redir); //pop all external links to system browser
+				app.openURL(redir); //pop all external links to system browser
 				return true; //tell webkit to do nothing
 			} else if ((host != "slack.com")
 				&& !host.endsWith('.slack.com')
@@ -94,16 +99,17 @@ delegate.decideNavigationForClickedURL = function(url, tab) {
 				&& !host.endsWith('.vimeo.com')
 				&& !host.endsWith('.fbcdn.net')
 			) {
-				$.app.openURL(url);
+				app.openURL(url);
 				return true;
 			}
 		default:
 			return false;
 	}
 };
-delegate.decideNavigationForURL = delegate.decideNavigationForClickedURL;
+app.on('decideNavigationForURL', clicker);
+app.on('decideNavigationForClickedURL', clicker);
 
-delegate.launchURL = function(url) {
+app.on('launchURL', (url) => {
 	console.log("app.js: launching " + url);
 	var comps = url.split(':'),
 		scheme = comps.shift(),
@@ -112,35 +118,42 @@ delegate.launchURL = function(url) {
 		case "slack": //FIXME: support search for find users, channels
 			break;
 		default:
-			$.browser.tabSelected = new $.WebView({url: url});
+			browser.tabSelected = new WebView({url: url});
 	}
-};
+});
 
-// $.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
+//let enDarken = require(`file://${app.resourcePath}/enDarken.js`);
 // ^^ uses CSS filters, CPU intensive
-delegate.enDarken = function(tab) {
+let enDarken = function(tab) {
 	let idx = tab.styles.indexOf('dark');
 	(idx >= 0) ? tab.popStyle(idx) : tab.style('dark');
 	return;
 };
 
-delegate.tabTransparencyToggled = function(transparent, tab) {
+app.on('tabTransparencyToggled', (transparent, tab) => {
 	console.log(transparent, tab);
 	let idx = tab.styles.indexOf('transparent');
 	(!transparent && idx >= 0) ? tab.popStyle(idx) : tab.style('transparent');
 	return; // cannot affect built-in transperatizing of tab
-};
+});
 
 var alwaysAllowRedir = false;
-delegate.toggleRedirection = function(state) { alwaysAllowRedir = (state) ? true : false; };
+let toggleRedirection = function(state) { alwaysAllowRedir = (state) ? true : false; };
 
-delegate.AppFinishedLaunching = function() {
+
+app.on('AppWillFinishLaunching', (AppUI) => {
+	//browser.unhideApp();
 	//$.browser.addShortcut('Slack', slack);
 	// FIXME: use LocalStorage to save slackTab's team-domain after sign-in, and restore that on every start up
-	$.browser.addShortcut('Dark Mode', ['enDarken']);
-	$.browser.addShortcut('Enable Redirection to external domains', ['toggleRedirection', true]);
+	browser.addShortcut('Dark Mode', [], enDarken);
+	browser.addShortcut('Enable Redirection to external domains', [true], toggleRedirection);
 	// FIXME add themes: https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99  DrewML/Theming-Slack-OSX.md
-	//slackTab.asyncEvalJS(`document.location = document.querySelectorAll('.btn')[1].href ? document.querySelectorAll('.btn')[1].href : document.location;`, 3); // try logging into the first signed-in team
-};
+	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
+});
 
-delegate; //return this to macpin
+app.on('AppFinishedLaunching', (launchURLs) => {
+	//slackTab.asyncEvalJS(`document.location = document.querySelectorAll('.btn')[1].href ? document.querySelectorAll('.btn')[1].href : document.location;`, 3); // try logging into the first signed-in team
+	browser.tabSelected = slackTab;
+});
+
+true;

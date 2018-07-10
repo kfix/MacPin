@@ -6,8 +6,8 @@
 var hangouts = {
 	transparent: true,
 	postinject: ["notifier"], // "convopopper"],
-	preinject: ["styler", 'shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', 'unhideApp', 'HangoutsRosterReady', 'SwitchToThisTab'],
+	preinject: ["styler"],
+	subscribeTo: ['unhideApp', 'HangoutsRosterReady', 'SwitchToThisTab'], // + ['receivedHTML5DesktopNotification'],
 	style: [ "style" ],
 	url: "https://hangouts.google.com"
 };
@@ -99,13 +99,15 @@ delegate.launchURL = function(url) { // $.app.openURL(/[sms|hangouts|tel]:.*/) c
 				$.browser.unhideApp(); //user might have switched apps while waiting for roster to load
 				$.browser.tabSelected = hangoutsTab;
 				hangoutsTab.evalJS("xssRoster(['inputAddress', '"+addr+"'], ['makeCall']);"); // Hangouts now does in-frame phone calls!
-				// TODO: use callback to get new chatbox frame name, simulate keypress events over it? 
+				// TODO: use callback to get new chatbox frame name, simulate keypress events over it?
 			} else if ($.app.doesAppExist("com.google.Chrome")) {
 				// use Chrome's NaCL+WebRTC Hangouts client for A/V chats ( https://webrtchacks.com/hangout-analysis-philipp-hancke/ )
 				$.app.openURL("https://plus.google.com/hangouts/_/?hl=en&hpn="+addr+"&hip="+addr+"&hnc=0", "com.google.Chrome");
 			} else {
 				// no plugin or chrome ...
 				$.browser.tabSelected = new $.WebView({url: "https://encrypted.google.com/tools/dlpage/hangoutplugin"}); //prompt to install plugin
+				// so how bout that WebRTC in WebKit???
+				//    https://blog.mozilla.org/webrtc/firefox-is-now-supported-by-google-hangouts-and-meet/ should we pretend to be FireFox 60?
 				$.app.openURL("tel:"+addr, "com.apple.facetime"); // maybe they have iPhone w/Handoff, so try call w/ facetime
 			}
 			break;
