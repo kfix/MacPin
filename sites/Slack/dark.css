@@ -261,3 +261,13 @@ pre.c-mrkdwn__pre
 {
 background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(255, 255, 255, 0.1)) !important;
 }
+
+.c-message--focus:not(.c-message--highlight):not(.c-message--standalone):not(.c-message--pinned):not(.c-message--ephemeral):not(.c-message--custom_response):not(.c-message--starred):not(.c-message--sli_highlight),
+.c-message--hover:not(.c-message--highlight):not(.c-message--standalone):not(.c-message--pinned):not(.c-message--ephemeral):not(.c-message--custom_response):not(.c-message--starred):not(.c-message--sli_highlight),
+.c-message:hover:not(.c-message--highlight):not(.c-message--standalone):not(.c-message--pinned):not(.c-message--ephemeral):not(.c-message--custom_response):not(.c-message--starred):not(.c-message--sli_highlight) {
+    /* background-color: #f9f9f9; */
+    /*background-color: lightsteelblue !important; */
+    background-color: none !important;
+	border-bottom: 1px solid darkgrey !important;
+}
+
