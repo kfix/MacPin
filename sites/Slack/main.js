@@ -10,6 +10,7 @@ let slackTab, slack = {
 	url: 'https://slack.com/ssb/',
 	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Slack_SSB/2.0.3', // MacGap app
 	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleWebKit/537.36 (KHTML, like Gecko) AtomShell/2.5.2 Chrome/53.0.2785.143 Electron/1.4.15 Safari/537.36 MacAppStore/16.5.0 Slack_SSB/2.5.2', // new Electron app (env SLACK_DEVELOPER_MENU=true)
+	//preinject: ['shim_notification_promises'],
 	postinject: ['slack_notifications'] //, 'styler']
 };
 slackTab = new WebView(slack); // get it started early

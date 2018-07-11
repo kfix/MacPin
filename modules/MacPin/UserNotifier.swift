@@ -6,6 +6,8 @@ struct NotificationCallbacks {
 	// thunks for WebKit user notification C APIs
 
 	static let showCallback: WKNotificationProviderShowCallback = { page, notification, clientInfo in
+		// clientInfo == &UserNotifier.shared.notificationProvider.base.clientInfo
+
 		let title = WKStringCopyCFString(CFAllocatorGetDefault().takeUnretainedValue(),
 			WKNotificationCopyTitle(notification)) as String
 
@@ -28,6 +30,7 @@ struct NotificationCallbacks {
 
 		warn("\(title) - \(body) - \(iconurl)")
 		AppScriptRuntime.shared.postNotification(title, subtitle: tag, msg: body, id: String(idnum))
+		// TODO store the tag,idnum,clientInfo so we can ping the webview when AppDelegate/main.js says notification was clicked
 	}
 
 	static let cancelCallback: WKNotificationProviderCancelCallback = { notification, clientInfo in
@@ -47,7 +50,11 @@ struct NotificationCallbacks {
 		// seems to happen for erry new tab
 	}
 
-	//static let permissionsCallback: WKNotificationProviderNotificationPermissionsCallback = { clientInfo -> WKDictionaryRef in }
+	static let permissionsCallback: WKNotificationProviderNotificationPermissionsCallback = { clientInfo -> Optional<OpaquePointer> /*WKDictionaryRef*/ in
+		warn("permissions")
+		return WKMutableDictionaryCreate()
+		// WKDictionarySetItem(WKMutableDictionaryRef dictionary, WKStringRef key, WKTypeRef item)
+	}
 
 	static let clearCallback: WKNotificationProviderClearNotificationsCallback = { notificationIDs, clientInfo in
 		warn("clear")
@@ -74,7 +81,7 @@ class UserNotifier: NSObject  {
 	func subscribe(webview: MPWebView) {
 		warn()
 		WKNotificationManagerSetProvider(WKContextGetNotificationManager(webview.context), &notificationProvider.base)
-		// skipping this doesn't fix the post-nav retain cycle ...
+		// FIXME: create a new provider(.base) for each webview? that way the clientInfo's will be tab-unique ....
 	}
 
 }

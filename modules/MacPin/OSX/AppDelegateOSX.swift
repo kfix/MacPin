@@ -431,14 +431,14 @@ extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 	public func userNotificationCenter(_ center: NSUserNotificationCenter, didActivate notification: NSUserNotification) {
 		warn("user clicked notification")
 
-		//if ! (AppScriptRuntime.shared.emit(.handleClickedNotification,
-		//....) ?? []).flatMap().isEmpty
-		if AppScriptRuntime.shared.jsdelegate.tryFunc("handleClickedNotification",
+		if AppScriptRuntime.shared.anyHandled(.handleClickedNotification,
 			(notification.title ?? "") as NSString, (notification.subtitle ?? "") as NSString,
 			(notification.informativeText ?? "") as NSString, (notification.identifier ?? "") as NSString) {
 				warn("handleClickedNotification fired!")
 				center.removeDeliveredNotification(notification)
 		}
+
+		//TODO: check the identifier with UserNotifier.shared to find the specific WebView:JS:onclick's to ping ...
 	}
 
 	// always display notifcations, even if app is active in foreground (for alert sounds)

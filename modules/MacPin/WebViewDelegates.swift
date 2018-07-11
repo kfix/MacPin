@@ -426,10 +426,11 @@ extension WebViewController: _WKIconLoadingDelegate {
 }
 
 extension WebViewController: WKUIDelegatePrivate {
+
 	func _webView(_ webView: WKWebView!, requestNotificationPermissionFor securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
-		warn(webView.url?.absoluteString ?? "")
+		warn("Notification.requestPermission(...) <= \(webView.url?.absoluteString ?? "")")
 		//FIXME: prompt
-		decisionHandler(true) // allow
+		decisionHandler(true) // Notification.permission == "default" => "granted"
 	}
 
 	// @objc func _webView(_ webView: WKWebView!, createWebViewWithConfiguration configuration: WKWebViewConfiguration !, forNavigationAction navigationAction: WKNavigationAction!, windowFeatures: WKWindowFeatures!, completionHandler: ((WKWebView?) -> Void)!)
