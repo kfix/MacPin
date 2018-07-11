@@ -131,10 +131,17 @@ let enDarken = function(tab) {
 	return;
 };
 
+let enVibrant = function(tab) {
+	enDarken(tab);
+	tab.transparent = !tab.transparent;
+}
+
 app.on('tabTransparencyToggled', (transparent, tab) => {
 	console.log(transparent, tab);
 	let idx = tab.styles.indexOf('transparent');
 	(!transparent && idx >= 0) ? tab.popStyle(idx) : tab.style('transparent');
+	app.sleep(0.3);
+	tab.repaint();
 	return; // cannot affect built-in transperatizing of tab
 });
 
@@ -147,6 +154,7 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	//$.browser.addShortcut('Slack', slack);
 	// FIXME: use LocalStorage to save slackTab's team-domain after sign-in, and restore that on every start up
 	browser.addShortcut('Dark Mode', [], enDarken);
+	browser.addShortcut('Darkly Vibrant Mode', [], enVibrant);
 	browser.addShortcut('Enable Redirection to external domains', [true], toggleRedirection);
 	// FIXME add themes: https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99  DrewML/Theming-Slack-OSX.md
 	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts

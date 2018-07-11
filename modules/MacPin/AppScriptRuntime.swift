@@ -83,7 +83,7 @@ extension JSValue {
 	@objc(postNotification::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?)
 	func postHTML5Notification(_ object: [String:AnyObject])
 	func openURL(_ urlstr: String, _ app: String?)
-	func sleep(_ secs: Int)
+	func sleep(_ secs: Double)
 	func doesAppExist(_ appstr: String) -> Bool
 
 	func pathExists(_ path: String) -> Bool
@@ -121,6 +121,7 @@ struct AppScriptGlobals {
 		// TODO: caching, loop-prevention
 
 		if let mods = mods, urlstr == "@MacPin" { // export our native objects & classes
+			// JS module naming is BS: https://youtu.be/M3BM9TB-8yA?t=11m0s
 			let exports = JSObjectMake(ctx, nil, nil)!
 			for (k, v) in mods {
 				if let jsv = v as? JSValue { // mod-obj is pre-bridged
@@ -470,8 +471,10 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	override var description: String { return "<\(type(of: self))> [\(appPath)]" }
 
-	func sleep(_ secs: Int) {
+	func sleep(_ secs: Double) {
+		warn("for \(secs)s")
 		Thread.sleep(forTimeInterval: TimeInterval(secs))
+		warn("woke!")
 	}
 
 	@objc func loadSiteApp() -> Bool {

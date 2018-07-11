@@ -68,6 +68,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	func addHandler(_ handler: String) // FIXME kill
 	func subscribeTo(_ handler: String)
 	func console()
+	func repaint()
 	func scrapeIcon()
 	var thumbnail: _WKThumbnailView? { get }
 	//func goBack()
@@ -197,6 +198,7 @@ struct IconCallbacks {
 #endif
 			AppScriptRuntime.shared.emit(.tabTransparencyToggled, transparent as AnyObject, self)
 			evalJS("window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(transparent)}}));")
+			// ^ JS->DOM may not finish up fast enough for the repaints to cleanly update the view
 			WKPageForceRepaint(_pageRefForTransitionToWKWebView, nil, {error, void in warn()} as WKPageForceRepaintFunction )
 			//^ background-color:transparent sites immediately bleedthru to a black CALayer, which won't go clear until the content is reflowed or reloaded
 			needsDisplay = true // queue the whole frame for rerendering
@@ -824,6 +826,11 @@ struct IconCallbacks {
 		DispatchQueue.main.async() {
 			WKInspectorShowConsole(inspector) // ShowConsole, Hide, Close, IsAttatched, Attach, Detach
 		}
+	}
+
+	func repaint() {
+		WKPageForceRepaint(_pageRefForTransitionToWKWebView, nil, {error, void in warn()} as WKPageForceRepaintFunction )
+		needsDisplay = true // queue the whole frame for rerendering
 	}
 
 #endif

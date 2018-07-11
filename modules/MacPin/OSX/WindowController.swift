@@ -90,7 +90,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 	}
 	func windowWillClose(_ notification: Notification) {
 		warn()
-		warn(obj: self)
+		//warn(obj: self)
 	} // window was closed by red stoplight button
 
 	override func noResponder(for eventSelector: Selector) { warn(obj: eventSelector); }
