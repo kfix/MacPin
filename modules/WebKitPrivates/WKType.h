@@ -27,7 +27,7 @@
 #ifndef WKType_h
 #define WKType_h
 
-#include <WebKit/WKBase.h>
+#include <WebKitPrivates/WKBase.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,5 +1,6 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKUserStyleSheet.h
+	* https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKUserStyleSheet.h
+ *
  * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,7 +34,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class _WKUserContentWorld;
 
-//WK_CLASS_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA)
+WK_CLASS_AVAILABLE(macosx(10.12), ios(10.0))
 @interface _WKUserStyleSheet : NSObject <NSCopying>
 
 @property (nonatomic, readonly, copy) NSString *source;

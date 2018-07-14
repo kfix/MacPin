@@ -121,7 +121,8 @@ struct AppScriptGlobals {
 		// TODO: caching, loop-prevention
 
 		if let mods = mods, urlstr == "@MacPin" { // export our native objects & classes
-			// JS module naming is BS: https://youtu.be/M3BM9TB-8yA?t=11m0s
+			// JS module naming is BS: https://youtu.be/M3BM9TB-8yA?t=11m0s http://tinyclouds.org/jsconf2018.pdf
+			//   maybe look for a custom macpin:// scheme? `macpin://natives`?
 			let exports = JSObjectMake(ctx, nil, nil)!
 			for (k, v) in mods {
 				if let jsv = v as? JSValue { // mod-obj is pre-bridged
@@ -415,8 +416,6 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		context._remoteInspectionEnabled = false
 		//context.logToSystemConsole = false
 
-	// runtime check possible to confirm active remote inspector?
-	//	WKInspectorIsConnected(inspectorRef)
 			// make thrown exceptions popup an nserror displaying the file name and error type,
 			//   which will be shunted to console.log
 			context.exceptionHandler = { context, exception in
@@ -432,6 +431,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 					NSLocalizedDescriptionKey: "<\(source ?? ""):\(line ?? -1):\(column ?? -1)> \(type ?? "noType"): \(message ?? "?")\n\(stack ?? "?")"
 					// exception seems to be Error.toString(). I want .message|line|column|stack too
 				])
+				//if !WKInspectorIsConnected(inspectorRef)
 				displayError(error) // FIXME: would be nicer to pop up an inspector pane or tab to interactively debug this
 				context?.exception = exception //default in JSContext.mm
 				return // gets returned to evaluateScript()?

@@ -1,10 +1,12 @@
-// https://github.com/WebKit/webkit/blob/0190dd5b8c0272beaa705dbc10863a84a3e6af5e/Source/WebKit2/Shared/mac/PasteboardTypes.h
+#if TARGET_OS_OSX
+
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/mac/PasteboardTypes.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKitLegacy/mac/Misc/WebNSPasteboardExtras.h
 extern NSString *WebURLPboardType;
 extern NSString *WebURLNamePboardType;
 extern NSString *WebArchivePboardType;
-// https://github.com/WebKit/webkit/blob/0190dd5b8c0272beaa705dbc10863a84a3e6af5e/Source/WebKit2/Shared/mac/PasteboardTypes.mm
 
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/History/WebURLsWithTitles.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKitLegacy/mac/History/WebURLsWithTitles.h
 /*
  * Copyright (C) 2005 Apple Inc.  All rights reserved.
  *
@@ -60,3 +62,5 @@ extern NSString *WebArchivePboardType;
 + (NSArray *)titlesFromPasteboard:(NSPasteboard *)pasteboard;
 
 @end
+
+#endif

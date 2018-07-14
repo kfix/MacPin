@@ -1,5 +1,6 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKUserContentControllerPrivate.h
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKUserContentControllerPrivate.h
+ *
  * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,18 +36,24 @@
 
 @interface WKUserContentController (WKPrivate)
 
-- (void)_removeUserScript:(WKUserScript *)userScript WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-- (void)_removeAllUserScriptsAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+- (void)_removeUserScript:(WKUserScript *)userScript WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+- (void)_removeAllUserScriptsAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld WK_API_AVAILABLE(macosx(10.12), ios(10.0));
 
-- (void)_addUserContentFilter:(_WKUserContentFilter *)userContentFilter WK2_AVAILABLE(10_11, 9_0);
-- (void)_removeUserContentFilter:(NSString *)userContentFilterName WK2_AVAILABLE(10_11, 9_0);
-- (void)_removeAllUserContentFilters WK2_AVAILABLE(10_11, 9_0);
+- (void)_addUserScriptImmediately:(WKUserScript *)userScript WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
 
-@property (nonatomic, readonly, copy) WK_ARRAY(_WKUserStyleSheet *) *_userStyleSheets WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-- (void)_addUserStyleSheet:(_WKUserStyleSheet *)userStyleSheet WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-- (void)_removeUserStyleSheet:(_WKUserStyleSheet *)userStyleSheet WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-- (void)_removeAllUserStyleSheets WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
-- (void)_removeAllUserStyleSheetsAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+- (void)_addUserContentFilter:(_WKUserContentFilter *)userContentFilter WK_API_AVAILABLE(macosx(10.11), ios(9.0));
+- (void)_removeUserContentFilter:(NSString *)userContentFilterName WK_API_AVAILABLE(macosx(10.11), ios(9.0));
+- (void)_removeAllUserContentFilters WK_API_AVAILABLE(macosx(10.11), ios(9.0));
+
+@property (nonatomic, readonly, copy) WK_ARRAY(_WKUserStyleSheet *) *_userStyleSheets WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+- (void)_addUserStyleSheet:(_WKUserStyleSheet *)userStyleSheet WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+- (void)_removeUserStyleSheet:(_WKUserStyleSheet *)userStyleSheet WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+- (void)_removeAllUserStyleSheets WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+- (void)_removeAllUserStyleSheetsAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+
+- (void)_addScriptMessageHandler:(id <WKScriptMessageHandler>)scriptMessageHandler name:(NSString *)name userContentWorld:(_WKUserContentWorld *)userContentWorld;
+- (void)_removeScriptMessageHandlerForName:(NSString *)name userContentWorld:(_WKUserContentWorld *)userContentWorld;
+- (void)_removeAllScriptMessageHandlersAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld;
 
 @end
 

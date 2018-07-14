@@ -1,7 +1,15 @@
 module WebKitPrivates {
-	umbrella header "WebKitPrivates.h"
-	link "WebKitPrivates"
-	link "c++"
-	export *
-	 //requires plusplus11
+	umbrella "./"
+	exclude header "WKReloadFrameErrorRecoveryAttempter.h"
+
+	link framework "WebKit"
+	use "WebKit"
+
+	//export *
+	//explicit module * { export * }
+
+	// https://www.mail-archive.com/cfe-commits@lists.llvm.org/msg68407.html
+	// http://llvm.org/viewvc/llvm-project?view=revision&revision=313316
+	// https://clang.llvm.org/docs/Modules.html#id30
+	//export_as WebKit
 }

@@ -1,4 +1,6 @@
-/* https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKFindDelegate.h
+/*
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKFindDelegate.h
+ *
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,6 +26,7 @@
  */
 
 #import <WebKit/WKFoundation.h>
+#import <WebKit/WKWebView.h>
 
 #if WK_API_ENABLED
 

@@ -29,6 +29,7 @@
 
 #include <WebKitPrivates/WKDeclarationSpecifiers.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #if defined(BUILDING_GTK__)
 #include <WebKit/WKBaseGtk.h>

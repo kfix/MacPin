@@ -31,6 +31,8 @@
 #if WK_API_ENABLED
 
 #import <wtf/Forward.h>
+// https://github.com/WebKit/webkit/blob/master/Source/WTF/wtf/Forward.h
+// https://github.com/WebKit/webkit/blob/master/Source/WTF/wtf/text/CString.h
 
 @class WKWebView;
 @class _WKFrameHandle;

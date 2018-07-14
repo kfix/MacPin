@@ -3,9 +3,9 @@
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/Cocoa/WebViewImpl.h
 // https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/Settings.in
 
-#ifdef STP
 #import "_WKLayoutMode.h"
-#endif
+#import "_WKFindOptions.h"
+#import "_WKInputDelegate.h"
 
 typedef NS_ENUM(NSInteger, _WKPaginationMode) {
     _WKPaginationModeUnpaginated,
@@ -49,6 +49,7 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @class _WKApplicationManifest;
 @class _WKIconLoadingDelegate;
 @class _WKThumbnailView;
+@class _WKFrameHandle;
 
 @protocol _WKFindDelegate;
 @protocol _WKDiagnosticLoggingDelegate;
@@ -87,29 +88,28 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 
 - (void)_setHeaderBannerHeight:(int)height WK_API_AVAILABLE(macosx(10.12.3));
 - (void)_setFooterBannerHeight:(int)height WK_API_AVAILABLE(macosx(10.12.3));
-#endif
-
-@property (nonatomic, setter=_setLayoutMode:) _WKLayoutMode _layoutMode;
-@property (nonatomic, setter=_setViewScale:) CGFloat _viewScale;
-
-#ifdef STP
-@property (nonatomic, setter=_setDrawsBackground:) BOOL _drawsBackground;
-// https://github.com/WebKit/webkit/commit/0dfc67a174b79a8a401cf6f60c02150ba27334e5
-- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo; // prints top frame
-//- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 
 // TODO: make Status Bar from NSTrackingArea's tooltips
 // https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/EventOverview/TrackingAreaObjects/TrackingAreaObjects.html#//apple_ref/doc/uid/10000060i-CH8-SW1
 - (NSString *)view:(NSView *)view stringForToolTip:(NSToolTipTag)tag point:(NSPoint)point userData:(void *)data;
 - (NSView *)documentContainerView;
-#else
-@property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground; //DEPRECATED: missing from STP builds!
 #endif
+
+@property (nonatomic, setter=_setLayoutMode:) _WKLayoutMode _layoutMode;
+@property (nonatomic, setter=_setViewScale:) CGFloat _viewScale;
+
+// hard-renamed to ^background in 11/2015. only pre-macOS with no STP will respond to ^transparentBackground.
+// https://github.com/WebKit/webkit/commit/6cbd5051e809407615b2fd903dacc8c14bbd69eb
+@property (nonatomic, setter=_setDrawsBackground:) BOOL _drawsBackground WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+@property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground; // DEPRECATED!
+
+- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo; // prints top frame
+- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle WK_API_AVAILABLE(macosx(10.12), ios(10.0));
 
 -(void)_close;
 
 @property (nonatomic, readonly) BOOL _networkRequestsInProgress;
-@property (nonatomic, getter=_isEditable, setter=_setEditable:) BOOL _editable WK2_AVAILABLE(10_11, 9_0);
+@property (nonatomic, getter=_isEditable, setter=_setEditable:) BOOL _editable WK_API_AVAILABLE(macosx(10.11), ios(9.0));
 @property (nonatomic, setter=_setAddsVisitedLinks:) BOOL _addsVisitedLinks;
 @property (nonatomic, setter=_setAllowsRemoteInspection:) BOOL _allowsRemoteInspection;
 @property (nonatomic, copy, setter=_setRemoteInspectionNameOverride:) NSString *_remoteInspectionNameOverride WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
@@ -175,7 +175,7 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @end
 
 // https://github.com/WebKit/webkit/commit/1e291e88d96caa8e5421f81bd570e90b1af02ff4
-#if !TARGET_OS_IPHONE
+#if TARGET_OS_OSX
 @interface WKWebView (WKNSTextFinderClient) <NSTextFinderClient>
 @end
 

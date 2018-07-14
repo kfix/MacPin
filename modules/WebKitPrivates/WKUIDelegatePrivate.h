@@ -31,12 +31,6 @@
 #import <WebKit/WKSecurityOrigin.h>
 #import <WebKitPrivates/_WKActivatedElementInfo.h>
 
-#ifdef STP
-#if 101100 >= __MAC_OS_X_VERSION_MAX_ALLOWED
-#import <WebKitPrivates/WKOpenPanelParameters.h>
-#endif
-#endif
-
 @class UIScrollView;
 @class UIViewController;
 @class _WKContextMenuElementInfo;
