@@ -76,6 +76,7 @@ extension JSValue {
 	var arches: [AnyObject]? { get }
 	var platform: String { get }
 	var platformVersion: String { get }
+	var libraries: [String: Any] { get }
 	func registerURLScheme(_ scheme: String)
 	//func registerMIMEType(scheme: String)
 	func registerUTI(_ scheme: String)
@@ -381,6 +382,16 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	// http://nshipster.com/swift-system-version-checking/
 	var platformVersion: String { return ProcessInfo.processInfo.operatingSystemVersionString }
 
+	var libraries: [String: Any] {
+		var infos: [String: Any] = [:]
+		for bun in ["com.apple.WebKit", "com.apple.JavaScriptCore"] {
+			if let bunDict = Bundle(identifier: bun)?.infoDictionary { infos[bun] = bunDict }
+		}
+		infos["WebKit.dylib"] = "\(WebKit_version)"
+		infos["JavaScriptCore.dylib"] = "\(JavaScriptCore_version)"
+		return infos
+	}
+
 	var arches: [AnyObject]? { return Bundle.main.executableArchitectures }
 #if arch(i386)
 	let architecture = "i386"
@@ -397,6 +408,25 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	let globalObjClass = JSClassCreate(&AppScriptGlobals.globalClassDef)
 
 	override init() {
+
+		if JavaScriptCore_version >= (603, 1, 30) {
+			/* Safari 10.1 == WK/JSC 603.1.30 first version for ES6 support */
+		} else {
+			assertionFailure("""
+			JSC \(JavaScriptCore_version) < 603.1.30
+			**********************************************************************************************
+			System's JavaScriptCore.framework is obsolete. Minimum requirement is satisfied by Safari 10.1
+			Downloads are available through Software Update:
+			  https://www.jamf.com/jamf-nation/third-party-products/598/safari-for-yosemite?view=info
+			  https://www.jamf.com/jamf-nation/third-party-products/599/safari-for-el-capitan?view=info
+			  https://www.jamf.com/jamf-nation/third-party-products/660/safari-for-sierra?view=info
+			  https://www.jamf.com/jamf-nation/third-party-products/131/safari?view=info
+			See https://support.apple.com/en-us/HT207921 for its release notes.
+			**********************************************************************************************
+
+			""")
+		}
+
 		//AppScriptGlobals.ptrFunctions.initialize(from: AppScriptGlobals.functions)
 		//AppScriptGlobals.ptrValues.initialize(from: AppScriptGlobals.values)
 
@@ -865,7 +895,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		}
 		warn(ev.description)
 		eventCallbacks[ev, default: []] += [callback]
-		warn(eventCallbacks[ev, default: []].description)
+		//warn(eventCallbacks[ev, default: []].description)
 	}
 
 	@discardableResult
