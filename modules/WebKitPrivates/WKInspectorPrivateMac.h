@@ -1,5 +1,6 @@
 /*
-https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/C/mac/WKInspectorPrivateMac.h
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/C/mac/WKInspectorPrivateMac.h
+ *
  * Copyright (C) 2011 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

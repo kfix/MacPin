@@ -108,16 +108,6 @@ delegate.receivedHTML5DesktopNotification = function(tab, note) {
 
 delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(url); return true; };
 
-//delegate.getGeolocation = function(tab, opts) { $.app.getGeolocation(); };
-
-//delegate.watchGeolocation = function(tab, msg) { $.app.watchGeolocation(); }; // msg = [opts, id]
-
-//delegate.deactivateGeolocation = function(tab, id) { $.app.deactivateGeolocation(id); };
-
-delegate.updateGeolocation = function(lat, lon) {
-	// fire custom geolocation event in mapsTab (or all tabs?) with lat, lon
-}
-
 $.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
 
 delegate.AppFinishedLaunching = function() {

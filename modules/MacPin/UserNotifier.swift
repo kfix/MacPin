@@ -5,9 +5,13 @@ import WebKitPrivates
 struct NotificationCallbacks {
 	// thunks for WebKit user notification C APIs
 
+	// Requests that a notification be shown.
+	// https://www.w3.org/TR/notifications/#showing-a-notification
 	static let showCallback: WKNotificationProviderShowCallback = { page, notification, clientInfo in
-		// clientInfo == &UserNotifier.shared.notificationProvider.base.clientInfo
+		//let notifier = unsafeBitCast(clientInfo, to: UserNotifier.self)
+		//let webview = unsafeBitCast(clientInfo, to: MPWebView.self)
 
+		// https://www.w3.org/TR/notifications/#model
 		let title = WKStringCopyCFString(CFAllocatorGetDefault().takeUnretainedValue(),
 			WKNotificationCopyTitle(notification)) as String
 
@@ -26,17 +30,27 @@ struct NotificationCallbacks {
 		let dir = WKStringCopyCFString(CFAllocatorGetDefault().takeUnretainedValue(),
 			WKNotificationCopyDir(notification)) as String
 
+		let origin = WKStringCopyCFString(CFAllocatorGetDefault().takeUnretainedValue(),
+			WKSecurityOriginCopyToString(WKNotificationGetSecurityOrigin(notification))) as String
+
+		let type = WKNotificationGetTypeID()
+
 		let idnum = WKNotificationGetID(notification)
 
-		warn("\(title) - \(body) - \(iconurl)")
+		warn("\(title) - \(body) - \(iconurl) - \(origin)")
 		AppScriptRuntime.shared.postNotification(title, subtitle: tag, msg: body, id: String(idnum))
-		// TODO store the tag,idnum,clientInfo so we can ping the webview when AppDelegate/main.js says notification was clicked
+		// webview.showDesktopNotification(title: title, tag: tag, body: body, iconurl: iconurl, id: idnum, type: type, origin: origin, lang: lang, dir: dir)
+		// ^^ enables tab-focusing activations to webview's DOM
 	}
 
+	// Requests that a notification that has already been shown be canceled.
 	static let cancelCallback: WKNotificationProviderCancelCallback = { notification, clientInfo in
 		warn("cancel")
 	}
 
+    // Informs the presenter that a Notification object has been destroyed
+    // (such as by a page transition). The presenter may continue showing
+    // the notification, but must not attempt to call the event handlers.
 	static let destroyCallback: WKNotificationProviderDidDestroyNotificationCallback = { notification, clientInfo in
 		warn("destroy")
 	}
@@ -50,38 +64,53 @@ struct NotificationCallbacks {
 		// seems to happen for erry new tab
 	}
 
+	 // Checks the current level of permission.
 	static let permissionsCallback: WKNotificationProviderNotificationPermissionsCallback = { clientInfo -> Optional<OpaquePointer> /*WKDictionaryRef*/ in
 		warn("permissions")
 		return WKMutableDictionaryCreate()
 		// WKDictionarySetItem(WKMutableDictionaryRef dictionary, WKStringRef key, WKTypeRef item)
 	}
 
+	// Cancel all outstanding requests
 	static let clearCallback: WKNotificationProviderClearNotificationsCallback = { notificationIDs, clientInfo in
 		warn("clear")
 		// only happens for new about:blank tabs that are closed and deinit'd
-		// all active tabs are being retained post-close and not clearing ...
 	}
+
+	// https://github.com/WebKit/webkit/blob/5277f6fb92b0c03958265d24a7692142f7bdeaf8/Tools/WebKitTestRunner/WebNotificationProvider.cpp
+	static func makeProvider() -> WKNotificationProviderV0 { return WKNotificationProviderV0(
+		base: WKNotificationProviderBase(),
+		show: showCallback,
+		cancel: cancelCallback,
+		didDestroyNotification: destroyCallback,
+		addNotificationManager: addCallback,
+		removeNotificationManager: removeCallback,
+		notificationPermissions: nil, // permissionsCallback,
+		clearNotifications: clearCallback
+	)}
+
+	static func subscribe(_ client: MPWebView) {
+		warn()
+		var provider = NotificationCallbacks.makeProvider()
+		provider.base = WKNotificationProviderBase(version: 0, clientInfo: Unmanaged.passUnretained(client).toOpaque())
+		WKNotificationManagerSetProvider(WKContextGetNotificationManager(client.context), &provider.base)
+		// func WKNotificationManagerProviderDidUpdateNotificationPolicy(_ managerRef: WKNotificationManagerRef!, _ origin: WKSecurityOriginRef!, _ allowed: Bool)
+	}
+
 }
 
 class UserNotifier: NSObject  {
 	static let shared = UserNotifier() // create & export the singleton
 
-	// https://github.com/WebKit/webkit/blob/5277f6fb92b0c03958265d24a7692142f7bdeaf8/Tools/WebKitTestRunner/WebNotificationProvider.cpp
-	var notificationProvider = WKNotificationProviderV0(
-		base: WKNotificationProviderBase(),
-		show: NotificationCallbacks.showCallback,
-		cancel: NotificationCallbacks.cancelCallback,
-		didDestroyNotification: NotificationCallbacks.destroyCallback,
-		addNotificationManager: NotificationCallbacks.addCallback,
-		removeNotificationManager: NotificationCallbacks.removeCallback,
-		notificationPermissions: nil, // NotificationCallbacks.permissionsCallback,
-		clearNotifications: NotificationCallbacks.clearCallback
-	)
+	var notificationProvider = NotificationCallbacks.makeProvider()
+
+	override init() {
+		super.init()
+		//notificationProvider.base = WKNotificationProviderBase(version: 0, clientInfo: Unmanaged.passUnretained(self).toOpaque())
+	}
 
 	func subscribe(webview: MPWebView) {
 		warn()
 		WKNotificationManagerSetProvider(WKContextGetNotificationManager(webview.context), &notificationProvider.base)
-		// FIXME: create a new provider(.base) for each webview? that way the clientInfo's will be tab-unique ....
 	}
-
 }

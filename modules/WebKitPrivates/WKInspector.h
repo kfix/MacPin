@@ -1,5 +1,6 @@
 /*
- * https://raw.githubusercontent.com/WebKit/webkit/master/Source/WebKit2/UIProcess/API/C/WKInspector.h
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/C/WKInspector.h
+ *
  * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

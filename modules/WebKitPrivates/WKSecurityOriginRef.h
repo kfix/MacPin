@@ -1,6 +1,7 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/C/cg/WKIconDatabaseCG.h
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/c/WKSecurityOriginRef.h
+ *
+ * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,23 +25,29 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WKIconDatabaseCG_h
-#define WKIconDatabaseCG_h
+#ifndef WKSecurityOriginRef_h
+#define WKSecurityOriginRef_h
 
-#include <CoreFoundation/CFArray.h>
-#include <CoreGraphics/CGImage.h>
-#include "WKBase.h"
-#include "WKGeometry.h"
+#include <WebKitPrivates/WKBase.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-WK_EXPORT CGImageRef WKIconDatabaseTryGetCGImageForURL(WKIconDatabaseRef iconDatabase, WKURLRef url, WKSize size);
-WK_EXPORT CFArrayRef WKIconDatabaseTryCopyCGImageArrayForURL(WKIconDatabaseRef iconDatabase, WKURLRef url) CF_RETURNS_RETAINED;
+WK_EXPORT WKTypeID WKSecurityOriginGetTypeID();
+
+WK_EXPORT WKSecurityOriginRef WKSecurityOriginCreateFromString(WKStringRef string);
+WK_EXPORT WKSecurityOriginRef WKSecurityOriginCreateFromDatabaseIdentifier(WKStringRef identifier);
+WK_EXPORT WKSecurityOriginRef WKSecurityOriginCreate(WKStringRef protocol, WKStringRef host, int port);
+
+WK_EXPORT WKStringRef WKSecurityOriginCopyDatabaseIdentifier(WKSecurityOriginRef securityOrigin);
+WK_EXPORT WKStringRef WKSecurityOriginCopyToString(WKSecurityOriginRef securityOrigin);
+WK_EXPORT WKStringRef WKSecurityOriginCopyProtocol(WKSecurityOriginRef securityOrigin);
+WK_EXPORT WKStringRef WKSecurityOriginCopyHost(WKSecurityOriginRef securityOrigin);
+WK_EXPORT unsigned short WKSecurityOriginGetPort(WKSecurityOriginRef securityOrigin);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* WKIconDatabaseCG_h */
+#endif /* WKSecurityOriginRef_h */

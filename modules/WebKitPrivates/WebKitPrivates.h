@@ -23,8 +23,6 @@
 #import "WKPage.h"
 #import "WKFrame.h"
 #import "WKInspectorPrivateMac.h"
-#import "WKIconDatabase.h"
-#import "WKIconDatabaseCG.h"
 #import "WKNavigationDelegatePrivate.h"
 #import "WKNavigationResponsePrivate.h"
 #import "WKUIDelegatePrivate.h"
@@ -57,6 +55,7 @@
 #import "WKNotificationManager.h"
 #import "WKNotification.h"
 #import "WKMutableDictionary.h"
+#import "WKSecurityOriginRef.h"
 
 /* things to integrate:
 	Remote debuggers for app.js: https://github.com/WebKit/webkit/commit/a06b5fecb8e69eccdc7ee2a668868740750d260c
