@@ -7,8 +7,7 @@ struct NotificationCallbacks {
 	// Requests that a notification be shown.
 	// https://www.w3.org/TR/notifications/#showing-a-notification
 	static let showCallback: WKNotificationProviderShowCallback = { page, notification, clientInfo in
-		//let notifier = unsafeBitCast(clientInfo, to: UserNotifier.self)
-		//let webview = unsafeBitCast(clientInfo, to: MPWebView.self)
+		let webview = unsafeBitCast(clientInfo, to: MPWebView.self)
 
 		// https://www.w3.org/TR/notifications/#model
 		let title = WKStringCopyCFString(CFAllocatorGetDefault().takeUnretainedValue(),
@@ -145,7 +144,7 @@ struct WebViewUICallbacks {
 	static func subscribe(_ webview: MPWebView) {
 		warn()
 		var uiClient = makeClient()
-		//uiClient.base.clientInfo = Unmanaged.passUnretained(self).toOpaque()
+		uiClient.base.clientInfo = UnsafeRawPointer(Unmanaged.passUnretained(webview).toOpaque()) // +0
 		guard let page = webview._page else { return }
 		WKPageSetPageUIClient(page, &uiClient.base)
 	}

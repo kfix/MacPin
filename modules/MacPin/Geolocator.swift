@@ -6,16 +6,18 @@ import WebKitPrivates
 struct GeolocationCallbacks {
 	// thunks for WebKit geolocation C APIs
 	static let setEnableHighAccuracyCallback: WKGeolocationProviderSetEnableHighAccuracyCallback = { manager, enable, clientInfo in
+		let geolocator = unsafeBitCast(clientInfo, to: Geolocator.self)
 		// https://github.com/WebKit/webkit/blob/2d04a55b4031d09c912c4673d3e753357b383071/Tools/TestWebKitAPI/Tests/WebKit/Geolocation.cpp#L68
 		if enable {
-			Geolocator.shared.manager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+			geolocator.manager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
 		}
 	}
 
 	static let startUpdatingCallback: WKGeolocationProviderStartUpdatingCallback = { manager, clientInfo in
-		Geolocator.shared.manager.startUpdatingLocation()
+		let geolocator = unsafeBitCast(clientInfo, to: Geolocator.self)
+		geolocator.manager.startUpdatingLocation()
 
-		if let location = Geolocator.shared.lastLocation {
+		if let location = geolocator.lastLocation {
 			warn(location.description)
 
 			// https://github.com/WebKit/webkit/blob/master/Source/WebCore/Modules/geolocation/ios/GeolocationPositionIOS.mm
@@ -26,8 +28,9 @@ struct GeolocationCallbacks {
 	}
 
 	static let stopUpdatingCallback: WKGeolocationProviderStopUpdatingCallback = { manager, clientInfo in
-		//Geolocator.shared.manager.stopUpdatingLocation()
-		// FIXME: should unsubscribe the caller so Geol'r can choose to stop if no subscribers remain
+		let geolocator = unsafeBitCast(clientInfo, to: Geolocator.self)
+		//geolocator.manager.stopUpdatingLocation()
+		// FIXME: should unsubscribe the calling webview so Geol'r can choose to stop if no subscribers remain
 	}
 }
 
@@ -54,13 +57,14 @@ class Geolocator: NSObject  {
 				manager.stopUpdatingLocation()
 				warn("stopped updates")
 			}
-			warn(subscribers.count.description)
+			//warn(subscribers.count.description)
 		}
 	}
 
 #if os(OSX)
 	override init() {
 		super.init()
+		geoProvider.base.clientInfo = UnsafeRawPointer(Unmanaged.passUnretained(self).toOpaque()) // +0
 		manager.delegate = self
 		manager.desiredAccuracy = kCLLocationAccuracyBest
 	}
