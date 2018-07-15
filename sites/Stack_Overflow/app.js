@@ -32,8 +32,9 @@ delegate.decideNavigationForURL = function(url) {
 	switch (scheme) {
 		case "http":
 		case "https":
-			if (!~addr.indexOf("//stackoverflow.com") &&
-				!~addr.indexOf("//stackexchange.com")
+			if (!addr.startsWith("//stackoverflow.com") &&
+				!addr.startsWith("//stackexchange.com") &&
+				!addr.startsWith("//tpc.googlesyndication.com")
 			) {
 				$.app.openURL(url); //pop all external links to system browser
 				console.log("opened "+url+" externally!");

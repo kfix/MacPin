@@ -3,12 +3,12 @@
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
 
-var devdocs = {url: 'http://devdocs.io'};
+var devdocs = {url: 'https://devdocs.io'};
 
 var delegate = {}; // our delegate to receive events from the webview app
 
 function search(query) {
-	$.browser.tabSelected = new $.WebView({url: "http://devdocs.io/#q="+query});
+	$.browser.tabSelected = new $.WebView({url: "https://devdocs.io/#q="+query});
 }
 delegate.launchURL = function(url) {
 	console.log("app.js: launching " + url);
