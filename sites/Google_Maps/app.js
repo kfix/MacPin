@@ -69,6 +69,7 @@ delegate.decideNavigationForURL = function(url, tab) {
 				!addr.startsWith("//www.google.com/maps") &&
 				!addr.startsWith("//google-latlong.blogspot.com") &&
 				!addr.startsWith("//gokml.net") &&
+				!addr.startsWith("//notifications.google.com") &&
 				!addr.startsWith("//www.youtube.com") // yt vids are usually embedded players
 			) {
 				$.app.openURL(url); //pop all external links to system browser

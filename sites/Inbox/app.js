@@ -36,29 +36,70 @@ delegate.launchURL = function(url) {
 	}
 };
 
-delegate.decideNavigationForURL = function(url) {
+var alwaysAllowRedir = false;
+
+delegate.decideNavigationForURL = function(url, tab) {
 	var comps = url.split(':'),
 		scheme = comps.shift(),
 		addr = comps.shift();
 	switch (scheme) {
 		case "http":
 		case "https":
-			if (!~addr.indexOf("//inbox.google.com") &&
-				!~addr.indexOf("//accounts.google.com") &&
-				!~addr.indexOf("//docs.google.com") &&
-				!~addr.indexOf(".docs.google.com") &&
-				!~addr.indexOf("//clients6.google.com") &&
-				!~addr.indexOf("//clients5.google.com") &&
-				!~addr.indexOf("//clients4.google.com") &&
-				!~addr.indexOf("//clients3.google.com") &&
-				!~addr.indexOf("//clients2.google.com") &&
-				!~addr.indexOf("//clients1.google.com") &&
-				!~addr.indexOf("//clients.google.com") &&
-				!~addr.indexOf("//0.client-channel.google.com") &&
-				!~addr.indexOf("//talkgadget.google.com") &&
-				!~addr.indexOf("//plus.google.com") &&
-				!~addr.indexOf("//www.google.com/tools/feedback/content_frame") &&
-				!~addr.indexOf("//www.youtube.com") // yt vids are usually embedded players
+			if (alwaysAllowRedir) break; //user override
+			if ((addr.startsWith("//inbox.google.com/") || addr.startsWith("//mail.google.com/")) && tab.allowAnyRedir) {
+				tab.allowAnyRedir = false; // we are back home
+			} else if (tab.allowAnyRedir || unescape(unescape(addr)).match("//accounts.google.com/")) {
+				// we might be redirected to an external domain for a SSO-integrated Google Apps login
+				// https://support.google.com/a/answer/60224#userSSO
+				// process starts w/ https://accounts.google.com/ServiceLogin(Auth) and ends w/ /MergeSession
+				tab.allowAnyRedir = true;
+			} else if (!addr.startsWith("//inbox.google.com") &&
+				!addr.startsWith("//docs.google.com") &&
+				!addr.startsWith(".docs.google.com") &&
+				!addr.startsWith("//mail.google.com") &&
+				!addr.startsWith(".mail.google.com") &&
+				!addr.startsWith("//clients6.google.com") &&
+				!addr.startsWith("//clients5.google.com") &&
+				!addr.startsWith("//clients4.google.com") &&
+				!addr.startsWith("//clients3.google.com") &&
+				!addr.startsWith("//clients2.google.com") &&
+				!addr.startsWith("//clients1.google.com") &&
+				!addr.startsWith("//clients.google.com") &&
+				!addr.startsWith("//plus.google.com") &&
+				!addr.startsWith("//hangouts.google.com") &&
+				!addr.startsWith("//cello.client-channel.google.com") &&
+				!addr.startsWith("//0.client-channel.google.com") &&
+				!addr.startsWith("//1.client-channel.google.com") &&
+				!addr.startsWith("//2.client-channel.google.com") &&
+				!addr.startsWith("//3.client-channel.google.com") &&
+				!addr.startsWith("//4.client-channel.google.com") &&
+				!addr.startsWith("//5.client-channel.google.com") &&
+				!addr.startsWith("//6.client-channel.google.com") &&
+				!addr.startsWith("//apis.google.com") &&
+				!addr.startsWith("//0.talkgadget.google.com") &&
+				!addr.startsWith("//1.talkgadget.google.com") &&
+				!addr.startsWith("//2.talkgadget.google.com") &&
+				!addr.startsWith("//3.talkgadget.google.com") &&
+				!addr.startsWith("//4.talkgadget.google.com") &&
+				!addr.startsWith("//5.talkgadget.google.com") &&
+				!addr.startsWith("//6.talkgadget.google.com") &&
+				!addr.startsWith("//0.docs.google.com") &&
+				!addr.startsWith("//1.docs.google.com") &&
+				!addr.startsWith("//2.docs.google.com") &&
+				!addr.startsWith("//3.docs.google.com") &&
+				!addr.startsWith("//4.docs.google.com") &&
+				!addr.startsWith("//5.docs.google.com") &&
+				!addr.startsWith("//6.docs.google.com") &&
+				!addr.startsWith("//7.docs.google.com") &&
+				!addr.startsWith("//8.docs.google.com") &&
+				!addr.startsWith("//9.docs.google.com") &&
+				!addr.startsWith("//content.googleapis.com") &&
+				!addr.startsWith("//www.youtube.com") && // yt vids are usually embedded players
+				!addr.startsWith("//youtube.googleapis.com/embed/") &&
+				!addr.startsWith("//www.google.com/a/") &&
+				!addr.startsWith("//myaccount.google.com") &&
+				!addr.startsWith("//www.google.com/tools/feedback/content_frame") &&
+				!addr.startsWith("//www.google.com/settings")
 			) {
 				$.app.openURL(url); //pop all external links to system browser
 				console.log("opened "+url+" externally!");
@@ -67,6 +108,7 @@ delegate.decideNavigationForURL = function(url) {
 		//case "mailto":
 		// break out params
 		case "about":
+		case "file":
 		default:
 			return false;
 	}
@@ -94,11 +136,14 @@ delegate.receivedHTML5DesktopNotification = function(tab, note) {
 
 delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(url); return true; };
 
+delegate.toggleRedirection = function(state) { alwaysAllowRedir = (state) ? true : false; };
+
 delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('ginbox');
 	//$.app.registerURLScheme('mailto');
 	$.browser.addShortcut('Inbox by Gmail', inbox);
 	$.browser.addShortcut('Inbox by Gmail (using secondary account)', inboxAlt);
+	$.browser.addShortcut('Enable Redirection to external domains', ['toggleRedirection', true]);
 
 	if ($.launchedWithURL != '') { // app was launched with a search query
 		inboxTab.asyncEvalJS( // need to wait for app.js to load and render DOM
@@ -110,6 +155,10 @@ delegate.AppFinishedLaunching = function() {
 			}
 		);
 	}
+
+	$.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
+	$.browser.addShortcut('Paint It Black', ['enDarken']);
+
 
 };
 delegate; //return this to macpin

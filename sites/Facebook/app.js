@@ -18,8 +18,11 @@ fbTab = $.browser.tabSelected = new $.WebView(fb);
 $.browser.addShortcut("Facebook Home", fb);
 
 delegate.setAgent = function(agent) { $.browser.tabSelected.userAgent = agent; };
-$.browser.addShortcut('UA: Android 5 / Chrome 36', ["setAgent", "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.2311.38 Mobile Safari/537.36"]) 
+$.browser.addShortcut('UA: Android 5 / Chrome 36', ["setAgent", "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.2311.38 Mobile Safari/537.36"]);
 // FB sets margin-* to be 0 on a bunch of elements (header jewels) for chr36
+
+let enDarken = require(`file://${$.app.resourcePath}/enDarken.js`);
+$.browser.addShortcut('Dark Mode', [], enDarken);
 
 function search(query) {
 	$.browser.tabSelected = fbTab;
@@ -69,7 +72,6 @@ delegate.AppFinishedLaunching = function() {
 			}
 		);
 	}
-
 };
 
 delegate; //return this to macpin

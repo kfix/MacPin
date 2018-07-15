@@ -406,7 +406,11 @@
 	<key>NSHighResolutionMagnifyAllowed</key>
 	<false/>
 	<key>NSHumanReadableCopyright</key>
-	<string>Joey Korkames (2017)</string>
+	<string>Joey Korkames (2018)</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Websites you visit may request your location.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Websites you visit may request your location.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Websites you visit may request your location.</string>
 	<key>NSServices</key>
