@@ -4,11 +4,12 @@
 
 import WebKit
 import WebKitPrivates
-//import Async
 
-extension WebViewControllerOSX {
+extension WebViewControllerOSX: WKUIDelegate {
 
 	func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+		//focus()
+			// tab switches, but re-draw of webview is frozen because webthread is stuck waiting for this delegated call to finish...
 		let alert = NSAlert()
 		alert.messageText = webView.title ?? ""
 		alert.addButton(withTitle: "Dismiss")
@@ -204,9 +205,18 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 	}
 }
 
-@objc extension WebViewControllerOSX { // WKUIDelegatePrivate
+@objc extension WebViewControllerOSX: WKUIDelegatePrivate {
 
-	@available(OSX 10.13.4, *, iOS 11.3)
+	/*
+	//override func _webView(_ webView: WKWebView!, requestNotificationPermissionForSecurityOrigin securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
+	@objc override func _webView(_ webView: WKWebView!, requestNotificationPermissionFor securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
+		warn()
+		//super._webView(webView, requestNotificationPermissionForSecurityOrigin: securityOrigin, decisionHandler: decisionHandler)
+		super._webView(webView, requestNotificationPermissionFor: securityOrigin, decisionHandler: decisionHandler)
+	}
+	*/
+
+	//@available(OSX 10.13.4, *, iOS 11.3)
 	@objc func _webView(_ webView: WKWebView!, requestGeolocationPermissionForFrame frame: WKFrameInfo!, decisionHandler: ((Bool) -> Void)!) {
 		warn(webView.url?.absoluteString ?? "")
 
@@ -219,22 +229,10 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 			// FIXME: do this with Async?
 		}
 
-		/*
-		// so lets do some yucky hackery to polyfill+reload once for the life of the tab
-		if let mpwv = webView as? MPWebView, mpwv.preinject("shim_html5_geolocation") {
-			mpwv.subscribeTo("MacPinPollStates")
-			mpwv.subscribeTo("getGeolocation")
-			mpwv.subscribeTo("watchGeolocation")
-			mpwv.subscribeTo("deactivateGeolocation")
-			webView.reload() // hafta reload for the preinjection to happen
-		}
-		*/
-
 		decisionHandler(true) // signal that we are done
 	}
 
 	//func _webView(_ webView: WKWebView!, editorStateDidChange editorState: [AnyHashable : Any]!)
-	//func _webView(_ webView: WKWebView!, requestNotificationPermissionForSecurityOrigin securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!)
 
 	// handler for PDFViewer's Save-to-File button (blobbed PDFs)
 	@objc func _webView(_ webView: WKWebView!, saveDataToFile data: Data!, suggestedFilename: String!, mimeType: String!, originatingURL url: URL!) {
@@ -253,13 +251,13 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 		}
 	}
 
-	@available(OSX 10.13, *)
+	//@available(OSX 10.13, *)
 	@objc func _webView(_ webView: WKWebView!, requestUserMediaAuthorizationFor devices: _WKCaptureDevices, url: URL!, mainFrameURL: URL!, decisionHandler: ((Bool) -> Void)!) {
 		warn(url.absoluteString)
 		decisionHandler(true)
 	}
 
-	@available(OSX 10.12.3, *)
+	//@available(OSX 10.12.3, *)
 	@objc func _webView(_ webView: WKWebView!, checkUserMediaPermissionFor url: URL!, mainFrameURL: URL!, frameIdentifier: UInt, decisionHandler: ((String?, Bool) -> Void)!) {
 		warn(url.absoluteString)
 		//decisionHandler(url.absoluteString, true)
@@ -280,11 +278,7 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 
 	func _webView(_ webView: WKWebView, printFrame: WKFrameInfo) {
 		warn("JS: `window.print();`")
-#if STP
-		let printer = webView._printOperation(with: NSPrintInfo.shared)
-		printer?.showsPrintPanel = true
-		printer?.run()
-#endif
+		(webView as? MPWebView)?.printWebView(nil)
 	}
 
 	//@objc func _webView(_ webView: WKWebView!, drawHeaderInRect rect: CGRect, forPageWithTitle title: String!, URL url: URL!) { warn(); }

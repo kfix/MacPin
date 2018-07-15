@@ -65,12 +65,10 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	func mainStyle(_ css: String) -> Bool
 	func preinject(_ script: String) -> Bool
 	func postinject(_ script: String) -> Bool
-	func addHandler(_ handler: String) // FIXME kill
 	func subscribeTo(_ handler: String)
 	func console()
 	func repaint()
 	func scrapeIcon()
-	var thumbnail: _WKThumbnailView? { get }
 	//func goBack()
 	//func goForward()
 	//func reload()
@@ -79,21 +77,6 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	//var snapshotURL: String { get } // gets a data:// of the WKThumbnailView
 }
 
-
-struct IconCallbacks {
-
-	static let decidePolicyForGeolocationPermissionRequestCallBack: WKPageDecidePolicyForGeolocationPermissionRequestCallback = { page, frame, origin, permissionRequest, clientInfo in
-		// FIXME: prompt?
-		warn()
-		WKGeolocationPermissionRequestAllow(permissionRequest)
-	}
-	static let decidePolicyForNotificationPermissionRequest: WKPageDecidePolicyForNotificationPermissionRequestCallback = { page, securityOrigin, permissionRequest, clientInfo in
-		warn()
-		WKNotificationPermissionRequestAllow(permissionRequest)
-		//WKNotificationPermissionRequestDeny(permissionRequest)
-	}
-
-}
 
 @objc class MPWebView: WKWebView, WebViewScriptExports {
 
@@ -143,39 +126,51 @@ struct IconCallbacks {
 		//   registerProtocolClass(NSURLSessionConfiguration) <- that could let you configure ad-hoc CFProxySupport dictionaries: http://stackoverflow.com/a/28101583/3878712
 		// NSURLSessionConfiguration ? https://www.objc.io/issues/5-ios7/from-nsurlconnection-to-nsurlsession/
 
-	var context: WKContextRef { get { return WKPageGetContext(_pageRefForTransitionToWKWebView) } }
-
-#if STP
-	// a long lived thumbnail viewer should construct and store thumbviews itself, this is for convenient dumping
-	var thumbnail: _WKThumbnailView? {
+	var context: WKContextRef? {
 		get {
-			let snap = self._thumbnailView ?? _WKThumbnailView(frame: self.frame, from: self)
-			snap?.requestSnapshot()
-			return snap
+			guard let page = _page else { return nil }
+			return WKPageGetContext(page)
 		}
 	}
-#endif
+
+	var _page: WKPageRef? {
+		get {
+			if WebKit_version >= (605, 1, 7) {
+				// _pageRefForTransition is very new, pageRefForTesting is older
+				return _pageRefForTransitionToWKWebView
+			} else {
+				return _pageForTesting()
+			}
+		}
+
+	}
 
 #if os(OSX)
-
-#if !STP // no inner WKView in STP, iOS10, & Sierra: https://bugs.webkit.org/show_bug.cgi?id=150174#c0
-	// https://github.com/WebKit/webkit/blob/8c504b60d07b2a5c5f7c32b51730d3f6f6daa540/Source/WebKit2/UIProcess/mac/WebInspectorProxyMac.mm#L679
-	override var _inspectorAttachmentView: NSView? {
+	var inspectorAttachmentView: NSView? {
 		// when inspector is open, subviews.first is actually the inspector (WKWebInspectorWKWebView), not the WKView
 		// tabitem.view.subviews = [ WKWebInspectorView, WKView, ... ]
 		get {
-			if let topFrame = subviews.first as? WKView {
-				return topFrame._inspectorAttachmentView
+			if WebKit_version >= (605, 1, 7) {
+				// no inner WKView in STP, iOS10, & Sierra: https://bugs.webkit.org/show_bug.cgi?id=150174#c0 landed ~ 602.1.9.1, 602.1.11 (in ChLog)
+				return self._inspectorAttachmentView
+			} else {
+				// https://github.com/WebKit/webkit/blob/8c504b60d07b2a5c5f7c32b51730d3f6f6daa540/Source/WebKit2/UIProcess/mac/WebInspectorProxyMac.mm#L679
+				if let topFrame = subviews.first as? WKView {
+					return topFrame._inspectorAttachmentView
+				}
+				return nil
 			}
-			return nil
 		}
 		set {
-			if let topFrame = subviews.first as? WKView {
-				topFrame._inspectorAttachmentView = newValue
+			if WebKit_version >= (605, 1, 7) {
+				self._inspectorAttachmentView = newValue
+			} else {
+				if let topFrame = subviews.first as? WKView {
+					topFrame._inspectorAttachmentView = newValue
+				}
 			}
 		}
 	}
-#endif
 
 	var caching: Bool {
 		get { return !WKPageGetResourceCachingDisabled(_pageRefForTransitionToWKWebView) }
@@ -184,18 +179,19 @@ struct IconCallbacks {
 
 	var transparent: Bool {
 		get {
-#if STP
-			return !_drawsBackground
-#else
-			return _drawsTransparentBackground
-#endif
+			if WebKit_version >= (602, 1, 11) {
+				return !_drawsBackground
+			} else {
+				return _drawsTransparentBackground
+			}
 		}
 		set(transparent) {
-#if STP
-			_drawsBackground = !transparent
-#else
-			_drawsTransparentBackground = transparent
-#endif
+			if WebKit_version >= (602, 11, 11) {
+				_drawsBackground = !transparent
+			} else {
+				_drawsTransparentBackground = transparent
+			}
+
 			AppScriptRuntime.shared.emit(.tabTransparencyToggled, transparent as AnyObject, self)
 			evalJS("window.dispatchEvent(new window.CustomEvent('MacPinWebViewChanged',{'detail':{'transparent': \(transparent)}}));")
 			// ^ JS->DOM may not finish up fast enough for the repaints to cleanly update the view
@@ -216,20 +212,21 @@ struct IconCallbacks {
 
 	let favicon: FavIcon = FavIcon()
 
-	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
+	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = false) {
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
 		let configuration = config ?? WKWebViewConfiguration()
 		if config == nil {
-#if STP
-			configuration._allowUniversalAccessFromFileURLs = true
 #if os(OSX)
-			configuration._showsURLsInToolTips = true
-			configuration._serviceControlsEnabled = true
-			configuration._imageControlsEnabled = true
-			//configuration._requiresUserActionForEditingControlsManager = true
+			if WebKit_version.major >= 602 { // Safari 10
+				configuration._showsURLsInToolTips = true
+				configuration._serviceControlsEnabled = true
+				configuration._imageControlsEnabled = true
+				//configuration._requiresUserActionForEditingControlsManager = true
+			}
 #endif
-#endif
-			if #available(OSX 10.13, iOS 11, *) {
+			//if #available(OSX 10.13, iOS 11, *) {
+			if WebKit_version >= (604, 1, 28) { // Version/11.0 Safari/604.1.28 sierra
+				configuration._allowUniversalAccessFromFileURLs = true
 				// https://forums.developer.apple.com/thread/87474#267547
 				configuration.setURLSchemeHandler(MPRetriever(), forURLScheme: "x-macpin")
 				// has to be set before self.init
@@ -242,10 +239,14 @@ struct IconCallbacks {
 		prefs._fullScreenEnabled = true
 
 		// https://webkit.org/blog/7763/a-closer-look-into-webrtc/
-		if #available(OSX 10.13, iOS 11, *) {
+		//if #available(OSX 10.13, iOS 11, *) {
+		if WebKit_version >= (604, 1, 8) { // Safari-604.1.8 = Safari 11, STP_32
+			// https://trac.webkit.org/changeset/213294/webkit
 			prefs._mediaCaptureRequiresSecureConnection = false
 			prefs._mediaDevicesEnabled = true
 			prefs._mockCaptureDevicesEnabled = false
+		} else {
+			warn("WebRTC not available for WebKit: \(WebKit_version)")
 		}
 #endif
 		if let privacy = privacy, privacy {
@@ -266,7 +267,8 @@ struct IconCallbacks {
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
 		if let privacy = privacy, privacy {
-			if #available(OSX 10.11, iOS 9, *) {
+			//if #available(OSX 10.11, iOS 9, *) {
+			if WebKit_version >= (601, 1, 30) {
 				configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
 			}
 		}
@@ -289,38 +291,19 @@ struct IconCallbacks {
 		allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
 #if os(OSX)
 		allowsMagnification = true
-		//_mediaCaptureEnabled = false
-#if STP
-		_applicationNameForUserAgent = "Version/11.1 Safari/605.1.33"
-#else
-		_applicationNameForUserAgent = "Version/10.0 Safari/603.5.17"
-#endif
-		"http".withCString { http in
-			WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(http)) // FIXME: makeInsecure() toggle!
-		}
-		"https".withCString { https in
-			WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(https))
-		}
+		_applicationNameForUserAgent = "Version/11.1 Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
 
-		var uiClient = WKPageUIClientV2()
-		uiClient.base.version = 2
-		uiClient.decidePolicyForGeolocationPermissionRequest = IconCallbacks.decidePolicyForGeolocationPermissionRequestCallBack
-		uiClient.decidePolicyForNotificationPermissionRequest = IconCallbacks.decidePolicyForNotificationPermissionRequest
-		//uiClient.showPage: WKPageUIClientCallback!
-		//uiClient.close: WKPageUIClientCallback!
-		//uiClient.takeFocus: WKPageTakeFocusCallback!
-		//uiClient.focus: WKPageFocusCallback!
-		//uiClient.unfocus: WKPageUnfocusCallback!
-
-		// https://developer.mozilla.org/en-US/docs/Web/API/Window/status
-		// https://developer.mozilla.org/en-US/docs/Web/API/Window/statusbar
-		//uiClient.setStatusText: WKPageSetStatusTextCallback!
-		//statusBarIsVisible: WKPageGetStatusBarIsVisibleCallback!
-		//setStatusBarIsVisible: WKPageSetStatusBarIsVisibleCallback!
-		WKPageSetPageUIClient(_pageRefForTransitionToWKWebView, &uiClient.base)
+		if let context = context {
+			"http".withCString { http in
+				WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(http)) // FIXME: makeInsecure() toggle!
+			}
+			"https".withCString { https in
+				WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(https))
+			}
+		}
 
 #elseif os(iOS)
-		_applicationNameForUserAgent = "Version/8.0 Mobile/12F70 Safari/600.1.4"
+		_applicationNameForUserAgent = "Version/10 Mobile/12F70 Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
 #endif
 		if let agent = agent { if !agent.isEmpty { _customUserAgent = agent } }
 	}
@@ -425,17 +408,15 @@ struct IconCallbacks {
 				case let magnification as Bool where key == .allowsMagnification: allowsMagnification = magnification
 				case let recordable as Bool where key == .allowsRecording: _mediaCaptureEnabled = recordable
 				case let transparent as Bool where key == .transparent:
-#if os(OSX)
-#if STP
-					_drawsBackground = !transparent
-#else
-					_drawsTransparentBackground = transparent
-#endif
-#endif
+					if WebKit_version >= (602, 1, 11) {
+						_drawsBackground = !transparent
+					} else {
+						_drawsTransparentBackground = transparent
+					}
 				case let value as [String] where key == .preinject: for script in value { preinject(script) }
 				case let value as [String] where key == .postinject: for script in value { postinject(script) }
 				case let value as [String] where key == .style: for css in value { style(css) }
-				case let value as [String] where key == .handlers: for handler in value { addHandler(handler) } //FIXME kill delegate.`handlerStr` indirect-str-refs
+				//case let value as [String] where key == .handlers: for handler in value { addHandler(handler) } //FIXME kill delegate.`handlerStr` indirect-str-refs
 				case let value as [String: [JSValue]] where key == .handlers: addHandlers(value)
 				case let value as [String] where key == .subscribeTo: for handler in value { subscribeTo(handler) }
 				default: warn("unhandled param: `<\(type(of: key))>\(key): <\(type(of: value))>\(value)`")
@@ -445,12 +426,12 @@ struct IconCallbacks {
 		if let url = url { gotoURL(url) } else { return nil }
 	}
 
-	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
-		self.init(url: url as URL, agent: agent, isolated: isolated, privacy: privacy)
+	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = false) {
+		self.init(url: url as URL, agent: agent, isolated: isolated, privacy: privacy, transparent: transparent)
 	}
 
-	convenience required init(url: URL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false) {
-		self.init(config: nil, agent: agent, isolated: isolated, privacy: privacy)
+	convenience required init(url: URL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = false) {
+		self.init(config: nil, agent: agent, isolated: isolated, privacy: privacy, transparent: transparent)
 		gotoURL(url)
 	}
 
@@ -620,8 +601,6 @@ struct IconCallbacks {
 		//return true
 	}
 
-	func addHandler(_ handler: String) { configuration.userContentController.add(AppScriptRuntime.shared, name: handler) } //FIXME kill
-
 	func addHandlers(_ handlerMap: [String: [JSValue]]) {
 		for (eventName, handlers) in handlerMap {
 			//warn("\(eventName) => \(type(of: handlers))\(handlers)")
@@ -629,7 +608,7 @@ struct IconCallbacks {
 
 			for hd in handlers {
 				if !hd.isNull && !hd.isUndefined && !cbs.contains(hd) && hd.hasProperty("call") {
-					warn("\(eventName) += \(type(of: hd)) \(hd)")
+					warn("\(eventName)") // += \(type(of: hd)) \(hd)")
 					cbs.append(hd)
 				} else { warn("handler for \(eventName) not a callable! <= \(hd)") }
 			}
@@ -675,6 +654,7 @@ struct IconCallbacks {
 	//webview._getMainResourceDataWithCompletionHandler() { (data: Data?, err: Error?) -> Void in }
 	//webview._getContentsAsStringWithCompletionHandler() { (str: String?, err: Error?) -> Void in }
 	//webview._getApplicationManifestWithCompletionHandler() { (manifest: _WKApplicationManifest?) -> Void in }
+	// 605.2.8 == 11.1 for PWA support
 
 #if os(OSX)
 	@objc func reloadWithoutContentBlockers() {
@@ -806,32 +786,50 @@ struct IconCallbacks {
 	}
 
 	@objc func printWebView(_ sender: AnyObject?) {
-#if STP
-		// _printOperation not avail in 10.11.4's WebKit
-		//let printer = _printOperation(with: NSPrintInfo.shared, forFrame: WKFrame)
-		guard let printer = _printOperation(with: NSPrintInfo.shared) else { return }
-		// nil is returned if page contains encrypted/secured PDF, and maybe other qualms
+		//if #available(OSX 10.12, iOS 10, *) {
+			// _printOperation not avail in 10.11.4's WebKit
+			//   but what about Safari 11 back-releases to 10.11/ElCap?
+		if WebKit_version >= (602, 1, 12) { // 11/2015 602.1.11.1 probably works too
+			guard let printer = _printOperation(with: NSPrintInfo.shared) else { return }
+			// nil is returned if page contains encrypted/secured PDF, and maybe other qualms
 
-		printer.showsPrintPanel = true
-		if let window = self.window {
-			printer.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
-		} else {
-			printer.run()
+			printer.showsPrintPanel = true
+			if let window = self.window {
+				printer.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
+			} else {
+				printer.run()
+			}
 		}
-#endif
 	}
 
 	func console() {
-		let inspector = WKPageGetInspector(_pageRefForTransitionToWKWebView)
-		DispatchQueue.main.async() {
-			WKInspectorShowConsole(inspector) // ShowConsole, Hide, Close, IsAttatched, Attach, Detach
-		}
+		guard let page = _page else { return }
+		let inspector = WKPageGetInspector(_page)
+		WKInspectorShowConsole(inspector) // ShowConsole, Hide, Close, IsAttatched, Attach, Detach
 	}
 
 	func repaint() {
-		WKPageForceRepaint(_pageRefForTransitionToWKWebView, nil, {error, void in warn()} as WKPageForceRepaintFunction )
+		guard let page = _page else { return }
+		WKPageForceRepaint(_page, nil, {error, void in warn()} as WKPageForceRepaintFunction )
 		needsDisplay = true // queue the whole frame for rerendering
 	}
 
 #endif
+
+	func showDesktopNotification(title: String, tag: String, body: String, iconurl: String, id: Int, type: Int, origin: String, lang: String, dir: String) {
+		warn("\(title) - \(body) - \(iconurl) - \(origin)")
+
+		// https://electronjs.org/docs/tutorial/notifications
+		// https://developers.google.com/web/updates/2017/04/native-mac-os-notifications
+
+		// if !AppScriptRuntime.shared.anyHandled(.receivedHTML5Notification, webview, title, tag, body, id ..)
+		//    postNotification(title ...)
+
+		// will need to create a rich userInfo[:] to enable tab-selection
+		// need W3C props: origin type
+		//  https://github.com/chromium/chromium/blob/f18e79d901f56154f80eea1e2218544285e62623/chrome/browser/ui/cocoa/notifications/notification_builder_mac.mm
+		// https://www.w3.org/TR/notifications/#activating-a-notification
+		//   https://notifications.spec.whatwg.org/#activating-a-notification
+	}
+
 }

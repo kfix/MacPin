@@ -32,12 +32,6 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 		if let webView = message.webView as? MPWebView {
 			//called from JS: webkit.messageHandlers.<messsage.name>.postMessage(<message.body>);
 			switch message.name {
-				case "getGeolocation":
-					Geolocator.shared.sendLocationEvent(webView) // add this webview as a one-time subscriber
-				//case "watchGeolocation":
-					// Geolocator.subscribeToLocationEvents(webView) // add this webview as a continuous subscriber
-				//case "unwatchGeolocation":
-					// Geolocator.unsubscribeFromLocationEvents(webView) // remove this webview from subscribers
 				case "MacPinPollStates": // direct poll. app.js needs to authorize this handler per tab
 					//FIXME: should iterate message.body's [varnames] to send events for
 					webView.evaluateJavaScript( //for now, send an omnibus event with all varnames values
@@ -64,7 +58,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 	}
 }
 
-extension WebViewController: WKUIDelegate { } // javascript prompts, implemented per-platform
+//extension WebViewController: WKUIDelegate { } // javascript prompts, implemented per-platform
 // window.beforeunload -> runBeforeUnloadConfirmPanelWithMessage https://github.com/WebKit/webkit/commit/204a88b497f6d2051997226e940f088e6ab51178
 
 extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
@@ -380,6 +374,18 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		//webView.reload()
 		warn("webview crashed!!")
 	}
+
+	// FIXME: STP v20: per-site preferences: https://github.com/WebKit/webkit/commit/d9f6f7249630d7756e4b6ca572b29ac61d5c38d7
+			//if WebKit_version >= (605, 1, 8) {
+				//WKWebsitePolicies for header additions https://bugs.webkit.org/show_bug.cgi?id=177255
+				//WKDownload.wasUserInitated https://bugs.webkit.org/show_bug.cgi?id=177435
+	//func _webView(_ webView: WKWebView!, decidePolicyForNavigationAction navigationAction: WKNavigationAction!, decisionHandler: ((WKNavigationActionPolicy, _WKWebsitePolicies?) -> Void)! {
+	//	warn()
+	//	decisionHandler() { navPolicy, sitePolicies in
+	// 		sitePolicies.customHeaderFields[]
+	//	}
+	//}
+
 }
 
 extension WebViewController: _WKFormDelegate { } // form input hooks, implemented per-platform
@@ -405,8 +411,6 @@ extension WebViewController: _WKDownloadDelegate {
 	func _downloadDidCancel(_ download: _WKDownload!) { warn(download.request.description) }
 }
 
-// extensions WebViewController: WebsitePoliciesDelegate // FIXME: STP v20: per-site preferences: https://github.com/WebKit/webkit/commit/d9f6f7249630d7756e4b6ca572b29ac61d5c38d7
-
 extension WebViewController: _WKIconLoadingDelegate {
 	@objc(webView:shouldLoadIconWithParameters:completionHandler:) // give WK2 what it wants...
 	func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Void) -> Void) { // but swiftc insists on this ...
@@ -425,13 +429,13 @@ extension WebViewController: _WKIconLoadingDelegate {
 	}
 }
 
-extension WebViewController: WKUIDelegatePrivate {
+extension WebViewController { //WKUIDelegatePrivate .. but platform/Delagtes will declare the conformation
 
-	func _webView(_ webView: WKWebView!, requestNotificationPermissionFor securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
+	@objc func _webView(_ webView: WKWebView!, requestNotificationPermissionForSecurityOrigin securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
 		warn("Notification.requestPermission(...) <= \(webView.url?.absoluteString ?? "")")
 		//FIXME: prompt
 		decisionHandler(true) // Notification.permission == "default" => "granted"
 	}
 
-	// @objc func _webView(_ webView: WKWebView!, createWebViewWithConfiguration configuration: WKWebViewConfiguration !, forNavigationAction navigationAction: WKNavigationAction!, windowFeatures: WKWindowFeatures!, completionHandler: ((WKWebView?) -> Void)!)
+	// @objc func _webView(_ webView: WKWebView!, createWebViewWithConfiguration configuration: WKWebViewConfiguration!, forNavigationAction navigationAction: WKNavigationAction!, windowFeatures: WKWindowFeatures!, completionHandler: ((WKWebView?) -> Void)!)
 }

@@ -31,10 +31,13 @@ import WebKitPrivates
 		view.autoresizesSubviews = true
 		view.autoresizingMask = [.width, .height]
 		webview.autoresizingMask = [.width, .height]
-#if STP
-		// scale-to-fit https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
-		webview._layoutMode = .dynamicSizeComputedFromViewScale
-#endif
+
+		if WebKit_version >= (601, 1, 27) {
+			// scale-to-fit https://github.com/WebKit/webkit/commit/b40b702baeb28a497d29d814332fbb12a2e25d03
+			webview._layoutMode = .dynamicSizeComputedFromViewScale
+		}
+
+		webview.uiDelegate = self //alert(), window.open(): see <platform>/WebViewDelegates<platform>
 
 		bind(NSBindingName.title, to: webview, withKeyPath: #keyPath(MPWebView.title), options: nil)
 		//backMenu.delegate = self
@@ -104,11 +107,25 @@ import WebKitPrivates
 
 	override func viewWillLayout() {
 		//webview.resizeSubviewsWithOldSize(CGSizeZero)
-		if webview != nil && view.window != nil { // vc's still in hierarchy can be asked to layout after view is deinit'd
-			webview._inspectorAttachmentView = webview
-			// BUG: sometimes get SIGSEGVs for this when JS is adding the viewcontroller....defer this to another delegate method?
-		}
 		super.viewWillLayout()
+
+		if webview != nil && view.window != nil { // vc's still in hierarchy can be asked to layout after view is deinit'd
+			webview.inspectorAttachmentView = webview
+			// BUG: sometimes get SIGSEGVs for this when JS is adding the viewcontroller....defer this to another delegate method?
+
+/*
+			if WebKit_version >= (0, 0, 0) {
+				if webview._thumbnailView == nil {
+					webview._thumbnailView = _WKThumbnailView( // make a custom webview.thumbnail
+						frame: CGRect(origin: CGPoint(x: 0, y: 0), size: webview.bounds.size.applying(CGAffineTransform(scaleX: 0.15, y: 0.15))),
+						from: webview as WKWebView
+					)
+				}
+				//webview._thumbnailView?.requestSnapshot() // should only do this @ [webView didFinishNavigation]
+			}
+*/
+
+		}
 	}
 
 	override func updateViewConstraints() {
@@ -123,7 +140,7 @@ import WebKitPrivates
 	deinit {
 		//warn()
 		textFinder.client = nil
-		webview._inspectorAttachmentView = nil
+		webview.inspectorAttachmentView = nil
 		unbind(NSBindingName.title)
 		Geolocator.shared.unsubscribeFromLocationEvents(webview: webview)
 		// super.deinit is implicit here
@@ -149,22 +166,24 @@ extension WebViewControllerOSX { // AppGUI funcs
 
 	override func dismiss() {
 		warn()
-		webview._inspectorAttachmentView = nil
+		webview.inspectorAttachmentView = nil
 		textFinder.client = nil
-		//webview.iconClient = nil
 		//view?.removeFromSuperviewWithoutNeedingDisplay()
+		//WKPageTerminate(webview._pageRefForTransitionToWKWebView)
 		super.dismiss()
 	}
 
 	@objc func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }  // WKPageForceRepaint(webview.topFrame?.pageRef, 0, didForceRepaint);
 
-#if STP
 	@objc func zoomIn() { zoom(0.2) }
 	@objc func zoomOut() { zoom(-0.2) }
 	func zoom(_ factor: Double) {
-		// https://github.com/WebKit/webkit/commit/1fe5bc35da4a688b9628e2e0b0c013fd0d44b9d5
-		//webview.magnification -= factor
-		textZoom(factor)
+		if WebKit_version >= (601, 1, 27) {
+			textZoom(factor)
+		} else {
+			webview.magnification += CGFloat(factor)
+		}
+
 		return
 
 		/*
@@ -182,12 +201,9 @@ extension WebViewControllerOSX { // AppGUI funcs
 	func textZoomIn() { textZoom(0.2) }
 	func textZoomOut() { textZoom(-0.2) }
 	func textZoom(_ factor: Double) {
+		// https://github.com/WebKit/webkit/commit/1fe5bc35da4a688b9628e2e0b0c013fd0d44b9d5
 		webview._textZoomFactor += factor
 	}
-#else
-	@objc func zoomIn() { webview.magnification += 0.2 } // user-adjustable "page" scale
-	@objc func zoomOut() { webview.magnification -= 0.2 }
-#endif
 	@objc func zoomText() {
 		webview._textZoomFactor = webview._textZoomFactor
 		webview._pageZoomFactor = webview._pageZoomFactor
@@ -211,12 +227,25 @@ extension WebViewControllerOSX { // AppGUI funcs
 		}
 	}
 
+	// sugar for delgates' switching to owning tab by parent browser VC
+	override func focus() {
+		// https://www.w3.org/TR/html/editing.html#dom-window-focus
+		// https://html.spec.whatwg.org/multipage/interaction.html#dom-window-focus
+		warn()
+		if let parent = parent as? BrowserViewController {
+			//parent.presentViewController(self, animator: parent)
+			// seems to fire tvc.transition(from:tvc, to: self) !!?
+			// https://github.com/OAuthSwift/OAuthSwift/blob/master/Sources/OAuthWebViewController.swift
+			// https://github.com/avaidyam/Parrot/blob/master/MochaUI/NSViewController%2BWindow.swift
+			parent.tabSelected = self
+		}
+	}
+
 	@available(OSX 10.13, *, iOS 11)
-	//#STP_21
 	@objc func snapshotButtonClicked(_ sender: AnyObject?) {
 		warn()
 		guard let btn = sender as? NSView else { return }
-		guard let thumb = _WKThumbnailView( // make a custom webview.thumbnail
+		guard let thumb = webview._thumbnailView ?? _WKThumbnailView( // make a custom webview.thumbnail
 			frame: CGRect(origin: CGPoint(x: 0, y: 0), size: webview.bounds.size.applying(CGAffineTransform(scaleX: 0.15, y: 0.15))),
 			from: webview as WKWebView
 		) else { return }
@@ -226,6 +255,18 @@ extension WebViewControllerOSX { // AppGUI funcs
 		snap.view = thumb
 		poprect.size.height -= snap.view.frame.height + 12 // make room at the top to stuff the popover
 		presentViewController(snap, asPopoverRelativeTo: poprect, of: btn, preferredEdge: NSRectEdge.maxY, behavior: NSPopover.Behavior.transient)
+
+		// so, when the ThumbnailView is visible, the webview becomes invisble
+		// I think this is why the tab-preview pickers in iOS & Mac Safari are fullscreen ...
+		// previews currently can't be shown with real WebViews on the same display
+		//  https://github.com/WebKit/webkit/blob/1acb7f363f86a93be26d185d3fd6c4d4f018e11a/Source/WebKit/UIProcess/API/Cocoa/_WKThumbnailView.mm#L40
+		//   > FIXME: Make it possible to leave a snapshot of the content presented in the WKView while the thumbnail is live.
+
+		// https://bugs.webkit.org/show_bug.cgi?id=161450 try webview.takeSnapshotWithConfiguration instead?
+		// let snapCfg = WKSnapshotConfiguration()
+		// snapCfg.rect = CGRect(origin: CGPoint(x: 0, y: 0), size: webview.bounds.size.applying(CGAffineTransform(scaleX: 0.15, y: 0.15)))
+		// snapCfg.snapshotWidth =  width-in-points (height is auto-calc'd to scale)
+		// webview.takeSnapshot(with: snapCfg) { (img, err) in snapshot = img }
 	}
 
 	func displayAlert(_ alert: NSAlert, _ completionHandler: @escaping (NSApplication.ModalResponse) -> Void) {
@@ -271,6 +312,23 @@ extension WebViewControllerOSX { // AppGUI funcs
 			DispatchQueue.main.async() { WKInspectorShow(inspectorRef) }
 		}
 	}
+/*
+	func validateMenuItem(menuItem: NSMenuItem) -> Bool {
+		warn(obj: menuItem)
+		switch menuItem.action {
+			// https://github.com/WebKit/webkit/blob/7142fb3b53b77c1f4881f2c7b5fa2a61794cc2e0/Tools/MiniBrowser/mac/WK2BrowserWindowController.m
+			case #selector(showHideWebInspector:):
+				menuItem.title = WKInspectorIsVisible(WKPageGetInspector(_webView._pageRefForTransitionToWKWebView)) ? "Close Web Inspector" : "Show Web Inspector"
+				fallthrough
+			default:
+				return true
+		}
+
+		return false
+	}
+*/
+
+
 }
 
 extension WebViewControllerOSX: NSSharingServicePickerDelegate { }
