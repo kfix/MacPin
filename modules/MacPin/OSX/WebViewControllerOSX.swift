@@ -244,17 +244,8 @@ extension WebViewControllerOSX { // AppGUI funcs
 	@available(OSX 10.13, *, iOS 11)
 	@objc func snapshotButtonClicked(_ sender: AnyObject?) {
 		warn()
-		guard let btn = sender as? NSView else { return }
-		guard let thumb = webview._thumbnailView ?? _WKThumbnailView( // make a custom webview.thumbnail
-			frame: CGRect(origin: CGPoint(x: 0, y: 0), size: webview.bounds.size.applying(CGAffineTransform(scaleX: 0.15, y: 0.15))),
-			from: webview as WKWebView
-		) else { return }
-
-		var poprect = btn.bounds
-		let snap = NSViewController()
-		snap.view = thumb
-		poprect.size.height -= snap.view.frame.height + 12 // make room at the top to stuff the popover
-		presentViewController(snap, asPopoverRelativeTo: poprect, of: btn, preferredEdge: NSRectEdge.maxY, behavior: NSPopover.Behavior.transient)
+		let popview = sender as? NSView ?? view
+		var poprect = popview.bounds
 
 		// so, when the ThumbnailView is visible, the webview becomes invisble
 		// I think this is why the tab-preview pickers in iOS & Mac Safari are fullscreen ...
@@ -262,11 +253,23 @@ extension WebViewControllerOSX { // AppGUI funcs
 		//  https://github.com/WebKit/webkit/blob/1acb7f363f86a93be26d185d3fd6c4d4f018e11a/Source/WebKit/UIProcess/API/Cocoa/_WKThumbnailView.mm#L40
 		//   > FIXME: Make it possible to leave a snapshot of the content presented in the WKView while the thumbnail is live.
 
+		guard let thumb = webview._thumbnailView ?? _WKThumbnailView( // make a custom webview.thumbnail
+			frame: CGRect(origin: CGPoint(x: 0, y: 0), size: webview.bounds.size.applying(CGAffineTransform(scaleX: 0.15, y: 0.15))),
+			from: webview as WKWebView
+		) else { return }
+
+		let snap = NSViewController()
+		snap.view = thumb
+		poprect.size.height -= snap.view.frame.height + 12 // make room at the top to stuff the popover
+
+
 		// https://bugs.webkit.org/show_bug.cgi?id=161450 try webview.takeSnapshotWithConfiguration instead?
 		// let snapCfg = WKSnapshotConfiguration()
 		// snapCfg.rect = CGRect(origin: CGPoint(x: 0, y: 0), size: webview.bounds.size.applying(CGAffineTransform(scaleX: 0.15, y: 0.15)))
 		// snapCfg.snapshotWidth =  width-in-points (height is auto-calc'd to scale)
 		// webview.takeSnapshot(with: snapCfg) { (img, err) in snapshot = img }
+
+		presentViewController(snap, asPopoverRelativeTo: poprect, of: popview, preferredEdge: NSRectEdge.maxY, behavior: NSPopover.Behavior.transient)
 	}
 
 	func displayAlert(_ alert: NSAlert, _ completionHandler: @escaping (NSApplication.ModalResponse) -> Void) {
@@ -303,8 +306,10 @@ extension WebViewControllerOSX { // AppGUI funcs
 */
 
 	// https://github.com/WebKit/webkit/commit/7142fb3b53b77c1f4881f2c7b5fa2a61794cc2e0#diff-da59bd1d4a25653a6963b1d22bbc088f
+	// https://github.com/WebKit/webkit/blob/07c00cf1cf8625bcd5abd80857c9bf98f9d2b9ab/Tools/TestWebKitAPI/Tests/WebKitCocoa/ProcessSwapOnNavigation.mm#L1102
 	@objc func showHideWebInspector(_ sender: AnyObject?) {
-		let inspectorRef = WKPageGetInspector(webview._pageRefForTransitionToWKWebView)
+		guard let page = webview._page else { return }
+		let inspectorRef = WKPageGetInspector(page)
 		if WKInspectorIsVisible(inspectorRef) {
 			DispatchQueue.main.async() { WKInspectorHide(inspectorRef) }
 			webview.window?.makeFirstResponder(webview)

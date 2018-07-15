@@ -626,10 +626,11 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	}
 
 	func REPL() {
+		var stderr = FileHandle.standardError
 		termiosREPL({ (line: String) -> Void in
 			self.evaluateJavaScript(line, completionHandler:{ (result: Any?, exception: Error?) -> Void in
 				// FIXME: the JS execs async so these print()s don't consistently precede the REPL thread's prompt line
-				if let result = result { Swift.print(result) }
+				if let result = result { Swift.print(result, to: &stderr) }
 				guard let exception = exception else { return }
 				switch (exception._domain, exception._code) { // codes: https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKError.h
 					// case(WKErrorDomain, Int(WKErrorCode.JavaScriptExceptionOccurred.rawValue)): fallthrough
@@ -639,7 +640,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 						// _WKJavaScriptExceptionLineNumberErrorKey
 						// _WKJavaScriptExceptionColumnNumberErrorKey
 						// _WKJavaScriptExceptionSourceURLErrorKey
-					default: Swift.print("Error: \(exception)")
+					default: Swift.print("Error: \(exception)", to: &stderr)
 				}
 			})
 		},
@@ -647,7 +648,13 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 		ps2: #function,
 		abort: { () -> Void in
 			// EOF'd by Ctrl-D
+			warn("got EOF from stdin, stopping console")
 			// self.close() // FIXME: self is still retained (by the browser?)
+#if os(OSX)
+			//NSProcessInfo.processInfo().enableAutomaticTermination("REPL")
+			ProcessInfo.processInfo.enableSuddenTermination()
+			NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
+#endif
 		})
 	}
 
@@ -830,6 +837,23 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 		//  https://github.com/chromium/chromium/blob/f18e79d901f56154f80eea1e2218544285e62623/chrome/browser/ui/cocoa/notifications/notification_builder_mac.mm
 		// https://www.w3.org/TR/notifications/#activating-a-notification
 		//   https://notifications.spec.whatwg.org/#activating-a-notification
+#if os(OSX)
+		let note = NSUserNotification()
+		note.title = title ?? ""
+		note.subtitle = tag ?? "" //empty strings wont be displayed
+		note.informativeText = body ?? ""
+		//note.contentImage = ?bubble pic? //iconurl
+		note.identifier = String(id) // TODO: make moar unique? would need to be stripped back to original before passing back to WK()
+		//note.hasReplyButton = true
+		//note.hasActionButton = true
+		//note.responsePlaceholder = "say something stupid"
+
+		note.userInfo = ["origin": origin, "type": type, "tabHash": hash]
+
+		note.soundName = NSUserNotificationDefaultSoundName // something exotic?
+		NSUserNotificationCenter.default.deliver(note)
+		// these can be listened for by all: http://pagesofinterest.net/blog/2012/09/observing-all-nsnotifications-within-an-nsapp/
+#endif
 	}
 
 }

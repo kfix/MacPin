@@ -2,7 +2,7 @@
 import CoreFoundation
 import WebKitPrivates
 
-struct NotificationCallbacks {
+struct WebViewNotificationCallbacks {
 
 	// Requests that a notification be shown.
 	// https://www.w3.org/TR/notifications/#showing-a-notification
@@ -31,14 +31,17 @@ struct NotificationCallbacks {
 		let origin = WKStringCopyCFString(CFAllocatorGetDefault().takeUnretainedValue(),
 			WKSecurityOriginCopyToString(WKNotificationGetSecurityOrigin(notification))) as String
 
-		let type = WKNotificationGetTypeID()
+		let type = Int(WKNotificationGetTypeID())
 
 		let idnum = WKNotificationGetID(notification)
 
 		warn("\(title) - \(body) - \(iconurl) - \(origin)", function: "showCallback")
-		AppScriptRuntime.shared.postNotification(title, subtitle: tag, msg: body, id: String(idnum))
-		// webview.showDesktopNotification(title: title, tag: tag, body: body, iconurl: iconurl, id: idnum, type: type, origin: origin, lang: lang, dir: dir)
-		// ^^ enables tab-focusing activations to webview's DOM
+		webview.showDesktopNotification(title: title, tag: tag, body: body, iconurl: iconurl, id: Int(idnum), type: type, origin: origin, lang: lang, dir: dir)
+
+		if let manager = getManager(webview) {
+			// let the webview know we sent it
+			WKNotificationManagerProviderDidShowNotification(manager, idnum)
+		}
 	}
 
 	// Requests that a notification that has already been shown be canceled.
@@ -87,12 +90,19 @@ struct NotificationCallbacks {
 		clearNotifications: clearCallback
 	)}
 
+	static func getManager(_ client: MPWebView) -> WKNotificationManagerRef? {
+		if let context = client.context {
+			return WKContextGetNotificationManager(context)
+		}
+		return nil
+	}
+
 	static func subscribe(_ client: MPWebView) {
 		warn()
 		var provider = makeProvider()
 		provider.base = WKNotificationProviderBase(version: 0, clientInfo: Unmanaged.passUnretained(client).toOpaque())
-		if let context = client.context {
-			WKNotificationManagerSetProvider(WKContextGetNotificationManager(context), &provider.base)
+		if let manager = getManager(client) {
+			WKNotificationManagerSetProvider(manager, &provider.base)
 		}
 		// func WKNotificationManagerProviderDidUpdateNotificationPolicy(_ managerRef: WKNotificationManagerRef!, _ origin: WKSecurityOriginRef!, _ allowed: Bool)
 	}

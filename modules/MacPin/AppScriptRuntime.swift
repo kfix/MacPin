@@ -172,7 +172,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		} else if let scriptURL = NSURL(string: urlstr), let script = try? NSString(contentsOf: scriptURL as URL
 		, encoding: String.Encoding.utf8.rawValue), let sourceURL = scriptURL.absoluteString {
 			// FIXME: script code could be loaded from anywhere, exploitable?
-			warn("\(scriptURL): read")
+			warn("\(scriptURL): read", function: "loadCommonJSScript")
 
 			let contextGroup = JSContextGetGroup(ctx)
 			let jsurl = JSStringCreateWithCFString(urlstr as CFString)
@@ -189,7 +189,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 			)
 
 			if errorLine == 0 {
-				warn("\(scriptURL): syntax checked ok")
+				warn("\(scriptURL): syntax checked ok", function: "loadCommonJSScript")
 
 				let contxt = JSGlobalContextCreateInGroup(contextGroup, cls)
 				JSGlobalContextSetName(contxt, JSStringCreateWithCFString(urlstr as CFString))
@@ -223,12 +223,12 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 					return exception!
 				}
 			} else {
-				warn("bad syntax: \(scriptURL) @ line \(errorLine)")
+				warn("bad syntax: \(scriptURL) @ line \(errorLine)", function: "loadCommonJSScript")
 				let errMessage = JSStringCopyCFString(kCFAllocatorDefault, jsErrorMsg) as String
 				warn(errMessage)
 			} // or pop open the script source-code in a new tab and highlight the offender
 		}
-		warn("\(urlstr): could not be read")
+		warn("\(urlstr): could not be read", function: "loadCommonJSScript")
 		return JSValueMakeNull(ctx)
 	}
 
@@ -305,7 +305,6 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 	}
 
 	static let initialize: JSObjectInitializeCallback = { ctx, obj in
-		warn("context created")
 		// this[Symbol.toStringTag] = "app"; this => [object app]
 
 		injectGlobal(ctx: ctx!, property: "require", function: cjsrequire) // workaround for &[JSStaticFunction] uselessness
@@ -320,17 +319,18 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 				console._logOriginal.apply(console, args);
 				_log(args);
 			}
-			console.log("_log hooked");
+			//console.log("_log hooked");
 		""" as CFString)
 		JSEvaluateScript(ctx, source, obj, nil, 1, nil)
 
 		//context.globalObject.setObject(nativeModules, forKeyedSubscript: modSpace as NSString) // copied values-by-ref, but the array is stale!
 		// retain(obj)
+		warn("", function: "initialize")
 	}
 
 	static let finalize: JSObjectFinalizeCallback = { obj in
-		warn("context freed")
 		// release(obj)
+		warn("", function: "finalize")
 	}
 
 	// https://developer.apple.com/documentation/javascriptcore/jsclassdefinition
@@ -445,7 +445,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #else //if os(OSX)
 		context._remoteInspectionEnabled = false
 		//context.logToSystemConsole = false
-
+#endif
 			// make thrown exceptions popup an nserror displaying the file name and error type,
 			//   which will be shunted to console.log
 			context.exceptionHandler = { context, exception in
@@ -461,13 +461,12 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 					NSLocalizedDescriptionKey: "<\(source ?? ""):\(line ?? -1):\(column ?? -1)> \(type ?? "noType"): \(message ?? "?")\n\(stack ?? "?")"
 					// exception seems to be Error.toString(). I want .message|line|column|stack too
 				])
-				//if !WKInspectorIsConnected(inspectorRef)
+				//if !WKInspectorIsConnected(inspectorRef) how do I get inspectorref of a JSContext ??
 				displayError(error) // FIXME: would be nicer to pop up an inspector pane or tab to interactively debug this
 				context?.exception = exception //default in JSContext.mm
 				return // gets returned to evaluateScript()?
 			}
-			// if you don't set the exception handler, JSC will directly pass them to console.* so they could bubble up to the Inspector
-#endif
+			// JSC will always pass exceptions to console.* so they can bubble up to any RemoteInspectors (Safari->Develop)
 
 		//context._debuggerRunLoop = CFRunLoopRef // FIXME: make a new thread for REPL and Web Inspector console eval()s
 		JSRemoteInspectorSetLogToSystemConsole(false)
@@ -789,6 +788,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		//NSProcessInfo.processInfo().disableSuddenTermination()
 		//NSProcessInfo.processInfo().disableAutomaticTermination("REPL")
 #endif
+		var stderr = FileHandle.standardError
+		// ^ stderr is unbuffered and is where warn() prints too
+
 		termiosREPL(
 			{ [unowned self] (line: String) -> Void in
 				let val = self.context.evaluateScript(line)
@@ -797,7 +799,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 					, let typ = self.context.exception.forProperty("name").toString()
 					, let msg = self.context.exception.forProperty("message").toString()
 					, let det = self.context.exception.toDictionary() {
-						print("\(str)")
+						print("\(str)", to: &stderr)
 						//warn(obj: det) // stack of error
 						//if str == "SyntaxError: Unexpected end of script" => Prompt.readNextLine?
 					}
@@ -806,21 +808,21 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 				if let rets = self.emit(.printToREPL, val as Any, true) { //handler, expression, colorize
 					rets.forEach { ret in
-						if let retstr = ret?.toString() { print(retstr) }
+						if let retstr = ret?.toString() { print(retstr, to: &stderr) }
 					}
 				} else if let val = val as? JSValue { // no REPLprint handler, just eval and dump
 					// FIXME: instead of waiting on the events returns, expose a repl object to the runtime that can be replaced
 					//  if replaced with a callable func, we will print(`repl.writer(result)`)
 					//   https://nodejs.org/dist/latest/docs/api/repl.html#repl_customizing_repl_output
 					//	 https://nodejs.org/dist/latest/docs/api/repl.html#repl_custom_evaluation_functions
-					print(val)
+					print(val, to: &stderr)
 					// !val.isUndefined, self.context.assigntoKey("_", val)
 						// https://nodejs.org/dist/latest/docs/api/repl.html#repl_assignment_of_the_underscore_variable
 					// return val??  then abort(val) could do something special?
 				} else {
 					// TODO: support multi-line input
 					//	https://nodejs.org/dist/latest/docs/api/repl.html#repl_recoverable_errors
-					print("null [not-bridged]")
+					print("null [not-bridged]", to: &stderr)
 				}
 			},
 			ps1: #file,

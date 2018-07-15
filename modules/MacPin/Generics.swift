@@ -21,9 +21,38 @@ import Prompt // https://github.com/neilpa/swift-libedit
 var prompter: Async? = nil
 #endif
 
+var startTime = Date()
+
+extension FileHandle: TextOutputStream {
+  public func write(_ string: String) {
+    guard let data = string.data(using: .utf8) else { return }
+    self.write(data)
+  }
+}
+
+
+extension TimeInterval {
+    // builds string in app's labels format 00:00.0
+    func stringFormatted() -> String {
+        var miliseconds = (self * 10).rounded() / 10
+        let interval = Int(self)
+        let seconds = interval % 60
+        let minutes = (interval / 60) % 60
+        return String(format: "%02d:%02d.%03.f", minutes, seconds, miliseconds)
+    }
+}
+
 func warn(_ msg: String = String(), function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
+	// https://forums.swift.org/t/supplement-file-line-and-function-with-context/9505/2
 	// https://github.com/swisspol/XLFacility ?
-	FileHandle.standardError.write("[\(NSDate())] <\(file):\(line):\(column)> [\(function)] \(msg)\n".data(using: .utf8)!)
+
+	// FIXME if REPL waiting, reset TTY cursor to line^?
+
+	var stderr = FileHandle.standardError
+	//print("[\(startTime - startTime.timeIntervalSinceNow)] <\(file):\(line):\(column)> [\(function)] \(msg)", to: &stderr) // formatedd absolute time
+
+	print("\r[\(DateInterval(start: startTime, end: Date()).duration.stringFormatted())] <\(file):\(line):\(column)> [\(function)] \(msg)", to: &stderr) // min:sec.ms
+
 #if WARN2NSLOG
 	NSLog("<\(file):\(line):\(column)> [\(function)] \(msg)")
 	//FIXME timestamp?
@@ -37,6 +66,12 @@ func warn(_ msg: String = String(), function: StaticString = #function, file: St
 #if SYSLOG
 	// http://stackoverflow.com/questions/33194791/how-can-i-use-syslog-in-swift
 #endif
+}
+
+func warn(_ items: Any..., function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
+	var out = ""
+	debugPrint(items, separator: " ", terminator: "", to: &out)
+	warn(out, function: function, file: file, line: line, column: column)
 }
 
 func warn(obj: Any?, function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
@@ -294,7 +329,7 @@ func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2:
 			// L: command dispatched, restart loop
 		}
 		// prompt loop killed, dealloc'd?
-		//NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
+		NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
 		//warn("restarting REPL!")
 		//termiosREPL(eval, ps1: ps1, ps2: ps2, abort: abort) //restart!
 	}

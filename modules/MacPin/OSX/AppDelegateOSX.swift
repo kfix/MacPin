@@ -3,7 +3,6 @@ import ObjectiveC
 import WebKitPrivates
 import Darwin
 //import Bookmarks
-import Async
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
 open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
@@ -39,8 +38,6 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 		UserDefaults.standard.removeObject(forKey: "__WebInspectorPageGroupLevel1__.WebKit2InspectorStartsAttached") // #13 fixed
 
-		//browserController.title = nil
-		//browserController.canPropagateSelectedChildViewControllerTitle = true
 		super.init()
 	}
 
@@ -176,6 +173,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		winMenu.submenu?.addItem(MenuItem("Close Tab", #selector(BrowserViewControllerOSX.closeTab(_:)), "w", [.command]))
 		winMenu.submenu?.addItem(MenuItem("Show Next Tab", #selector(NSTabView.selectNextTabViewItem(_:)), String(format:"%c", NSTabCharacter), [.control]))
 		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", #selector(NSTabView.selectPreviousTabViewItem(_:)), String(format:"%c", NSTabCharacter), [.control, .shift]))
+		winMenu.submenu?.addItem(MenuItem("Show Tab Overview", #selector(WebViewControllerOSX.snapshotButtonClicked(_:)), "\\", [.shift, .command]))
 		app!.mainMenu?.addItem(winMenu)
 
 		tabListMenu.isHidden = true
@@ -212,30 +210,29 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		// NSApp.appearance = NSAppearance(named: .darkAqua) // NSApp.effectiveAppearance
 
 		NSAppleEventManager.shared().setEventHandler(self, andSelector: #selector(MacPinAppDelegateOSX.handleGetURLEvent(_:replyEvent:)), forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)) //route registered url schemes
+
+		warn()
+		if !AppScriptRuntime.shared.loadMainScript() { // load main.js, if present
+			self.browserController.extend(AppScriptRuntime.shared.exports) // expose our default browser instance early on, because legacy
+			BrowserController.self.exportSelf(AppScriptRuntime.shared.context.globalObject) // & the type for self-setup
+			AppScriptRuntime.shared.exports.setObject(MPWebView.self, forKeyedSubscript: "WebView" as NSString) // because legacy
+			AppScriptRuntime.shared.exports.setObject("", forKeyedSubscript: "launchedWithURL" as NSString)
+			AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
+		}
+
+		AppScriptRuntime.shared.emit(.AppWillFinishLaunching, self) // allow JS to replace our browserController
+		self.shortcutsMenu.submenu = self.browserController.shortcutsMenu // update the menu from browserController
+		self.shortcutsMenu.submenu?.title = "Shortcuts" // FIXME: allow JS to customize title?
+		self.shortcutsMenu.isHidden = !(self.browserController.shortcutsMenu.numberOfItems > 0)
+		self.tabListMenu.submenu = self.browserController.tabMenu
+		self.tabListMenu.submenu?.title = "Tabs"
+		self.tabListMenu.isHidden = false
+		AppScriptRuntime.shared.context.evaluateScript("eval = null;") // security thru obscurity
 	}
 
     public func applicationDidFinishLaunching(_ notification: Notification) { //dock icon stops bouncing
-		warn()
-		let booter = Async.main {
-			if !AppScriptRuntime.shared.loadMainScript() { // load main.js, if present
-				self.browserController.extend(AppScriptRuntime.shared.exports) // expose our default browser instance early on, because legacy
-				BrowserController.self.exportSelf(AppScriptRuntime.shared.context.globalObject) // & the type for self-setup
-				AppScriptRuntime.shared.exports.setObject(MPWebView.self, forKeyedSubscript: "WebView" as NSString) // because legacy
-				AppScriptRuntime.shared.exports.setObject("", forKeyedSubscript: "launchedWithURL" as NSString)
-				AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
-			}
 
-			AppScriptRuntime.shared.emit(.AppWillFinishLaunching, self) // allow JS to replace our browserController
-			self.shortcutsMenu.submenu = self.browserController.shortcutsMenu // update the menu from browserController
-			self.shortcutsMenu.submenu?.title = "Shortcuts" // FIXME: allow JS to customize title?
-			self.shortcutsMenu.isHidden = !(self.browserController.shortcutsMenu.numberOfItems > 0)
-			self.tabListMenu.submenu = self.browserController.tabMenu
-			self.tabListMenu.submenu?.title = "Tabs"
-			self.tabListMenu.isHidden = false
-			AppScriptRuntime.shared.context.evaluateScript("eval = null;") // security thru obscurity
-
-			AppScriptRuntime.shared.emit(.AppFinishedLaunching, "launched with this url") // FIXME: provide real URLs
-		}
+		AppScriptRuntime.shared.emit(.AppFinishedLaunching, "FIXME: provide real launch URLs")
 
 /*
 		http://stackoverflow.com/a/13621414/3878712
@@ -318,17 +315,15 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 		//NSApp.setServicesProvider(ServiceOSX())
 
-		booter.main { // booter's JS tab additions are done on background queue -- wait for them to flush out
-			if self.browserController.tabs.count < 1 { self.browserController.newTabPrompt() } //don't allow a tabless state
+		if self.browserController.tabs.count < 1 { self.browserController.newTabPrompt() } //don't allow a tabless state
 
-			self.windowController = self.browserController.present()
+		self.windowController = self.browserController.present()
 
-			if let wc = self.windowController, let window = wc.window, let fr = window.firstResponder {
-				// window.makeFirstResponder(self.browserController.view)
-				// scripts may have already added tabs which would have changed win's responders
-				warn("focus is on: `\(fr)`")
-				//warn(obj: fr) // crashes if any nils are in the responder chain!
-			}
+		if let wc = self.windowController, let window = wc.window, let fr = window.firstResponder {
+			// window.makeFirstResponder(self.browserController.view)
+			// scripts may have already added tabs which would have changed win's responders
+			warn("focus is on: `\(fr)`")
+			//warn(obj: fr) // crashes if any nils are in the responder chain!
 		}
 
     }
@@ -361,7 +356,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		AppScriptRuntime.shared.resetStates()
 		//browserController.close() // kill any zombie tabs -- causes lock-loop?
 		// unfocus app?
-#if arch(x86_64) || arch(i386)
+#if arch(x86_64) || arch(i386) // !TARGET_OS_EMBEDDED || TARGET_OS_SIMULATOR
 		if prompter != nil { return .terminateLater } // wait for user to EOF the Prompt
 #endif
 		return .terminateNow
@@ -429,7 +424,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 	//didDeliverNotification
 	public func userNotificationCenter(_ center: NSUserNotificationCenter, didActivate notification: NSUserNotification) {
-		warn("user clicked notification")
+		warn("user clicked notification for app")
 
 		if AppScriptRuntime.shared.anyHandled(.handleClickedNotification,
 			(notification.title ?? "") as NSString, (notification.subtitle ?? "") as NSString,
@@ -438,7 +433,21 @@ extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 				center.removeDeliveredNotification(notification)
 		}
 
-		//TODO: check the identifier with UserNotifier.shared to find the specific WebView:JS:onclick's to ping ...
+		if let info =  notification.userInfo, let type = info["type"] as? Int, let origin = info["origin"] as? String, let tabHash = info["tabHash"] as? UInt {
+			//warn(obj: info)
+
+			if let webview = browserController.tabs.filter({ UInt($0.hash) == tabHash }).first {
+				if let idstr = notification.identifier, let id = UInt64(idstr), let manager = WebViewNotificationCallbacks.getManager(webview) {
+					// let the webview know we sent it
+					warn("app notification is for tab: \(webview)")
+					WKNotificationManagerProviderDidClickNotification(manager, id)
+					// void return, so no confirmation that webview accepted/processed the click
+					browserController.tabSelected = webview
+					// dismiss notification ....
+				}
+			}
+
+		}
 	}
 
 	// always display notifcations, even if app is active in foreground (for alert sounds)
