@@ -162,7 +162,7 @@ app.on('printToREPL', function (result, colorize) {
 	var rtype = vtype(result);
 	if (rtype == 'Function') description = REPLdump(result);
 	//if (typeof result == 'object') description += Object.keys(result);
-	if (typeof result != 'undefined' && result.__proto__) description += `\n${rtype}.__proto__: ${Object.getOwnPropertyNames(result.__proto__)}`;
+	if (typeof result != 'undefined' && !(result === null) && result.__proto__) description += `\n${rtype}.__proto__: ${Object.getOwnPropertyNames(result.__proto__)}`;
 	var ret = `[${rtype}] = ${description}`;
 	return ret;
 });

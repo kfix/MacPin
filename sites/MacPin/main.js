@@ -173,6 +173,8 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut('Notification test', 'https://ttsvetko.github.io/HTML5-Desktop-Notifications/');
 
 	// http://user-agents.me
+	browser.addShortcut('Examine WebKit User-Agent', 'http://browserspy.dk/webkit.php');
+	browser.addShortcut('Safari Version history', 'https://en.wikipedia.org/wiki/Safari_version_history');
 	browser.addShortcut('UA: Safari 11 Mac', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/604.1.29 (KHTML, like Gecko) Version/11.0 Safari/604.1.129"], setAgent);
 	browser.addShortcut('UA: Safari 8 Mac', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/600.6.3 (KHTML, like Gecko) Version/8.0.6 Safari/600.6.3"], setAgent);
 	browser.addShortcut('UA: iPhone', ["Mozilla/5.0 (iPhone; CPU iPhone OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"], setAgent);
