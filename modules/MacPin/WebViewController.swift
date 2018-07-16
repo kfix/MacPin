@@ -36,7 +36,7 @@ import JavaScriptCore
 		WebViewUICallbacks.subscribe(webview)
 
 #if os(OSX)
-		NotificationCallbacks.subscribe(webview)
+		WebViewNotificationCallbacks.subscribe(webview)
 		// sometimes the webview will go away on its own a minute after being closed, sometime it won't ...
 
 		representedObject = webview	// OSX omnibox/browser uses KVC to interrogate webview
