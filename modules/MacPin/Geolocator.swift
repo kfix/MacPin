@@ -1,47 +1,12 @@
 import Foundation
 import CoreLocation
-import WebKit
 import WebKitPrivates
-
-struct GeolocationCallbacks {
-	// thunks for WebKit geolocation C APIs
-	static let setEnableHighAccuracyCallback: WKGeolocationProviderSetEnableHighAccuracyCallback = { manager, enable, clientInfo in
-		let geolocator = unsafeBitCast(clientInfo, to: Geolocator.self)
-		// https://github.com/WebKit/webkit/blob/2d04a55b4031d09c912c4673d3e753357b383071/Tools/TestWebKitAPI/Tests/WebKit/Geolocation.cpp#L68
-		if enable {
-			geolocator.manager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-		}
-	}
-
-	static let startUpdatingCallback: WKGeolocationProviderStartUpdatingCallback = { manager, clientInfo in
-		let geolocator = unsafeBitCast(clientInfo, to: Geolocator.self)
-		geolocator.manager.startUpdatingLocation()
-
-		if let location = geolocator.lastLocation {
-			warn(location.description)
-
-			// https://github.com/WebKit/webkit/blob/master/Source/WebCore/Modules/geolocation/ios/GeolocationPositionIOS.mm
-			WKGeolocationManagerProviderDidChangePosition(manager,
-				WKGeolocationPositionCreate(location.timestamp.timeIntervalSince1970, location.coordinate.latitude, location.coordinate.longitude, location.horizontalAccuracy)
-			)
-		}
-	}
-
-	static let stopUpdatingCallback: WKGeolocationProviderStopUpdatingCallback = { manager, clientInfo in
-		let geolocator = unsafeBitCast(clientInfo, to: Geolocator.self)
-		//geolocator.manager.stopUpdatingLocation()
-		// FIXME: should unsubscribe the calling webview so Geol'r can choose to stop if no subscribers remain
-	}
-}
 
 class Geolocator: NSObject  {
 
-	var geoProvider = WKGeolocationProviderV1(
-		base: WKGeolocationProviderBase(),
-		startUpdating: GeolocationCallbacks.startUpdatingCallback,
-		stopUpdating: GeolocationCallbacks.stopUpdatingCallback,
-		setEnableHighAccuracy: GeolocationCallbacks.setEnableHighAccuracyCallback
-	)
+	lazy var geoProvider: WKGeolocationProviderV1 = {
+		return WebViewGeolocationCallbacks.makeProvider(self)
+	}()
 
 	static let shared = Geolocator() // create & export the singleton
 	let manager = CLLocationManager()
@@ -64,7 +29,6 @@ class Geolocator: NSObject  {
 #if os(OSX)
 	override init() {
 		super.init()
-		geoProvider.base.clientInfo = UnsafeRawPointer(Unmanaged.passUnretained(self).toOpaque()) // +0
 		manager.delegate = self
 		manager.desiredAccuracy = kCLLocationAccuracyBest
 	}
@@ -78,18 +42,28 @@ class Geolocator: NSObject  {
 		}
 	}
 
-	func subscribeToLocationEvents(webview: MPWebView) {
+	@discardableResult
+	func subscribeToLocationEvents(webview: MPWebView) -> Bool {
 
-		if !CLLocationManager.locationServicesEnabled() {
+		if !CLLocationManager.locationServicesEnabled() { // device location is off
 #if !os(OSX)
-			Geolocator.shared.manager.requestWhenInUseAuthorization()
+			manager.requestWhenInUseAuthorization() // runs async! Grrr....
 #endif
+			manager.startUpdatingLocation() // asyncly (prompts for app permission on OSX if needed) & warms up the fix
 		}
 
-		// https://github.com/WebKit/webkit/blob/827d99acfeb79537ec9ce26f4bb5a438ba2f5463/Tools/TestWebKitAPI/Tests/WebKitCocoa/UIDelegate.mm#L144
-		WKGeolocationManagerSetProvider(WKContextGetGeolocationManager(webview.context), &geoProvider.base)
-		// skipping this did not fix post-nav retain cycle
-		manager.startUpdatingLocation()
+		// FIXME: how to wait to ensure prompts were fired?
+
+		//let appvds: [CLAuthorizationStatus] = [.authorizedAlways, .authorizedWhenInUse] // https://bugs.swift.org/browse/SR-4644
+		//if appvds.contains(CLLocationManager.authorizationStatus()) {
+		///if case .authorizedAlways = CLLocationManager.authorizationStatus() {
+
+		if CLLocationManager.locationServicesEnabled() {
+			WebViewGeolocationCallbacks.subscribe(&geoProvider, webview: webview)
+			return true
+		}
+
+		return false
 	}
 
 	func unsubscribeFromLocationEvents(webview: MPWebView) {

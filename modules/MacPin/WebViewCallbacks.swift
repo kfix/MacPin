@@ -1,5 +1,6 @@
 // thunk-chunks for WebKit C APIs
 import CoreFoundation
+import CoreLocation
 import WebKitPrivates
 
 struct WebViewNotificationCallbacks {
@@ -157,5 +158,64 @@ struct WebViewUICallbacks {
 		uiClient.base.clientInfo = UnsafeRawPointer(Unmanaged.passUnretained(webview).toOpaque()) // +0
 		guard let page = webview._page else { return }
 		WKPageSetPageUIClient(page, &uiClient.base)
+	}
+}
+
+struct WebViewGeolocationCallbacks {
+	// thunks for WebKit geolocation C APIs
+	static let setEnableHighAccuracyCallback: WKGeolocationProviderSetEnableHighAccuracyCallback = { manager, enable, clientInfo in
+		let geolocator = unsafeBitCast(clientInfo, to: Geolocator.self)
+		// https://github.com/WebKit/webkit/blob/2d04a55b4031d09c912c4673d3e753357b383071/Tools/TestWebKitAPI/Tests/WebKit/Geolocation.cpp#L68
+		if enable {
+			warn(enable.description, function: "setHighAccuracy")
+			geolocator.manager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+		}
+	}
+
+	static let startUpdatingCallback: WKGeolocationProviderStartUpdatingCallback = { manager, clientInfo in
+		let geolocator = unsafeBitCast(clientInfo, to: Geolocator.self)
+		geolocator.manager.startUpdatingLocation()
+
+		if let location = geolocator.lastLocation {
+			warn(location.description, function: "startUpdating")
+
+			// https://github.com/WebKit/webkit/blob/master/Source/WebCore/Modules/geolocation/ios/GeolocationPositionIOS.mm
+			WKGeolocationManagerProviderDidChangePosition(manager,
+				WKGeolocationPositionCreate(location.timestamp.timeIntervalSince1970, location.coordinate.latitude, location.coordinate.longitude, location.horizontalAccuracy)
+			)
+		}
+	}
+
+	static let stopUpdatingCallback: WKGeolocationProviderStopUpdatingCallback = { manager, clientInfo in
+		let geolocator = unsafeBitCast(clientInfo, to: Geolocator.self)
+		//geolocator.manager.stopUpdatingLocation()
+		// FIXME: should unsubscribe the calling webview (<WKGeolocationManagerRef>manager->?) so Geol'r can choose to stop if no subscribers remain
+	}
+
+	//WKGeolocationProviderV? never got slots wired up for these:
+	//static let didFailCallback: WKGeolocationManagerProviderDidFailToDeterminePosition = { manager in
+	//static let didFailWithMessageCallback: WKGeolocationManagerProviderDidFailToDeterminePositionWithErrorMessage = { manager, errorMessage in
+
+	static func makeProvider(_ client: Geolocator) -> WKGeolocationProviderV1 { return WKGeolocationProviderV1(
+		base: WKGeolocationProviderBase(version: 1, clientInfo: Unmanaged.passUnretained(client).toOpaque()), // +0
+		startUpdating: startUpdatingCallback,
+		stopUpdating: stopUpdatingCallback,
+		setEnableHighAccuracy: setEnableHighAccuracyCallback
+
+	)}
+
+	static func getManager(_ client: MPWebView) -> WKGeolocationManagerRef? {
+		if let context = client.context {
+			return WKContextGetGeolocationManager(context)
+		}
+		return nil
+	}
+
+	// https://github.com/WebKit/webkit/blob/827d99acfeb79537ec9ce26f4bb5a438ba2f5463/Tools/TestWebKitAPI/Tests/WebKitCocoa/UIDelegate.mm#L144
+	static func subscribe(_ provider: inout WKGeolocationProviderV1, webview: MPWebView) {
+		warn()
+		if let manager = getManager(webview) {
+			WKGeolocationManagerSetProvider(manager, &provider.base)
+		}
 	}
 }
