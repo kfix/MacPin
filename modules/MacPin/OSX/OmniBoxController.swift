@@ -20,11 +20,6 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	//override init(frame frameRect: NSRect) {
 	//	self.super(frame: frameRect)
 	func viewDidLoad() {
-		let appearance = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") ?? "Light"
-		if appearance == "Dark" {
-			drawsBackground = false
-			textColor = NSColor.labelColor
-		}
 		isSelectable = true
 		isEditable = true
 	}
@@ -34,12 +29,14 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			// draw a Safari style progress-line along edge of the text box's focus ring
 			//var progressRect = NSOffsetRect(bounds, 0, 4) // top edge
 			var progressRect = NSOffsetRect(bounds, 0, NSMaxY(bounds) - 4) // bottom edge
+			progressRect = NSInsetRect(progressRect, 3, 0) // laterally shrink to fit within the flat bottom of the bezel
 			progressRect.size.height = 6 // line thickness
 			progressRect.size.width *= progress == 1.0 ? 0 : CGFloat(progress) // only draw line when downloading
 
 			NSColor(calibratedRed:0.0, green: 0.0, blue: 1.0, alpha: 0.4).set() // transparent blue line
 			progressRect.fill(using: .sourceOver)
 		} else {
+			NSColor.clear.setFill() // clear background outside of bezel
 			bounds.fill(using: .copy) // .clear
 		}
 		super.draw(dirtyRect)
@@ -71,7 +68,6 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	@objc weak var webview: MPWebView? = nil {
 		didSet { //KVC to copy updates to webviews url & title (user navigations, history.pushState(), window.title=)
 			if let wv = webview {
-				warn()
 				view.bind(NSBindingName.toolTip, to: wv, withKeyPath: #keyPath(MPWebView.title), options: nil)
 				view.bind(NSBindingName.value, to: wv, withKeyPath: #keyPath(MPWebView.url), options: nil)
 				view.bind(NSBindingName.fontBold, to: wv, withKeyPath: #keyPath(MPWebView.hasOnlySecureContent), options: nil)
@@ -99,11 +95,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	required init?(coder: NSCoder) { super.init(coder: coder) }
 	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
 	override func loadView() { //view = urlbox } // NIBless
-		if DispatchQueue.getSpecific(key: mainQueueKey) == mainQueueValue {
-			view = urlbox
-		} else {
-			DispatchQueue.main.sync { view = urlbox }
-		}
+		view = urlbox
 	}
 
 	func popup(_ webview: MPWebView?) {
@@ -121,19 +113,13 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 
 	convenience init() {
 		self.init(nibName:nil, bundle:nil)
-
-		if DispatchQueue.getSpecific(key: mainQueueKey) == mainQueueValue {
-			preferredContentSize = CGSize(width: 600, height: 24) //app hangs on view presentation without this!
-		} else {
-			DispatchQueue.main.sync {
-				preferredContentSize = CGSize(width: 600, height: 24) //app hangs on view presentation without this!
-			}
-		}
+		preferredContentSize = CGSize(width: 600, height: 24) //app hangs on view presentation without this!
 	}
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
  		// prepareForReuse() {...} ?
+
 		let appearance = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") ?? "Light"
 		if appearance == "Dark" {
 			urlbox.drawsBackground = false
@@ -142,6 +128,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 		urlbox.wantsLayer = true
 		urlbox.bezelStyle = .roundedBezel
 		urlbox.toolTip = ""
+
 		//urlbox.menu = NSMenu //ctrl-click context menu
 		// search with DuckDuckGo
 		// go to URL
