@@ -10,5 +10,5 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.tabSelected = new $.WebView({ url: "http://vine.co" });
 };
 
-let injectTab = require(`file://${$.app.resourcePath}/app_injectTab.js`);
+let injectTab = require('app_injectTab.js');
 delegate; //return this to macpin

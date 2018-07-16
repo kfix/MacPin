@@ -8,8 +8,8 @@
 
 // https://github.com/electron/electron-quick-start/blob/master/main.js
 const {app, BrowserWindow, WebView} = require('@MacPin');
-let injectTab = require(`file://${app.resourcePath}/app_injectTab.js`);
-let enDarken = require(`file://${app.resourcePath}/enDarken.js`);
+let injectTab = require('app_injectTab.js');
+let enDarken = require('enDarken.js');
 
 var ntpTab = new WebView("file:///usr/share/doc/ntp/index.html");
 //var gitTab = new WebView({url: 'http://github.com/kfix/MacPin'});
@@ -171,7 +171,7 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	// window.AudioContext = window.AudioContext || window.webkitAudioContext;
 	browser.addShortcut('Geolocation test', 'https://onury.io/geolocator/?content=examples');
 	browser.addShortcut('Notification test', 'https://ttsvetko.github.io/HTML5-Desktop-Notifications/');
-
+	browser.addShortcut('Apple Maps test', 'https://maps.apple.com/place?address=One%20Infinite%20Loop');
 	// http://user-agents.me
 	browser.addShortcut('Examine WebKit User-Agent', 'http://browserspy.dk/webkit.php');
 	browser.addShortcut('Safari Version history', 'https://en.wikipedia.org/wiki/Safari_version_history');
@@ -232,6 +232,8 @@ app.on('AppFinishedLaunching', (launchURLs) => {
 	if (!('printToREPL' in app.eventCallbacks)) {
 		app.loadAppScript(`file://${app.resourcePath}/app_repl.js`);
 	}
+
+	// app.postHTML5Notification({title: "title", subtitle: "sub", body: "this is a test", type: 1, tabHash: ntpTab.hash, origin: "ntpTab"})
 });
 
 // https://www.lucidchart.com/techblog/2018/02/14/javascriptcore-the-holy-grail-of-cross-platform/

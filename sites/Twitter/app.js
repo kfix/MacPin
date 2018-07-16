@@ -12,5 +12,5 @@ delegate.AppFinishedLaunching = function() {
 	//"Mozilla/5.0 (iPad; CPU OS 9_3_2 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Mobile/13F69 Twitter for iPad"})
 };
 
-let injectTab = require(`file://${$.app.resourcePath}/app_injectTab.js`);
+let injectTab = require('app_injectTab.js');
 delegate; //return this to macpin

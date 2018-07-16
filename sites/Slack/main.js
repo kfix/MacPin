@@ -123,7 +123,7 @@ app.on('launchURL', (url) => {
 	}
 });
 
-//let enDarken = require(`file://${app.resourcePath}/enDarken.js`);
+//let enDarken = require('enDarken.js');
 // ^^ uses CSS filters, CPU intensive
 let enDarken = function(tab) {
 	let idx = tab.styles.indexOf('dark');

@@ -13,7 +13,7 @@ import Foundation
 import JavaScriptCore // https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
 import WebKitPrivates
 
-import XMLHTTPRequest // https://github.com/Lukas-Stuehrk/XMLHTTPRequest
+//import XMLHTTPRequest // https://github.com/Lukas-Stuehrk/XMLHTTPRequest
 
 #if arch(x86_64) || arch(i386)
 import Prompt // https://github.com/neilpa/swift-libedit
@@ -81,7 +81,7 @@ extension JSValue {
 	//func registerMIMEType(scheme: String)
 	func registerUTI(_ scheme: String)
 	func changeAppIcon(_ iconpath: String)
-	@objc(postNotification::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?)
+	@objc(postNotification:::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?, info: JSValue?)
 	func postHTML5Notification(_ object: [String:AnyObject])
 	func openURL(_ urlstr: String, _ app: String?)
 	func sleep(_ secs: Double)
@@ -169,66 +169,83 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 
 			return exports
 
-		} else if let scriptURL = NSURL(string: urlstr), let script = try? NSString(contentsOf: scriptURL as URL
-		, encoding: String.Encoding.utf8.rawValue), let sourceURL = scriptURL.absoluteString {
-			// FIXME: script code could be loaded from anywhere, exploitable?
-			warn("\(scriptURL): read", function: "loadCommonJSScript")
-
-			let contextGroup = JSContextGetGroup(ctx)
-			let jsurl = JSStringCreateWithCFString(urlstr as CFString)
-
-			let jsErrorMsg = JSStringCreateWithCFString("" as CFString)
-			var errorLine = Int32(0)
-			let script = JSScriptCreateFromString(
-				contextGroup,
-				jsurl,
-				/*startingLineNumber:*/ 1,
-				/*script:*/ JSStringCreateWithCFString(script as CFString),
-				/*errorMessage*/ UnsafeMutablePointer(jsErrorMsg),
-				/*errorLine*/ &errorLine
-			)
-
-			if errorLine == 0 {
-				warn("\(scriptURL): syntax checked ok", function: "loadCommonJSScript")
-
-				let contxt = JSGlobalContextCreateInGroup(contextGroup, cls)
-				JSGlobalContextSetName(contxt, JSStringCreateWithCFString(urlstr as CFString))
-
-				let globalObj = JSContextGetGlobalObject(contxt)
-				var exception = JSValueMakeUndefined(contxt)
-
-				// https://nodejs.org/api/modules.html#modules_module_exports
-				// https://github.com/requirejs/requirejs/issues/89
-				let module = JSObjectMake(contxt, nil, nil)
-				let exports = JSObjectMake(contxt, nil, nil)
-				JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString), exports, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
-				JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("uri" as CFString), JSValueMakeString(contxt, jsurl), JSPropertyAttributes(kJSPropertyAttributeNone), nil)
-				JSObjectSetProperty(contxt, globalObj, JSStringCreateWithCFString("module" as CFString), module, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
-
-				// https://nodejs.org/api/modules.html#modules_exports_shortcut
-				JSEvaluateScript(contxt, JSStringCreateWithUTF8CString("""
-					Object.defineProperty(this, "exports", {
-						get: function () {
-							return module.exports;
-						}
-					});
-				"""), nil, nil, 1, nil)
-
-				// `this === module.exports` per https://stackoverflow.com/a/30894970/3878712
-				let this = JSValueToObject(contxt, exports, nil)
-
-				if let ret = JSScriptEvaluate(contxt, script, this, &exception) {
-					return JSObjectGetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString), nil)
-				} else if !JSValueIsUndefined(contxt, exception) {
-					return exception!
-				}
-			} else {
-				warn("bad syntax: \(scriptURL) @ line \(errorLine)", function: "loadCommonJSScript")
-				let errMessage = JSStringCopyCFString(kCFAllocatorDefault, jsErrorMsg) as String
-				warn(errMessage)
-			} // or pop open the script source-code in a new tab and highlight the offender
 		}
-		warn("\(urlstr): could not be read", function: "loadCommonJSScript")
+
+		// not a synthetic require, so going to source a real file
+		let scriptTxt: String
+		let scriptURL: String
+		let resources = URL(fileURLWithPath: (Bundle.main.resourcePath ?? ""), isDirectory: true)
+
+		if	let sourceURL = URL(string: urlstr, relativeTo: resources),
+			let source = try? String(contentsOf: sourceURL, encoding: .utf8) {
+				scriptTxt = source
+				scriptURL = sourceURL.absoluteString
+		} else if let sourceURL = URL(string: urlstr),
+			let source = try? String(contentsOf: sourceURL, encoding: .utf8) {
+				scriptTxt = source
+				scriptURL = sourceURL.absoluteString
+		} else {
+			warn("\(urlstr): could not be read", function: "loadCommonJSScript")
+			return JSValueMakeNull(ctx)
+		}
+
+		// FIXME: script code could be loaded from anywhere, exploitable?
+		warn("\(scriptURL): read", function: "loadCommonJSScript")
+
+		let contextGroup = JSContextGetGroup(ctx)
+		let jsurl = JSStringCreateWithCFString(scriptURL as CFString)
+
+		let jsErrorMsg = JSStringCreateWithCFString("" as CFString)
+		var errorLine = Int32(0)
+		let script = JSScriptCreateFromString(
+			contextGroup,
+			jsurl,
+			/*startingLineNumber:*/ 1,
+			/*script:*/ JSStringCreateWithCFString(scriptTxt as CFString),
+			/*errorMessage*/ UnsafeMutablePointer(jsErrorMsg),
+			/*errorLine*/ &errorLine
+		)
+
+		if errorLine == 0 {
+			warn("\(scriptURL): syntax checked ok", function: "loadCommonJSScript")
+
+			let contxt = JSGlobalContextCreateInGroup(contextGroup, cls)
+			JSGlobalContextSetName(contxt, JSStringCreateWithCFString(urlstr as CFString))
+
+			let globalObj = JSContextGetGlobalObject(contxt)
+			var exception = JSValueMakeUndefined(contxt)
+
+			// https://nodejs.org/api/modules.html#modules_module_exports
+			// https://github.com/requirejs/requirejs/issues/89
+			let module = JSObjectMake(contxt, nil, nil)
+			let exports = JSObjectMake(contxt, nil, nil)
+			JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString), exports, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+			JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("uri" as CFString), JSValueMakeString(contxt, jsurl), JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+			JSObjectSetProperty(contxt, globalObj, JSStringCreateWithCFString("module" as CFString), module, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+
+			// https://nodejs.org/api/modules.html#modules_exports_shortcut
+			JSEvaluateScript(contxt, JSStringCreateWithUTF8CString("""
+				Object.defineProperty(this, "exports", {
+					get: function () {
+						return module.exports;
+					}
+				});
+			"""), nil, nil, 1, nil)
+
+			// `this === module.exports` per https://stackoverflow.com/a/30894970/3878712
+			let this = JSValueToObject(contxt, exports, nil)
+
+			if let ret = JSScriptEvaluate(contxt, script, this, &exception) {
+				return JSObjectGetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString), nil)
+			} else if !JSValueIsUndefined(contxt, exception) {
+				return exception!
+			}
+		} else {
+			warn("bad syntax: \(scriptURL) @ line \(errorLine)", function: "loadCommonJSScript")
+			let errMessage = JSStringCopyCFString(kCFAllocatorDefault, jsErrorMsg) as String
+			warn(errMessage)
+		} // or pop open the script source-code in a new tab and highlight the offender
+
 		return JSValueMakeNull(ctx)
 	}
 
@@ -694,7 +711,13 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	// TOIMPL: https://electronjs.org/docs/api/notification extend a Notification() shim
-	@objc(postNotification::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?) {
+	@objc(postNotification:::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?, info: JSValue?) {
+
+	var infoDict: [String: Any] = [:]
+	if let object = info, object.isObject, let jsdict = object.toDictionary() as? [String: Any] {
+		infoDict = jsdict
+	}
+
 #if os(OSX)
 		let note = NSUserNotification()
 		note.title = title ?? ""
@@ -707,6 +730,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		//note.responsePlaceholder = "say something stupid"
 
 		note.soundName = NSUserNotificationDefaultSoundName // something exotic?
+		note.userInfo = infoDict
 		NSUserNotificationCenter.default.deliver(note)
 		// these can be listened for by all: http://pagesofinterest.net/blog/2012/09/observing-all-nsnotifications-within-an-nsapp/
 #elseif os(iOS)
@@ -744,10 +768,11 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		//   https://developer.mozilla.org/en-US/docs/Web/API/notification/Notification
 		//  https://developer.apple.com/library/iad/documentation/AppleApplications/Conceptual/SafariJSProgTopics/Articles/SendingNotifications.html
 #if os(OSX)
+		var infoDict: [String: Any] = [:]
 		let note = NSUserNotification()
 		for (key, value) in object {
 			switch value {
-				case let title as String where key == "title": note.title = title
+				case let title as String where key == "title": note.title = title // minimum requirement
 				case let subtitle as String where key == "subtitle": note.subtitle = subtitle // not-spec
 				case let body as String where key == "body": note.informativeText = body
 				case let tag as String where key == "tag": note.identifier = tag
@@ -760,9 +785,13 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 					if let url = NSURL(string: image), let img = NSImage(contentsOf: url as URL) {
 						note.contentImage = img // right-side embed
 					}
-				default: warn("unhandled param: `\(key): \(value)`")
+				default:
+					warn("extra info: `\(key): \(value)`")
+					infoDict[key] = value
 			}
 		}
+		warn(obj: infoDict)
+		note.userInfo = infoDict
 		note.soundName = NSUserNotificationDefaultSoundName // something exotic?
 		NSUserNotificationCenter.default.deliver(note)
 #elseif os(iOS)
