@@ -37,6 +37,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	func inspect() -> String
 	// https://nodejs.org/api/util.html#util_custom_inspection_functions_on_objects
 
+	var hash: Int { get }
 	var transparent: Bool { get set }
 	var caching: Bool { get set }
 	var userAgent: String { get set }
@@ -856,4 +857,11 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 #endif
 	}
 
+#if	DEBUG
+	@objc override func _gestureEventWasNotHandled(byWebCore event: NSEvent!) {
+		// https://github.com/WebKit/webkit/commit/10f11d2d8227a7665c410c642ebb6cb9d482bfa8 r191299 10/19/2015
+		warn(event.debugDescription)
+		super._gestureEventWasNotHandled(byWebCore: event)
+	}
+#endif
 }

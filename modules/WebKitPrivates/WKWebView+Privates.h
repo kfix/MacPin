@@ -70,9 +70,16 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @property (nonatomic, setter=_setTopContentInset:) CGFloat _topContentInset;
 @property (nonatomic, setter=_setAutomaticallyAdjustsContentInsets:) BOOL _automaticallyAdjustsContentInsets;
 
+// https://bugs.webkit.org/show_bug.cgi?id=177022
 @property (nonatomic, readonly) WKPageRef _pageRefForTransitionToWKWebView  WK_API_AVAILABLE(macosx(WK_MAC_TBA));
 
 - (void)_setFrame:(NSRect)rect andScrollBy:(NSSize)offset WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+
+- (void)_gestureEventWasNotHandledByWebCore:(NSEvent *)event WK_API_AVAILABLE(macosx(10.13.4));
+- (void)_setCustomSwipeViews:(NSArray *)customSwipeViews WK_API_AVAILABLE(macosx(10.13.4));
+- (void)_setCustomSwipeViewsTopContentInset:(float)topContentInset WK_API_AVAILABLE(macosx(10.13.4));
+- (NSView *)_fullScreenPlaceholderView WK_API_AVAILABLE(macosx(10.13.4));
+- (NSWindow *)_fullScreenWindow WK_API_AVAILABLE(macosx(10.13.4));
 
 @property (nonatomic, readonly) BOOL _hasActiveVideoForControlsManager WK_API_AVAILABLE(macosx(10.12));
 - (void)_requestControlledElementID WK_API_AVAILABLE(macosx(10.12.3));
@@ -99,10 +106,12 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @property (nonatomic, setter=_setViewScale:) CGFloat _viewScale;
 
 // hard-renamed to ^background in 11/2015. only pre-macOS with no STP will respond to ^transparentBackground.
-// https://github.com/WebKit/webkit/commit/6cbd5051e809407615b2fd903dacc8c14bbd69eb
+// https://github.com/WebKit/webkit/commit/6cbd5051e809407615b2fd903dacc8c14bbd69eb =>
+// https://trac.webkit.org/browser/webkit/tags/Safari-602.1.11/Source/WebKit2/ChangeLog
 @property (nonatomic, setter=_setDrawsBackground:) BOOL _drawsBackground WK_API_AVAILABLE(macosx(10.12), ios(10.0));
 @property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground; // DEPRECATED!
 
+// https://bugs.webkit.org/show_bug.cgi?id=151276 ChangeLog-2015-11-21
 - (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo; // prints top frame
 - (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle WK_API_AVAILABLE(macosx(10.12), ios(10.0));
 
