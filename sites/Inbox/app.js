@@ -78,6 +78,7 @@ delegate.decideNavigationForURL = function(url, tab) {
 				!addr.startsWith("//5.client-channel.google.com") &&
 				!addr.startsWith("//6.client-channel.google.com") &&
 				!addr.startsWith("//apis.google.com") &&
+				!addr.startsWith("//notifications.google.com") &&
 				!addr.startsWith("//0.talkgadget.google.com") &&
 				!addr.startsWith("//1.talkgadget.google.com") &&
 				!addr.startsWith("//2.talkgadget.google.com") &&
