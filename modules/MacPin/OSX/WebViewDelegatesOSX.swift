@@ -184,10 +184,10 @@ extension WebViewController { // _WKInputDelegate
 }
 
 @available(OSX 10.12, *)
-extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
+@objc extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 	// https://bugs.webkit.org/show_bug.cgi?id=137759
 	// https://github.com/WebKit/webkit/blob/4b7052ab44fa581810188638d1fdf074e7d754ca/Tools/MiniBrowser/mac/WK2BrowserWindowController.m#L451
-	@objc func webView(_ webView: WKWebView!, runOpenPanelWithParameters parameters: WKOpenPanelParameters!, initiatedByFrame frame: WKFrameInfo!, completionHandler: (([NSURL]?) -> Void)!) {
+	func webView(_ webView: WKWebView!, runOpenPanelWith parameters: WKOpenPanelParameters!, initiatedByFrame frame: WKFrameInfo!, completionHandler: (([NSURL]?) -> Void)!) {
 		warn("<input> file upload panel opening!")
 		//pop open a save Panel to dump data into file
 		let openDialog = NSOpenPanel()
@@ -224,12 +224,11 @@ extension WebViewControllerOSX { // WKOpenPanel for <input> file uploading
 		// if unapproved, handle(false) & return now
 
 		if let mpwv = webView as? MPWebView {
-			Geolocator.shared.subscribeToLocationEvents(webview: mpwv)
-			// this should warm up the locator
-			// FIXME: do this with Async?
+			decisionHandler(Geolocator.shared.subscribeToLocationEvents(webview: mpwv))
+			return
 		}
 
-		decisionHandler(true) // signal that we are done
+		decisionHandler(false)
 	}
 
 	//func _webView(_ webView: WKWebView!, editorStateDidChange editorState: [AnyHashable : Any]!)

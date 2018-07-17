@@ -2,6 +2,8 @@
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
 
+const {BrowserWindow} = require('@MacPin');
+
 var delegate = {}; // our delegate to receive events from the webview app
 var inboxTab, inbox = {
 	transparent:false,
@@ -113,6 +115,25 @@ delegate.decideNavigationForURL = function(url, tab) {
 			return false;
 	}
 };
+
+// Inbox converts all links into window.open()s ... whoaa
+delegate.didWindowOpenForURL = function(url, newTab, tab) {
+
+	if (url.length > 0 && newTab) {
+		console.log(`window.open(${url})`);
+		$.browser.tabSelected = newTab;
+	} else if (newTab) {
+		console.log('popping new window!');
+		// have to add the "tab" (webview) to a browser in order for it
+		// to set its navigation and js delegates
+		// that's probably a bug...
+		let bro = new BrowserWindow(); // new window!
+		bro.tabs.push(newTab);
+		// new bro seems to garbage collect on its own! ftw
+	}
+
+	return true; // macpin would have popped open a tab on its own
+}
 
 delegate.handleUserInputtedInvalidURL = function(query) {
 	// assuming the invalid url is a search request

@@ -61,7 +61,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 //extension WebViewController: WKUIDelegate { } // javascript prompts, implemented per-platform
 // window.beforeunload -> runBeforeUnloadConfirmPanelWithMessage https://github.com/WebKit/webkit/commit/204a88b497f6d2051997226e940f088e6ab51178
 
-extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
+@objc extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 
 	// FUTURE: didPerformClientRedirectForNavigation https://github.com/WebKit/webkit/commit/9475f62f3602aa91309f00c64e4430a25d5ae4e9
 
@@ -322,14 +322,15 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 #endif
 	}
 
-	func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction,
-                windowFeatures: WKWindowFeatures) -> WKWebView? {
+	// (webView:createWebViewWithConfiguration:forNavigationAction:windowFeatures:)
+	@objc func webView(_ webView: WKWebView, createWebViewWithConfiguration configuration: WKWebViewConfiguration, forNavigationAction navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+	//func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
 		// called via JS:window.open()
 		// https://developer.mozilla.org/en-US/docs/Web/API/window.open
 		// https://developer.apple.com/library/prerelease/ios/documentation/WebKit/Reference/WKWindowFeatures_Ref/index.html
 
 		let srcurl = navigationAction.sourceFrame.request.url ?? NSURL(string:String())! as URL
-		let openurl = navigationAction.request.url ?? NSURL(string:String())! as URL
+		let openurl = navigationAction.request.url ?? NSURL(string:String())! as URL // JS can request a blank window, and wait till its returned to set the URL....grrr
 		let tgt = (navigationAction.targetFrame == nil) ? NSURL(string:String())! as URL : navigationAction.targetFrame!.request.url
 		//let tgtdom = navigationAction.targetFrame?.request.mainDocumentURL ?? NSURL(string:String())!
 		//^tgt is given as a string in JS and WKWebView synthesizes a WKFrameInfo from it _IF_ it matches an iframe title in the DOM
@@ -339,7 +340,6 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 		warn("JS <\(srcurl)>: `window.open(\(openurl), \(tgt?.absoluteString ?? ""));`")
 		if AppScriptRuntime.shared.anyHandled(.decideWindowOpenForURL, openurl.absoluteString as NSString, webView) { return nil }
 		let wv = MPWebView(config: configuration, agent: webView._customUserAgent)
-		popup(wv)
 #if os(OSX)
 		if (windowFeatures.allowsResizing ?? 0) == 1 {
 			if let window = view.window {
@@ -358,7 +358,7 @@ extension WebViewController: WKNavigationDelegate, WKNavigationDelegatePrivate {
 #endif
 		//if !tgt.description.isEmpty { evalJS("window.name = '\(tgt)';") }
 		if !openurl.description.isEmpty { wv.gotoURL(openurl as NSURL) } // this should be deferred with a timer so all chained JS calls on the window.open() instanciation can finish executing
-		AppScriptRuntime.shared.anyHandled(.didWindowOpenForURL, openurl.absoluteString as NSString, wv, webView)
+		if !AppScriptRuntime.shared.anyHandled(.didWindowOpenForURL, openurl.absoluteString as NSString, wv, webView) { popup(wv) }
 		return wv // window.open() -> Window()
 		//return nil //window.open() -> undefined
 	}
@@ -430,6 +430,19 @@ extension WebViewController: _WKIconLoadingDelegate {
 }
 
 extension WebViewController { //WKUIDelegatePrivate .. but platform/Delagtes will declare the conformation
+	// https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKitCocoa/UIDelegate.mm
+
+	// make dat status bar!
+	@objc func webView(_ sender: WebView!, mouseDidMoveOverElement elementInformation: [AnyHashable : Any]!, modifierFlags: Int) {
+		warn(obj: elementInformation)
+    	//eI.absoluteLinkURL.absoluteString "http://example.com/path"
+    	//eI.linkLabel  "link label"
+    	//eI.linkTitle  "link title"
+    	//flags .Shift
+    	//userInfo.class "_WKFrameHandle"
+    }
+
+	//@objc func _webView(_ webView: WKWebView!, getToolbarsAreVisibleWithCompletionHandler completionHandler: ((Bool) -> Void)!)
 
 	@objc func _webView(_ webView: WKWebView!, requestNotificationPermissionForSecurityOrigin securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
 		warn("Notification.requestPermission(...) <= \(webView.url?.absoluteString ?? "")")
@@ -437,5 +450,4 @@ extension WebViewController { //WKUIDelegatePrivate .. but platform/Delagtes wil
 		decisionHandler(true) // Notification.permission == "default" => "granted"
 	}
 
-	// @objc func _webView(_ webView: WKWebView!, createWebViewWithConfiguration configuration: WKWebViewConfiguration!, forNavigationAction navigationAction: WKNavigationAction!, windowFeatures: WKWindowFeatures!, completionHandler: ((WKWebView?) -> Void)!)
 }
