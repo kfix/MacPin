@@ -22,6 +22,16 @@ import Prompt // https://github.com/neilpa/swift-libedit
 import UserNotificationPrivates
 //import SSKeychain // https://github.com/soffes/sskeychain
 
+func getResourceURL(_ urlstr: String, function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) -> URL? {
+	guard let fileURL = Bundle.main.url(forResource: urlstr, withExtension: nil) ??
+	URL(string: urlstr)?.standardizedFileURL, fileURL.isFileURL else {
+		// FIXME: script code could be loaded from any path, exploitable?
+		warn("\(urlstr): could not be found", function: function, file: file, line: line, column: column)
+		return nil
+	}
+	return fileURL
+}
+
 // FIXME: AppScript needs a HandlerMethods enum instead of just tryFunc("unsafe-string")s everywhere....
 extension JSValue {
 	@discardableResult
@@ -175,8 +185,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		let scriptTxt: String
 		let scriptURL: String
 
-		guard let sourceURL = Bundle.main.url(forResource: urlstr, withExtension: nil) ??
-		URL(string: urlstr)?.standardizedFileURL, sourceURL.isFileURL else {
+		guard let sourceURL = getResourceURL(urlstr) else {
 			// FIXME: script code could be loaded from any path, exploitable?
 			warn("\(urlstr): could not be found", function: "loadCommonJSScript")
 			return JSValueMakeNull(ctx)
@@ -570,8 +579,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		let scriptTxt: String
 		let scriptURL: String
 
-		guard let sourceURL = Bundle.main.url(forResource: urlstr, withExtension: nil) ??
-		URL(string: urlstr)?.standardizedFileURL, sourceURL.isFileURL else {
+		guard let sourceURL = getResourceURL(urlstr) else {
 			// FIXME: script code could be loaded from any path, exploitable?
 			warn("\(urlstr): could not be found", function: "loadCommonJSScript")
 			return nil
@@ -690,7 +698,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		}
 		*/
 
-		if let icon_url = Bundle.main.url(forResource: iconpath, withExtension: "png") ?? URL(string: iconpath) {
+		if let icon_url = getResourceURL(iconpath) {
 			// path was a url, local or remote
 			Application.shared.applicationIconImage = NSImage(contentsOf: icon_url)
 		} else {
