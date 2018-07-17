@@ -62,8 +62,8 @@ delegate.decideNavigationForURL = function(url) {
 	}
 };
 
-$.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
-$.browser.addShortcut('Dark Mode', ['enDarken']);
+let enDarken = require('enDarken.js');
+$.browser.addShortcut('Dark Mode', [], enDarken);
 
 delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('Salesforce', salesforce);

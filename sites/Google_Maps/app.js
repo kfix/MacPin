@@ -6,9 +6,6 @@
 var delegate = {}; // our delegate to receive events from the webview app
 var mapsTab, maps = {
 	url: "https://maps.google.com",
-	postinject: [],
-	preinject: ['shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
 	allowsMagnification: false // lets gmaps JS handle pinch-zooms
 };
 var mapsAlt = Object.assign({}, maps, {url: "https://www.google.com/maps/?authuser=1"});
@@ -109,7 +106,7 @@ delegate.receivedHTML5DesktopNotification = function(tab, note) {
 
 delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(url); return true; };
 
-$.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
+let enDarken = require('enDarken.js');
 
 delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('gmaps');
@@ -123,7 +120,7 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('Google Maps API Team blog', "http://googlegeodevelopers.blogspot.com");
 	$.browser.addShortcut('Classic gMaps', "http://gokml.net/maps");
 	$.browser.addShortcut("Install 'Show Address in Google Maps app' service", `http://github.com/kfix/MacPin/tree/master/extras/${escape('Show Address in Google Maps app.workflow')}`);
-	$.browser.addShortcut('Dark Mode', ['enDarken']);
+	$.browser.addShortcut('Dark Mode', [], enDarken);
 
 	// TODO: add "Open in Apple Maps", send it http://maps.apple.com lat & long
 	// https://developer.apple.com/library/ios/featuredarticles/iPhoneURLScheme_Reference/MapLinks/MapLinks.html

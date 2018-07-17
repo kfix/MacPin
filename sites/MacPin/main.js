@@ -154,6 +154,10 @@ let launchRepl = () => {
 }
 */
 
+function sendNoteFromTab(msg, tab) {
+	app.postHTML5Notification({title: tab.title, subtitle: tab.url, body: msg, type: 1, tabHash: tab.hash, origin: app.resourcePath});
+}
+
 app.on('AppWillFinishLaunching', (AppUI) => {
 	//browser.unhideApp();
 
@@ -169,9 +173,12 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut('WebRTC recorder', 'https://www.webrtc-experiment.com/RecordRTC/');
 	browser.addShortcut('WebRTC test', 'https://webrtc.test.org');
 	// window.AudioContext = window.AudioContext || window.webkitAudioContext;
+
 	browser.addShortcut('Geolocation test', 'https://onury.io/geolocator/?content=examples');
 	browser.addShortcut('Notification test', 'https://ttsvetko.github.io/HTML5-Desktop-Notifications/');
+	browser.addShortcut('Notification test (generated)', ["testing tab notification"], sendNoteFromTab);
 	browser.addShortcut('Apple Maps test', 'https://maps.apple.com/place?address=One%20Infinite%20Loop');
+
 	// http://user-agents.me
 	browser.addShortcut('Examine WebKit User-Agent', 'http://browserspy.dk/webkit.php');
 	browser.addShortcut('Safari Version history', 'https://en.wikipedia.org/wiki/Safari_version_history');
@@ -210,7 +217,7 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	//  WebView.init ends up with WebViewInitProps.handlers: <__NSFrozenDictionaryM>
 	browser.addShortcut('MacPin/app.js debugging REPL', [], launchRepl);
 
-	if (app.platform === "OSX") app.changeAppIcon(`file://${app.resourcePath}/icon.png`);
+	if (app.platform === "OSX") app.changeAppIcon('icon.png');
 	//browser.tabSelected = new $.WebView({url: 'http://github.com/kfix/MacPin'});
 
 	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
@@ -230,13 +237,10 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 app.on('AppFinishedLaunching', (launchURLs) => {
 	console.log(launchURLs);
 	if (!('printToREPL' in app.eventCallbacks)) {
-		app.loadAppScript(`file://${app.resourcePath}/app_repl.js`);
+		app.loadAppScript('app_repl.js');
 	}
-
-	// app.postHTML5Notification({title: "title", subtitle: "sub", body: "this is a test", type: 1, tabHash: ntpTab.hash, origin: "ntpTab"})
 });
 
 // https://www.lucidchart.com/techblog/2018/02/14/javascriptcore-the-holy-grail-of-cross-platform/
-//$.app.loadAppScript(`file://${$.app.resourcePath}/fetchURL.js`);
-//$.app.loadAppScript(`file://${$.app.resourcePath}/fetchDeps.js`);
-//var fetch = require('fetch').fetch;
+//app.loadAppScript('fetchDeps.js`);
+//let fetchURL = require('fetchURL');

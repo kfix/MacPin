@@ -6,9 +6,7 @@
 var delegate = {}; // our delegate to receive events from the webview app
 var jiraTab, jira = {
 	transparent: true,
-	url: "https://my.atlassian.com",
-	//postinject: ['styler'],
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"] //styler.js does polls
+	url: "https://my.atlassian.com"
 };
 jiraTab = $.browser.tabSelected = new $.WebView(jira);
 
@@ -97,11 +95,12 @@ delegate.overrideBG = function(bgcolor) { jiraTab.evalJS('\
 };
 // https://github.com/MikoMagni/Trello-Monochrome-Safari/blob/master/Monochrome/jira_monochrome.css
 
+let enDarken = require('enDarken.js');
+
 $.app.on('AppFinishedLaunching', (launchURLs) => {
 	$.app.registerURLScheme('jira');
 
-	$.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
-	$.browser.addShortcut('Toggle Dark Mode', ['enDarken']);
+	$.browser.addShortcut('Toggle Dark Mode', [], enDarken);
 
 	if ($.launchedWithURL != '') { // app was launched with a search query
 		jiraTab.asyncEvalJS( // need to wait for app.js to load and render DOM

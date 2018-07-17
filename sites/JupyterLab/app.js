@@ -6,7 +6,7 @@
 // need derivative logo: https://github.com/jupyter/design/issues/21
 //   or overlay netloc on dock icon at runtime ?
 
-var lab = {url: "https://joey-lxd:8888"};
+var lab = {url: "https://joey-lxd"};
 // FIXME: source from ENV or NSUserDefaults...
 // could also grab system's username and add "-lab" to it...
 
@@ -39,11 +39,12 @@ delegate.launchURL = function(url) {
 	}
 };
 
+let enDarken = require('enDarken.js');
+
 delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('JuyterLab', lab);
-	$.browser.addShortcut('Dark Mode', ['enDarken']);
+	$.browser.addShortcut('Dark Mode', [], enDarken);
 	$.browser.tabSelected = new $.WebView(lab);
 };
-$.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
 
 delegate; //return this to macpin

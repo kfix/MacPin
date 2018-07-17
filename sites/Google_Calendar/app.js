@@ -8,17 +8,11 @@
  */
 
 var delegate = {}; // our delegate to receive events from the webview app
-var driveTab, drive = {
+var calTab, calendar = {
 	transparent: false,
-	url: "https://drive.google.com",
-	postinject: [],
-	preinject: ['shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"]
+	url: "https://calendar.google.com"
 };
-var driveAlt = Object.assign({}, drive, {url: "https://drive.google.com/drive/u/1"});
-var sheets = Object.assign({}, drive, {url: "https://docs.google.com/spreadsheets/"});
-var docs = Object.assign({}, drive, {url: "https://docs.google.com/document/"});
-var presentation = Object.assign({}, drive, {url: "https://docs.google.com/presentation/"});
+var calendarAlt = Object.assign({}, calendar, {url: "https://calendar.google.com/calendar/b/1"});
 
 /*
 // ?authuser=N always overrides /u/N/ in the url!
@@ -45,7 +39,7 @@ func gotoNextGoogleAccount(tab) {
 // https://github.com/google/google-api-javascript-client/issues/13
 */
 
-driveTab = $.browser.tabSelected = new $.WebView(drive);
+calTab = $.browser.tabSelected = new $.WebView(calendar);
 /* TODO
  * bundle a local html that has uses the gapi JS client to pre-auth as a a cached authuser/user_id (prompt if no username in cache)
  * the username should be stored in localStorage and hopefully will not be shared to other apps or Safari
@@ -58,7 +52,7 @@ driveTab = $.browser.tabSelected = new $.WebView(drive);
 // dark mode: https://userstyles.org/styles/105045/google-drive-dark
 
 function search(query) {
-	driveTab.evalJS( // hook app.js to perform search
+	calTab.evalJS( // hook app.js to perform search
 		""
  	);
 }
@@ -73,12 +67,13 @@ delegate.launchURL = function(url) {
 			//    open{"url": "https://docs.google.com/open?id=HASH", "doc_id": "HASH", "email": "joey@example.com", "resource_id": "spreadsheet:HASH"}
 			//        if so, extract the link and pop the doc 
 			// else, prompt to do upload
-			driveTab.evalJS('confirm("Upload '+addr+'?");');
+			calTab.evalJS('confirm("Upload '+addr+'?");');
 			break;
-		case 'googledrive:':
-		case 'gdrive:':
+		case 'googlecalendar:':
+		case 'gcal:':
+		case 'gcalendar:':
 			$.browser.unhideApp();
-			$.browser.tabSelected = driveTab;
+			$.browser.tabSelected = calTab;
 			search(decodeURI(addr));
 			break;
 		default:
@@ -97,14 +92,14 @@ delegate.decideNavigationForURL = function(url, tab) {
 		case "http":
 		case "https":
 			if (alwaysAllowRedir) break; //user override
-			if ((addr.startsWith("//drive.google.com/") || addr.startsWith("//docs.google.com/")) && tab.allowAnyRedir) {
+			if ((addr.startsWith("//calendar.google.com/") || addr.startsWith("//docs.google.com/")) && tab.allowAnyRedir) {
 				tab.allowAnyRedir = false; // we are back home
 			} else if (tab.allowAnyRedir || unescape(unescape(addr)).match("//accounts.google.com/")) {
 				// we might be redirected to an external domain for a SSO-integrated Google Apps login
 				// https://support.google.com/a/answer/60224#userSSO
 				// process starts w/ https://accounts.google.com/ServiceLogin(Auth) and ends w/ /MergeSession
 				tab.allowAnyRedir = true;
-			} else if (!addr.startsWith("//drive.google.com") &&
+			} else if (!addr.startsWith("//calendar.google.com") &&
 				!addr.startsWith("//docs.google.com") &&
 				!addr.startsWith(".docs.google.com") &&
 				!addr.startsWith("//clients6.google.com") &&
@@ -124,7 +119,10 @@ delegate.decideNavigationForURL = function(url, tab) {
 				!addr.startsWith("//4.client-channel.google.com") &&
 				!addr.startsWith("//5.client-channel.google.com") &&
 				!addr.startsWith("//6.client-channel.google.com") &&
+				!addr.startsWith("//19.client-channel.google.com") &&
 				!addr.startsWith("//apis.google.com") &&
+				!addr.startsWith("//contacts.google.com") &&
+				!addr.startsWith("//notifications.google.com") &&
 				!addr.startsWith("//0.talkgadget.google.com") &&
 				!addr.startsWith("//1.talkgadget.google.com") &&
 				!addr.startsWith("//2.talkgadget.google.com") &&
@@ -186,24 +184,17 @@ delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(ur
 let enDarken = require('enDarken.js');
 
 delegate.AppFinishedLaunching = function() {
-	$.app.registerURLScheme('gdrive');
-	//$.app.registerURLScheme('googledrive'); //iOS
-	//$.app.registerUTI('dyn.ah62d4rv4ge80s65kqzw1k'); // `mdls ~/Google Drive/*.gsheet`
-	//$.app.registerUTI('dyn.ah62d4rv4ge80s3dtqq'); // *.gdoc
-	//$.app.registerUTI('dyn.ah62d4rv4ge80s65qrfwgn62'); // *.gslides
-	$.browser.addShortcut('Drive', drive);
-	$.browser.addShortcut('Drive (using secondary account)', driveAlt);
-	$.browser.addShortcut('Sheets', sheets);
-	$.browser.addShortcut('Docs', docs);
-	$.browser.addShortcut('Presentations', presentation);
+	//$.app.registerURLScheme('gcalendar');
+	//$.app.registerUTI('dyn.???'); // *.ical
+	$.browser.addShortcut('Calendar', calendar);
+	$.browser.addShortcut('Calendar (using secondary account)', calendarAlt);
 	$.browser.addShortcut("Add a Google log-in", 'https://accounts.google.com/AddSession');
 	$.browser.addShortcut('Use next Google log-in', ['gotoNextGoogleAccount']);
-	$.browser.addShortcut("Install 'Open in Google Drive app' service", `http://github.com/kfix/MacPin/tree/master/extras/${escape('Open in Google Drive app.workflow')}`);
 	$.browser.addShortcut('Enable Redirection to external domains', ['toggleRedirection', true]);
 	$.browser.addShortcut('Disable Redirection (default)', ['toggleRedirection', false]);
 
 	if ($.launchedWithURL != '') { // app was launched with a search query
-		driveTab.asyncEvalJS( // need to wait for app.js to load and render DOM
+		calTab.asyncEvalJS( // need to wait for app.js to load and render DOM
 			"true;",
 			5, // delay (in seconds) to wait for tab to load
 			function(result) { // callback

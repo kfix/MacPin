@@ -2,45 +2,36 @@
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
 
-const {BrowserWindow} = require('@MacPin');
+const {app, WebView, BrowserWindow} = require('@MacPin');
 
-var delegate = {}; // our delegate to receive events from the webview app
-var inboxTab, inbox = {
-	transparent:false,
-	url: "https://inbox.google.com",
-	postinject: [],
-	preinject: ['shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"]
-};
-var inboxAlt = Object.assign({}, inbox, {url: "https://inbox.google.com/u/1"});
-inboxTab = $.browser.tabSelected = new $.WebView(inbox);
+let browser = new BrowserWindow();
 
-function search(query) {
-	inboxTab.evalJS( // hook app.js to perform search
-		"" 
+function search(query, tab) {
+	tab.evalJS( // hook app.js to perform search
+		""
  	);
 	// document.querySelector('input[aria-label="Search"]').value = query
 	// https://inbox.google.com/search/stuff%20find?pli=1
 }
 
-delegate.launchURL = function(url) {
+app.on('launchURL', function(url) {
 	var comps = url.split(':'),
 		scheme = comps.shift(),
 		addr = comps.shift();
 	switch (scheme + ':') {
 		case 'googleinbox:':
 		case 'ginbox:':
-			$.browser.unhideApp();
-			$.browser.tabSelected = inboxTab;
+			browser.unhideApp();
+			browser.tabSelected = inboxTab;
 			search(decodeURI(addr));
 			break;
 		default:
 	}
-};
+});
 
 var alwaysAllowRedir = false;
 
-delegate.decideNavigationForURL = function(url, tab) {
+app.on('decideNavigationForURL', function(url, tab) {
 	var comps = url.split(':'),
 		scheme = comps.shift(),
 		addr = comps.shift();
@@ -78,6 +69,7 @@ delegate.decideNavigationForURL = function(url, tab) {
 				!addr.startsWith("//5.client-channel.google.com") &&
 				!addr.startsWith("//6.client-channel.google.com") &&
 				!addr.startsWith("//apis.google.com") &&
+				!addr.startsWith("//contacts.google.com") &&
 				!addr.startsWith("//notifications.google.com") &&
 				!addr.startsWith("//0.talkgadget.google.com") &&
 				!addr.startsWith("//1.talkgadget.google.com") &&
@@ -104,7 +96,7 @@ delegate.decideNavigationForURL = function(url, tab) {
 				!addr.startsWith("//www.google.com/tools/feedback/content_frame") &&
 				!addr.startsWith("//www.google.com/settings")
 			) {
-				$.app.openURL(url); //pop all external links to system browser
+				app.openURL(url); //pop all external links to system browser
 				console.log("opened "+url+" externally!");
 				return true; //tell webkit to do nothing
 			}
@@ -113,74 +105,66 @@ delegate.decideNavigationForURL = function(url, tab) {
 		case "about":
 		case "file":
 		default:
+			if (!browser.tabs.includes(tab)) { // callbacked by a window.open()d google tab opened headlessly
+				browser.tabSelected = new WebView(url); // lets popup its URL in the main browser
+				return true; // headless tab will cease-and-desist loading and get garbage collected after webview delegate finishes this callback
+			}
 			return false;
 	}
-};
+});
 
 // Inbox converts all links into window.open()s ... whoaa
-delegate.didWindowOpenForURL = function(url, newTab, tab) {
+app.on('didWindowOpenForURL', function(url, newTab, tab) {
 
 	if (url.length > 0 && newTab) {
 		console.log(`window.open(${url})`);
-		$.browser.tabSelected = newTab;
+		browser.tabSelected = newTab;
 	} else if (newTab) {
 		console.log('popping new window!');
 		// have to add the "tab" (webview) to a browser in order for it
-		// to set its navigation and js delegates
-		// that's probably a bug...
+		// to set its navigation and js delegates .. seems buggish?
 		let bro = new BrowserWindow(); // new window!
 		bro.tabs.push(newTab);
 		// new bro seems to garbage collect on its own! ftw
 	}
 
 	return true; // macpin would have popped open a tab on its own
-}
+});
 
-delegate.handleUserInputtedInvalidURL = function(query) {
+app.on('handleUserInputtedInvalidURL', function(query) {
 	// assuming the invalid url is a search request
 	search(query);
 	return true; // tell MacPin to stop validating the URL
-};
+});
 
 // handles all URLs drag-and-dropped into NON-html5 parts of Inbox and Dock icon.
-delegate.handleDragAndDroppedURLs = function(urls) {
+app.on('handleDragAndDroppedURLs', function(urls) {
 	console.log(urls);
 	for (var url of urls) {
 		this.launchURL(url);
-		//$.browser.tabSelected = new $.WebView({url: url});
+		//browser.tabSelected = new WebView({url: url});
 	}
-}
+});
 
-delegate.receivedHTML5DesktopNotification = function(tab, note) {
-	console.log(Date() + ' [posted HTML5 notification] ' + note);
-	$.app.postHTML5Notification(note);
-};
+app.on('handleClickedNotification', function(from, url, msg) { app.openURL(url); return true; });
 
-delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(url); return true; };
+function toggleRedirection(state) { alwaysAllowRedir = (state) ? true : false; };
 
-delegate.toggleRedirection = function(state) { alwaysAllowRedir = (state) ? true : false; };
+let enDarken = require('enDarken.js');
 
-delegate.AppFinishedLaunching = function() {
-	$.app.registerURLScheme('ginbox');
-	//$.app.registerURLScheme('mailto');
-	$.browser.addShortcut('Inbox by Gmail', inbox);
-	$.browser.addShortcut('Inbox by Gmail (using secondary account)', inboxAlt);
-	$.browser.addShortcut('Enable Redirection to external domains', ['toggleRedirection', true]);
+app.on('AppWillFinishLaunching', (AppUI) => {
+	app.registerURLScheme('ginbox');
+	//app.registerURLScheme('mailto');
 
-	if ($.launchedWithURL != '') { // app was launched with a search query
-		inboxTab.asyncEvalJS( // need to wait for app.js to load and render DOM
-			"true;",
-			5, // delay (in seconds) to wait for tab to load
-			function(result) { // callback
-				delegate.launchURL($.launchedWithURL);
-				$.launchedWithURL = '';
-			}
-		);
-	}
+	browser.addShortcut('Inbox by Gmail', "https://inbox.google.com/");
+	browser.addShortcut('Inbox by Gmail (using secondary account)', "https://inbox.google.com/u/1");
 
-	$.app.loadAppScript(`file://${$.app.resourcePath}/enDarken.js`);
-	$.browser.addShortcut('Paint It Black', ['enDarken']);
+	browser.addShortcut('Enable Redirection to external domains', [true], toggleRedirection);
+	browser.addShortcut('Paint It Black', [], enDarken);
 
+	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
+});
 
-};
-delegate; //return this to macpin
+app.on('AppFinishedLaunching', function(launchURLs) {
+	browser.tabSelected = new WebView("https://inbox.google.com/");
+});
