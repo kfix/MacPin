@@ -976,6 +976,7 @@ enum AppScriptEvent: String, CustomStringConvertible {
 		AppFinishedLaunching, // url...
 		printToREPL, // result
 		tabTransparencyToggled, // transparent, tab
+		AppShouldTerminate, // AppUI
 
 		// WKNavigationDelegate
 		decideNavigationForURL,

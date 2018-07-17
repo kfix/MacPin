@@ -5,5 +5,4 @@ import JavaScriptCore
 }
 
 protocol MacPinAppDelegate: ApplicationDelegate, ApplicationDelegateJS {
-	var window: Window? { get }
 }

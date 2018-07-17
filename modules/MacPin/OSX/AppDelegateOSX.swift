@@ -8,7 +8,6 @@ import Darwin
 open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 	var browserController: BrowserViewController = BrowserViewControllerOSX()
-	var window: Window?
 	var windowController: WindowController? // optional so app can run "headless" if desired
 
 	// FIXME: these menus are singletons for the App, but should really be tied to windows ....
@@ -51,7 +50,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		//replyEvent == ??
 	}
 
-	func updateProxies() {
+	@objc func updateProxies() {
 		let alert = NSAlert()
 		alert.messageText = "Set HTTP(s) proxy"
 		alert.addButton(withTitle: "Update")
@@ -60,8 +59,8 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		let input = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
 		input.stringValue = UserDefaults.standard.string(forKey: "WebKit2HTTPProxy") ?? ""
 		input.isEditable = true
- 		alert.accessoryView = input
- 		guard let window = window else { return }
+		alert.accessoryView = input
+		guard let window = browserController.view.window else { return }
 		alert.beginSheetModal(for: window, completionHandler: { (response: NSApplication.ModalResponse) -> Void in
 			UserDefaults.standard.set(input.stringValue, forKey: "WebKit2HTTPProxy")
 			UserDefaults.standard.set(input.stringValue, forKey: "WebKit2HTTPSProxy")
@@ -69,7 +68,6 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 			// FIXME: need to serialize all tabs & reinit them for proxy change to take effect?
 		})
 	}
-
 }
 
 @objc extension MacPinAppDelegateOSX: ApplicationDelegate {
@@ -113,7 +111,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		let svcMenu = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
 		svcMenu.submenu = app!.servicesMenu!
 		appMenu.submenu?.addItem(svcMenu)
-		appMenu.submenu?.addItem(MenuItem("Preferences...", "updateProxies")) // not much for now
+		appMenu.submenu?.addItem(MenuItem("Preferences...", #selector(MacPinAppDelegateOSX.updateProxies))) // not much for now
 		appMenu.submenu?.addItem(MenuItem("Quit \(appname)", "terminate:", "q"))
 
 		let editMenu = NSMenuItem() //NSTextArea funcs
@@ -352,13 +350,13 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		windowController?.close() // kill the window if it still exists
 		windowController?.window = nil
 		windowController = nil // deinit the wc
-		window = nil // deinit the window
-		AppScriptRuntime.shared.resetStates()
 		//browserController.close() // kill any zombie tabs -- causes lock-loop?
 		// unfocus app?
 #if arch(x86_64) || arch(i386) // !TARGET_OS_EMBEDDED || TARGET_OS_SIMULATOR
 		if prompter != nil { return .terminateLater } // wait for user to EOF the Prompt
 #endif
+		AppScriptRuntime.shared.emit(.AppShouldTerminate, self) // allow JS to clean up its refs
+		AppScriptRuntime.shared.resetStates() // then run a GC
 		return .terminateNow
 	}
 
@@ -457,7 +455,7 @@ extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 extension MacPinAppDelegateOSX: NSWindowRestoration {
 	// https://developer.apple.com/library/mac/documentation/General/Conceptual/MOSXAppProgrammingGuide/CoreAppDesign/CoreAppDesign.html#//apple_ref/doc/uid/TP40010543-CH3-SW35
 	public static func restoreWindow(withIdentifier identifier: NSUserInterfaceItemIdentifier, state: NSCoder, completionHandler: @escaping (NSWindow?, Error?) -> Void) {
-		if let app = MacPinApp.shared.appDelegate, let window = app.window, identifier.rawValue == "browser" {
+		if let app = MacPinApp.shared.appDelegate, let window = app.browserController.view.window, identifier.rawValue == "browser" {
 			completionHandler(window, nil)
 			//WKWebView._restoreFromSessionStateData ...
 		} else {
