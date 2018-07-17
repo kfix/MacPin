@@ -174,22 +174,22 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		// not a synthetic require, so going to source a real file
 		let scriptTxt: String
 		let scriptURL: String
-		let resources = URL(fileURLWithPath: (Bundle.main.resourcePath ?? ""), isDirectory: true)
 
-		if	let sourceURL = URL(string: urlstr, relativeTo: resources),
-			let source = try? String(contentsOf: sourceURL, encoding: .utf8) {
-				scriptTxt = source
-				scriptURL = sourceURL.absoluteString
-		} else if let sourceURL = URL(string: urlstr),
-			let source = try? String(contentsOf: sourceURL, encoding: .utf8) {
-				scriptTxt = source
-				scriptURL = sourceURL.absoluteString
-		} else {
-			warn("\(urlstr): could not be read", function: "loadCommonJSScript")
+		guard let sourceURL = Bundle.main.url(forResource: urlstr, withExtension: nil) ??
+		URL(string: urlstr)?.standardizedFileURL, sourceURL.isFileURL else {
+			// FIXME: script code could be loaded from any path, exploitable?
+			warn("\(urlstr): could not be found", function: "loadCommonJSScript")
 			return JSValueMakeNull(ctx)
 		}
 
-		// FIXME: script code could be loaded from anywhere, exploitable?
+		if let source = try? String(contentsOf: sourceURL, encoding: .utf8) {
+			scriptTxt = source
+			scriptURL = sourceURL.absoluteString
+		} else {
+			warn("\(sourceURL): could not be read", function: "loadCommonJSScript")
+			return JSValueMakeNull(ctx)
+		}
+
 		warn("\(scriptURL): read", function: "loadCommonJSScript")
 
 		let contextGroup = JSContextGetGroup(ctx)
@@ -567,20 +567,36 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	@discardableResult
 	func loadAppScript(_ urlstr: String) -> JSValue? {
-		if let scriptURL = NSURL(string: urlstr), let script = try? NSString(contentsOf: scriptURL as URL, encoding: String.Encoding.utf8.rawValue), let sourceURL = scriptURL.absoluteString {
-			// FIXME: script code could be loaded from anywhere, exploitable?
+		let scriptTxt: String
+		let scriptURL: String
+
+		guard let sourceURL = Bundle.main.url(forResource: urlstr, withExtension: nil) ??
+		URL(string: urlstr)?.standardizedFileURL, sourceURL.isFileURL else {
+			// FIXME: script code could be loaded from any path, exploitable?
+			warn("\(urlstr): could not be found", function: "loadCommonJSScript")
+			return nil
+		}
+
+		if let source = try? String(contentsOf: sourceURL, encoding: .utf8) {
+			scriptTxt = source
+			scriptURL = sourceURL.absoluteString
+		} else {
+			warn("\(sourceURL): could not be read", function: "loadCommonJSScript")
+			return nil
+		}
+
 			warn("\(scriptURL): read")
 
 			var exception = JSValue()
 
-			let jsurl = JSStringCreateWithCFString(sourceURL as CFString)
+			let jsurl = JSStringCreateWithCFString(scriptURL as CFString)
 			let jsErrorMsg = JSStringCreateWithCFString("" as CFString)
 			var errorLine = Int32(0)
 			let script = JSScriptCreateFromString(
 				/*group*/ contextGroup,
 				/*url*/ jsurl,
 				/*startingLineNumber:*/ 1,
-				/*script:*/ JSStringCreateWithCFString(script as CFString),
+				/*script:*/ JSStringCreateWithCFString(scriptTxt as CFString),
 				/*errorMessage*/ UnsafeMutablePointer(jsErrorMsg),
 				/*errorLine*/ &errorLine
 			)
@@ -609,7 +625,6 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				warn(errMessage)
 			} // or pop open the script source-code in a new tab and highlight the offender
 
-		}
 		return nil
 	}
 
@@ -963,7 +978,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	var messageHandlers: [String: [JSValue]] = [:]
 }
 
-enum AppScriptEvent: String, CustomStringConvertible {
+enum AppScriptEvent: String, CustomStringConvertible, CaseIterable {
 	var description: String { return "\(type(of: self)).\(self.rawValue)" }
 
 	case /* legacy MacPin event names */
