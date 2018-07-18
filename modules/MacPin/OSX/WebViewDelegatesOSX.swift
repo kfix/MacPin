@@ -161,10 +161,9 @@ extension WebViewControllerOSX { // _WKDownloadDelegate
 }
 
 extension WebViewControllerOSX { // HTML5 fullscreen
-	func _webViewFullscreenMayReturnToInline(_ webView: WKWebView) -> Bool {
+	func _webViewFullscreenMayReturn(toInline webView: WKWebView) {
 		// https://developer.apple.com/reference/webkit/wkwebviewconfiguration/1614793-allowsinlinemediaplayback
 		warn()
-		return true
 	}
 
 	// https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API
@@ -292,6 +291,14 @@ extension WebViewController { // _WKInputDelegate
 		return Int(WKDragDestinationAction.any.rawValue) // accept the drag
 		// .none .DHTML .edit .load
 	}
+
 	// @objc func _webView(_ webView: WKWebView!, getContextMenuFromProposedMenu menu: NSMenu!, forElement element: _WKContextMenuElementInfoQ, userInfo: Any!, completionHandler: ((NSMenu) -> Void)!) {}
 
-}
+	func _webView(_ webview: WKWebView!, mouseDidMoveOverElement hitTestResult: _WKHitTestResult!, with flags: NSEvent.ModifierFlags, userInfo: NSSecureCoding!) {
+		// this is called when elements are hovered over & hovered off of
+		if let webview = webview as? MPWebView, showStatusBar {
+			statusbar.hovered = hitTestResult
+		}
+    }
+
+} //-WKUIDelegatePrivate

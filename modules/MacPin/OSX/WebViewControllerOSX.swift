@@ -6,6 +6,13 @@ import WebKit
 import WebKitPrivates
 
 @objc class WebViewControllerOSX: WebViewController, NSTextFinderBarContainer {
+	let statusbar = StatusBarController()
+	var showStatusBar = false {
+		didSet {
+			if !showStatusBar { statusbar.hovered = nil }
+		}
+	}
+
 	let textFinder = NSTextFinder()
 	var findBarView: NSView? {
 		willSet { if findBarView != nil { _findBarVisible = false } }
@@ -51,6 +58,8 @@ import WebKitPrivates
 		// FIXME: webview doesn't auto-scroll to found matches
 		//  https://github.com/WebKit/webkit/blob/112c663463807e8676765cb7a006d415c372f447/Source/WebKit2/UIProcess/mac/WKTextFinderClient.mm#L39
 		// MiniBrowser: https://github.com/WebKit/webkit/commit/67ec9eb4a3e9f04ababc7ea6c0e5f9b5bf69ca1c
+
+		view.addSubview(statusbar.view)
 	}
 
 	func contentView() -> NSView? { return webview }
@@ -103,6 +112,10 @@ import WebKitPrivates
 		} else {
 			webview.frame = view.bounds
 		}
+
+		// webview has flipped coords (to match UIView?) ... but view is normal
+		statusbar.view.frame = CGRect(x: 0, y: 0, // align with bottom of screen
+			width: view.bounds.size.width, height: 24)
 	}
 
 	override func viewWillLayout() {
@@ -173,7 +186,8 @@ extension WebViewControllerOSX { // AppGUI funcs
 		super.dismiss()
 	}
 
-	@objc func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }  // WKPageForceRepaint(webview.topFrame?.pageRef, 0, didForceRepaint);
+	@objc func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }
+	@objc func toggleStatusBar() { showStatusBar = !showStatusBar }
 
 	@objc func zoomIn() { zoom(0.2) }
 	@objc func zoomOut() { zoom(-0.2) }
@@ -278,6 +292,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		see: https://developers.google.com/web/updates/2017/03/dialogs-policy
 
 		also rate-limit modals and nop them if limit exceeded
+			Safari.framework has this signature: -[BrowserViewController suppressJavaScriptDialogPresentation]
 	*/
 		if let window = view.window {
 			alert.beginSheetModal(for: window, completionHandler: completionHandler)
