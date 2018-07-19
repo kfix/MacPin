@@ -3,10 +3,10 @@
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
 
-var messengerTab, messenger = {
-	url: 'https://www.messenger.com',
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
-	preinject: ['shim_html5_notifications']
+let enDarken = require('enDarken.js');
+
+var messenger = {
+	url: 'https://www.messenger.com'
 };
 
 var delegate = {}; // our delegate to receive events from the webview app
@@ -21,8 +21,7 @@ delegate.handleClickedNotification = function(title, subtitle, msg, id) {
 	console.log("JS: opening notification for: "+ [title, subtitle, msg, id]);
 	//<time class="_497p _2lpt" data-reactid=".0.1.$1.0.1.$0.0.0.0.0.0.0.2.$db=2mid=11434908822690=2d3b8b216631a1b8625"><span class="_3oh-" data-reactid=".0.1.$1.0.1.$0.0.0.0.0.0.0.2.$db=2mid=11434908822690=2d3b8b216631a1b8625.0">10:47am</span></time>
 	$.browser.tabSelected = messengerTab;
-	//messengerTab.evalJS();
-	return true;
+	return false; // let MacPin find, notify, & focus the tab that made this notification, if its still active ...
 };
 
 delegate.launchURL = function(url) {
@@ -46,7 +45,7 @@ delegate.decideNavigationForURL = function(url) {
 		case "https": // https://github.com/rsms/fb-mac-messenger/blob/master/Messenger/AppDelegate.mm#L591
 			// https://www.messenger.com/login/fb_iframe_target/?userid=&name=&secret=&persistent=1&initial_request_id=
 			if (
-				(~addr.indexOf("//www.messenger.com") || ~addr.indexOf("//www.facebook.com")) &&
+				(addr.startsWith("//www.messenger.com") || addr.startsWith("//www.facebook.com")) &&
 				(subpath == "login" || subpath == "checkpoint")
 			) {
 				$.app.openURL(url); //pop all external links to system browser
@@ -60,8 +59,9 @@ delegate.decideNavigationForURL = function(url) {
 	}
 };
 
-delegate.AppFinishedLaunching = function() {
+delegate.AppFinishedLaunching = function(launchURLs) {
 	$.browser.addShortcut('Messenger', messenger);
-	$.browser.tabSelected = messengerTab = new $.WebView(messenger);
+	$.browser.addShortcut('Dark Mode', [], enDarken);
+	$.browser.tabSelected = new $.WebView(messenger);
 };
 delegate; //return this to macpin

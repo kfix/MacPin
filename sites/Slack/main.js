@@ -71,7 +71,7 @@ app.on('receivedRedirectionToURL', (url, tab) => {
 	}
 });
 
-let clicker = (url, tab) => {
+let clicker = (url) => {
 	console.log(`(click)navigation-delegating ${url} ...`);
 	var comps = url.split('/'),
 		scheme = comps.shift();

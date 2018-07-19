@@ -96,9 +96,6 @@ let img2data = function(tab) {
 
 let testAS = function(tab) { app.callJXALibrary('test', 'doTest', Array.prototype.slice.call(arguments)); };
 
-if (eval != null)
-	var eval_copy = eval; // global eval is wiped after app.js is started ...
-
 let replTab;
 // var-decl needed to retain the tab, which is "dropped" & deinit()d in a proxied-push() if not bound to a persistent scope
 let launchRepl = () => {
@@ -106,13 +103,13 @@ let launchRepl = () => {
 		var command = msg;
 		var result, exception;
 		try {
-			result = eval_copy(command); // <- line pointer marks right here
+			result = Function(`"use strict";return (${command})`).bind(window)(); // MDN sez dis moar betta
 		} catch(e) {
 			exception = e;
 			result = e; // printToREPL will make a line pointer object
 			try { console.log(e); } catch(e) { }
 		}
-		var ret = app.emit('printToREPL', result, false); // handler, expr, colorize
+		var ret = app.eventCallbacks['printToREPL'][0](result, false); // expr, colorize
 		//try { console.log(ret); } catch(e) { }
 		let exfil = `returnREPL('${escape(ret)}', ${(exception) ? `'${escape(exception)}'` : 'null'});`;
 		//console.log(exfil); // use base64 instead of urlencode??
@@ -175,6 +172,7 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	// window.AudioContext = window.AudioContext || window.webkitAudioContext;
 	// navigator.mediaDevices.getUserMedia({ audio: true })
 	// 		always fails with `result: NotReadableError: The I/O read operation failed.`
+	// 		https://github.com/WebKit/webkit/blob/4c854e1b185d80d853b12442e9d59aa25226388b/Source/WebCore/Modules/mediastream/UserMediaRequest.cpp#L285
 	// 		{video:true} streams work fine
 
 	browser.addShortcut('Geolocation test', 'https://onury.io/geolocator/?content=examples');

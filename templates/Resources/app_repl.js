@@ -22,12 +22,12 @@ let inspect = require(`file://${app.resourcePath}/browser-util-inspect.js`);
 //
 // https://github.com/Automattic/util-inspect
 
-Object.defineProperty(this, "allThis", {
+Object.defineProperty(this, "ls", {
 	configurable: true,
 	enumerable: true,
 	get: function () {
 		let thee = (this) ? this : window;
-		return Object.assign({},...Object.getOwnPropertyNames(thee).filter( (pn) => (!pn.startsWith("allThis")) ).map( (pn) => ( {[pn]: thee[pn]}) ));
+		return Object.assign({},...Object.getOwnPropertyNames(thee).filter( (pn) => (!pn.startsWith("ls")) ).map( (pn) => ( {[pn]: thee[pn]}) ));
 	}
 });
 

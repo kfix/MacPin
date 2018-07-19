@@ -118,6 +118,7 @@ app.on('didWindowOpenForURL', function(url, newTab, tab) {
 
 	if (url.length > 0 && newTab) {
 		console.log(`window.open(${url})`);
+		newTab.loadURL(url);
 		browser.tabSelected = newTab;
 	} else if (newTab) {
 		console.log('popping new window!');
@@ -128,7 +129,7 @@ app.on('didWindowOpenForURL', function(url, newTab, tab) {
 		// new bro seems to garbage collect on its own! ftw
 	}
 
-	return true; // macpin would have popped open a tab on its own
+	return true; // macpin will return the newTab to tab's JS
 });
 
 app.on('handleUserInputtedInvalidURL', function(query) {

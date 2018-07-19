@@ -1075,7 +1075,7 @@ enum AppScriptEvent: String, CustomStringConvertible, CaseIterable {
 
 		// WKNavigationDelegate
 		decideNavigationForURL, // url, tab
-		decideNavigationForClickedURL, // url, tab
+		decideNavigationForClickedURL, // url, targetIsMainFrame, tab
 		receivedRedirectionToURL, // url, tab
 		receivedCookie, // tab, cookieName, cookieValue
 		handleUnrenderableMIME, // mime, url, filename, tab

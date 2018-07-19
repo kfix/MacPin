@@ -33,7 +33,9 @@ delegate.decideNavigationForClickedURL = function(url) {
 		&& !url.startsWith("https://accounts.google.com")
 		&& !url.startsWith("https://hangouts.google.com")
 		&& !url.startsWith("https://plus.google.com/hangouts/")
-		&& !url.startsWith("https//www.google.com/a/")
+		&& !url.startsWith("https://www.google.com/a/")
+		&& !url.startsWith("https://voice.google.com")
+		&& !url.startsWith("https://g.co")
 		) { // open all links externally except those above
 			$.app.openURL(url);
 			return true;
