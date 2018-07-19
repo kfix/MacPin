@@ -171,8 +171,11 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut('WebRTC effect test', 'https://webkit.org/blog-files/webrtc/pc-with-effects/index.html');
 	browser.addShortcut('WebRTC samples', 'https://webrtc.github.io/samples/');
 	browser.addShortcut('WebRTC recorder', 'https://www.webrtc-experiment.com/RecordRTC/');
-	browser.addShortcut('WebRTC test', 'https://webrtc.test.org');
+	browser.addShortcut('WebRTC test', 'https://test.webrtc.org');
 	// window.AudioContext = window.AudioContext || window.webkitAudioContext;
+	// navigator.mediaDevices.getUserMedia({ audio: true })
+	// 		always fails with `result: NotReadableError: The I/O read operation failed.`
+	// 		{video:true} streams work fine
 
 	browser.addShortcut('Geolocation test', 'https://onury.io/geolocator/?content=examples');
 	browser.addShortcut('Notification test', 'https://ttsvetko.github.io/HTML5-Desktop-Notifications/');
@@ -189,6 +192,7 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut('UA: iPod Touch', ["Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"], setAgent);
 	browser.addShortcut('UA: Mac Chrome 29', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.57 Safari/537.36"], setAgent);
 	browser.addShortcut('UA: Mac Firefox 23', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:23.0) Gecko/20100101 Firefox/23.0"], setAgent);
+	browser.addShortcut('UA: Mac Firefox 62', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:62.0) Gecko/20100101 Firefox/62.0"], setAgent);
 	browser.addShortcut('UA: IE 10', ["Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Win64; x64; Trident/6.0)"], setAgent);
 
 	browser.addShortcut('see.js console', ['seeDebugger', 'see.init();', false], injectTab); // http://davidbau.com/archives/2013/04/19/debugging_locals_with_seejs.html
@@ -239,6 +243,7 @@ app.on('AppFinishedLaunching', (launchURLs) => {
 	if (!('printToREPL' in app.eventCallbacks)) {
 		app.loadAppScript('app_repl.js');
 	}
+	setTimeout((() => {console.log("yay timers work"); console.trace();}), 3.2);
 });
 
 // https://www.lucidchart.com/techblog/2018/02/14/javascriptcore-the-holy-grail-of-cross-platform/

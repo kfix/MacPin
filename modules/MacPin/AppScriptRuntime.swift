@@ -11,6 +11,7 @@ import UIKit
 
 import Foundation
 import JavaScriptCore // https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
+// https://developer.apple.com/videos/play/wwdc2013/615/
 import WebKitPrivates
 
 //import XMLHTTPRequest // https://github.com/Lukas-Stuehrk/XMLHTTPRequest
@@ -119,6 +120,8 @@ struct AppScriptGlobals {
 	/// https://forums.swift.org/t/what-is-the-plan-for-objc-on-non-darwin-platforms/12971
 	//	https://github.com/tris-foundation/javascript/blob/master/Sources/
 
+	static let modSpace = "_nativeModules"
+
 	@discardableResult
 	static func loadCommonJSScript(urlstr: String, ctx: JSContextRef, cls: JSClassRef? = nil, mods: [String: AnyObject]? = nil) -> JSValueRef {
 		// loosely impl node-ish require(scriptname, ...state) -> module.exports
@@ -128,6 +131,9 @@ struct AppScriptGlobals {
 		// actually importing things from npm would require a lot of node shims
 		// https://github.com/swittk/Node-JS-for-JavascriptCore/blob/master/Node/JSNodeEventEmitter.m
 		// https://github.com/nodejs/node-v0.x-archive/issues/5132#issuecomment-15432598 CommonJS is ded
+		// https://github.com/node-app/Nodelike/blob/master/Nodelike/NLContext.m
+		// https://github.com/node-app/Nodelike/blob/master/Nodelike/NLFS.m
+		// https://github.com/node-app/Nodelike/blob/master/Nodelike/NLHTTPParser.m
 
 		// TODO: caching, loop-prevention
 
@@ -140,7 +146,8 @@ struct AppScriptGlobals {
 					//warn("export of `\(k)`, pre-bridged type!")
 					JSObjectSetProperty(ctx, exports, JSStringCreateWithCFString(k as CFString), jsv.jsValueRef, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 				// TODO: check for simple-jack types havining dedicated JSValue(type:, in:)inits
-				} else if v is JSExport, let bridged = JSValue(object: v, in: JSContext(jsGlobalContextRef: ctx)) {
+				} else if v is JSExport, let bridged = JSValue(object: v, in: JSContext.current()) { // JSContext(jsGlobalContextRef: ctx)) {
+
 					// AVAST: thar be crashes heere*. gARRRbage Collection run amuk!
 
 					//let owned = JSManagedValue(value: bridged, andOwner: thisObject)! // let the call site be the owner
@@ -148,14 +155,12 @@ struct AppScriptGlobals {
 
 					// BUG: doesn't seem to honor NS->Swift conversions for JSExported setters, props will get NSwhatever as inputs even if decl'd as swift-foundation types
 					JSObjectSetProperty(ctx, exports, JSStringCreateWithCFString(k as CFString), bridged.jsValueRef, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
-					//JSValueProtect(ctx, bridged.jsValueRef) //protecc
 					//JSObjectSetProperty(ctx, exports, JSStringCreateWithCFString(k as CFString), owned.value.jsValueRef, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 				} else {
 					warn("skipped export of `\(k)`, un-bridgable type!")
 				}
 
 			}
-			//JSValueProtect(ctx, exports) //protecc
 			//JSGlobalContextRetain(ctx) // protecc plz
 
 // *: Instanciating bridged-JSValues/Contexts from @conv(c) funcs causes ARC faults indeterminately down the line (when JSC VM GC's??):
@@ -239,7 +244,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 						return module.exports;
 					}
 				});
-			"""), nil, nil, 1, nil)
+			"""), nil, nil, 1, nil) // nil this == [global] ?
 
 			// `this === module.exports` per https://stackoverflow.com/a/30894970/3878712
 			let this = JSValueToObject(contxt, exports, nil)
@@ -278,17 +283,57 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		if argc > 0 {
 			if let args = args, JSValueIsString(ctx, args[0]) {
 				let globalObjClass = JSClassCreate(&globalClassDef)
-				let url = JSStringCopyCFString(kCFAllocatorDefault, JSValueToStringCopy(ctx, args[0], nil)) as String
+					let url = JSStringCopyCFString(kCFAllocatorDefault, JSValueToStringCopy(ctx, args[0], nil)) as String
 				return loadCommonJSScript(urlstr: url, ctx: ctx!, cls: globalObjClass, mods: AppScriptRuntime.shared.nativeModules)
+				//	JSContext.current().nativeModules ?? globalObjClass.getProperty(modSpace)
+
 			}
 		}
 		return JSValueMakeNull(ctx) // generates an exception
 	}
 
+
+	static let setTimeout: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
+		// https://nodejs.org/en/docs/guides/timers-in-node/ https://github.com/electron/electron/issues/7079
+
+		if argc < 2 {
+			// FIMXE: support less/more args
+			// https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setTimeout
+			return JSValueMakeUndefined(ctx)
+		}
+
+		if let args = args, JSValueIsNumber(ctx, args[1]), JSValueIsObject(ctx, args[0]) {
+			let callback = JSValueToObject(ctx, args[0], exception) // too early?
+			// BUG? does not accept stringified "functions" as a callable callback, so call me maybe?
+
+			//let gctx = JSGlobalContextRetain(ctx) // segs
+			let gctx = JSContextGetGlobalContext(ctx) // get the global context, it should outlive us all
+			JSValueProtect(gctx, callback) //protecc any values that will outlive this callback
+			// https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setInterval#The_this_problem
+			//   we will also not pass in thisObj per MDN guideline
+
+			let delayTime = DispatchTime.now() + JSValueToNumber(ctx, args[1], nil)
+			warn("target timeout scheduled @ \(delayTime.rawValue)", function: "setTimeout")
+			DispatchQueue.global(qos: .userInteractive).asyncAfter(deadline: delayTime) { // "sleep"
+				warn("actual timeout fired @ \(DispatchTime.now().rawValue)", function: "setTimeout:async")
+				JSObjectCallAsFunction(gctx, callback, nil, 0, nil, nil) // run callback in globalContxt
+				// 0, nil should be (argc - 2), args[2..]
+
+				JSValueUnprotect(gctx, callback) // kthxbai
+			}
+		}
+
+		return JSValueMakeUndefined(ctx)
+	}
+
+	static let contrace: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
+		//TODO: show current stack / call-site location in script
+		let dump = JSContextCreateBacktrace(ctx, 5) // https://bugs.webkit.org/show_bug.cgi?id=64981
+		warn("\n" + (JSStringCopyCFString(kCFAllocatorDefault, dump) as String), function: "contrace")
+		return JSValueMakeUndefined(ctx) // ECMA spec for console.trace
+	}
+
 	static let conlog: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
-		// https://github.com/facebook/react-native/blob/da7873563bff945086a70306cc25fa4c048bb84b/React/CxxBridge/RCTJSCHelpers.mm
-
-
 		//TODO: colorize JS outputs
 
 		if let args = args, argc > 0 {
@@ -296,6 +341,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 			for idx in (0..<argc) {
 				// need to coerce to strings
 				//strs.append(JSValue(jsValueRef: args[idx], in: JSContext(jsGlobalContextRef: ctx)).toString()) // reverse Objc-bridge
+				//strs.append(JSValue(jsValueRef: args[idx], in: JSContext.current()).toString()) // reverse Objc-bridge
 				strs.append(JSStringCopyCFString(kCFAllocatorDefault, JSValueToStringCopy(ctx, args[idx], exception)) as String)
 			}
 			//if argc == 1 { warn(strs[0]); } else { warn(obj: strs); }
@@ -307,8 +353,6 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		return JSValueMakeUndefined(ctx) // ECMA spec for console.log
 	}
 
-	static let modSpace = "_nativeModules"
-
 	static let functions: [JSStaticFunction] = [
 		JSStaticFunction(name: "require", callAsFunction: cjsrequire,
 			attributes: JSPropertyAttributes(kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete)),
@@ -316,7 +360,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
     ] // doesn't seem to identically mmap to C-array-of-structs ...
 
 	static let values: [JSStaticValue] = [
-		//JSStaticValue(name: "nativeModules", getProperty: nil, setProperty: nil, attributes: 0),
+		//JSStaticValue(name: modSpace, getProperty: nil, setProperty: nil, attributes: 0),
 		JSStaticValue(name: nil, getProperty: nil, setProperty: nil, attributes: 0) // req'd terminator
     ]
 
@@ -325,29 +369,47 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		JSObjectSetProperty(ctx, globalObj, JSStringCreateWithCFString(property as CFString), value, attrs, nil)
 	}
 
-	static func injectGlobal(ctx: JSContextRef, property: String, function: JSObjectCallAsFunctionCallback!, attrs: JSPropertyAttributes = JSPropertyAttributes(kJSPropertyAttributeNone) ) {
+	@discardableResult
+	static func injectGlobal(ctx: JSContextRef, property: String, function: JSObjectCallAsFunctionCallback!, attrs: JSPropertyAttributes = JSPropertyAttributes(kJSPropertyAttributeNone) ) -> JSObjectRef! {
 		let jsfunc = JSObjectMakeFunctionWithCallback(ctx, JSStringCreateWithCFString(property as CFString), function)!
 		injectGlobal(ctx: ctx, property: property, value: jsfunc, attrs: attrs)
+		return jsfunc
 	}
 
 	static let initialize: JSObjectInitializeCallback = { ctx, obj in
 		// this[Symbol.toStringTag] = "app"; this => [object app]
 
 		injectGlobal(ctx: ctx!, property: "require", function: cjsrequire) // workaround for &[JSStaticFunction] uselessness
+		injectGlobal(ctx: ctx!, property: "setTimeout", function: setTimeout)
 
-		injectGlobal(ctx: ctx!, property: "_log", function: conlog, attrs: JSPropertyAttributes(kJSPropertyAttributeDontEnum))
+		// set up our logging muxer, makes console.log print to stderr and to attached Safari Inspectors' consoles
+		// https://developer.mozilla.org/en-US/docs/Web/API/console
 		// https://github.com/facebook/react-native/blob/d01ab66b47a173a62eef6261e2415f0619fefcbb/Libraries/Core/InitializeCore.js#L62
 		// https://github.com/facebook/react-native/blob/d01ab66b47a173a62eef6261e2415f0619fefcbb/Libraries/Core/ExceptionsManager.js#L110
 		// https://github.com/facebook/react-native/blob/d01ab66b47a173a62eef6261e2415f0619fefcbb/Libraries/Utilities/RCTLog.js
-		let source = JSStringCreateWithCFString("""
-			console._logOriginal = console.log.bind(console);
-			console.log = (...args) => {
-				console._logOriginal.apply(console, args);
-				_log(args);
+		JSEvaluateScript(ctx, JSStringCreateWithCFString("""
+		((conlog) => { // protecc the namespace
+			const _logOriginal = console.log.bind(console);
+			// decl makes sure our new .log is .name=="log"
+			const log = (...args) => {
+				_logOriginal.apply(console, args);
+				conlog(args);
 			}
-			//console.log("_log hooked");
-		""" as CFString)
-		JSEvaluateScript(ctx, source, obj, nil, 1, nil)
+			console.log = log;
+			//console.log("conlog hooked");
+		})(this);
+		""" as CFString), JSObjectMakeFunctionWithCallback(ctx!, nil, conlog)!, nil, 1, nil)
+
+		JSEvaluateScript(ctx, JSStringCreateWithCFString("""
+		((contrace) => { // protecc the namespace
+			const _traceOriginal = console.trace.bind(console);
+			const trace = (...args) => {
+				_traceOriginal.apply(console, args);
+				contrace(args);
+			}
+			console.trace = trace;
+		})(this);
+		""" as CFString), JSObjectMakeFunctionWithCallback(ctx!, nil, contrace)!, nil, 1, nil)
 
 		//context.globalObject.setObject(nativeModules, forKeyedSubscript: modSpace as NSString) // copied values-by-ref, but the array is stale!
 		// retain(obj)
@@ -526,6 +588,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	override var description: String { return "<\(type(of: self))> [\(appPath)]" }
 
+	// sleep is specious in JS...replace this with a node-ish setTimeout func
 	func sleep(_ secs: Double) {
 		warn("for \(secs)s")
 		Thread.sleep(forTimeInterval: TimeInterval(secs))
@@ -652,6 +715,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #if os(OSX)
 		if LSCopyApplicationURLsForBundleIdentifier(appstr as CFString, nil) != nil { return true }
 #elseif os(iOS)
+	// https://www.hackingwithswift.com/example-code/system/how-to-check-whether-your-other-apps-are-installed
+	// https://medium.com/@guanshanliu/lsapplicationqueriesschemes-4f5fa9c7d240
 		if let appurl = NSURL(string: "\(appstr)://") { // installed bundleids are usually (automatically?) usable as URL schemes in iOS
 			if UIApplication.sharedApplication().canOpenURL(appurl) { return true }
 		}
@@ -948,7 +1013,12 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				return
 		}
 		warn(ev.description)
-		eventCallbacks[ev, default: []] += [callback]
+
+		// ensure callback can be garbage collected by JS after self.deinit
+		// let ownedCB = JSManagedValue(mangaged: callback)
+		// JSContext.current.virtualMachine.addManagedReference(ownedCB, withOwner: self)
+
+		eventCallbacks[ev, default: []] += [callback] // [ownedCB]
 		//warn(eventCallbacks[ev, default: []].description)
 	}
 
@@ -1000,15 +1070,18 @@ enum AppScriptEvent: String, CustomStringConvertible, CaseIterable {
 		printToREPL, // result
 		tabTransparencyToggled, // transparent, tab
 		AppShouldTerminate, // AppUI
+		handleUserInputtedInvalidURL, // urlstr, tab
+		handleUserInputtedKeywords, // urlstr, tab
 
 		// WKNavigationDelegate
-		decideNavigationForURL,
-		decideNavigationForClickedURL,
-		receivedRedirectionToURL,
-		receivedCookie,
-		handleUnrenderableMIME,
-		decideWindowOpenForURL,
-		didWindowOpenForURL
+		decideNavigationForURL, // url, tab
+		decideNavigationForClickedURL, // url, tab
+		receivedRedirectionToURL, // url, tab
+		receivedCookie, // tab, cookieName, cookieValue
+		handleUnrenderableMIME, // mime, url, filename, tab
+		decideWindowOpenForURL, // url, tab
+		didWindowOpenForURL, // url, newTab, tab
+		didWindowClose // tab
 
 
 // TOIMPL: https://electronjs.org/docs/api/app#events
