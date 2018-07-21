@@ -136,6 +136,9 @@ struct AppScriptGlobals {
 		// https://github.com/node-app/Nodelike/blob/master/Nodelike/NLHTTPParser.m
 
 		// TODO: caching, loop-prevention
+		// Ejecta ships a JS wrapper as require() to manage its module-space:
+		//     https://github.com/phoboslab/Ejecta/blob/b3745f235a7aba6973d39a77990bb0f6eb02a413/Source/Ejecta/Ejecta.js#L136
+		//			https://github.com/phoboslab/Ejecta/blob/6ff2424/Source/Ejecta/EJJavaScriptView.m#L274
 
 		if let mods = mods, urlstr == "@MacPin" { // export our native objects & classes
 			// JS module naming is BS: https://youtu.be/M3BM9TB-8yA?t=11m0s http://tinyclouds.org/jsconf2018.pdf
@@ -147,8 +150,9 @@ struct AppScriptGlobals {
 					JSObjectSetProperty(ctx, exports, JSStringCreateWithCFString(k as CFString), jsv.jsValueRef, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 				// TODO: check for simple-jack types havining dedicated JSValue(type:, in:)inits
 				} else if v is JSExport, let bridged = JSValue(object: v, in: JSContext.current()) { // JSContext(jsGlobalContextRef: ctx)) {
-
 					// AVAST: thar be crashes heere*. gARRRbage Collection run amuk!
+
+					//JSValue.init(*, in:) already JSValueProtects itself ... so that's not it
 
 					//let owned = JSManagedValue(value: bridged, andOwner: thisObject)! // let the call site be the owner
 					// Erp, thisObject is not the caller, its thisfunc.bind(thisFunc) ...
@@ -156,12 +160,13 @@ struct AppScriptGlobals {
 					// BUG: doesn't seem to honor NS->Swift conversions for JSExported setters, props will get NSwhatever as inputs even if decl'd as swift-foundation types
 					JSObjectSetProperty(ctx, exports, JSStringCreateWithCFString(k as CFString), bridged.jsValueRef, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 					//JSObjectSetProperty(ctx, exports, JSStringCreateWithCFString(k as CFString), owned.value.jsValueRef, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+
+					JSGlobalContextRetain(ctx) // protecc plz, we now hold a swift instance
 				} else {
 					warn("skipped export of `\(k)`, un-bridgable type!")
 				}
 
 			}
-			//JSGlobalContextRetain(ctx) // protecc plz
 
 // *: Instanciating bridged-JSValues/Contexts from @conv(c) funcs causes ARC faults indeterminately down the line (when JSC VM GC's??):
 // Fixed? https://github.com/WebKit/webkit/commit/9be0bde9221db8c348511fa4bd10cbb2eaa607b7
@@ -191,7 +196,6 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		let scriptURL: String
 
 		guard let sourceURL = getResourceURL(urlstr) else {
-			// FIXME: script code could be loaded from any path, exploitable?
 			warn("\(urlstr): could not be found", function: "loadCommonJSScript")
 			return JSValueMakeNull(ctx)
 		}
@@ -294,36 +298,73 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 
 
 	static let setTimeout: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
+		// https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setTimeout
 		// https://nodejs.org/en/docs/guides/timers-in-node/ https://github.com/electron/electron/issues/7079
 
-		if argc < 2 {
-			// FIMXE: support less/more args
-			// https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setTimeout
+		guard let args = args, argc > 1 else {
 			return JSValueMakeUndefined(ctx)
 		}
 
-		if let args = args, JSValueIsNumber(ctx, args[1]), JSValueIsObject(ctx, args[0]) {
-			let callback = JSValueToObject(ctx, args[0], exception) // too early?
-			// BUG? does not accept stringified "functions" as a callable callback, so call me maybe?
+		let timeout = JSValueToNumber(ctx, args[1], exception)
+		if timeout.isNaN { return JSValueMakeUndefined(ctx) }
 
-			//let gctx = JSGlobalContextRetain(ctx) // segs
-			let gctx = JSContextGetGlobalContext(ctx) // get the global context, it should outlive us all
-			JSValueProtect(gctx, callback) //protecc any values that will outlive this callback
-			// https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setInterval#The_this_problem
-			//   we will also not pass in thisObj per MDN guideline
+		let gctx = JSContextGetGlobalContext(ctx) // get the global context, it should outlive us all
 
-			let delayTime = DispatchTime.now() + JSValueToNumber(ctx, args[1], nil)
-			warn("target timeout scheduled @ \(delayTime.rawValue)", function: "setTimeout")
-			DispatchQueue.global(qos: .userInteractive).asyncAfter(deadline: delayTime) { // "sleep"
-				warn("actual timeout fired @ \(DispatchTime.now().rawValue)", function: "setTimeout:async")
-				JSObjectCallAsFunction(gctx, callback, nil, 0, nil, nil) // run callback in globalContxt
-				// 0, nil should be (argc - 2), args[2..]
-
-				JSValueUnprotect(gctx, callback) // kthxbai
-			}
+		var argv: [JSValueRef?] = [] // arguments: UnsafePointer<JSValueRef?>!
+		for idx in 2..<(argc) {
+			JSValueProtect(gctx, args[idx])
+			argv.append(args[idx])
 		}
 
-		return JSValueMakeUndefined(ctx)
+		let callBack: JSObjectRef?
+
+		if JSValueIsString(ctx, args[0]), let code = JSValueToStringCopy(ctx, args[0], exception) {  // accept stringified "functions"
+			callBack = JSObjectMakeFunction(ctx, nil, 0, nil, code, nil, 0, exception)
+			// FIXME: send in argv as a `arguments` named spread?
+			//_ ctx: JSContextRef!, _ name: JSStringRef!, _ parameterCount: UInt32, _ parameterNames: UnsafePointer<JSStringRef?>!,
+			//_ body: JSStringRef!, _ sourceURL: JSStringRef!, _ startingLineNumber: Int*32, _ exception: UnsafeMutablePointer<JSValueRef?>!
+		} else if !JSValueIsNull(ctx, args[0]) && !JSValueIsUndefined(ctx, args[0]) {
+			// if JSValueIsFunction(ctx, args[0]) // skips [CallbackFunction]s
+			callBack = JSValueToObject(ctx, args[0], exception)
+			// FIXME if callback is a property of a parent object, should parent be passed as callbackThis?
+		} else {
+			callBack = nil
+		}
+
+		guard let callback = callBack, JSObjectIsFunction(ctx, callback) else {
+			warn("did not supply a function!", function: "setTimeout")
+			return JSValueMakeUndefined(ctx)
+		}
+
+		// https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setInterval#The_this_problem
+		//   per MDN, will *not* callback.bind(thisObj)
+
+		//protecc any values passed into this FunctionCallback that will outlive its return to JS
+		JSValueProtect(gctx, callback)
+
+		let delayTime = DispatchTime.now() + JSValueToNumber(ctx, args[1], nil)
+		warn("timeout scheduled @ \(delayTime.rawValue)", function: "setTimeout")
+
+		DispatchQueue.main.asyncAfter(deadline: delayTime, qos: .userInteractive, flags: .enforceQoS) { [argv] in
+			// https://developer.apple.com/videos/play/wwdc2015/718/?time=1380
+
+			// WKWebView.evaluateJavascript schedules work on main thread, so we must be using it too
+			dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
+
+			warn("timeout call @ \(DispatchTime.now().rawValue)", function: "setTimeout:main")
+
+			JSObjectCallAsFunction(gctx, callback, nil, argv.count, argv, nil)
+			// FIXME calling func-properties of JSExported instances throws
+			// `TypeError: self type check failed for Objective-C instance method`
+			// can workaround by inst.bind(inst)ing or wrapping as an arrow/Function()
+
+			JSValueUnprotect(gctx, callback) // kthxbai
+			argv.forEach { JSValueUnprotect(gctx, $0) }
+		}
+
+		// https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setTimeout#Return_value
+		return JSValueMakeUndefined(ctx) // FIXME: per ^ we should be returning a random number ...
+		// ... but then we'd have to support cancelTimeout(timeoutID)
 	}
 
 	static let contrace: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
@@ -344,7 +385,6 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 				//strs.append(JSValue(jsValueRef: args[idx], in: JSContext.current()).toString()) // reverse Objc-bridge
 				strs.append(JSStringCopyCFString(kCFAllocatorDefault, JSValueToStringCopy(ctx, args[idx], exception)) as String)
 			}
-			//if argc == 1 { warn(strs[0]); } else { warn(obj: strs); }
 			if argc == 1 { warn(strs[0], function: "conlog"); } else { warn(strs.description, function: "conlog"); }
 		} else {
 			warn("", function: "conlog")
@@ -573,6 +613,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		nativeModules = [
 			// https://electronjs.org/docs/api/app
 			"app":				JSValue(object: self, in: context)
+			//,"app2":			self // crash bandicoots
 			// https://electronjs.org/docs/api/browser-window
 			,"BrowserWindow":	BrowserController.self.wrapSelf(context)
 			// https://electronjs.org/docs/api/browser-view
@@ -643,7 +684,6 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		let scriptURL: String
 
 		guard let sourceURL = getResourceURL(urlstr) else {
-			// FIXME: script code could be loaded from any path, exploitable?
 			warn("\(urlstr): could not be found", function: "loadCommonJSScript")
 			return nil
 		}
@@ -1056,15 +1096,29 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	var messageHandlers: [String: [JSValue]] = [:]
 }
 
+/*
+enum AppScriptEventPrototypes: String, CustomStringConvertible, CaseIterable {
+	var description: String { return "\(type(of: self)).\(self.rawValue)" }
+	// TODO: how to describe allowed arguments?
+	// cases can be tuples: https://github.com/OAuthSwift/OAuthSwift/blob/master/Sources/OAuthWebViewController.swift#L64
+	//   each declared event is like an anon-struct
+	//     case launchURL(url: URL); case printToREPL(result: Any)
+	// but then the emit() implementation has to have a specific case for all events to unpack their specific tuples for the call into JS
+	//   case launchURL(let url):
+	//		AppScriptRuntime.shared.eventHandlers[event.rawValue].callAsFunction(args: [url])
+	//	any way to spread the tuple comps generically?
+	//		eventArgs = Mirror(reflecting: event).children.allValues // makes [Any]
+	//		AppScriptRuntime.shared.eventHandlers[event.rawValue].callAsFunction(args: eventArgs)
+}
+*/
+
 enum AppScriptEvent: String, CustomStringConvertible, CaseIterable {
 	var description: String { return "\(type(of: self)).\(self.rawValue)" }
 
 	case /* legacy MacPin event names */
 		launchURL, // url
-		networkIsOffline, //url, tab
 		handleClickedNotification, // title, subtitle, message, idstr
 		handleDragAndDroppedURLs, // urls -> Bool
-		decideNavigationForMIME, // mime, url, webview -> Bool
 		AppWillFinishLaunching, // AppUI
 		AppFinishedLaunching, // url...
 		printToREPL, // result
@@ -1073,10 +1127,13 @@ enum AppScriptEvent: String, CustomStringConvertible, CaseIterable {
 		handleUserInputtedInvalidURL, // urlstr, tab
 		handleUserInputtedKeywords, // urlstr, tab
 
-		// WKNavigationDelegate
+		// TODO: these should be in BrowsingEvents
+		// WKNavigationDelegate, WebViewDelegates
+		networkIsOffline, //url, tab
 		decideNavigationForURL, // url, tab
 		decideNavigationForClickedURL, // url, targetIsMainFrame, tab
 		receivedRedirectionToURL, // url, tab
+		decideNavigationForMIME, // mime, url, webview -> Bool
 		receivedCookie, // tab, cookieName, cookieValue
 		handleUnrenderableMIME, // mime, url, filename, tab
 		decideWindowOpenForURL, // url, tab
