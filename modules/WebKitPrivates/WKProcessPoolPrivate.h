@@ -1,12 +1,12 @@
 @import WebKit;
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKProcessPoolPrivate.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKProcessPoolPrivate.h
 
 #if WK_API_ENABLED
 
 @class _WKProcessPoolConfiguration;
 @protocol _WKDownloadDelegate;
 
-@interface WKProcessPool () 
+@interface WKProcessPool ()
 - (instancetype)_initWithConfiguration:(_WKProcessPoolConfiguration *)configuration __attribute__((objc_method_family(init))) WK_DESIGNATED_INITIALIZER;
 @end
 
@@ -17,7 +17,7 @@
 @property (nonatomic, readonly) _WKProcessPoolConfiguration *_configuration;
 
 - (void)_setAllowsSpecificHTTPSCertificate:(NSArray *)certificateChain forHost:(NSString *)host;
-- (void)_setCanHandleHTTPSServerTrustEvaluation:(BOOL)value WK2_AVAILABLE(10_11, 9_0);
+- (void)_setCanHandleHTTPSServerTrustEvaluation:(BOOL)value WK_API_AVAILABLE(macosx(10.11), ios(9.0));
 - (void)_setCookieAcceptPolicy:(NSHTTPCookieAcceptPolicy)policy;
 
 - (id)_objectForBundleParameter:(NSString *)parameter;
@@ -29,14 +29,23 @@
 // https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
 // https://github.com/WebKit/webkit/search?q=_downloadDelegate&type=Code
 
+//@property (nonatomic, weak, setter=_setAutomationDelegate:) id <_WKAutomationDelegate> _automationDelegate WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+
 // tells where in the local filesystem any particular URL's cache file ("~/Library/WebKit/WebsiteData") is saved
 + (NSURL *)_websiteDataURLForContainerWithURL:(NSURL *)containerURL;
 + (NSURL *)_websiteDataURLForContainerWithURL:(NSURL *)containerURL bundleIdentifierIfNotInContainer:(NSString *)bundleIdentifier;
 //- (void)_automationCapabilitiesDidChange WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 //- (void)_setAutomationSession:(_WKAutomationSession *)automationSession WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 
+// Test only. Returns web processes running web pages (does not include web processes running service workers)
+- (size_t)_webPageContentProcessCount WK_API_AVAILABLE(macosx(10.13.4), ios(11.3));
+
 //- (void)_warmInitialProcess WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 
+- (void)_preconnectToServer:(NSURL *)serverURL WK_API_AVAILABLE(macosx(10.13.4), ios(11.3));
+
+@property (nonatomic, getter=_isCookieStoragePartitioningEnabled, setter=_setCookieStoragePartitioningEnabled:) BOOL _cookieStoragePartitioningEnabled WK_API_AVAILABLE(macosx(10.12.3), ios(10.3));
+@property (nonatomic, getter=_isStorageAccessAPIEnabled, setter=_setStorageAccessAPIEnabled:) BOOL _storageAccessAPIEnabled WK_API_AVAILABLE(macosx(10.13.4), ios(11.3));
 @end
 
 #endif
