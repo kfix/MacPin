@@ -14,7 +14,7 @@ var hangouts = {
 var hangoutsAlt = Object.assign({}, hangouts, {url: "https://plus.google.com/u/1/hangouts"});
 $.browser.addShortcut("Google Hangouts", hangouts);
 var hangoutsTab = new $.WebView(hangouts); // start loading right way, its a big Closure app
-$.browser.addShortcut("Log into Google Account", {url: "https://accounts.google.com/serviceloginauth"});
+$.browser.addShortcut("Log into Google Account", "https://accounts.google.com/signin");
 $.browser.addShortcut("Open Hangouts tab using secondary Google account", hangoutsAlt);
 $.browser.addShortcut("Install Google Voice & Video plugin", "https://encrypted.google.com/tools/dlpage/hangoutplugin");
 $.browser.addShortcut("Get Contacts.app -> Hangouts.app plugin", "http://github.com/kfix/MacPin/tree/master/extras/AddressBookHangoutsPlugin");

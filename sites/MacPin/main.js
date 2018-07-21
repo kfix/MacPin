@@ -17,6 +17,50 @@ var ntpTab = new WebView("file:///usr/share/doc/ntp/index.html");
 
 let browser = new BrowserWindow();
 
+function readability(tab) {
+	// do the bookmarklet stuff for "Reading Mode"
+	console.trace();
+
+	// https://github.com/mozilla/readability/blob/master/Readability.js
+	let pkg = 'Readability'; // i keep typo'ing this, lol
+
+	//inject & evalJS are both async so we need some blocking here ...
+
+	let popupReader = `
+		(() => {
+			let readr = new ${pkg}(window.document.cloneNode(true), {}).parse();
+			console.log(readr);
+
+			//let popup = window.open('about:readability', '_blank'); // i get same-origin errors with this
+			let popup = window.open();
+			// Inherited origins: Content from about:blank, javascript: and data: URLs inherits the origin from the document that loaded the URL
+
+			// debugs
+			//console.log(popup);
+			//console.log(popup.location);
+			//console.log(popup.document.origin === window.document.origin);
+			// ^ same-origin policy must pass if we want to manipulate the popup's DOM!
+			//console.log(popup.opener.location); // window.open(...,'noopener') to prevent
+			//window.readerArticle = readr;
+			//window.readerPopup = popup;
+
+			popup.document.write(readr.content);
+			popup.document.title = 'Reading: ' + readr.title;
+			//console.log(popup.document.body);
+			popup.focus(); // notimpld yet
+		})();
+	`;
+
+	injectTab(pkg, popupReader, false, tab);
+}
+
+app.on('didWindowOpenForURL', function(url, newTab, tab) {
+	if (url.length > 0 && newTab)
+		console.log(`window.open(${url})`);
+
+	return false; // macpin will popup(newTab, url) and return newTab to tab's JS
+});
+
 let openInChrome = function(tab) {
 	console.log(`app.js: opening (${tab.url}) in chrome`);
 	switch (app.platform) {
@@ -157,6 +201,8 @@ function sendNoteFromTab(msg, tab) {
 
 app.on('AppWillFinishLaunching', (AppUI) => {
 	//browser.unhideApp();
+	browser.addShortcut('Paint It Black', [], enDarken);
+	browser.addShortcut('Make it Readable', [], readability);
 
 	browser.addShortcut('MacPin @ GitHub', 'http://github.com/kfix/MacPin');
 	browser.addShortcut('WebKit Feature Status', 'https://webkit.org/status/');
@@ -197,7 +243,6 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut('Simulate TouchEvents', ['thumbs', '', false], injectTab); // http://mwbrooks.github.io/thumbs.js/
 	browser.addShortcut('Log DnDs to console', ['dnd', '', false], injectTab);
 	browser.addShortcut('pop-open 1st image as data:// URL', [], img2data);
-	browser.addShortcut('Paint It Black', [], enDarken);
 	browser.addShortcut('test AppleScript', ["whooo", '1'], testAS);
 
 	// a dual-mode REPL like this loaded in another browser would be nice: http://reality.hk/2014/01/12/building-a-ios-ruby-repl/
@@ -238,11 +283,13 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 
 app.on('AppFinishedLaunching', (launchURLs) => {
 	console.log(launchURLs);
-	if (!('printToREPL' in app.eventCallbacks)) {
-		app.loadAppScript('app_repl.js');
-	}
 	setTimeout((() => {console.log("yay timers work"); console.trace();}), 3.2);
 });
+
+if (!('printToREPL' in app.eventCallbacks)) {
+	let {repl} = require('app_repl.js');
+	app.on('printToREPL', repl);
+}
 
 // https://www.lucidchart.com/techblog/2018/02/14/javascriptcore-the-holy-grail-of-cross-platform/
 //app.loadAppScript('fetchDeps.js`);

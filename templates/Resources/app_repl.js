@@ -3,9 +3,7 @@
 /*eslint eqeqeq:0, quotes:0, space-infix-ops:0, curly:0*/
 "use strict";
 
-(() => { // ES6 IIFE to protecc global scowpe
-const {app} = require("@MacPin");
-
+((module) => { // ES6 IIFE to protecc global scowpe if being loaded as a global "app" script
 // helpers to stringify JS outputs to REPL from seeDebugger.js
 // also refer to:
 //   http://stackoverflow.com/questions/34914397/why-doesnt-console-log-work-in-the-jsc-environment-but-it-works-in-safaris-deb
@@ -18,7 +16,7 @@ const {app} = require("@MacPin");
 // https://github.com/substack/object-inspect/blob/master/index.js
 //
 // https://github.com/deecewan/browser-util-inspect/blob/master/index.js
-let inspect = require(`file://${app.resourcePath}/browser-util-inspect.js`);
+let inspect = require('browser-util-inspect.js');
 //
 // https://github.com/Automattic/util-inspect
 
@@ -31,7 +29,7 @@ Object.defineProperty(this, "ls", {
 	}
 });
 
-app.on('printToREPL', function (result, colorize) {
+let printToREPL = function (result, colorize) {
 
 	function vtype(obj) {
       // JS world doesn't have a solid convention to get bare type names for *any* given object. pathetic.
@@ -144,20 +142,6 @@ app.on('printToREPL', function (result, colorize) {
 	}
 
 	let description = inspect(result, {showHidden: true, colors: colorize});
-/*
-	var description;
-	try {
-		description = JSON.stringify(result, function (k,v) { //replacer func
-			return REPLdump(v);
-			var type = vtype(v);
-			if (isstringy(type)) return result.toString(); // dump funcs' code
-			if (!isprimitive(type)) return type;
-			return v;
-		}, 1)
-	} catch(e) {
-		description = `((JSON.stringify failed: ${e}))`;
-	}
-*/
 	if (description) description = description.replace(/\\t/g, "\t").replace(/\\n/g, "\n")
 	var rtype = vtype(result);
 	if (rtype == 'Function') description = REPLdump(result);
@@ -165,6 +149,13 @@ app.on('printToREPL', function (result, colorize) {
 	if (typeof result != 'undefined' && !(result === null) && result.__proto__) description += `\n${rtype}.__proto__: ${Object.getOwnPropertyNames(result.__proto__)}`;
 	var ret = `[${rtype}] = ${description}`;
 	return ret;
-});
+};
 
-})(); //-ES6 IIFE
+if (typeof module === "object") { // loaded as a require()
+	module.exports['repl'] = printToREPL;
+} else { // loaded as an app script (global include)
+	const {app} = require("@MacPin");
+	app.on('printToREPL', printToREPL);
+}
+
+})((typeof module === "object") ? module : false); //-ES6 IIFE
