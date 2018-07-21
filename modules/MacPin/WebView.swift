@@ -19,7 +19,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	var description: String { return "\(type(of: self)).\(self.rawValue)" }
 
 	/* legacy MacPin event names */
-	case url, agent, icon, // String
+	case url, agent, agentApp, icon, // String
 	transparent, isolated, privacy = "private", allowsMagnification, allowsRecording, // Bool
 	preinject, postinject, style, subscribeTo, // [String]
 	handlers // {} ~> [String: [JSValue]]
@@ -41,6 +41,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	var transparent: Bool { get set }
 	var caching: Bool { get set }
 	var userAgent: String { get set }
+	var userAgentAppName: String { get set }
 	var allowsMagnification: Bool { get set }
 	var allowsRecording: Bool { get set }
 	//var canGoBack: Bool { get }
@@ -53,7 +54,10 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 		//WKContentRuleListStore.default().getAvailableContentRuleListIdentifiers(_ completionHandler: (([String]?)
 		// https://trac.webkit.org/changeset/213696/webkit
 		// https://developer.apple.com/library/archive/documentation/Extensions/Conceptual/ContentBlockingRules/CreatingRules/CreatingRules.html
-	static var MatchedAddressOptions: [String:String] { get set }
+
+	var isLoading: Bool { get }
+
+	//static var MatchedAddressOptions: [String:String] { get set }
 
 	// methods are exported as non-enumerable (but configurable) JS props by JSC
 	//   https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSWrapperMap.mm#L258
@@ -72,14 +76,15 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	func scrapeIcon()
 	//func goBack()
 	//func goForward()
-	//func reload()
+	func reload() -> WKNavigation?
 	//func reloadFromOrigin()
 	//func stopLoading() -> WKNavigation?
 	//var snapshotURL: String { get } // gets a data:// of the WKThumbnailView
 }
 
 
-@objc class MPWebView: WKWebView, WebViewScriptExports {
+@objcMembers
+class MPWebView: WKWebView, WebViewScriptExports {
 
 	//@objc dynamic var isLoading: Bool
 	//@objc dynamic var estimatedProgress: Double
@@ -113,9 +118,27 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	}
 
 	var userAgent: String {
-		get { return _customUserAgent ?? _userAgent ?? "" }
-		// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/mac/UserAgentMac.mm#L48
-		set(agent) { if !agent.isEmpty { _customUserAgent = agent } }
+		get { return _customUserAgent.isEmpty ? _userAgent : _customUserAgent }
+		// @abstract The custom user agent string or nil if no custom user agent string has been set.
+		set(agent) {
+			_customUserAgent =
+				// lolwut JSExport<String?> will toString() whatever is received...	so we get String("null") for JSNull
+				( agent == "null" || agent == "undefined" || agent == "false" || agent.isEmpty ) ?
+					"" : agent // so treat all falsies as empty-string
+				// webkit treats empty-string _customUserAgent as equivalent to default user agent
+		}
+	}
+
+	var userAgentAppName: String { // is suffixed to an automatic webkit useragent if not blank:
+		// https://github.com/WebKit/webkit/blob/master/Source/WebCore/platform/cocoa/UserAgentCocoa.mm
+		// https://github.com/WebKit/webkit/blob/master/Source/WebCore/platform/mac/UserAgentMac.mm#L48
+		get { return _applicationNameForUserAgent ?? "" }
+		//set(app) { if !app.isEmpty { _applicationNameForUserAgent = app } }
+		set(app) {
+			_applicationNameForUserAgent =
+				( app == "null" || app == "undefined" || app == "false" || app.isEmpty ) ?
+					"" : app
+		}
 	}
 
 	//let page = self.browsingContextController()._pageRef // https://github.com/WebKit/webkit/blob/e41847fbe7dd0bf191a8dafc2c3a5d965e96d277/Source/WebKit2/UIProcess/Cocoa/WebViewImpl.h#L368
@@ -219,7 +242,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 		if config == nil {
 #if os(OSX)
 			if WebKit_version.major >= 602 { // Safari 10
-				configuration._showsURLsInToolTips = true
+				//configuration._showsURLsInToolTips = true
 				configuration._serviceControlsEnabled = true
 				configuration._imageControlsEnabled = true
 				//configuration._requiresUserActionForEditingControlsManager = true
@@ -239,13 +262,22 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
 		prefs._fullScreenEnabled = true
 
+		// gate?
+		prefs._javaScriptCanAccessClipboard = true
+		prefs._domPasteAllowed = true
+
 		// https://webkit.org/blog/7763/a-closer-look-into-webrtc/
 		//if #available(OSX 10.13, iOS 11, *) {
 		if WebKit_version >= (604, 1, 8) { // Safari-604.1.8 = Safari 11, STP_32
 			// https://trac.webkit.org/changeset/213294/webkit
 			prefs._mediaCaptureRequiresSecureConnection = false
-			prefs._mediaDevicesEnabled = true
-			prefs._mockCaptureDevicesEnabled = false
+			prefs._mediaDevicesEnabled = true // audio device acquisiton always fails :-(
+			//prefs._mockCaptureDevicesEnabled = true // works perfectly but uses internal bip-bop streams
+
+			// gate?
+			prefs._peerConnectionEnabled = true
+			prefs._screenCaptureEnabled = true
+
 		} else {
 			warn("WebRTC not available for WebKit: \(WebKit_version)")
 		}
@@ -293,6 +325,8 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 #if os(OSX)
 		allowsMagnification = true
 		_applicationNameForUserAgent = "Version/11.1 Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
+		// FIXME: scrape numbers from local Safari.framework
+		// defaults read /Applications/Safari.app/Contents/Info CFBundleShortVersionString
 
 		if let context = context {
 			"http".withCString { http in
@@ -333,7 +367,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 				if object.hasProperty(prop.rawValue) {
 					guard let jsval = object.forProperty(prop.rawValue) else { warn("no value for \(prop)!"); continue }
 					switch prop {
-						case .url, .agent, .icon where jsval.isString:
+						case .url, .agent, .agentApp, .icon where jsval.isString:
 							props[prop] = jsval.toString()
 						case .transparent, .isolated, .privacy, .allowsMagnification, .allowsRecording where jsval.isBoolean:
 							props[prop] = jsval.toBool()
@@ -378,7 +412,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 		}
 	}
 
-	convenience required init?(object: [String:AnyObject]?) {
+	@nonobjc convenience required init?(object: [String:AnyObject]?) {
 		guard let object = object else { warn("no config object given!"); return nil} // JS can dump a nil on us
 		// this is just for addShortcut() & gotoShortcut(), I think ...
 		var props: [WebViewInitProps: Any] = [:]
@@ -400,11 +434,18 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 		} else {
 			self.init(config: nil)
 		}
-		var url = NSURL(string: "about:blank")
+		var url: URL? = nil
 		for (key, value) in props {
 			switch value {
-				case let urlstr as String where key == .url: url = NSURL(string: urlstr)
+				case let urlstr as String where key == .url:
+					url = URL(string: urlstr)
+					if url == nil { return nil } // hard-fail for bad urls
 				case let agent as String where key == .agent: _customUserAgent = agent
+				case let appName as String where key == .agentApp: _applicationNameForUserAgent = appName
+				//TODO: if v.startsWith('+='), then append to whatever self.userAgent & self.userAgentAppName return
+				// lots of JS libs pick from many expressions in the UA, but we may not always want to be hardcoding platform version numbers
+				// so a dynamic append feature on init is desirable
+
 				case let icon as String where key == .icon: loadIcon(icon)
 				case let magnification as Bool where key == .allowsMagnification: allowsMagnification = magnification
 				case let recordable as Bool where key == .allowsRecording: _mediaCaptureEnabled = recordable
@@ -424,7 +465,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 			}
 		}
 
-		if let url = url { gotoURL(url) } else { return nil }
+		if let url = url { gotoURL(url) }
 	}
 
 	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = false) {
@@ -473,9 +514,10 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 				}
 				return
 			})
-			return
+		} else {
+			warn("no-callback")
+			evaluateJavaScript(js, completionHandler: nil)
 		}
-		evaluateJavaScript(js, completionHandler: nil)
 	}
 
 	// cuz JSC doesn't come with setTimeout()
@@ -501,7 +543,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 		}
 	}
 
-	func gotoURL(_ url: NSURL) { gotoURL(url as URL) }
+	@nonobjc func gotoURL(_ url: NSURL) { gotoURL(url as URL) }
 	func gotoURL(_ url: URL) {
 		let act = ProcessInfo.processInfo.beginActivity(options: [ProcessInfo.ActivityOptions.userInitiated, ProcessInfo.ActivityOptions.idleSystemSleepDisabled], reason: "browsing begun")
 		if url.scheme == "file", #available(OSX 10.11, iOS 9.1, *) {
@@ -587,7 +629,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	@discardableResult
 	func preinject(_ script: String) -> Bool {
 		if !injected.contains(script) && loadUserScriptFromBundle(script, webctl: configuration.userContentController, inject: .atDocumentStart, onlyForTop: false) { injected.append(script); return true }
-		return false
+		return false // ambiguous ... does this mean no script was injected because its already loaded or its not loaded cuz its broken?
 	}
 
 	@discardableResult

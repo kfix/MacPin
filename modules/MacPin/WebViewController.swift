@@ -6,12 +6,18 @@ import WebKit
 import WebKitPrivates
 import JavaScriptCore
 
-@objc class WebViewController: ViewController { //, WebViewControllerScriptExports {
+// https://github.com/apple/swift-evolution/blob/master/proposals/0160-objc-inference.md#re-enabling-objc-inference-within-a-class-hierarchy
+@objcMembers
+class WebViewController: ViewController { //, WebViewControllerScriptExports {
 	@objc unowned var webview: MPWebView
 
 #if os(OSX)
 	override func loadView() { view = NSView() } // NIBless
 #endif
+
+	let browsingReactor = AppScriptRuntime.shared
+	// ^ this is a simple object that can re-broadcast events from the webview and return with confirmation that those events were "handled" or not.
+	// this lets the controller know whether it should perform "reasonable browser-like actions" or to defer to the Reactor's business logic.
 
 	required init?(coder: NSCoder) { self.webview = MPWebView(); super.init(coder: coder); } // required by NSCoding protocol
 	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { self.webview = MPWebView(); super.init(nibName:nil, bundle:nil) } //calls loadView
@@ -23,6 +29,7 @@ import JavaScriptCore
 		webview._findDelegate = self
 
 		if WebKit_version >= (603, 1, 17) {
+			// STP 57, Safari 12
 			webview._iconLoadingDelegate = self
 		}
 		//webview._historyDelegate = self
@@ -31,6 +38,7 @@ import JavaScriptCore
 		//webview._diagnosticLoggingDelegate = self
 #endif
 		webview.configuration.processPool._downloadDelegate = self
+		webview.configuration.processPool._setCanHandleHTTPSServerTrustEvaluation(true)
 
 		WebViewUICallbacks.subscribe(webview)
 
@@ -72,7 +80,12 @@ import JavaScriptCore
 	@objc func askToOpenCurrentURL() { askToOpenURL(webview.url as NSURL?) }
 
 	// sugar for delgates' opening a new tab in parent browser VC
-	func popup(_ webview: MPWebView) { parent?.addChildViewController(type(of: self).init(webview: webview)) }
+	func popup(_ webview: MPWebView) -> WebViewController {
+		let wvc = type(of: self).init(webview: webview)
+		parent?.addChildViewController(wvc)
+		return wvc
+	}
+
 	@objc dynamic func focus() { warn("not implemented!") }
 
 	deinit { warn(description) }

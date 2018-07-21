@@ -11,11 +11,13 @@ extension WKWebView {
 	}
 }
 
-import AppKit
-
 class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
-	@objc dynamic var isLoading: Bool = false { didSet { needsDisplay = true } }
+	@objc dynamic var isLoading: Bool = false { didSet { needsDisplay = true } } // cell.needsDisplay = true
 	@objc dynamic var progress: Double = Double(0.0) { didSet { needsDisplay = true } }
+
+	let thickness = CGFloat(3) // progress line thickness
+
+	//var baselineOffsetFromBottom: CGFloat { get } // http://www.openradar.me/36672952
 
 	//override init(frame frameRect: NSRect) {
 	//	self.super(frame: frameRect)
@@ -25,21 +27,29 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	}
 
 	override func draw(_ dirtyRect: NSRect) {
+		var bezel: NSBezierPath = NSBezierPath(roundedRect: NSInsetRect(bounds, 2, 2), xRadius: 5, yRadius: 5)
+			// approximating the geo of 10.10's .roundedBezel
+			NSColor.darkGray.set(); bezel.stroke() // draw bezel
+	    	bezel.addClip() // constrain further drawing within bezel
+
 		if isLoading {
 			// draw a Safari style progress-line along edge of the text box's focus ring
-			//var progressRect = NSOffsetRect(bounds, 0, 4) // top edge
-			var progressRect = NSOffsetRect(bounds, 0, NSMaxY(bounds) - 4) // bottom edge
-			progressRect = NSInsetRect(progressRect, 3, 0) // laterally shrink to fit within the flat bottom of the bezel
-			progressRect.size.height = 6 // line thickness
+			//var progressRect = NSOffsetRect(bounds, 0, 4) // top edge of bezel
+			var progressRect = NSOffsetRect(bounds, 0, NSMaxY(bounds) - (thickness + 2)) // bottom edge of bezel
+
+			progressRect.size.height = thickness
 			progressRect.size.width *= progress == 1.0 ? 0 : CGFloat(progress) // only draw line when downloading
 
-			NSColor(calibratedRed:0.0, green: 0.0, blue: 1.0, alpha: 0.4).set() // transparent blue line
+			//NSColor(calibratedRed:0.0, green: 0.0, blue: 1.0, alpha: 0.4).set() // transparent blue line
+			// FIXME alpha get overwhelmed when bg/appearance is light
+			NSColor.systemBlue.set() // matches "Highlight Color: Blue" from SysPrefs:General
 			progressRect.fill(using: .sourceOver)
 		} else {
-			NSColor.clear.setFill() // clear background outside of bezel
+	    	NSColor.clear.setFill() // clear background
 			bounds.fill(using: .copy) // .clear
 		}
-		super.draw(dirtyRect)
+
+		super.draw(dirtyRect) // draw control's built-in bezel, background (if not a rounded bezel), & text
 	}
 
 	// NSControl
@@ -94,9 +104,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 
 	required init?(coder: NSCoder) { super.init(coder: coder) }
 	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
-	override func loadView() { //view = urlbox } // NIBless
-		view = urlbox
-	}
+	override func loadView() { view = urlbox } // NIBless
 
 	func popup(_ webview: MPWebView?) {
 		guard let webview = webview else { return }
@@ -120,14 +128,17 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 		super.viewDidLoad()
  		// prepareForReuse() {...} ?
 
+		urlbox.isBezeled = true
+		urlbox.bezelStyle = .roundedBezel
 		let appearance = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") ?? "Light"
 		if appearance == "Dark" {
-			urlbox.drawsBackground = false
 			urlbox.textColor = NSColor.labelColor
 		}
-		urlbox.wantsLayer = true
-		urlbox.bezelStyle = .roundedBezel
 		urlbox.toolTip = ""
+
+		urlbox.maximumNumberOfLines = 1
+		urlbox.importsGraphics = false
+		urlbox.allowsEditingTextAttributes = false
 
 		//urlbox.menu = NSMenu //ctrl-click context menu
 		// search with DuckDuckGo
@@ -162,10 +173,10 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	}
 
 	@objc func userEnteredURL() {
-		if let tf = view as? NSTextField, let url = validateURL(tf.stringValue, fallback: { [unowned self] (urlstr: String) -> NSURL? in
-			if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedInvalidURL", urlstr as NSString, self.webview!) { return nil } // app.js did its own thing FIXME: it should be able to return URL<->NSURL
-			if AppScriptRuntime.shared.jsdelegate.tryFunc("handleUserInputtedKeywords", urlstr as NSString, self.webview!) { return nil } // app.js did its own thing
-			// FIXME: emit()->wait() events here instead
+		if let tf = view as? NSTextField, let url = validateURL(tf.stringValue, fallback: { [unowned self] (urlstr: String) -> URL? in
+			if AppScriptRuntime.shared.anyHandled(.handleUserInputtedInvalidURL, urlstr as NSString, self.webview!) { return nil } // app.js did its own thing
+			if AppScriptRuntime.shared.anyHandled(.handleUserInputtedKeywords, urlstr as NSString, self.webview!) { return nil } // app.js did its own thing
+			//FIXME: it should be able to return URL<->NSURL
 			return searchForKeywords(urlstr)
 		}){
 			if let wv = webview { // FIXME: Selector(gotoURL:) to nextResponder
@@ -180,6 +191,10 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 				// need parent of the presenter?
 			} else {
 				warn("no webviews-tabs and no parentVC ... WTF!!")
+				if let win = view.window {
+					//	win.performSelector(onMainThread: #selector(BrowserViewControllerOSX.newTabPrompt), with: nil, waitUntilDone: false, modes: nil)
+					// win's responderChain is useless ...
+				}
 			}
 		} else {
 			warn("invalid url was requested!")

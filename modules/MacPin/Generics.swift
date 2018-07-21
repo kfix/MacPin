@@ -117,6 +117,7 @@ func loadUserScriptFromBundle(_ basename: String, webctl: WKUserContentControlle
 		if webctl.userScripts.filter({$0 == script}).count < 1 { // don't re-add identical userscripts
 		//if (find(webctl.userScripts, script) ?? -1) < 0 { // don't re-add identical userscripts
 			webctl.addUserScript(script)
+			//webctl.addUserScriptImmediately(script) // https://github.com/WebKit/webkit/commit/9509d7a48a026d9dc9fd229b13eabf7346cd77aa
 		} else { warn("\(scriptUrl) already loaded!"); return false }
 
 	} else {
@@ -193,7 +194,7 @@ func loadUserBlockListFromBundle(_ basename: String, webctl: WKUserContentContro
 }
 
 
-func validateURL(_ urlstr: String, fallback: ((String) -> NSURL?)? = nil) -> NSURL? {
+func validateURL(_ urlstr: String, fallback: ((String) -> URL?)? = nil) -> URL? {
 	// apply fuzzy logic like WK1: https://github.com/WebKit/webkit/blob/master/Source/WebKit/ios/Misc/WebNSStringExtrasIOS.m
 	// or firefox-ios: https://github.com/mozilla/firefox-ios/commit/6cab24f7152c2e56e864a9d75f4762b2fbdc6890
 	// CFURL parser: https://opensource.apple.com/source/CF/CF-1153.18/CFURL.inc.h.auto.html
@@ -226,7 +227,7 @@ func validateURL(_ urlstr: String, fallback: ((String) -> NSURL?)? = nil) -> NSU
 		// TODO: handle ~/
 
 		if let url = urlp.url?.standardizedFileURL, FileManager.default.fileExists(atPath: path) {
-			return url as NSURL? // this file is confirmed to exist, lets use it
+			return url // this file is confirmed to exist, lets use it
 			// BUG: this is accepting all folders, should only do that if index.html exists
 		} else {
 			warn("\(path) not found - request was for \(urlstr)")
@@ -234,7 +235,7 @@ func validateURL(_ urlstr: String, fallback: ((String) -> NSURL?)? = nil) -> NSU
 		}
 	} else if let urlp = NSURLComponents(string: urlstr), !urlstr.hasPrefix("?") {
 		// handle networked urls
-		if urlp.scheme == "about" { return urlp.url as NSURL? }
+		if urlp.scheme == "about" { return urlp.url }
 		barehttp: if let path = urlp.path, !path.isEmpty && !urlstr.contains(" ") && (urlp.scheme ?? "").isEmpty && (urlp.host ?? "").isEmpty && urlstr.contains(".") { // 'example.com' & 'example.com/foobar'
 			if let _ = Int(path) { break barehttp; } //FIXME: ensure not all numbers. RFC952 & 1123 differ on this, but inet_ does weird stuff regardless
 			urlp.scheme = "http"
@@ -260,10 +261,10 @@ func validateURL(_ urlstr: String, fallback: ((String) -> NSURL?)? = nil) -> NSU
 			if let chost = host.cString(using: String.Encoding.utf8) {
 				if let hp = gethostbyname2(chost, AF_INET), hp.hashValue > 0 {
 					warn("IPV4 preflight succeeded")
-					return url as NSURL? // hostname preflighted, so use let WK try this url
+					return url // hostname preflighted, so use let WK try this url
 				} else if let hp = gethostbyname2(chost, AF_INET6), hp.hashValue > 0 {
 					warn("IPV6 preflight suceeded")
-					return url as NSURL? // hostname preflighted, so use let WK try this url
+					return url // hostname preflighted, so use let WK try this url
 				} else {
 					warn("preflighting failed")
 					break schemehandler // try the fallback
@@ -277,7 +278,7 @@ func validateURL(_ urlstr: String, fallback: ((String) -> NSURL?)? = nil) -> NSU
 			// we were force-fed a (custom?) scheme...
 			// I have no idea how to preflight those so follow thru with the URL
 			warn(urlp.description)
-			return urlp.url as NSURL?
+			return urlp.url
 		}
 	}
 
@@ -289,13 +290,13 @@ func validateURL(_ urlstr: String, fallback: ((String) -> NSURL?)? = nil) -> NSU
 	}
 }
 
-func searchForKeywords(_ str: String) -> NSURL? {
+func searchForKeywords(_ str: String) -> URL? {
 	// return a URL that will search the given keyword string
 
 	// maybe its a search query? check if blank and reformat it
 	if !str.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
 		let query = str.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-		let search = NSURL(string: "https://duckduckgo.com/?q=\(query)") { // FIXME: JS setter
+		let search = URL(string: "https://duckduckgo.com/?q=\(query)") { // FIXME: JS setter
 			return search
 		}
 	// FIXME: support OpenSearch to search current site on-the-fly https://en.wikipedia.org/wiki/OpenSearch
