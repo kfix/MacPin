@@ -113,25 +113,6 @@ app.on('decideNavigationForURL', function(url, tab) {
 	}
 });
 
-// Inbox converts all links into window.open()s ... whoaa
-app.on('didWindowOpenForURL', function(url, newTab, tab) {
-
-	if (url.length > 0 && newTab) {
-		console.log(`window.open(${url})`);
-		newTab.loadURL(url);
-		browser.tabSelected = newTab;
-	} else if (newTab) {
-		console.log('popping new window!');
-		// have to add the "tab" (webview) to a browser in order for it
-		// to set its navigation and js delegates .. seems buggish?
-		let bro = new BrowserWindow(); // new window!
-		bro.tabs.push(newTab);
-		// new bro seems to garbage collect on its own! ftw
-	}
-
-	return true; // macpin will return the newTab to tab's JS
-});
-
 app.on('handleUserInputtedInvalidURL', function(query) {
 	// assuming the invalid url is a search request
 	search(query);

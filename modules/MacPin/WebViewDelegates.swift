@@ -392,7 +392,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 		}
 #endif
 		//if !tgt.description.isEmpty { evalJS("window.name = '\(tgt)';") }
-		if let url = openurl, url.scheme != "about" { wv.gotoURL(url) } // decideWindowOpen has allowed us to get this far, so start the load now
+		if let url = openurl, let scheme = url.scheme, url.scheme != "about" { wv.gotoURL(url) } // decideWindowOpen has allowed us to get this far, so start the load now
 		if !browsingReactor.anyHandled(.didWindowOpenForURL, openurl?.absoluteString ?? "", wv, webView) { popup(wv).focus() }
 		return wv // window.open() -> Window()
 		//return nil //window.open() -> undefined
