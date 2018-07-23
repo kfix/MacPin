@@ -26,9 +26,11 @@ function readability(tab) {
 
 	//inject & evalJS are both async so we need some blocking here ...
 
+	tab.style(pkg);
+
 	let popupReader = `
 		(() => {
-			let readr = new ${pkg}(window.document.cloneNode(true), {}).parse();
+			let readr = new ${pkg}(window.document.cloneNode(true), {debug: true}).parse();
 			console.log(readr);
 
 			//let popup = window.open('about:readability', '_blank'); // i get same-origin errors with this
@@ -47,6 +49,7 @@ function readability(tab) {
 			popup.document.write(readr.content);
 			popup.document.title = 'Reading: ' + readr.title;
 			//console.log(popup.document.body);
+
 			popup.focus(); // notimpld yet
 		})();
 	`;
@@ -124,6 +127,7 @@ app.on('decideNavigationForMIME', (mime, url, webview) => {
 });
 
 let setAgent = function(agent, tab) { tab.userAgent = agent; };
+let getAgent = function(tab) { tab.evalJS(`window.alert(navigator.userAgent);`); };
 let img2data = function(tab) {
 	if (!tab) tab = browser.tabSelected;
 	tab.evalJS(`
@@ -227,6 +231,7 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut('Apple Maps test', 'https://maps.apple.com/place?address=One%20Infinite%20Loop');
 
 	// http://user-agents.me
+	browser.addShortcut('Show current User-Agent', [], getAgent);
 	browser.addShortcut('Examine WebKit User-Agent', 'http://browserspy.dk/webkit.php');
 	browser.addShortcut('Safari Version history', 'https://en.wikipedia.org/wiki/Safari_version_history');
 	browser.addShortcut('UA: Safari 11 Mac', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/604.1.29 (KHTML, like Gecko) Version/11.0 Safari/604.1.129"], setAgent);
