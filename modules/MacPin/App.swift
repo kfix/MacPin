@@ -19,6 +19,15 @@ let JavaScriptCore_version: (major: Int, minor: Int, tiny: Int) = {
 	return ( Int(ver >> 16 & 0x0000FFFF), Int((ver >> 8) & 0xFF), Int(ver & 0xFF) )
 }()
 
+// https://en.wikipedia.org/wiki/Safari_version_history#
+// https://github.com/apple/swift-evolution/blob/master/proposals/0015-tuple-comparison-operators.md
+let Safari_version: String = { v in switch true {
+	case v>=(606, 1, 25):	return "12.0" //STP61
+	case v>=(605, 3,  8):	return "11.1"
+	case v>=(604, 1, 28):	return "11.0"
+	case v>=(602, 1, 50):	return "10.0"
+	default:				return "???"
+} }( WebKit_version )
 
 @objc(MacPinApp)
 class MacPinApp: Application {

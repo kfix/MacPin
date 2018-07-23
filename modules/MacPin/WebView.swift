@@ -324,9 +324,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
 #if os(OSX)
 		allowsMagnification = true
-		_applicationNameForUserAgent = "Version/11.1 Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
-		// FIXME: scrape numbers from local Safari.framework
-		// defaults read /Applications/Safari.app/Contents/Info CFBundleShortVersionString
+		_applicationNameForUserAgent = "Version/\(Safari_version) Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
 
 		if let context = context {
 			"http".withCString { http in
@@ -705,6 +703,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	//webview._getContentsAsStringWithCompletionHandler() { (str: String?, err: Error?) -> Void in }
 	//webview._getApplicationManifestWithCompletionHandler() { (manifest: _WKApplicationManifest?) -> Void in }
 	// 605.2.8 == 11.1 for PWA support
+	// no webworkers in wkwebview: https://webkit.org/blog/8090/workers-at-your-service/
 
 #if os(OSX)
 	@objc func reloadWithoutContentBlockers() {
