@@ -39,7 +39,7 @@ struct WeakThing<T: AnyObject> {
 		return grid
 	}() */
 
-	enum BrowserButtons: String {
+	enum BrowserButtons: String, CaseIterable {
 		case OmniBox		= "Search or Go To URL"
 		case Share			= "Share URL"
 		case Snapshot		= "Snapshot"
@@ -139,6 +139,9 @@ struct WeakThing<T: AnyObject> {
 	override func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
 		let tabs = super.toolbarAllowedItemIdentifiers(toolbar)
 		warn(tabs.description)
+
+		let buttons = BrowserButtons.allCases.map { NSToolbarItem.Identifier(rawValue: $0.rawValue) }
+
 		return (tabs as [NSToolbarItem.Identifier]) + ([
 			.separator,
 			.space,
@@ -146,20 +149,8 @@ struct WeakThing<T: AnyObject> {
 			.showColors,
 			.showFonts,
 			.customizeToolbar,
-			.print,
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.OmniBox.rawValue),
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.Share.rawValue),
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.Snapshot.rawValue),
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.Sidebar.rawValue),
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.NewTab.rawValue),
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.CloseTab.rawValue),
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.SelectedTab.rawValue),
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.Back.rawValue),
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.Forward.rawValue),
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.ForwardBack.rawValue),
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.Refresh.rawValue),
-			NSToolbarItem.Identifier(rawValue: BrowserButtons.TabList.rawValue)
-		] as [NSToolbarItem.Identifier])
+			.print
+		] + buttons as [NSToolbarItem.Identifier])
 	}
 
 	override func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -173,6 +164,7 @@ struct WeakThing<T: AnyObject> {
 		] + tabs + [
 			NSToolbarItem.Identifier(rawValue: BrowserButtons.OmniBox.rawValue)
 			// [NSToolbarFlexibleSpaceItemIdentifier]
+			//, NSToolbarItem.Identifier(rawValue: BrowserButtons.StatusBar.rawValue)
 		]
 		//tabviewcontroller remembers where tabs was and keeps pushing new tabs to that position
 	}
@@ -268,7 +260,6 @@ struct WeakThing<T: AnyObject> {
 					ti.view = flag ? tabPopBtn : NSPopUpButton()
 					return ti
 
-
 				case .TabList:
 					btn.image = NSImage(named: NSImage.Name(rawValue: "ToolbarButtonTabOverviewTemplate.pdf"))
 					//btn.action = #selector(BrowserViewControllerOSX.tabListButtonClicked(sender:))
@@ -315,7 +306,7 @@ struct WeakThing<T: AnyObject> {
 
 		view.autoresizingMask = [.width, .height] //resize tabview to match parent ContentView size
 		view.autoresizesSubviews = true // resize tabbed subviews based on their autoresizingMasks
-		transitionOptions = [] //.Crossfade .SlideUp/Down/Left/Right/Forward/Backward
+		transitionOptions = [] // []==.none .crossfade .slideUp/Down/Left/Right/Forward/Backward .allowsUserInteraction
 
 		super.viewDidLoad()
 		view.registerForDraggedTypes([NSPasteboard.PasteboardType.string,NSURLPboardType,NSPasteboard.PasteboardType.fileURL]) //webviews already do this, this just enables openURL when tabless
@@ -352,32 +343,55 @@ struct WeakThing<T: AnyObject> {
 	func performDragOperation(_ sender: NSDraggingInfo) -> Bool { return true } //should open the file:// url
 }
 
+#if DEBUG
+extension TabViewController: NSViewControllerPresentationAnimator {
+    public func animatePresentation(of viewController: NSViewController, from fromViewController: NSViewController) {
+    	warn(fromViewController)
+    	warn(viewController)
+    	super.transition(from: fromViewController, to: viewController, options: transitionOptions, completionHandler: nil)
+    }
+
+    public func animateDismissal(of viewController: NSViewController, from fromViewController: NSViewController) {
+    	warn()
+    }
+}
+#endif
+
 class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	@objc dynamic var tabsArray = [WebViewController]()
 	//var tabsController = NSArrayController()
 
-	lazy var windowController: WindowController = {
+	lazy var windowController: WindowController = { return makeWindow() }()
+
+	func makeWindow() -> WindowController {
 		var effectController = EffectViewController()
 		let win = NSWindow(contentViewController: effectController)
+		//win.setContentBorderThickness(24.0, for: .minY) // fake bottom toolbar
 
 		let wc = WindowController(window: win)
 		wc.window?.initialFirstResponder = self.view // should defer to selectedTab.initialFirstRepsonder
-		//wc.window?.initialFirstResponder = omnibox.view // crashy! must put a nil somewhere in the responder chain...
 		wc.window?.bind(NSBindingName.title, to: self, withKeyPath: #keyPath(BrowserViewController.title), options: nil)
 		effectController.view.addSubview(self.view)
 		self.view.frame = effectController.view.bounds
 		return wc
-	}()
+	}
 
+	@discardableResult
 	func present() -> WindowController {
 		warn()
-		if let win = self.windowController.window { // inits window
+		NSApp.reply(toApplicationShouldTerminate: false) // cancel any termination in progress
+		if tabs.count < 1 { newTabPrompt() } //don't allow a tabless state
+		if let win = self.windowController.window {
 			win.makeKeyAndOrderFront(self)
 			if self.selectedTabViewItemIndex > -1 {
 				let vc = childViewControllers[selectedTabViewItemIndex]
 				self.prepareTab(vc) // retroactively prep current Tab (JS may have made some headlessly)
 			}
+		} else {
+			warn("window is gone, need to re-init windowController!")
+			windowController = makeWindow()
+			return present()
 		}
 
 		return windowController
@@ -402,6 +416,13 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 		//tabsController.automaticallyRearrangesObjects = false
 		//tabsController.entityName = "foo"
+
+		// https://www.ralfebert.de/ios-examples/swift/property-key-value-observer/
+		// https://github.com/ole/whats-new-in-swift-4/blob/master/Whats-new-in-Swift-4.playground/Pages/Key%20paths.xcplaygroundpage/Contents.swift
+		//let observation = observe(\.selectedTabViewItemIndex) { (bvc, change) in
+		//	omnibox.webview = ... bvc.selectedTabViewItemIndex
+		//}
+
 	}
 
 	convenience required init?(object: JSValue) {
@@ -469,6 +490,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			});
 		"""
 		browser.thisEval(helpers)
+			//^ JSObjectGetProxyTarget() https://github.com/WebKit/webkit/commit/546af2a36fededa1263a5ea0a40bc4b2362a3651
 		mountObj.setValue(browser, forProperty: "browser")
 	}
 
@@ -732,6 +754,8 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		//view.layer?.addSublayer(toViewController.view.layer?)
 
 		prepareTab(toViewController)
+		//present()
+		// should take focus now
 	}
 
 	func prepareTab(_ viewController: NSViewController) {
@@ -908,9 +932,6 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	override func tabView(_ tabView: NSTabView, willSelect tabViewItem: NSTabViewItem?) {
 		super.tabView(tabView, willSelect: tabViewItem)
 		warn()
-		//omnibox.webview = tabViewItem?.view?.subviews.first as? MPWebView
-		// FIXME: hokey reference to webview, can't get a ref to the tabViewItem?.viewController?
-		if let vc = tabViewItem?.viewController { prepareTab(vc) }
 	}
 
 	override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
@@ -988,7 +1009,9 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 					var args = Array(arr.dropFirst()).map({ $0! }) // filters nils....buggish?
 					if let wv = tabSelected as? MPWebView { args.append(wv) }
 					AppScriptRuntime.shared.jsdelegate.tryFunc((arr.first as! String), argv: args)
+					// should manually check jsdelegate for named property matching arr.first
 				case let arr as [AnyObject?] where arr.count > 0 && arr.first is JSValue:
+					// bridged JS strings can catch on this too ...
 					guard let callback = arr.first! as? JSValue, // we may have a JS func-ref to call here ...
 					!callback.isNull && !callback.isUndefined && callback.hasProperty("call") else {
 						warn("leading value is uncallable")
@@ -1004,6 +1027,17 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			}
 		}
 	}
+
+	override func viewWillDisappear() {
+		warn()
+		super.viewWillDisappear()
+	}
+
+	override func viewDidDisappear() {
+		warn()
+		super.viewDidDisappear()
+	}
+
 }
 
 extension BrowserViewControllerOSX: NSMenuDelegate {

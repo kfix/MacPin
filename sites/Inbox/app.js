@@ -128,8 +128,6 @@ app.on('handleDragAndDroppedURLs', function(urls) {
 	}
 });
 
-app.on('handleClickedNotification', function(from, url, msg) { app.openURL(url); return true; });
-
 function toggleRedirection(state) { alwaysAllowRedir = (state) ? true : false; };
 
 let enDarken = require('enDarken.js');

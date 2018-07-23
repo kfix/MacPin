@@ -4,6 +4,7 @@
 
 import WebKit
 import WebKitPrivates
+//import AVFoundation
 
 @objc extension WebViewControllerOSX: WKUIDelegate {
 
@@ -69,6 +70,7 @@ import WebKitPrivates
 extension WebViewControllerOSX {
 
 	// https://github.com/WebKit/webkit/commit/fa99fc8295905850b2b9444ba019a7250996ee7d
+	// https://github.com/mozilla-mobile/firefox-ios/blob/ba5b95f7da3940ec523fa912bc9ba1a333a1a3be/Client/Frontend/Browser/BrowserViewController/BrowserViewController%2BWKNavigationDelegate.swift#L256
 	@objc func webView(_ webView: WKWebView, didReceiveAuthenticationChallenge challenge: URLAuthenticationChallenge,
 		completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
 
@@ -250,17 +252,42 @@ extension WebViewController { // _WKInputDelegate
 		}
 	}
 
+	//@available(OSX 10.12.3, *)
+	@objc func _webView(_ webView: WKWebView!, checkUserMediaPermissionFor url: URL!, mainFrameURL: URL!, frameIdentifier: UInt, decisionHandler: ((String?, Bool) -> Void)!) {
+		// navigator.mediaDevices.enumerateDevices
+		warn(url.absoluteString)
+		decisionHandler("0x987654321", true) // salt, authorized
+		// i think the salt needs to match the sum of the devices allowed to be used:
+		//  https://github.com/WebKit/webkit/blob/5c76d692ff9b63c22896dfc7526b3352bbb61667/Source/WebKit/UIProcess/Cocoa/UIDelegate.mm#L965
+		////  https://github.com/WebKit/webkit/blob/7e853093871006bd0e9455272189e0d045df927e/Source/WebKit/UIProcess/UserMediaPermissionRequestManagerProxy.cpp#L330
+		////  https://github.com/WebKit/webkit/blob/7e853093871006bd0e9455272189e0d045df927e/Source/WebKit/UIProcess/UserMediaPermissionRequestManagerProxy.cpp#L156
+	}
+
+	// no objc delegate for requestUserMediaPermissionForFrame ??!
+
 	//@available(OSX 10.13, *)
 	@objc func _webView(_ webView: WKWebView!, requestUserMediaAuthorizationFor devices: _WKCaptureDevices, url: URL!, mainFrameURL: URL!, decisionHandler: ((Bool) -> Void)!) {
-		warn(url.absoluteString)
+	// decidePolicyForUserMediaPermissionRequest page frame mediaOrigin topOrigin request
+	// if this delegate missing or no device types requested, automatic denial
+	// https://github.com/WebKit/webkit/blob/5c76d692ff9b63c22896dfc7526b3352bbb61667/Source/WebKit/UIProcess/Cocoa/UIDelegate.mm#L871
+
+		// this is the per-device authorization
+		// navigator.mediaDevices.getUserMedia({audio: true, video: true});
+		warn("\(url.absoluteString)\n\tnavigator.mediaDevices.getUserMedia({video: \(devices.contains(.camera)), audio: \(devices.contains(.microphone))})")
+
+		//if #available(OSX 10.14, iOS 7, *) {
+		//AVCaptureDevice.devices()
+		// AVAuthorizationStatus.requestAccess(for: ) { }
+		//warn(AVAuthorizationStatus.authorizationStatus(for: .audio).debugDescription)
+		//warn(AVAuthorizationStatus.authorizationStatus(for: .video).debugDescription)
+
 		decisionHandler(true)
 	}
 
-	//@available(OSX 10.12.3, *)
-	@objc func _webView(_ webView: WKWebView!, checkUserMediaPermissionFor url: URL!, mainFrameURL: URL!, frameIdentifier: UInt, decisionHandler: ((String?, Bool) -> Void)!) {
-		warn(url.absoluteString)
-		//decisionHandler(url.absoluteString, true)
-		decisionHandler("0x987654321", true)
+	func _webView(_ webView: WKWebView!, mediaCaptureStateDidChange state: _WKMediaCaptureState) {
+		warn()
+		//warn(obj: state)
+		// .activeCamera .activeMicrophone .mutedCamera .mutedMicrophone
 	}
 
 	// JS window.beforeunload() handler

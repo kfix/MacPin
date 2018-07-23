@@ -99,7 +99,7 @@ struct WebViewNotificationCallbacks {
 	}
 
 	static func subscribe(_ client: MPWebView) {
-		warn()
+		warn("notifications")
 		var provider = makeProvider()
 		provider.base = WKNotificationProviderBase(version: 0, clientInfo: Unmanaged.passUnretained(client).toOpaque())
 		if let manager = getManager(client) {
@@ -124,6 +124,20 @@ struct WebViewUICallbacks {
 		//WKNotificationPermissionRequestDeny(permissionRequest)
 	}
 
+//	static let checkUserMediaPermissions: WKCheckUserMediaPermissionCallback = { page, frame, mediaOrigin, topOrigin, permissionRequest, clientInfo in
+//		WKUserMediaPermissionCheckSetUserMediaAccessInfo(permissionRequest, WKStringCreateWithUTF8CString("0x123456789"), true)
+//	}
+
+	// static let decidePolicyForUserMediaPermissionRequest: WK = { page, frame, mediaOrigin, topOrigin, permissionRequest, clientInfo in
+	//  https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit/UserMedia.cpp
+		//WKUserMediaPermissionRequestAllow(permissionRequest,
+		//, WKUserMediaPermissionRequestAudioDeviceUIDs(permissionRequest)
+		//, WKUserMediaPermissionRequestVideoDeviceUIDs(permissionRequest)
+		//)
+	// without this, requests auto-denied
+	//https://github.com/WebKit/webkit/blob/7e853093871006bd0e9455272189e0d045df927e/Source/WebKit/UIProcess/UserMediaPermissionRequestManagerProxy.cpp#L318
+
+
 	static func makeClient() -> WKPageUIClientV2 {
 		var uiClient = WKPageUIClientV2()
 		uiClient.base.version = 2
@@ -136,6 +150,10 @@ struct WebViewUICallbacks {
 		//uiClient.takeFocus: WKPageTakeFocusCallback!
 		//uiClient.focus: WKPageFocusCallback! // window.focus()
 		//uiClient.unfocus: WKPageUnfocusCallback! // window.blur()
+
+		// V6:
+		//  checkUserMediaPermissionForOrigin = checkUserMediaPermissionCallback
+		//	decidePolicyForUserMediaPermissionRequest = decidePolicyForUserMediaPermissionRequest
 
 		// V9:
 		//  didClickAutoFillButton: WKPageDidClickAutoFillButtonCallback!
@@ -153,7 +171,7 @@ struct WebViewUICallbacks {
 	}
 
 	static func subscribe(_ webview: MPWebView) {
-		warn()
+		warn("UI")
 		var uiClient = makeClient()
 		uiClient.base.clientInfo = UnsafeRawPointer(Unmanaged.passUnretained(webview).toOpaque()) // +0
 		guard let page = webview._page else { return }

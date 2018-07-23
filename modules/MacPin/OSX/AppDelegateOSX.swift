@@ -17,7 +17,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	override init() {
 		// gotta set these before MacPin()->NSWindow()
 		UserDefaults.standard.register(defaults: [
-			"NSQuitAlwaysKeepsWindows":	true, // insist on Window-to-Space/fullscreen persistence between launches
+			//"NSQuitAlwaysKeepsWindows":	true, // insist on Window-to-Space/fullscreen persistence between launches
 			"NSInitialToolTipDelay": 1, // get TTs in 1ms instead of 3s
 			"NSInitialToolTipFontSize": 12.0,
 			// NSUserDefaults for NetworkProcesses:
@@ -25,8 +25,8 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 			// 		WebKit2HTTPProxy, WebKit2HTTPSProxy, WebKitOmitPDFSupport, all the cache directories ...
 			// 		https://lists.webkit.org/pipermail/webkit-dev/2016-May/028233.html
 			"WebKit2HTTPProxy": "",
-			"WebKit2HTTPSProxy": "",
-			"URLParserEnabled": "" // JS: new URL()
+			"WebKit2HTTPSProxy": ""
+			//"URLParserEnabled": "" // JS: new URL()
 			// wish there was defaults for:
 			// 		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/NetworkProcess/mac/NetworkProcessMac.mm overrideSystemProxies()
 			// SOCKS (kCFProxyTypeSOCKS)
@@ -36,6 +36,11 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		])
 
 		UserDefaults.standard.removeObject(forKey: "__WebInspectorPageGroupLevel1__.WebKit2InspectorStartsAttached") // #13 fixed
+
+		if #available(OSX 10.12, *) {
+			// Sierra: don't coalesce windows into forced tabs
+			NSWindow.allowsAutomaticWindowTabbing = false
+		}
 
 		super.init()
 	}
@@ -142,6 +147,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Zoom Out", #selector(WebViewControllerOSX.zoomOut), "-", [.command]))
 		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", #selector(WebViewControllerOSX.zoomText), nil, [.command]))
 		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", #selector(WebViewControllerOSX.toggleTransparency)))
+		tabMenu.submenu?.addItem(MenuItem("Toggle Status Bar", #selector(WebViewControllerOSX.toggleStatusBar)))
 		tabMenu.submenu?.addItem(NSMenuItem.separator())
 		tabMenu.submenu?.addItem(MenuItem("Show JS Console", #selector(MPWebView.console), "c", [.option, .command]))
 		tabMenu.submenu?.addItem(MenuItem("Toggle Web Inspector", #selector(WebViewControllerOSX.showHideWebInspector(_:)), "i", [.option, .command]))
@@ -313,8 +319,6 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 		//NSApp.setServicesProvider(ServiceOSX())
 
-		if self.browserController.tabs.count < 1 { self.browserController.newTabPrompt() } //don't allow a tabless state
-
 		self.windowController = self.browserController.present()
 
 		if let wc = self.windowController, let window = wc.window, let fr = window.firstResponder {
@@ -354,6 +358,8 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		// unfocus app?
 #if arch(x86_64) || arch(i386) // !TARGET_OS_EMBEDDED || TARGET_OS_SIMULATOR
 		if prompter != nil { return .terminateLater } // wait for user to EOF the Prompt
+		// This return value is for delegates that need to provide document modal alerts (sheets) in order to decide whether to quit.
+		// Returning this value causes Cocoa to run the run loop in the NSModalPanelRunLoopMode until your app subsequently calls replyToApplicationShouldTerminate: with the value YES or NO
 #endif
 		AppScriptRuntime.shared.emit(.AppShouldTerminate, self) // allow JS to clean up its refs
 		AppScriptRuntime.shared.resetStates() // then run a GC
@@ -371,6 +377,12 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	}
 
 	public func applicationShouldTerminateAfterLastWindowClosed(_ app: NSApplication) -> Bool { return true }
+
+	@available(OSX 10.13, *) // High Sierra does this in lieu of HandleGetURLEvent
+	public func application(_ application: NSApplication, open urls: [URL]) {
+		warn(obj: urls)
+		//AppScriptRuntime.shared.emit(.launchURL, urlstr)
+	}
 
 	// handles drag-to-dock-badge, /usr/bin/open and argv[1:] requests specifiying urls & local pathnames
 	// https://github.com/WebKit/webkit/commit/3e028543b95387e8ac73e9947a5cef4dd1ac90f2
@@ -424,9 +436,13 @@ extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 	public func userNotificationCenter(_ center: NSUserNotificationCenter, didActivate notification: NSUserNotification) {
 		warn("user clicked notification for app")
 
-		if AppScriptRuntime.shared.anyHandled(.handleClickedNotification,
-			(notification.title ?? "") as NSString, (notification.subtitle ?? "") as NSString,
-			(notification.informativeText ?? "") as NSString, (notification.identifier ?? "") as NSString) {
+		// FIXME should be passing a [:]
+		if AppScriptRuntime.shared.anyHandled(.handleClickedNotification, [
+			"title":	(notification.title ?? "") as NSString,
+			"subtitle":	(notification.subtitle ?? "") as NSString,
+			"body":		(notification.informativeText ?? "") as NSString,
+			"id":		(notification.identifier ?? "") as NSString
+		]) {
 				warn("handleClickedNotification fired!")
 				center.removeDeliveredNotification(notification)
 		}

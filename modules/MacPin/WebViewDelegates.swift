@@ -28,6 +28,13 @@ extension WKWebView {
 }
 
 extension AppScriptRuntime: WKScriptMessageHandler {
+
+	// TODO proper main<->renderer IPC needed .... https://electronjs.org/docs/api/ipc-main
+	//	webkit.messageHandlers cannot support a polyfill of electron.ipcRenderer.sendSync
+	//		https://electronjs.org/docs/api/ipc-renderer#ipcrenderersendsyncchannel-arg1-arg2-
+	//		https://www.chromium.org/developers/design-documents/inter-process-communication#Synchronous_messages
+	// https://github.com/XWebView/XWebView/blob/master/XWebView/xwebview.js#L178
+
 	func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
 		if let webView = message.webView as? MPWebView {
 			//called from JS: webkit.messageHandlers.<messsage.name>.postMessage(<message.body>);
@@ -43,11 +50,9 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 			if let cbs = messageHandlers[message.name] {
 				for cb in cbs {
 					warn("\(message.name) cb:`<\(type(of: cb))>`")
-					//if let cb = cb as? JSValue {
 						cb.call(withArguments: [webView, message.body])
-					//}
 				}
-			} else if jsdelegate.hasProperty(message.name) {
+			} else if jsdelegate.hasProperty(message.name) { // support legacy app.js->{delegate} scripts
 				warn("forwarding webkit.messageHandlers.\(message.name) to jsdelegate.\(message.name)(webview,msg)")
 				jsdelegate.invokeMethod(message.name, withArguments: [webView, message.body])
 			} else {

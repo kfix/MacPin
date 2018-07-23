@@ -5,16 +5,34 @@
 import AppKit
 import WebKitPrivates
 
+@objc class StatusBarField: NSTextField { // FIXMEios UILabel + UITextField
+	// override func minSizeForContent -> NSSize {} // https://brockerhoff.net/blog/2006/10/02/autoresizing-nstextfields/
+	// FIXME adjust width to fit stringValue
+
+	// http://devetc.org/code/2014/07/07/auto-layout-and-views-that-wrap.html
+	//var preferredMaxLayoutWidth: CGFloat { get set }
+
+	// https://www.objc.io/issues/3-views/advanced-auto-layout-toolbox/
+	// var fittingSize: NSSize { get }
+	//var intrinsicContentSize: NSSize { get }
+
+	override var stringValue: String {
+		didSet {
+			//TODO: scale intrisicContentSize.width to fit URL length, like safari does
+			invalidateIntrinsicContentSize()
+			isHidden = stringValue.isEmpty
+		}
+	}
+}
+
 @objc class StatusBarController: NSViewController {
-	let statusbox = NSTextField()
+	let statusbox = StatusBarField()
 
 	@objc weak var hovered: _WKHitTestResult? = nil {
 		didSet {
 			if let hovered = hovered {
 				statusbox.stringValue = hovered.absoluteLinkURL.absoluteString
-				//TODO: scale frame.width to fit URL length, like safari does
 				// Safari also seems to use SegmentedText to bold the scheme+host (origin)
-				statusbox.isHidden = statusbox.stringValue.isEmpty
 			} else {
 				statusbox.isHidden = true
 			}
@@ -54,6 +72,7 @@ import WebKitPrivates
 		}
 
 		statusbox.isHidden = true
+		statusbox.maximumNumberOfLines = 1
 	}
 
 	deinit { hovered = nil }

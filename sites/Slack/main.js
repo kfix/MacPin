@@ -23,10 +23,8 @@ app.on("postedDesktopNotification", (note, tab) => {
 	return false
 });
 
-app.on('handleClickedNotification', (title, subtitle, msg, id) => {
-	console.log("JS: clicked notification for: "+ [title, subtitle, msg, id]);
-	//browser.tabSelected = slackTab;
-	//slackTab.evalJS();
+app.on('handleClickedNotification', (note) => {
+	console.log("App signals a clicked notification: "+ JSON.stringify(note));
 	return false;
 });
 

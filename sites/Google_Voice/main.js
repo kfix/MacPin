@@ -182,11 +182,17 @@ app.on('launchURL', function(url) { // app.openURL(/[sms|hangouts|tel]:.*/) call
 	}
 });
 
-app.on("handleClickedNotification", function(title, subtitle, msg, id) {
-	console.log("JS: clicked user notification for: "+ [title, subtitle, msg, id]);
-	unhideApp(); // focus the app, just in case this is an old notifcation
-	return false; // let MacPin find, notify, & focus the tab that made this notification, if its still active ...
+app.on("postedDesktopNotification", (note, tab) => {
+	console.log(Date() + `[${tab.url}] posted HTML5 desktop notification: ${note.id}`);
+	console.log(JSON.stringify(note));
+	return false
 });
+
+app.on('handleClickedNotification', (note) => {
+	console.log("App signals a clicked notification: "+ JSON.stringify(note));
+	return false;
+});
+
 
 app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut("Google Voice", voice);
