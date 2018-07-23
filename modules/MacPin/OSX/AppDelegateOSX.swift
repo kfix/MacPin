@@ -278,10 +278,12 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 				case "-i" where isatty(1) == 1:
 
 					//open a JS console on the terminal, if present
-					//AppScriptRuntime.shared.eventCallbacks[.printToREPL, default: []]
 					if AppScriptRuntime.shared.eventCallbacks[.printToREPL, default: []].isEmpty {
 						if let repl_js = Bundle.main.url(forResource: "app_repl", withExtension: "js") {
-							AppScriptRuntime.shared.loadAppScript(repl_js.description)
+							warn("injecting TTY REPL")
+							AppScriptRuntime.shared.eventCallbacks[.printToREPL] = [
+								AppScriptRuntime.shared.loadCommonJSScript(repl_js.absoluteString).objectForKeyedSubscript("repl")
+							]
 						}
 					}
 					AppScriptRuntime.shared.REPL()

@@ -690,14 +690,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 		if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
 
-			// we could run the main script as if it were a module ike nodeJS does ....
-			//   https://nodejs.org/api/modules.html#modules_accessing_the_main_module
-			//   https://nodejs.org/api/modules.html#modules_require_main
-			//let jsval = loadCommonJSScript(app_js.absoluteString)
-			// .... but then the tty REPL gets no access to app.js scope :-(
 			let jsval = loadCommonJSScript(app_js.absoluteString, asMain: true)
-
-			//guard let jsval = loadAppScript(app_js.absoluteString) else { return false }
 
 			// check for error
 			if jsval.isObject && !jsval.hasProperty("exception") {
@@ -750,24 +743,12 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				warn("\(scriptURL): syntax checked ok")
 
 				let contxt = context.jsGlobalContextRef // want to share scope with console & inspectors
-				//JSGlobalContextSetName(contxt, JSStringCreateWithCFString(urlstr as CFString))
-				//context.name = "\(context.name ?? "js(??)") <\(urlstr)>"
 
 				let globalObj = JSContextGetGlobalObject(contxt)
 				var exception = JSValueMakeUndefined(contxt)
 
 				// `this` === module.exports in node.js, in electron main.js this==[[main-process]].window
 				let this = globalObj //JSValueToObject(contxt, exports, nil)
-
-				// https://nodejs.org/api/globals.html#globals_dirname
-				JSObjectSetProperty(contxt, globalObj, JSStringCreateWithCFString("__dirname" as CFString),
-					JSValueMakeString(contxt, JSStringCreateWithCFString(sourceURL.pathComponents.dropLast().joined(separator: "/") as CFString)),
-						JSPropertyAttributes(kJSPropertyAttributeNone), nil)
-
-				// https://nodejs.org/api/globals.html#globals_filename
-				JSObjectSetProperty(contxt, globalObj, JSStringCreateWithCFString("__filename" as CFString),
-					JSValueMakeString(contxt, JSStringCreateWithCFString(sourceURL.lastPathComponent as CFString)),
-						JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 
 				if let ret = JSScriptEvaluate(contxt, script, this, &exception) {
 					return JSValue(jsValueRef: ret, in: context)
