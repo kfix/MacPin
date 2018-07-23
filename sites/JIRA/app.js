@@ -81,13 +81,6 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 }
 */
 
-delegate.receivedHTML5DesktopNotification = function(tab, note) {
-	console.log(Date() + ' [posted HTML5 notification] ' + note);
-	$.app.postHTML5Notification(note);
-};
-
-delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(url); return true; };
-
 delegate.overrideBG = function(bgcolor) { jiraTab.evalJS('\
 	localStorage.overrideStockTrelloBlue ? delete localStorage.overrideStockTrelloBlue : localStorage.overrideStockTrelloBlue = "'+bgcolor+'";\
 	localStorage.darkMode ? delete localStorage.darkMode : localStorage.darkMode = "true";\

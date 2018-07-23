@@ -6,25 +6,11 @@
 
 var salesforceTab, salesforce = {
 	url: 'https://login.salesforce.com/',
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"],
-	postinject: ['shim_html5_notifications'],
 	style: ['psa']
 };
 $.browser.tabSelected = salesforceTab = new $.WebView(salesforce);
 
 var delegate = {}; // our delegate to receive events from the webview app
-
-delegate.receivedHTML5DesktopNotification = function(tab, note) {
-	console.log(Date() + ' [posted HTML5 notification] ' + note);
-	$.app.postHTML5Notification(note);
-};
-
-delegate.handleClickedNotification = function(title, subtitle, msg, id) {
-	console.log("JS: opening notification for: "+ [title, subtitle, msg, id]);
-	$.browser.tabSelected = salesforceTab;
-	//salesforceTab.evalJS();
-	return true;
-};
 
 delegate.launchURL = function(url) {
 	console.log("app.js: launching " + url);

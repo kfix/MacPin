@@ -99,13 +99,6 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 	}
 }
 
-delegate.receivedHTML5DesktopNotification = function(tab, note) {
-	console.log(Date() + ' [posted HTML5 notification] ' + note);
-	$.app.postHTML5Notification(note);
-};
-
-delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(url); return true; };
-
 let enDarken = require('enDarken.js');
 
 delegate.AppFinishedLaunching = function() {

@@ -7,7 +7,7 @@ var hangouts = {
 	transparent: true,
 	postinject: ["notifier"], // "convopopper"],
 	preinject: ["styler"],
-	subscribeTo: ['unhideApp', 'HangoutsRosterReady', 'SwitchToThisTab'], // + ['receivedHTML5DesktopNotification'],
+	subscribeTo: ['unhideApp', 'HangoutsRosterReady', 'SwitchToThisTab'],
 	style: [ "style" ],
 	url: "https://hangouts.google.com"
 };
@@ -128,9 +128,11 @@ delegate.receivedHTML5DesktopNotification = function(tab, note) {
 	if (tab.gaia) note.tag += '__' + tab.gaia // add your Google ID to the notification tag
 	console.log(Date() + ' [posted HTML5 notification] ' + note);
 	$.app.postHTML5Notification(note);
+	return true;
 };
 
-delegate.handleClickedNotification = function(title, subtitle, msg, id) {
+delegate.handleClickedNotification = function(note) {
+	let {title, subtitle, msg, id} = note;
 	console.log("JS: opening user notification for: "+ [title, subtitle, msg, id]);
 	//$.browser.tabSelected = hangoutsTab;
 	//hangoutsTab.evalJS('rosterClickOn("button[cpar='+"'"+id+"'"+']");');

@@ -9,11 +9,7 @@
 
 var delegate = {}; // our delegate to receive events from the webview app
 var driveTab, drive = {
-	transparent: false,
-	url: "https://drive.google.com",
-	postinject: [],
-	preinject: ['shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"]
+	url: "https://drive.google.com"
 };
 var driveAlt = Object.assign({}, drive, {url: "https://drive.google.com/drive/u/1"});
 var sheets = Object.assign({}, drive, {url: "https://docs.google.com/spreadsheets/"});
@@ -175,13 +171,6 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 		//$.browser.tabSelected = new $.WebView({url: url});
 	}
 }
-
-delegate.receivedHTML5DesktopNotification = function(tab, note) {
-	console.log(Date() + ' [posted HTML5 notification] ' + note);
-	$.app.postHTML5Notification(note);
-};
-
-delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(url); return true; };
 
 let enDarken = require('enDarken.js');
 

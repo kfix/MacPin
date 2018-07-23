@@ -7,8 +7,7 @@ var trelloTab, trello = {
 	transparent: true,
 	url: "https://trello.com",
 	postinject: ['styler'],
-	preinject: ['shim_html5_notifications'],
-	subscribeTo: ['receivedHTML5DesktopNotification', "MacPinPollStates"] //styler.js does polls
+	subscribeTo: ["MacPinPollStates"] //styler.js does polls
 };
 trelloTab = $.browser.tabSelected = new $.WebView(trello);
 
@@ -79,14 +78,6 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 	}
 }
 
-// http://help.trello.com/article/793-receiving-trello-notifications
-delegate.receivedHTML5DesktopNotification = function(tab, note) {
-	console.log(Date() + ' [posted HTML5 notification] ' + note);
-	$.app.postHTML5Notification(note);
-};
-
-delegate.handleClickedNotification = function(from, url, msg) { $.app.openURL(url); return true; };
-
 delegate.overrideBG = function(bgcolor) { trelloTab.evalJS('\
 	localStorage.overrideStockTrelloBlue ? delete localStorage.overrideStockTrelloBlue : localStorage.overrideStockTrelloBlue = "'+bgcolor+'";\
 	localStorage.darkMode ? delete localStorage.darkMode : localStorage.darkMode = "true";\
@@ -102,13 +93,11 @@ delegate.AppFinishedLaunching = function() {
 	// window.TrelloVersion
 
 	if ($.launchedWithURL != '') { // app was launched with a search query
-		trelloTab.asyncEvalJS( // need to wait for app.js to load and render DOM
-			"true;",
-			5, // delay (in seconds) to wait for tab to load
-			function(result) { // callback
+		setTimeout( // need to wait for app.js to load and render DOM
+			() => { // callback
 				delegate.launchURL($.launchedWithURL);
 				$.launchedWithURL = '';
-			}
+			}, 5 // delay (in seconds) to wait for tab to load
 		);
 	}
 

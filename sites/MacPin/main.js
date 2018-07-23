@@ -294,10 +294,12 @@ app.on('AppFinishedLaunching', (launchURLs) => {
 	setTimeout((() => {console.log("yay timers work"); console.trace();}), 3.2);
 });
 
+// replTab needs this
 if (!('printToREPL' in app.eventCallbacks)) {
 	let {repl} = require('app_repl.js');
 	app.on('printToREPL', repl);
 }
+
 
 // https://www.lucidchart.com/techblog/2018/02/14/javascriptcore-the-holy-grail-of-cross-platform/
 //app.loadAppScript('fetchDeps.js`);
