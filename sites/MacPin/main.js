@@ -6,6 +6,9 @@
 */
 "use strict";
 
+console.log(`evaluating ${__dirname} ${__filename}`);
+console.assert(module === require.main);
+
 // https://github.com/electron/electron-quick-start/blob/master/main.js
 const {app, BrowserWindow, WebView} = require('@MacPin');
 let injectTab = require('app_injectTab.js');

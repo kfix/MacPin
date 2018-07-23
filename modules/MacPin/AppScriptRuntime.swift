@@ -95,12 +95,10 @@ extension JSValue {
 	@objc(postNotification:::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?, info: JSValue?)
 	func postHTML5Notification(_ object: [String:AnyObject])
 	func openURL(_ urlstr: String, _ app: String?)
-	func sleep(_ secs: Double)
 	func doesAppExist(_ appstr: String) -> Bool
 
 	func pathExists(_ path: String) -> Bool
 	func loadAppScript(_ urlstr: String) -> JSValue?
-	func loadCommonJSScript(_ urlstr: String) -> JSValue
 
 #if DEBUG
 	func evalJXA(_ script: String)
@@ -123,7 +121,7 @@ struct AppScriptGlobals {
 	static let modSpace = "_nativeModules"
 
 	@discardableResult
-	static func loadCommonJSScript(urlstr: String, ctx: JSContextRef, cls: JSClassRef? = nil, mods: [String: AnyObject]? = nil) -> JSValueRef {
+	static func loadCommonJSScript(urlstr: String, ctx: JSContextRef, cls: JSClassRef? = nil, mods: [String: AnyObject]? = nil, asMain: Bool = false) -> JSValueRef {
 		// loosely impl node-ish require(scriptname, ...state) -> module.exports
 		// http://www.commonjs.org/specs/modules/1.0/
 		// TODO: RequireJS mandates AMD define() http://requirejs.org/docs/commonjs.html
@@ -227,21 +225,44 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		if errorLine == 0 {
 			warn("\(scriptURL): syntax checked ok", function: "loadCommonJSScript")
 
-			let contxt = JSGlobalContextCreateInGroup(contextGroup, cls)
+			// create new scope/context for the eval of the script
+			let contxt = asMain ? ctx : JSGlobalContextCreateInGroup(contextGroup, cls)
 			JSGlobalContextSetName(contxt, JSStringCreateWithCFString(urlstr as CFString))
 
 			let globalObj = JSContextGetGlobalObject(contxt)
 			var exception = JSValueMakeUndefined(contxt)
 
-			// https://nodejs.org/api/modules.html#modules_module_exports
-			// https://github.com/requirejs/requirejs/issues/89
+			// http://wiki.commonjs.org/wiki/Modules/1.1.1#Module_Context
 			let module = JSObjectMake(contxt, nil, nil)
 			let exports = JSObjectMake(contxt, nil, nil)
-			JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString), exports, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
-			JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("uri" as CFString), JSValueMakeString(contxt, jsurl), JSPropertyAttributes(kJSPropertyAttributeNone), nil)
-			JSObjectSetProperty(contxt, globalObj, JSStringCreateWithCFString("module" as CFString), module, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+			JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString),
+				exports, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+			JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("uri" as CFString), // cjs3.2
+				JSValueMakeString(contxt, jsurl), JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 
-			// https://nodejs.org/api/modules.html#modules_exports_shortcut
+			// https://nodejs.org/api/modules.html#modules_module_filename
+			let fpath = JSValueMakeString(contxt, JSStringCreateWithCFString(sourceURL.path as CFString))
+			JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("filename" as CFString),
+				fpath, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+			// https://nodejs.org/api/modules.html#modules_module_id cjs3.1
+			JSObjectSetProperty(contxt, module, JSStringCreateWithCFString("id" as CFString),
+				fpath, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+
+			// https://nodejs.org/api/modules.html#modules_module_exports
+			JSObjectSetProperty(contxt, globalObj, JSStringCreateWithCFString("module" as CFString),
+				module, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+
+			// https://nodejs.org/api/modules.html#modules_accessing_the_main_module
+			let req = JSObjectGetProperty(contxt, globalObj, JSStringCreateWithCFString("require" as CFString), nil)
+			if JSValueIsObject(contxt, req) {
+				// https://nodejs.org/api/modules.html#modules_require_main
+				JSObjectSetProperty(contxt, req, JSStringCreateWithCFString("main" as CFString),
+					(asMain ? module : JSValueMakeUndefined(ctx)), JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+				// default can be undefined per https://nodejs.org/api/process.html#process_process_mainmodule
+				//   not going to bother with storing the main.module ref and propagating it to all its sub-requires
+			}
+
+			// https://nodejs.org/api/modules.html#modules_exports_shortcut cjs2.
 			JSEvaluateScript(contxt, JSStringCreateWithUTF8CString("""
 				Object.defineProperty(this, "exports", {
 					get: function () {
@@ -249,6 +270,16 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 					}
 				});
 			"""), nil, nil, 1, nil) // nil this == [global] ?
+
+			// https://nodejs.org/api/globals.html#globals_filename
+			JSObjectSetProperty(contxt, globalObj, JSStringCreateWithCFString("__filename" as CFString),
+				JSValueMakeString(contxt, JSStringCreateWithCFString(sourceURL.lastPathComponent as CFString)),
+					JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+
+			// https://nodejs.org/api/globals.html#globals_dirname
+			JSObjectSetProperty(contxt, globalObj, JSStringCreateWithCFString("__dirname" as CFString),
+				JSValueMakeString(contxt, JSStringCreateWithCFString(sourceURL.pathComponents.dropLast().joined(separator: "/") as CFString)),
+					JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 
 			// `this === module.exports` per https://stackoverflow.com/a/30894970/3878712
 			let this = JSValueToObject(contxt, exports, nil)
@@ -264,7 +295,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 			warn(errMessage)
 		} // or pop open the script source-code in a new tab and highlight the offender
 
-		return JSValueMakeNull(ctx)
+		return JSValueMakeNull(ctx) // generates an exception if called via JS:require()
 	}
 
 //ES6 async imports of .mjs?
@@ -465,6 +496,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 	static var globalClassDef = JSClassDefinition(
 		version: 0, attributes: JSClassAttributes(kJSClassAttributeNoAutomaticPrototype), // shows all Object.protos but not my custom func
 		//version: 0, attributes: JSClassAttributes(kJSClassAttributeNone), // only shows my custom func in the proto, none from Object
+		//version: 0, attributes: JSClassAttributes(), // MPGlobalObject.__proto__: MPGlobalObject
 		className: "MPGlobalObject", parentClass: nil, // nil==Object()
 		//staticValues: values.withUnsafeBufferPointer { $0.baseAddress }, // works *sometimes*
 		staticValues: nil, /* BUG: cannot get consistently working pointer */
@@ -555,9 +587,6 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			""")
 		}
 
-		//AppScriptGlobals.ptrFunctions.initialize(from: AppScriptGlobals.functions)
-		//AppScriptGlobals.ptrValues.initialize(from: AppScriptGlobals.values)
-
 		// lets create the global context with a custom-classed globalObj
 		// all app-scripts and cjs-mods will get their own contexts when evaluated, but within the same context-group
 		context = JSContext(jsGlobalContextRef: JSGlobalContextCreateInGroup(contextGroup, globalObjClass))
@@ -624,17 +653,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			let window = this; // https://github.com/nodejs/node/issues/1043
 			let global = this; // https://github.com/browserify/insert-module-globals/pull/48#issuecomment-186291413
 		""")
-		//JSSynchronousGarbageCollectForDebugging(context.jsGlobalContextRef)
 	}
 
 	override var description: String { return "<\(type(of: self))> [\(appPath)]" }
-
-	// sleep is specious in JS...replace this with a node-ish setTimeout func
-	func sleep(_ secs: Double) {
-		warn("for \(secs)s")
-		Thread.sleep(forTimeInterval: TimeInterval(secs))
-		warn("woke!")
-	}
 
 	@objc func loadSiteApp() -> Bool {
 		let app = (Bundle.main.object(forInfoDictionaryKey:"MacPin-AppScriptName") as? String) ?? AppScriptRuntime.legacyAppFile
@@ -668,11 +689,24 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		let app = (Bundle.main.object(forInfoDictionaryKey:"MacPin-MainScriptName") as? String) ?? AppScriptRuntime.mainScriptFile
 
 		if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
-			if let jsval = loadAppScript(app_js.description) {
+
+			// we could run the main script as if it were a module ike nodeJS does ....
+			//   https://nodejs.org/api/modules.html#modules_accessing_the_main_module
+			//   https://nodejs.org/api/modules.html#modules_require_main
+			//let jsval = loadCommonJSScript(app_js.absoluteString)
+			// .... but then the tty REPL gets no access to app.js scope :-(
+			let jsval = loadCommonJSScript(app_js.absoluteString, asMain: true)
+
+			//guard let jsval = loadAppScript(app_js.absoluteString) else { return false }
+
+			// check for error
+			if jsval.isObject && !jsval.hasProperty("exception") {
 				warn("\(app_js) loaded as main script")
 				jsdelegate = JSValue(nullIn: self.context)
 				return true
 			}
+
+			// dump exception
 		}
 
 		return false
@@ -725,6 +759,16 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				// `this` === module.exports in node.js, in electron main.js this==[[main-process]].window
 				let this = globalObj //JSValueToObject(contxt, exports, nil)
 
+				// https://nodejs.org/api/globals.html#globals_dirname
+				JSObjectSetProperty(contxt, globalObj, JSStringCreateWithCFString("__dirname" as CFString),
+					JSValueMakeString(contxt, JSStringCreateWithCFString(sourceURL.pathComponents.dropLast().joined(separator: "/") as CFString)),
+						JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+
+				// https://nodejs.org/api/globals.html#globals_filename
+				JSObjectSetProperty(contxt, globalObj, JSStringCreateWithCFString("__filename" as CFString),
+					JSValueMakeString(contxt, JSStringCreateWithCFString(sourceURL.lastPathComponent as CFString)),
+						JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+
 				if let ret = JSScriptEvaluate(contxt, script, this, &exception) {
 					return JSValue(jsValueRef: ret, in: context)
 				} else if !JSValueIsUndefined(contxt, exception) {
@@ -740,9 +784,11 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	@discardableResult
-	func loadCommonJSScript(_ urlstr: String) -> JSValue {
+	func loadCommonJSScript(_ urlstr: String, asMain: Bool = false) -> JSValue {
 		// just a bridgeable-wrapper for JSContext.loadCommonJSScript
-		return JSValue(jsValueRef: AppScriptGlobals.loadCommonJSScript(urlstr: urlstr, ctx: context.jsGlobalContextRef, cls: globalObjClass), in: context)
+		return JSValue(jsValueRef:
+			AppScriptGlobals.loadCommonJSScript(urlstr: urlstr, ctx: context.jsGlobalContextRef, cls: globalObjClass, mods: nativeModules, asMain: asMain),
+		in: context)
 	}
 
 	func resetStates() {
@@ -1118,6 +1164,7 @@ enum AppScriptEvent: String, CustomStringConvertible, CaseIterable {
 	case /* legacy MacPin event names */
 		launchURL, // url
 		handleClickedNotification, // title, subtitle, message, idstr
+		postedDesktopNotification, // note, tab
 		handleDragAndDroppedURLs, // urls -> Bool
 		AppWillFinishLaunching, // AppUI
 		AppFinishedLaunching, // url...

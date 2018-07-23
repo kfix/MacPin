@@ -879,18 +879,23 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		//  https://github.com/chromium/chromium/blob/f18e79d901f56154f80eea1e2218544285e62623/chrome/browser/ui/cocoa/notifications/notification_builder_mac.mm
 		// https://www.w3.org/TR/notifications/#activating-a-notification
 		//   https://notifications.spec.whatwg.org/#activating-a-notification
+
+		if AppScriptRuntime.shared.anyHandled(.postedDesktopNotification, ["title":title, "tag":tag, "body":body, "id":id], self) { return }
+
 #if os(OSX)
 		let note = NSUserNotification()
 		note.title = title ?? ""
-		note.subtitle = tag ?? "" //empty strings wont be displayed
+		note.subtitle =  "" //empty strings wont be displayed
 		note.informativeText = body ?? ""
 		//note.contentImage = ?bubble pic? //iconurl
 		note.identifier = String(id) // TODO: make moar unique? would need to be stripped back to original before passing back to WK()
+
 		//note.hasReplyButton = true
 		//note.hasActionButton = true
 		//note.responsePlaceholder = "say something stupid"
 
 		note.userInfo = ["origin": origin, "type": type, "tabHash": hash]
+		note.userInfo?["tag"] = tag // https://developer.mozilla.org/en-US/docs/Web/API/Notification/tag
 
 		note.soundName = NSUserNotificationDefaultSoundName // something exotic?
 		NSUserNotificationCenter.default.deliver(note)

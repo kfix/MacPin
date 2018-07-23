@@ -11,23 +11,23 @@ let slackTab, slack = {
 	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Slack_SSB/2.0.3', // MacGap app
 	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleWebKit/537.36 (KHTML, like Gecko) AtomShell/2.5.2 Chrome/53.0.2785.143 Electron/1.4.15 Safari/537.36 MacAppStore/16.5.0 Slack_SSB/2.5.2', // new Electron app (env SLACK_DEVELOPER_MENU=true)
 	//preinject: ['shim_notification_promises'],
-	postinject: ['slack_notifications'] //, 'styler']
+	postinject: ['slack_notifications'] // just auto-requests notification permissions
 };
 slackTab = new WebView(slack); // get it started early
 
 let browser = new BrowserWindow();
 
-app.messageHandlers["receivedHTML5DesktopNotification"] = (tab, note) => {
-	console.log(Date() + ' [posted HTML5 notification] ' + note);
-	//tag: "mid.1434908822690:d3b8b216631a1b8625"
-	app.postHTML5Notification(note);
-};
+app.on("postedDesktopNotification", (note, tab) => {
+	console.log(Date() + `[${tab.url}] posted HTML5 desktop notification: ${note.id}`);
+	console.log(JSON.stringify(note));
+	return false
+});
 
 app.on('handleClickedNotification', (title, subtitle, msg, id) => {
-	console.log("JS: opening notification for: "+ [title, subtitle, msg, id]);
-	browser.tabSelected = slackTab;
+	console.log("JS: clicked notification for: "+ [title, subtitle, msg, id]);
+	//browser.tabSelected = slackTab;
 	//slackTab.evalJS();
-	return true;
+	return false;
 });
 
 app.on('networkIsOffline', (url, tab) => {
@@ -85,7 +85,6 @@ let clicker = (url) => {
 			if ((host == "slack-redir.net") && path.startsWith("link?url=")) {
 				// stripping obnoxious redirector
 				let redir = decodeURIComponent(path.slice(9));
-				//$.app.openURL(`$(scheme):$(redir)`);
 				app.openURL(redir); //pop all external links to system browser
 				return true; //tell webkit to do nothing
 			} else if ((host != "slack.com")
@@ -94,6 +93,7 @@ let clicker = (url) => {
 				&& !host.endsWith('.cloudfront.net')
 				&& !host.endsWith('.doubleclick.net')
 				&& !host.endsWith('.perf.linkedin.com')
+
 				&& !host.endsWith('.youtube.com')
 				&& !host.endsWith('.giphy.com')
 				&& !host.endsWith('.imgur.com')
@@ -140,8 +140,7 @@ app.on('tabTransparencyToggled', (transparent, tab) => {
 	console.log(transparent, tab);
 	let idx = tab.styles.indexOf('transparent');
 	(!transparent && idx >= 0) ? tab.popStyle(idx) : tab.style('transparent');
-	app.sleep(0.3);
-	tab.repaint();
+	setTimeout(tab.repaint.bind(tab), 0.3);
 	return; // cannot affect built-in transperatizing of tab
 });
 
