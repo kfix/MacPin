@@ -30,7 +30,7 @@ function readability(tab) {
 
 	let popupReader = `
 		(() => {
-			let readr = new ${pkg}(window.document.cloneNode(true), {debug: true}).parse();
+			let readr = new ${pkg}(window.document.cloneNode(true), {debug: false}).parse();
 			console.log(readr);
 
 			//let popup = window.open('about:readability', '_blank'); // i get same-origin errors with this
