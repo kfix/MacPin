@@ -3,24 +3,15 @@ export
 #^ export all the variables
 builddir			?= build
 
-# Safari Technology Preview assumed
-# 10.13's WebKit.framework has most of the early STP features implemented...
-#   not iconDelegate!  should version the var: STP_57
-#   can then use shell to suss out the installed STP.app version and build with -D STP_58 -D SF_12
-#   when a major osx/safari release goes out corresponding to an earlier STP, will s/STP_58/SF_12 *.swift
-STP 				:= 1
+VERSION				 := 1.6.0
+
+# 1 == use STP.app's WebKit if its present at runtime
+STP 				?= 1
+# https://github.com/Homebrew/homebrew-cask-versions/commits/master/Casks/safari-technology-preview.rb
+# https://webkit.org/build-archives/
 
 SWFTFLAGS			?= -suppress-warnings
 SWCCFLAGS			?= -Wno-unreachable-code
-
-#WEB_INSPECTOR_SERVER	:=	127.0.0.1:9222
-# https://blogs.igalia.com/dpino/2015/11/22/Architecture-of-the-Web-Inspector/
-# seems like the javascriptcore on Mac is using XPC (REMOTE_INSPECTOR) so we can't make the frontend usable over http :-(
-#   https://lists.webkit.org/pipermail/webkit-dev/2014-June/026634.html
-#   https://blogs.igalia.com/carlosgc/2017/05/03/webkitgtk-remote-debugging-in-2-18/
-#   https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/inspector/remote/cocoa/RemoteInspectorCocoa.mm
-#   https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/inspector/remote/cocoa/RemoteInspectorXPCConnection.mm
-# could use this osascript to auto-open Safarie Remote Debugger: https://gist.github.com/Thinkscape/8538321
 
 # scan modules/ and define cross: target and vars: outdir, platform, arch, sdk, target, objs, execs, statics, incdirs, libdirs, linklibs, frameworks
 archs_macosx		?= x86_64
@@ -41,17 +32,31 @@ xcrun				?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcrun
 xcs					?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcode-select
 endif
 
+macpin				:= MacPin
+macpin_sites		?= sites
+installdir			:= ~/Applications/MacPin.localized
+bundle_untracked	?= 0
+appnames			= $(patsubst $(macpin_sites)/%,%.app,$(wildcard $(macpin_sites)/*))
+
 usage help:
-	@printf '\nusage:\tmake <target>\n\ntargets:\n%s'
+	@printf '\nusage:\tmake (V=1) <target>\n\ntargets:\n%s'
 	@printf '\t%s\n' reinstall uninstall test test.app stpdoc sites/*
 
 include eXcode.mk
 mk := $(firstword $(MAKEFILE_LIST))
+$(info )
 $(info [$(mk)])
+$(info )
 
-# now layout the MacPin .apps to generate
-macpin				:= MacPin
-macpin_sites		?= sites
+# print webkit.framework version?
+
+appdir				:= $(outdir)/apps
+
+# now layout the MacPin .app targets to generate based on eXcode's build targets
+$(info $(macpin_sites)/* => $(appdir) => $(installdir)/*.app)
+
+gen_apps			= $(patsubst $(macpin_sites)/%,$(appdir)/%.app,$(wildcard $(macpin_sites)/*))
+#gen_action_exts	= $(patsubst %,$(appdir)/%.appex,$(apps))
 
 template_bundle_id	:= com.github.kfix.MacPin
 xcassets			:= $(builddir)/xcassets/$(platform)
@@ -63,28 +68,22 @@ else
 icontypes			+= appiconset
 endif
 
-installdir			:= ~/Applications/MacPin.localized
 
-#appsig				?= kfix@github.com
 # http://www.objc.io/issue-17/inside-code-signing.html
-#`security find-identity`
 # https://developer.apple.com/library/mac/documentation/Security/Conceptual/CodeSigningGuide/Procedures/Procedures.html#//apple_ref/doc/uid/TP40005929-CH4-SW13
-appsig_iOS			:= iPhone Developer
-#appsig_OSX			:= Mac Developer
-appsig				?= -
-# ^ ad-hoc, not so great
 # https://developer.apple.com/library/mac/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919-CH1-TNTAG20
 
-# https://developer.apple.com/library/ios/technotes/tn2415/_index.html
-mobileprov_team_id := HKFYQ3A8TC
+# create this file if you want to test dev-signed iOS apps on your own devices
+-include apple_dev_id.mk
+appsig				?= -
+# ^ ad-hoc, not so great
+#appsig_OSX			:= Mac Developer
+appsig_iOS			:= iPhone Developer
+# open Xcode -> Preferences -> Accounts -> +Add: Apple ID -> Manage Certificates -> +Add: iOS Development
+#  `security find-identity` will then show your Developer keys you can use for appsig*:
+mobileprov_team_id	?=
+# https://developer.apple.com/account/#/membership/ "Team ID"
 
-bundle_untracked	?= 0
-appdir				:= $(outdir)/apps
-appnames			= $(patsubst $(macpin_sites)/%,%.app,$(wildcard $(macpin_sites)/*))
-gen_apps			= $(patsubst $(macpin_sites)/%,$(appdir)/%.app,$(wildcard $(macpin_sites)/*))
-#gen_action_exts	= $(patsubst %,$(appdir)/%.appex,$(apps))
-
-$(info $(macpin_sites)/ => $(installdir))
 
 ifeq (,$(filter $(arch),$(archs_macosx)))
 # only intel platforms have libedit so only those execs can have terminal CLIs
@@ -101,24 +100,36 @@ endif
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
 allapps install: $(gen_apps)
 zip test apirepl tabrepl wknightly stp $(gen_apps): $(execs)
-doc test apirepl tabrepl test.app test.ios dbg dbg.app stp stp.app: debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
+doc test apirepl tabrepl test.app test.ios dbg dbg.app stp stp.app test_% $(appnames:%=test_%): debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
 #-D WK2LOG
 
 ifeq ($(STP),1)
-stpwebkitdir			:= $(wildcard /Applications/Safari\ Technology\ Preview.app/Contents/Frameworks)
-ifneq ($(stpwebkitdir),)
-linkopts_main += -Wl,-dyld_env,DYLD_FRAMEWORK_PATH="$(stpwebkitdir)"
-linkopts_main += -Wl,-F,"$(stpwebkitdir)"
-libdirs += -L "$(stpwebkitdir)"
+stpdir					:= /Applications/Safari\ Technology\ Preview.app
+stpframes				:= $(wildcard $(stpdir)/Contents/Frameworks)
+ifneq ($(stpframes),)
+webkitdir				:= $(stpframes)/WebKit.framework
+safaridir				:= $(wildcard $(stpdir))
+
+# FIXME: only release builds should have STP burned into the RPATH
+#linkopts_main += -Wl,-dyld_env,DYLD_VERSIONED_FRAMEWORK_PATH="$(stpframes)"
+
+# FIXME shouldn't be linking to STP at all
+##linkopts_main += -Wl,-F,"$(stpframes)"
+##libdirs += -L "$(stpframes)"
+
+# man dyld
+env += DYLD_VERSIONED_FRAMEWORK_PATH="$(stpframes)"
+#env += DYLD_PRINT_LIBRARIES=1
 endif
-debug += -D STP
-clang += -DSTP
-clangpp += -DSTP
-swiftc += -D STP -Xcc -DSTP
-swift-update += -D STP -Xcc -DSTP
-swift += -D STP -Xcc -DSTP
-#env += DYLD_FRAMEWORK_PATH="/Applications/Safari Technology Preview.app/Contents/Frameworks"
 endif
+
+webkitdir				?= /System/Library/Frameworks/WebKit.framework
+safaridir				?= /Applications/Safari.app
+
+safariver				:= $(shell defaults read "$(safaridir)/Contents/Info" CFBundleShortVersionString)
+webkitver				:= $(shell defaults read "$(webkitdir)/Resources/Info" CFBundleVersion)
+$(info $(safaridir) => $(safariver))
+$(info $(webkitdir) => $(webkitver))
 
 test apirepl tabrepl test.app dbg dbg.app test.ios stp stp.app: | $(execs:%=%.dSYM)
 
@@ -146,7 +157,6 @@ endif
 
 # github settings for release: target
 #####
-VERSION		 := 1.6.0
 LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin
@@ -193,10 +203,13 @@ $(outdir)/%.entitlements.plist: templates/$(platform)/entitlements.plist
 	$(gen_plist_template)
 
 # phony targets for cmdline convenience
-%.app: $(appdir)/%.app
-sites/%: $(appdir)/%.app
+%.dSYM: $(appdir)/%.dSYM
+sites/% %.app: $(appdir)/%.app
 	@echo Finished building $<
 #modules/%: $(outdir)/obj/%.o
+
+test_%: $(appdir)/%.app
+	($(env) $^/Contents/MacOS/$(basename $(notdir $^)) -i) #|| { echo $$?; [ -t 1 ] && stty sane; }
 
 ifeq ($(platform),OSX)
 
@@ -215,14 +228,20 @@ $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/
 # https://developer.apple.com/library/mac/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html#//apple_ref/doc/uid/10000123i-CH101-SW1
 # https://developer.apple.com/library/mac/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
 
+# https://lldb.llvm.org/symbols.html https://blog.vucica.net/2013/01/symbolicating-mac-apps-crash-reports-manually.html
+# https://blog.bugsnag.com/symbolicating-ios-crashes/ https://www.cnblogs.com/feng9exe/p/7978040.html
+$(appdir)/%.dSYM:
+	@install -d $@ $@/Contents/Resources/DWARF
+	$(patsubst %,cp -f % $@/Contents/Resources/DWARF/$*,$(filter $(outdir)/exec/%.dSYM/Contents/Resources/DWARF/%,$^))
+
 $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings
 	@install -d $@ $@/Contents/MacOS $@/Contents/Resources
-	$(patsubst %,cp % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
+	$(patsubst %,COMMAND_MODE=legacy cp -f % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
 	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/Contents/MacOS/$*.dSYM,$(filter $(outdir)/exec/%.dSYM,$^))
-	cp -RL templates/Resources $@/Contents
+	COMMAND_MODE=legacy cp -fRL templates/Resources $@/Contents
 	#git ls-files -zc $(bundle_untracked) $(macpin_sites)/$* | xargs -0 -J % install -DT % $@/Contents/Resources/
 	(($(bundle_untracked))) || git archive HEAD $(macpin_sites)/$*/ | tar -xv --strip-components 2 -C $@/Contents/Resources
-	(($(bundle_untracked))) && cp -RL $(macpin_sites)/$*/* $@/Contents/Resources/ || true
+	(($(bundle_untracked))) && COMMAND_MODE=legacy cp -fRL $(macpin_sites)/$*/* $@/Contents/Resources/ || true
 	[ ! -d $@/Contents/Resources/Library ] || ln -sfh Resources/Library $@/Contents/Library
 	[ ! -n "$(wildcard $(outdir)/Frameworks/*.dylib)" ] || cp -a $(outdir)/Frameworks $@/Contents
 	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/Contents
@@ -232,6 +251,7 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	-codesign --display -r- --verbose=4 --deep --entitlements :- $@
 	-spctl -vvvv --raw --assess --type execute $@
 	-asctl container acl list -file $@
+	-codesign --verbose=4 --deep --ignore-resources --strict $@
 	@touch $@
 #xattr -w com.apple.application-instance $(shell echo uuidgen) $@
 
@@ -321,7 +341,7 @@ uninstall: $(wildcard $(appnames:%=$(installdir)/%))
 
 stp test:
 	#-defaults delete $(macpin)
-	($< -i http://browsingtest.appspot.com) #|| { echo $$?; [ -t 1 ] && stty sane; }
+	($(env) $< -i http://browsingtest.appspot.com) #|| { echo $$?; [ -t 1 ] && stty sane; }
 
 apirepl: ; ($< -i)
 tabrepl: ; ($< -t)
@@ -330,7 +350,7 @@ stp.app test.app: $(appdir)/$(macpin).app
 	#banner ':-}' | open -a $$PWD/$^ -f
 	#-defaults delete $(template_bundle_id).$(macpin)
 	#(open $^) &
-	($^/Contents/MacOS/$(macpin) -i) #|| { echo $$?; [ -t 1 ] && stty sane; }
+	($(env) $^/Contents/MacOS/$(macpin) -i) #|| { echo $$?; [ -t 1 ] && stty sane; }
 # https://github.com/WebKit/webkit/blob/master/Tools/Scripts/webkitdirs.pm
 
 # debug: $(appdir)/test.app
@@ -362,6 +382,9 @@ else
 test.ios: ;
 # make only=sim test.ios
 endif
+
+wkdoc:
+	{ for i in WebKitPrivates; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -swift-version $(swiftver) -suppress-warnings -Xfrontend -color-diagnostics -deprecated-integrated-repl; done ;} | { [ -t 1 ] && less || cat; }
 
 # need to gen static html with https://github.com/realm/jazzy
 doc stpdoc: $(execs) $(objs)
@@ -405,15 +428,17 @@ release:
 endif
 
 wk_symbols:
-	symbols /System/Library/Frameworks/WebKit.framework/Versions/A/WebKit | less
+	symbols "$(webkitdir)/Versions/A/WebKit" | less
 
 stp_symbols:
-	symbols /Applications/Safari\ Technology\ Preview.app/Contents/Frameworks/WebKit.framework/Versions/A/WebKit | less
+	symbols "$(stpframes)/WebKit.framework/Versions/A/WebKit" | less
+	symbols "$(stpframes)/Safari.framework/Versions/Current/Safari" | less
 
 stp_jsc:
 	JSC_useDollarVM=1 JSC_reportCompileTimes=true JSC_logHeapStatisticsAtExit=true \
-	/Applications/Safari\ Technology\ Preview.app/Contents/Frameworks/JavaScriptCore.framework/Resources/jsc -i
+	$(env) "$(stpframes)/JavaScriptCore.framework/Resources/jsc" -i
 
+$(V).SILENT: # enjoy the silence
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist
 .PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics stp_symbols stp_jsc
 .SUFFIXES:

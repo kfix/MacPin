@@ -201,7 +201,7 @@ endef
 #   https://github.com/apple/swift/blob/master/docs/ABIStabilityManifesto.md https://swift.org/abi-stability/
 
 $(outdir)/exec/%.dSYM: $(outdir)/exec/%
-	dsymutil $<
+	dsymutil $< 2>/dev/null
 
 #$(outdir)/exec/%: libdirs += -L $(swiftlibdir)
 $(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks $(outdir)/SwiftSupport
