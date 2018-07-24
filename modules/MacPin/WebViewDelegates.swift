@@ -96,9 +96,10 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 					decisionHandler(.cancel)
 			}
 
-			if browsingReactor.anyHandled(.decideNavigationForURL, url.absoluteString as NSString, webView) { decisionHandler(.cancel); return }
+			// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/a#attr-target
+			let targetIsMainFrame = navigationAction.targetFrame?.isMainFrame ?? false // target == _self
 
-			let targetIsMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
+			if browsingReactor.anyHandled(.decideNavigationForURL, url.absoluteString as NSString, webView, targetIsMainFrame) { decisionHandler(.cancel); return }
 
 			switch navigationAction.navigationType {
 				case .linkActivated:
@@ -109,18 +110,18 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 						else if modkeys.contains(.command) { popup(webView.clone(url)) } // cmd-click pops open a new tab
 						else if modkeys.contains(.command) { popup(MPWebView(url: url as NSURL, agent: webView._customUserAgent)) } // shift-click pops open a new tab w/ new session state
 						// FIXME: same keymods should work with Enter in omnibox controller
-						else if !browsingReactor.anyHandled(.decideNavigationForClickedURL, url.absoluteString as NSString, targetIsMainFrame, webView) { // allow override from JS
+						else if !browsingReactor.anyHandled(.decideNavigationForClickedURL, url.absoluteString as NSString, webView, targetIsMainFrame) { // allow override from JS
 							if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
-							popup(webView.clone(url))
+							popup(webView.clone(url)).focus()
 						}
 #elseif os(iOS)
 					// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/ios/WKActionSheetAssistant.mm
-					if !browsingReactor.anyHandled(.decideNavigationForClickedURL, url.absoluteString as NSString, targetIsMainFrame, webView) { // allow override from JS
+					if !browsingReactor.anyHandled(.decideNavigationForClickedURL, url.absoluteString as NSString, webView, targetIsMainFrame) { // allow override from JS
 						if navigationAction.targetFrame != nil { fallthrough } // tapped in_frame target link
-						popup(webView.clone(url))  // out of frame target link
+						popup(webView.clone(url)) // out of frame target link
 					}
 #endif
-					warn("-> .Cancel -- user clicked <a href=\(url) target=_blank> or middle-clicked: opening externally")
+					warn("-> .Cancel -- user clicked <a href=\(url) target!=_self> or middle-clicked: opening externally")
     		        decisionHandler(.cancel)
 
 				// FIXME: allow JS to hook all of these
@@ -248,6 +249,9 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 					//fallthrough
 				case(WebKitErrorDomain, kWKErrorCodeFrameLoadInterruptedByPolicyChange): //`Frame load interrupted` WebKitErrorFrameLoadInterruptedByPolicyChange
 					warn("Attachment received from an IFrame and was converted to a download? webView.loading == \(webView.isLoading)")
+					if let scheme = url.scheme, scheme == "about", let webview = webView as? MPWebView, let hint = URL(string: "about:downloading") {
+						webview.gotoURL(hint) // if webview is a stub _blank popup, then indicate its uselessness...
+					}
 					return
 				default:
 					displayError(error as NSError, self)
@@ -289,7 +293,6 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 				if let cd = headers["Content-Disposition"], cd.hasPrefix("attachment") {
 					// JS hook?
 					warn("got attachment! \(cd) \(fn)")
-					//decisionHandler(WKNavigationResponsePolicy(rawValue: WKNavigationResponsePolicy.Allow.rawValue + 1)!) // .BecomeDownload - offer to download
 					decisionHandler(_WKNavigationResponsePolicyBecomeDownload)
 					return
 				}
@@ -305,7 +308,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 				// else if askToOpenURL(open, uti: uti) // if compatible app for mime
 					 // .Cancel & return if we open()'d
 				// else download it
-					decisionHandler(WKNavigationResponsePolicy(rawValue: WKNavigationResponsePolicy.allow.rawValue + 1)!) // .BecomeDownload - offer to download
+					decisionHandler(_WKNavigationResponsePolicyBecomeDownload)
 					return
 			}
 		}

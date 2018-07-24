@@ -11,19 +11,6 @@ var messenger = {
 
 var delegate = {}; // our delegate to receive events from the webview app
 
-delegate.receivedHTML5DesktopNotification = function(tab, note) {
-	console.log(Date() + ' [posted HTML5 notification] ' + note);
-	//tag: "mid.1434908822690:d3b8b216631a1b8625"
-	$.app.postHTML5Notification(note);
-};
-
-delegate.handleClickedNotification = function(title, subtitle, msg, id) {
-	console.log("JS: opening notification for: "+ [title, subtitle, msg, id]);
-	//<time class="_497p _2lpt" data-reactid=".0.1.$1.0.1.$0.0.0.0.0.0.0.2.$db=2mid=11434908822690=2d3b8b216631a1b8625"><span class="_3oh-" data-reactid=".0.1.$1.0.1.$0.0.0.0.0.0.0.2.$db=2mid=11434908822690=2d3b8b216631a1b8625.0">10:47am</span></time>
-	$.browser.tabSelected = messengerTab;
-	return false; // let MacPin find, notify, & focus the tab that made this notification, if its still active ...
-};
-
 delegate.launchURL = function(url) {
 	console.log("app.js: launching " + url);
 	var comps = url.split(':'),

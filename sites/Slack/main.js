@@ -69,8 +69,8 @@ app.on('receivedRedirectionToURL', (url, tab) => {
 	}
 });
 
-let clicker = (url) => {
-	console.log(`(click)navigation-delegating ${url} ...`);
+let clicker = (url, tab, mainFrame) => {
+	console.log(`navigation-delegating ${url} ...`);
 	var comps = url.split('/'),
 		scheme = comps.shift();
 	comps.shift();
@@ -102,8 +102,14 @@ let clicker = (url) => {
 				return true;
 			}
 		default:
-			return false;
+			break;
 	}
+
+	if (mainFrame==false && host == "files.slack.com") {
+		console.log("clicked on a file download to be popped up!");
+	}
+
+	return false;
 };
 app.on('decideNavigationForURL', clicker);
 app.on('decideNavigationForClickedURL', clicker);

@@ -61,7 +61,7 @@ const setAgent = function(agent, tab) { tab.userAgent = agent; };
 // ^^ see that error all the time when attempting to make calls
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
 
-app.on("decideNavigationForClickedURL", function(url, mainFrame, tab) {
+app.on("decideNavigationForClickedURL", function(url, tab, mainFrame) {
 	if (
 		!url.startsWith("https://talkgadget.google.com")
 		&& !url.startsWith("https://accounts.google.com")
@@ -84,7 +84,6 @@ app.on("decideNavigationForClickedURL", function(url, mainFrame, tab) {
 	}
 	if (!mainFrame) {
 		console.log(`<a href="${url}" target=_blank>`);
-		//return true;
 	}
 	return false;
 });

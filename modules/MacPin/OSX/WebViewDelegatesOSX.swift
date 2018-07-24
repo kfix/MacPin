@@ -150,6 +150,8 @@ extension WebViewControllerOSX { // _WKDownloadDelegate
 		saveDialog.canCreateDirectories = true
 		saveDialog.nameFieldStringValue = filename
 		if let webview = download.originatingWebView, let window = webview.window {
+			// FIXME if this is a backgrounded tab, window will not be active!
+			//   need to take focus first
 			NSApplication.shared.requestUserAttention(.informationalRequest)
 			saveDialog.beginSheetModal(for: window) { (choice: NSApplication.ModalResponse) -> Void in
 				NSApp.stopModal(withCode: choice)
