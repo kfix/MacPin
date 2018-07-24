@@ -102,9 +102,6 @@ struct WeakThing<T: AnyObject> {
 				omnibox.webview = nil
 			}
 		}
-		if let wvc = tab.viewController as? WebViewControllerOSX {
-			wvc.dismiss() // remove retainers
-		}
 
 		tab.initialFirstResponder = nil
 		tab.label = ""
@@ -749,6 +746,17 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		super.removeChildViewController(at: index)
 		// if index was the currentselected, NSTVC will reselect to the left if this was the last controller, else to the right
 		//tabsController.remove(atArrangedObjectIndex: index)
+	}
+
+	override func dismissViewController(_ viewController: NSViewController) {
+		if childViewControllers[selectedTabViewItemIndex] == viewController {
+			warn("dismissing current tab")
+			closeTab(viewController)
+			//selectedTabViewItemIndex += (selectedTabViewItemIndex > 0) ? -1 : 1
+		} else {
+			// could be a popover or sheet or whatever
+			super.dismissViewController(viewController)
+		}
 	}
 
 	override func presentViewController(_ viewController: NSViewController, animator: NSViewControllerPresentationAnimator) {

@@ -58,26 +58,11 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 		super.viewDidLoad()
 	}
 
-	// func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) // iOS
-	//@objc func dismiss(_ viewController: ViewController) { // OSX
-	@objc dynamic func dismiss() {
-#if os(OSX)
-		//warn(obj: self)
-		representedObject = nil
-		//webview.stopLoading()
-		//webview._close()
-		view.nextKeyView = nil
-		view.nextResponder = nil
-#endif
-		//webview.uiDelegate = nil
-		//webview.navigationDelegate = nil
-		//webview._findDelegate = nil
-		if WebKit_version >= (603, 1, 17) {
-			webview._iconLoadingDelegate = nil
-		}
+	@objc func askToOpenCurrentURL() {
+		askToOpenURL(webview.url as NSURL?)
+		// if not accepted the prompt, self.focus()
+		// responder chain is borked by the modal prompt after hitting "cancel"
 	}
-
-	@objc func askToOpenCurrentURL() { askToOpenURL(webview.url as NSURL?) }
 
 	// sugar for delgates' opening a new tab in parent browser VC
 	func popup(_ webview: MPWebView) -> WebViewController {
@@ -86,7 +71,9 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 		return wvc
 	}
 
-	@objc dynamic func focus() { warn("not implemented!") }
+	@objc dynamic func focus() { warn("method not implemented by \(type(of: self))!") }
+
+	@objc dynamic func dismiss() { warn("method not implemented by \(type(of: self))!") }
 
 	deinit { warn(description) }
 

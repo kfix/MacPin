@@ -179,11 +179,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 
 	override func dismiss() {
 		warn()
-		webview.inspectorAttachmentView = nil
-		textFinder.client = nil
-		//view?.removeFromSuperviewWithoutNeedingDisplay()
-		//WKPageTerminate(webview._pageRefForTransitionToWKWebView)
-		super.dismiss()
+		parent?.dismissViewController(self)
 	}
 
 	@objc func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }

@@ -408,8 +408,12 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 
 
 	func webViewDidClose(_ webView: WKWebView) {
+		// https://developer.mozilla.org/en-US/docs/Web/API/Window/close
+		// only called for tabs opened by scripts being window.close()d by themselves or by their creating tabs
 		warn("JS [\(webView.urlstr)]: window.close();`")
-		browsingReactor.emit(.didWindowClose, webView)
+		if !browsingReactor.anyHandled(.didWindowClose, webView) {
+			dismiss() // ask parent vc to defenstrate this webview
+		}
 	}
 
 	func _webViewWebProcessDidCrash(_ webView: WKWebView) {
