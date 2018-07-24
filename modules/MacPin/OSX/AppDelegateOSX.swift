@@ -452,7 +452,6 @@ extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 		}
 
 		if let info =  notification.userInfo, let type = info["type"] as? Int, let origin = info["origin"] as? String, let tabHash = info["tabHash"] as? UInt {
-			//warn(obj: info)
 
 			if let webview = browserController.tabs.filter({ UInt($0.hash) == tabHash }).first {
 				if let idstr = notification.identifier, let id = UInt64(idstr), let manager = WebViewNotificationCallbacks.getManager(webview) {
@@ -461,7 +460,7 @@ extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 					WKNotificationManagerProviderDidClickNotification(manager, id)
 					// void return, so no confirmation that webview accepted/processed the click
 					browserController.tabSelected = webview
-					// dismiss notification ....
+					center.removeDeliveredNotification(notification)
 				}
 			}
 
