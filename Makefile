@@ -19,8 +19,8 @@ archs_macosx		?= x86_64
 archs_iphonesimulator	?= x86_64
 
 archs_iphoneos		?= arm64
-target_ver_OSX		?= 10.13
-target_ver_iOS		?= 11
+target_ver_OSX		?= 10.11
+target_ver_iOS		?= 9
 
 xcode				?= /Applications/Xcode.app
 swifttoolchain		?= XcodeDefault
@@ -89,19 +89,21 @@ ifeq (,$(filter $(arch),$(archs_macosx)))
 # only intel platforms have libedit so only those execs can have terminal CLIs
 $(execs): $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics))
 $(info $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics)))
-$(execs): $(statics)
 else
+endif
 # use static libs, not dylibs to build all executable modules
 $(execs): $(statics)
-endif
 
 ifeq ($(platform),OSX)
 endif
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
 allapps install: $(gen_apps)
-zip test apirepl tabrepl wknightly stp $(gen_apps): $(execs)
+zip test apirepl tabrepl wknightly stp $(gen_apps): $(execs) $(outdir)/SwiftSupport
 doc test apirepl tabrepl test.app test.ios dbg dbg.app stp stp.app test_% $(appnames:%=test_%): debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
 #-D WK2LOG
+
+# older OSX/macOS with backported Safari.app have vendored WK/JSC frameworks
+rpath					:= /System/Library/StagedFrameworks/Safari
 
 ifeq ($(STP),1)
 stpdir					:= /Applications/Safari\ Technology\ Preview.app
@@ -111,17 +113,15 @@ webkitdir				:= $(stpframes)/WebKit.framework
 safaridir				:= $(wildcard $(stpdir))
 
 # FIXME: only release builds should have STP burned into the RPATH
-#linkopts_main += -Wl,-dyld_env,DYLD_VERSIONED_FRAMEWORK_PATH="$(stpframes)"
-
-# FIXME shouldn't be linking to STP at all
-##linkopts_main += -Wl,-F,"$(stpframes)"
-##libdirs += -L "$(stpframes)"
+#rpath					+= :$(stpframes)
 
 # man dyld
 env += DYLD_VERSIONED_FRAMEWORK_PATH="$(stpframes)"
 #env += DYLD_PRINT_LIBRARIES=1
 endif
 endif
+
+linkopts_main 			:= -Wl,-dyld_env,DYLD_VERSIONED_FRAMEWORK_PATH="$(rpath)"
 
 webkitdir				?= /System/Library/Frameworks/WebKit.framework
 safaridir				?= /Applications/Safari.app
@@ -234,7 +234,12 @@ $(appdir)/%.dSYM:
 	@install -d $@ $@/Contents/Resources/DWARF
 	$(patsubst %,cp -f % $@/Contents/Resources/DWARF/$*,$(filter $(outdir)/exec/%.dSYM/Contents/Resources/DWARF/%,$^))
 
-$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings
+$(appdir)/%.app/Contents/SwiftSupport: $(outdir)/exec
+	@install -d $@
+	$(swift-stdlibtool) --copy --verbose --sign $(appsig) --scan-folder $(outdir)/exec --destination $@
+	@touch $@
+
+$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/Contents/SwiftSupport
 	@install -d $@ $@/Contents/MacOS $@/Contents/Resources
 	$(patsubst %,COMMAND_MODE=legacy cp -f % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
 	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/Contents/MacOS/$*.dSYM,$(filter $(outdir)/exec/%.dSYM,$^))
@@ -244,14 +249,13 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	(($(bundle_untracked))) && COMMAND_MODE=legacy cp -fRL $(macpin_sites)/$*/* $@/Contents/Resources/ || true
 	[ ! -d $@/Contents/Resources/Library ] || ln -sfh Resources/Library $@/Contents/Library
 	[ ! -n "$(wildcard $(outdir)/Frameworks/*.dylib)" ] || cp -a $(outdir)/Frameworks $@/Contents
-	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/Contents
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist >/dev/null
 	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
-	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@ $@/Contents/SwiftSupport/*.dylib
+	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
 	-codesign --display -r- --verbose=4 --deep --entitlements :- $@
-	-spctl -vvvv --raw --assess --type execute $@
+	-spctl -vvvv --assess --type execute $@ # App Store-ability
 	-asctl container acl list -file $@
-	-codesign --verbose=4 --deep --ignore-resources --strict $@
+	codesign --verbose=4 --deep --verify --strict $@
 	@touch $@
 #xattr -w com.apple.application-instance $(shell echo uuidgen) $@
 
@@ -324,6 +328,7 @@ clean: unregister
 
 binclean:
 	rm -f $(execs) $(objs) $(statics) $(dynamics) $(outdir)/obj/*.o
+	rm -rf $(outdir)/SwiftSupport
 
 cached:
 	-find ~/Library/Caches/$(template_bundle_id).$(APP)* ~/Library/WebKit/$(template_bundle_id).$(APP)*
@@ -439,6 +444,6 @@ stp_jsc:
 	$(env) "$(stpframes)/JavaScriptCore.framework/Resources/jsc" -i
 
 $(V).SILENT: # enjoy the silence
-.PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist
+.PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/SwiftSupport
 .PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics stp_symbols stp_jsc
 .SUFFIXES:

@@ -157,6 +157,9 @@ clang				:= $(xcrun) -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(plat
 clangpp				:= $(xcrun) -sdk $(sdk) clang++ -fmodules -fcxx-modules -std=c++11 -stdlib=libc++ -target $(arch)-$(target_$(platform)) $(verbose)
 #-fobj-arc
 #-fobjc-call-cxx-cdtors
+# https://github.com/apple/swift/blob/master/tools/swift-stdlib-tool/swift-stdlib-tool.mm
+swift-stdlibtool	:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swift-stdlib-tool --platform $(sdk)
+
 
 libdirs				:= -L $(outdir)/Frameworks -L $(outdir)/obj
 incdirs				+= -I $(sdkpath)/System/Library/Frameworks
@@ -183,7 +186,7 @@ $(swiftlibdir):
 	xcode-select --install
 ########################
 
-$(outdir)/MacOS $(outdir)/exec $(outdir)/Frameworks $(outdir)/obj $(outdir)/Contents $(outdir)/SwiftSupport: ; install -d $@
+$(outdir)/MacOS $(outdir)/exec $(outdir)/Frameworks $(outdir)/obj $(outdir)/Contents: ; install -d $@
 
 define bundle_libswift
 	for lib in $$(otool -L $@ | awk -F '[/ ]' '$$2 ~ /^libswift.*\.dylib/ { printf $$2 " " }'); do \
@@ -200,14 +203,20 @@ endef
 #  https://blog.timac.org/2017/1115-state-of-swift-ios11-1-macos10-13/
 #   https://github.com/apple/swift/blob/master/docs/ABIStabilityManifesto.md https://swift.org/abi-stability/
 
+# https://modocache.io/swift-stdlib-tool
+$(outdir)/SwiftSupport: $(outdir)/exec
+	install -d $@
+	$(swift-stdlibtool) --copy --verbose --scan-folder $(outdir)/exec --destination $@
+	touch $@
+
 $(outdir)/exec/%.dSYM: $(outdir)/exec/%
 	dsymutil $< 2>/dev/null
 
 #$(outdir)/exec/%: libdirs += -L $(swiftlibdir)
-$(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks $(outdir)/SwiftSupport
+$(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks
 	# grab the .d's of $^ and build any used modules ....
 	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../SwiftSupport $(linkopts_main) -o $@ $^
-	$(bundle_libswift)
+	touch $(dir $@)
 
 %.3.swift: %.swift
 	$(swift-update) $^ > $@
