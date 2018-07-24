@@ -378,9 +378,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 
 		DispatchQueue.main.asyncAfter(deadline: delayTime, qos: .userInteractive, flags: .enforceQoS) { [argv] in
 			// https://developer.apple.com/videos/play/wwdc2015/718/?time=1380
-
 			// WKWebView.evaluateJavascript schedules work on main thread, so we must be using it too
-			dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
 
 			warn("timeout call @ \(DispatchTime.now().rawValue)", function: "setTimeout:main")
 

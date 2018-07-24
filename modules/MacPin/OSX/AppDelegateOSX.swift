@@ -177,7 +177,9 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		winMenu.submenu?.addItem(MenuItem("Close Tab", #selector(BrowserViewControllerOSX.closeTab(_:)), "w", [.command]))
 		winMenu.submenu?.addItem(MenuItem("Show Next Tab", #selector(NSTabView.selectNextTabViewItem(_:)), String(format:"%c", NSTabCharacter), [.control]))
 		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", #selector(NSTabView.selectPreviousTabViewItem(_:)), String(format:"%c", NSTabCharacter), [.control, .shift]))
-		winMenu.submenu?.addItem(MenuItem("Show Tab Overview", #selector(WebViewControllerOSX.snapshotButtonClicked(_:)), "\\", [.shift, .command]))
+		if #available(macOS 10.13, iOS 10, *) {
+			winMenu.submenu?.addItem(MenuItem("Show Tab Overview", #selector(WebViewControllerOSX.snapshotButtonClicked(_:)), "\\", [.shift, .command]))
+		}
 		app!.mainMenu?.addItem(winMenu)
 
 		tabListMenu.isHidden = true

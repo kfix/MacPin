@@ -248,12 +248,13 @@ class MPWebView: WKWebView, WebViewScriptExports {
 				//configuration._requiresUserActionForEditingControlsManager = true
 			}
 #endif
-			//if #available(OSX 10.13, iOS 11, *) {
 			if WebKit_version >= (604, 1, 28) { // Version/11.0 Safari/604.1.28 sierra
 				configuration._allowUniversalAccessFromFileURLs = true
-				// https://forums.developer.apple.com/thread/87474#267547
-				configuration.setURLSchemeHandler(MPRetriever(), forURLScheme: "x-macpin")
-				// has to be set before self.init
+				if #available(macOS 10.13, iOS 11, *) {
+					// https://forums.developer.apple.com/thread/87474#267547
+					configuration.setURLSchemeHandler(MPRetriever(), forURLScheme: "x-macpin")
+					// has to be set before self.init
+				}
 			}
 		}
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm

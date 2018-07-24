@@ -33,9 +33,10 @@ extension FileHandle: TextOutputStream {
 
 extension TimeInterval {
     // builds string in app's labels format 00:00.0
-    func stringFormatted() -> String {
-        var miliseconds = (self * 10).rounded() / 10
-        let interval = Int(self)
+    func stopwatch(invert: Bool = false) -> String {
+		let ref = invert ? (self * -1) : self
+        var miliseconds = (ref * 10).rounded() / 10
+        let interval = Int(ref)
         let seconds = interval % 60
         let minutes = (interval / 60) % 60
         return String(format: "%02d:%02d.%03.f", minutes, seconds, miliseconds)
@@ -49,13 +50,18 @@ func warn(_ msg: String = String(), function: StaticString = #function, file: St
 	// FIXME if REPL waiting, reset TTY cursor to line^?
 
 	var stderr = FileHandle.standardError
-	//print("[\(startTime - startTime.timeIntervalSinceNow)] <\(file):\(line):\(column)> [\(function)] \(msg)", to: &stderr) // formatedd absolute time
 
-	print("\r[\(DateInterval(start: startTime, end: Date()).duration.stringFormatted())] <\(file):\(line):\(column)> [\(function)] \(msg)", to: &stderr) // min:sec.ms
+	var out = ""
+	// [min:sec.ms] <codeloc> [fn] message
+	if #available(OSX 10.12, iOS 10, *) {
+		out = "\r[\(DateInterval(start: startTime, end: Date()).duration.stopwatch())] <\(file):\(line):\(column)> [\(function)] \(msg)"
+	} else {
+		out = "[\((startTime.timeIntervalSinceNow.stopwatch(invert: true)))] <\(file):\(line):\(column)> [\(function)] \(msg)"
+	}
 
+	print(out, to: &stderr)
 #if WARN2NSLOG
-	NSLog("<\(file):\(line):\(column)> [\(function)] \(msg)")
-	//FIXME timestamp?
+	NSLog(out)
 #endif
 	// https://developer.apple.com/library/mac/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/LoggingErrorsAndWarnings.html
 #if ASL

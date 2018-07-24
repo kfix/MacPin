@@ -187,7 +187,7 @@ class TabGridController: NSViewController {
 		warn(String(row))
 		if let name = tabs[row].title {
 			warn(tabs[row].description)
-			let view = NSTextField(string: name)
+			let view = NSTextField() //string: name)
 			view.isEditable = false
 			view.isBordered = false
 			view.backgroundColor = .clear

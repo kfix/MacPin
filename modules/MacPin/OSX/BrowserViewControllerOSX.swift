@@ -195,14 +195,22 @@ struct WeakThing<T: AnyObject> {
 					return ti
 
 				case .Sidebar:
-					btn.image = NSImage(named: NSImage.Name.touchBarSidebarTemplate)
-					btn.action = #selector(BrowserViewControllerOSX.sidebarButtonClicked(_:))
-					return ti
+					if #available(macOS 10.13, iOS 10, *) {
+						btn.image = NSImage(named: NSImage.Name.touchBarSidebarTemplate)
+						btn.action = #selector(BrowserViewControllerOSX.sidebarButtonClicked(_:))
+						return ti
+					} else {
+						return nil
+					}
 
 				case .Snapshot:
-					btn.image = NSImage(named: NSImage.Name.quickLookTemplate)
-					btn.action = #selector(WebViewControllerOSX.snapshotButtonClicked(_:))
-					return ti
+					if #available(macOS 10.13, iOS 10, *) {
+						btn.image = NSImage(named: NSImage.Name.quickLookTemplate)
+						btn.action = #selector(WebViewControllerOSX.snapshotButtonClicked(_:))
+						return ti
+					} else {
+						return nil
+					}
 
 				//case .Inspect: // NSMagnifyingGlass
 				case .NewTab:
@@ -309,7 +317,12 @@ struct WeakThing<T: AnyObject> {
 		transitionOptions = [] // []==.none .crossfade .slideUp/Down/Left/Right/Forward/Backward .allowsUserInteraction
 
 		super.viewDidLoad()
-		view.registerForDraggedTypes([NSPasteboard.PasteboardType.string,NSURLPboardType,NSPasteboard.PasteboardType.fileURL]) //webviews already do this, this just enables openURL when tabless
+
+		if #available(macOS 10.13, iOS 10, *) {
+			view.registerForDraggedTypes([NSPasteboard.PasteboardType.string,NSURLPboardType,NSPasteboard.PasteboardType.fileURL]) //webviews already do this, this just enables openURL when tabless
+		} else {
+			view.registerForDraggedTypes([NSPasteboard.PasteboardType.string,NSURLPboardType]) //webviews already do this, this just enables openURL when tabless
+		}
 	}
 
 	override func viewWillAppear() {

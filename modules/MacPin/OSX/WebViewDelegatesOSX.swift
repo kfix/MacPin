@@ -43,7 +43,7 @@ import WebKitPrivates
 		displayAlert(alert) { (response: NSApplication.ModalResponse) -> Void in completionHandler(input.stringValue) }
 	}
 
-	//@available(OSX 10.12, *)
+	@available(OSX 10.12, *)
 	func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) {
 		// WKOpenPanel for <input> file uploading
 		// https://bugs.webkit.org/show_bug.cgi?id=137759
