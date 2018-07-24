@@ -58,7 +58,7 @@ app.on('receivedRedirectionToURL', (url, tab) => {
 				host = url.split('/')[2]
 				let redir = `${scheme}://${host}/`
 				console.log(`redirecting from ${url} to ${redir}!`);
-				tab.gotoURL(redir);
+				tab.loadURL(redir);
 				return true; //tell webkit that we handled this
 			}
 			if (host.endsWith('.slack.com')) break;
@@ -91,6 +91,7 @@ let clicker = (url, tab, mainFrame) => {
 				&& !host.endsWith('.cloudfront.net')
 				&& !host.endsWith('.doubleclick.net')
 				&& !host.endsWith('.perf.linkedin.com')
+				&& !host.endsWith('adservice.google.com')
 
 				&& !host.endsWith('.youtube.com')
 				&& !host.endsWith('.giphy.com')

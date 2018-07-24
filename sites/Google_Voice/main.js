@@ -175,7 +175,7 @@ app.on('launchURL', function(url) { // app.openURL(/[sms|hangouts|tel]:.*/) call
 			}
 			break;
 		case 'https':
-			if (!url.startsWith("//accounts.google.com")) { browser.tabSelected.gotoURL(url); break; }
+			if (!url.startsWith("//accounts.google.com")) { browser.tabSelected.loadURL(url); break; }
 		default:
 			app.openURL(url);
 	}
