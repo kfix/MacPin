@@ -182,6 +182,11 @@ extension WebViewControllerOSX { // AppGUI funcs
 		parent?.dismissViewController(self)
 	}
 
+	override func close() {
+		warn()
+		removeFromParentViewController()
+	}
+
 	@objc func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }
 	@objc func toggleStatusBar() { showStatusBar = !showStatusBar }
 
@@ -242,6 +247,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		// https://www.w3.org/TR/html/editing.html#dom-window-focus
 		// https://html.spec.whatwg.org/multipage/interaction.html#dom-window-focus
 		warn()
+		// no generic parent?.presentViewController(self) in OSX....
 		if let parent = parent as? BrowserViewController {
 			//parent.presentViewController(self, animator: parent)
 			// seems to fire tvc.transition(from:tvc, to: self) !!?

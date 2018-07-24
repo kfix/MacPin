@@ -751,8 +751,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	override func dismissViewController(_ viewController: NSViewController) {
 		if childViewControllers[selectedTabViewItemIndex] == viewController {
 			warn("dismissing current tab")
-			closeTab(viewController)
-			//selectedTabViewItemIndex += (selectedTabViewItemIndex > 0) ? -1 : 1
+			selectedTabViewItemIndex += (selectedTabViewItemIndex > 0) ? -1 : 1
 		} else {
 			// could be a popover or sheet or whatever
 			super.dismissViewController(viewController)

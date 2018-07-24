@@ -149,15 +149,17 @@ extension WebViewControllerOSX { // _WKDownloadDelegate
 		let saveDialog = NSSavePanel()
 		saveDialog.canCreateDirectories = true
 		saveDialog.nameFieldStringValue = filename
-		if let webview = download.originatingWebView, let window = webview.window {
-			// FIXME if this is a backgrounded tab, window will not be active!
-			//   need to take focus first
+		if let webview = download.originatingWebView, let window = webview.window ?? parent?.view.window {
+			// change webview URL? or flag it as a "MPWebview.downloader = true" to hide it?
+			// if this is a backgrounded tab, window may need to be sourced from our parent vc
 			NSApplication.shared.requestUserAttention(.informationalRequest)
 			saveDialog.beginSheetModal(for: window) { (choice: NSApplication.ModalResponse) -> Void in
 				NSApp.stopModal(withCode: choice)
 				return
 			}
 			if NSApp.runModal(for: window) != .abort { if let url = saveDialog.url { return url.path } }
+			// allowOverwrite = true // its an inout pointer ?
+			//   NSSavePanel alrewady implements a sub-prompt for overwrite, so we should just set this to true
 		}
 		download.cancel()
 		return ""
@@ -324,6 +326,8 @@ extension WebViewController { // _WKInputDelegate
 	// @objc func _webView(_ webView: WKWebView!, getContextMenuFromProposedMenu menu: NSMenu!, forElement element: _WKContextMenuElementInfoQ, userInfo: Any!, completionHandler: ((NSMenu) -> Void)!) {}
 
 	func _webView(_ webview: WKWebView!, mouseDidMoveOverElement hitTestResult: _WKHitTestResult!, with flags: NSEvent.ModifierFlags, userInfo: NSSecureCoding!) {
+		// TODO: check flags for option|command|control, alter status text to show ("Open <url> in new window|tabbehind|externally")
+
 		// this is called when elements are hovered over & hovered off of
 		if let webview = webview as? MPWebView, showStatusBar {
 			statusbar.hovered = hitTestResult

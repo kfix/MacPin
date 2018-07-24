@@ -112,13 +112,14 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 						// FIXME: same keymods should work with Enter in omnibox controller
 						else if !browsingReactor.anyHandled(.decideNavigationForClickedURL, url.absoluteString as NSString, webView, targetIsMainFrame) { // allow override from JS
 							if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
-							popup(webView.clone(url)).focus()
+							popup(webView.clone(url)).focus() // clicked out-of-frame target link
+							// auto-focusing on these is standard safari behavior
 						}
 #elseif os(iOS)
 					// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/ios/WKActionSheetAssistant.mm
 					if !browsingReactor.anyHandled(.decideNavigationForClickedURL, url.absoluteString as NSString, webView, targetIsMainFrame) { // allow override from JS
 						if navigationAction.targetFrame != nil { fallthrough } // tapped in_frame target link
-						popup(webView.clone(url)) // out of frame target link
+						popup(webView.clone(url)).focus() // out of frame target link
 					}
 #endif
 					warn("-> .Cancel -- user clicked <a href=\(url) target!=_self> or middle-clicked: opening externally")
@@ -251,6 +252,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 					warn("Attachment received from an IFrame and was converted to a download? webView.loading == \(webView.isLoading)")
 					if let scheme = url.scheme, scheme == "about", let webview = webView as? MPWebView, let hint = URL(string: "about:downloading") {
 						webview.gotoURL(hint) // if webview is a stub _blank popup, then indicate its uselessness...
+						// FIXME. implement a ".downloader" prop so this can be .hide()n and auto-destructs when done with its transfer ...
 					}
 					return
 				default:
@@ -401,19 +403,42 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 #endif
 		//if !tgt.description.isEmpty { evalJS("window.name = '\(tgt)';") }
 		if let url = openurl, let scheme = url.scheme, url.scheme != "about" { wv.gotoURL(url) } // decideWindowOpen has allowed us to get this far, so start the load now
-		if !browsingReactor.anyHandled(.didWindowOpenForURL, openurl?.absoluteString ?? "", wv, webView) { popup(wv).focus() }
+		if !browsingReactor.anyHandled(.didWindowOpenForURL, openurl?.absoluteString ?? "", wv, webView) { popup(wv) }
 		return wv // window.open() -> Window()
 		//return nil //window.open() -> undefined
 	}
-
 
 	func webViewDidClose(_ webView: WKWebView) {
 		// https://developer.mozilla.org/en-US/docs/Web/API/Window/close
 		// only called for tabs opened by scripts being window.close()d by themselves or by their creating tabs
 		warn("JS [\(webView.urlstr)]: window.close();`")
 		if !browsingReactor.anyHandled(.didWindowClose, webView) {
-			dismiss() // ask parent vc to defenstrate this webview
+			close() // ask parent vc to defenstrate this webview
 		}
+	}
+	//func webViewClose(_ webView: WKWebView) // only Close or DidClose will be called, not both
+
+	//func _webView(_ webView: WKWebView, takeFocus: WKFocusDirection) //.backward .forward
+	//func _webViewRunModal(_ webView: WKWebView)
+	//func _webViewDidScroll(_ webView: WKWebView)
+	//func _webView(_ webView: WKWebView, setWindowFrame: NSRect)
+	//func _webView(_ webView: WKWebView, setResizable: Bool)
+
+	//func _showWebView(_ webView: WKWebView)
+		// document.hidden document.visibilityState
+
+	func _unfocusWebView(_ webView: WKWebView) {
+		// https://developer.mozilla.org/en-US/docs/Web/API/Window/blur
+		warn("JS [\(webView.urlstr)]: window.focus();`")
+		dismiss() // ask parent vc to conceal this webview
+	}
+
+	func _focusWebView(_ webView: WKWebView) {
+		// https://developer.mozilla.org/en-US/docs/Web/API/Window/focus
+		warn("JS [\(webView.urlstr)]: window.focus();`")
+		focus() // ask parent vc to promulgate this webview
+		// should consider marking tab "hasBeenFocused+=1" so it can be rate-limited
+		//	https://stackoverflow.com/a/11344328/3878712
 	}
 
 	func _webViewWebProcessDidCrash(_ webView: WKWebView) {
