@@ -92,7 +92,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 				case "http": fallthrough
 				case "https": break
 				default: //weird protocols, or app launches like itmss:
-					askToOpenURL(url as NSURL?)
+					askToOpenURL(url)
 					decisionHandler(.cancel)
 			}
 

@@ -91,6 +91,9 @@ extension NSPasteboard {
 		let str = string(forType: .string)
 		let wkurls = WebURLsWithTitles.urls(from: self)
 
+//NSPasteboard._web_writableTypesForURL
+// _web_writeURL:(NSURL *)URL andTitle:(NSString *)title types:(NSArray *)types;
+
 		if let urls = readObjects(forClasses: [NSURL.self], options: nil) as? [NSURL] {
 			// FIXME: pass file urls to separate JS handler - image drags from safari to dock icons are tmpfiles
 			clearContents() // have to wipe it clean in order to modify
@@ -134,7 +137,7 @@ extension NSPasteboard {
 				setString(str, forType: PasteboardType.string) // -> text/plain
 			}
 
-			addTypes([NSPasteboard.PasteboardType("WebURLsWithTitlesPboardType")], owner: nil)
+			addTypes([NSPasteboard.PasteboardType(WebURLsWithTitlesPboardType)], owner: nil)
 			WebURLsWithTitles.writeURLs(wkurls ?? urls, andTitles: nil, to: self)
 			// https://github.com/WebKit/webkit/blob/master/Source/WebKit/mac/History/WebURLsWithTitles.h
 		}
@@ -173,7 +176,7 @@ func displayError(_ error: NSError, _ vc: NSViewController? = nil) {
 	}
 }
 
-func askToOpenURL(_ url: NSURL?) { //uti: UTIType? = nil
+func askToOpenURL(_ url: URL?) { //uti: UTIType? = nil
 	let app = NSApplication.shared
 	let window = app.mainWindow
 	let wk = NSWorkspace.shared
@@ -184,7 +187,7 @@ func askToOpenURL(_ url: NSURL?) { //uti: UTIType? = nil
 					//wk.localizedDescriptionForType(uti)
 					// ask to open direct, .Cancel & return if we did
 
-	if let url = url, let window = window, let opener = NSWorkspace.shared.urlForApplication(toOpen: url as URL) {
+	if let url = url, let window = window, let opener = NSWorkspace.shared.urlForApplication(toOpen: url) {
 		if opener == Bundle.main.bundleURL {
 			// macpin is already the registered handler for this (probably custom) url scheme, so just open it
 			NSWorkspace.shared.open(url as URL)
@@ -198,7 +201,7 @@ func askToOpenURL(_ url: NSURL?) { //uti: UTIType? = nil
 		alert.informativeText = url.description
 		alert.icon = wk.icon(forFile: opener.path)
 		alert.beginSheetModal(for: window, completionHandler:{(response: NSApplication.ModalResponse) -> Void in
-			if response == .alertFirstButtonReturn { wk.open(url as URL) }
+			if response == .alertFirstButtonReturn { wk.open(url) }
  		})
 		return
 	} else if let urlstr = url?.absoluteString, urlstr.hasPrefix("x-macpin:") {

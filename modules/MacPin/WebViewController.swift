@@ -58,11 +58,7 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 		super.viewDidLoad()
 	}
 
-	@objc func askToOpenCurrentURL() {
-		askToOpenURL(webview.url as NSURL?)
-		// if not accepted the prompt, self.focus()
-		// responder chain is borked by the modal prompt after hitting "cancel"
-	}
+	@objc func askToOpenCurrentURL() { askToOpenURL(webview.url) }
 
 	// sugar for delgates' opening a new tab in parent browser VC
 	func popup(_ webview: MPWebView) -> WebViewController {

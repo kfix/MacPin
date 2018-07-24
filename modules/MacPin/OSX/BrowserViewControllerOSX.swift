@@ -376,7 +376,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	func makeWindow() -> WindowController {
 		var effectController = EffectViewController()
-		let win = NSWindow(contentViewController: effectController)
+		let win = BrowserWindow(contentViewController: effectController)
 		//win.setContentBorderThickness(24.0, for: .minY) // fake bottom toolbar
 
 		let wc = WindowController(window: win)

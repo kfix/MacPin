@@ -1,6 +1,14 @@
 import CoreGraphics
 import AppKit
 
+class BrowserWindow: NSWindow {
+
+	//https://stackoverflow.com/a/9467692/3878712
+	override var canBecomeKey: Bool { get { return true } }
+	override var acceptsFirstResponder: Bool { get { return true } }
+
+}
+
 class WindowController: NSWindowController, NSWindowDelegate {
 	required init?(coder: NSCoder) { super.init(coder: coder) } // conform to NSCoding
 
@@ -91,6 +99,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 	func windowWillClose(_ notification: Notification) {
 		warn()
 		//warn(obj: self)
+		// browser.dismiss() // will force clear all tabs
 	} // window was closed by red stoplight button
 
 	override func noResponder(for eventSelector: Selector) { warn(obj: eventSelector); }
