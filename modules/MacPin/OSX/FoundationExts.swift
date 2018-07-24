@@ -153,7 +153,7 @@ func displayError(_ error: NSError, _ vc: NSViewController? = nil) {
 	DispatchQueue.main.async() { // don't lock up other threads on modally-presented errors
 		if Darwin.isatty(Int32(0)) == 0 { // don't popup these modal alerts if REPL() is active on STDIN!
 			warn("`\(error.localizedDescription)` [\(error.domain)] [\(error.code)] `\(error.localizedFailureReason ?? String())` : \(error.userInfo)")
-			if let window = vc?.view.window {
+			if let window = vc?.view.window ?? vc?.parent?.view.window {
 				// display it as a NSPanel sheet
 				vc?.view.presentError(error, modalFor: window, delegate: nil, didPresent: nil, contextInfo: nil)
 			} else if let window = NSApplication.shared.mainWindow {
@@ -176,9 +176,9 @@ func displayError(_ error: NSError, _ vc: NSViewController? = nil) {
 	}
 }
 
-func askToOpenURL(_ url: URL?) { //uti: UTIType? = nil
+func askToOpenURL(_ url: URL?)  /* -> Bool */ { //uti: UTIType? = nil
 	let app = NSApplication.shared
-	let window = app.mainWindow
+	let window = app.mainWindow // FIXME: code smell
 	let wk = NSWorkspace.shared
 	app.unhide(nil)
 				// if let uti = uti, opener = LSCopyDefaultRoleHandlerForContentType(UTI, kLSRolesAll)
@@ -201,8 +201,11 @@ func askToOpenURL(_ url: URL?) { //uti: UTIType? = nil
 		alert.informativeText = url.description
 		alert.icon = wk.icon(forFile: opener.path)
 		alert.beginSheetModal(for: window, completionHandler:{(response: NSApplication.ModalResponse) -> Void in
+			//NSApp.stopModal(withCode: response) // unblock UI activities
 			if response == .alertFirstButtonReturn { wk.open(url) }
  		})
+		// return (NSApp.runModal(for: window) != .abort) // blocks UI until sheet callback returns
+
 		return
 	} else if let urlstr = url?.absoluteString, urlstr.hasPrefix("x-macpin:") {
 		// tabs/1/snapshot
