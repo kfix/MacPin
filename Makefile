@@ -139,9 +139,12 @@ else ifneq (,$(appsig_$(platform)))
 appsig	:= $(appsig_$(platform))
 codesign := yes
 else ifeq ($(appsig),-)
+# Note: the ad-hoc signature (-) is only good for testing sandboxing on the builder's machine
+#  ( & sandboxing is required for -DSAFARIDBG to work )
+# for distribution, should use a self-signed signature or none at all (no codesign= var)
 codesign := yes
 else ifneq ($(appsig),)
-test test.app dbg dbg.app stp stp.app release: appsig := -
+codesign := yes
 endif
 
 reinstall: allapps uninstall install
@@ -236,7 +239,8 @@ $(appdir)/%.dSYM:
 
 $(appdir)/%.app/Contents/SwiftSupport: $(outdir)/exec
 	@install -d $@
-	$(swift-stdlibtool) --copy --verbose --sign $(appsig) --scan-folder $(outdir)/exec --destination $@
+	[ ! -z "$(codesign)" ] || $(swift-stdlibtool) --copy --verbose --scan-folder $(outdir)/exec --destination $@
+	[ ! -n "$(codesign)" ] || $(swift-stdlibtool) --copy --verbose --sign $(appsig) --scan-folder $(outdir)/exec --destination $@
 	@touch $@
 
 $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/Contents/SwiftSupport
@@ -255,7 +259,8 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	-codesign --display -r- --verbose=4 --deep --entitlements :- $@
 	-spctl -vvvv --assess --type execute $@ # App Store-ability
 	-asctl container acl list -file $@
-	codesign --verbose=4 --deep --verify --strict $@
+	[ ! -n "$(codesign)" ] || codesign --verbose=4 --deep --verify --strict $@
+	-[ ! -z "$(codesign)" ] || codesign --verbose=4 --remove-signature $@
 	@touch $@
 #xattr -w com.apple.application-instance $(shell echo uuidgen) $@
 
@@ -418,17 +423,16 @@ $(ZIP): .zipignore
 	zip -r $@ extras/*.workflow --exclude @extras/.zipignore
 	cd $(appdir) && zip -g -ws -r $@ *.app --exclude @$(realpath $+)
 
-testrelease: clean tag allapps $(ZIP)
+release: clean tag allapps $(ZIP)
 ifneq ($(GITHUB_ACCESS_TOKEN),)
-release: clean tag allapps $(ZIP) upload
-upload:
+upload: release
 	git push -f --tags
 	posturl=$$(curl --data $(GH_RELEASE_JSON) "https://api.github.com/repos/$(USER)/$(REPO)/releases?access_token=$(GITHUB_ACCESS_TOKEN)" | jq -r .upload_url | sed 's/[\{\}]//g') && \
 	dload=$$(curl --fail -X POST -H "Content-Type: application/gzip" --data-binary "@$(ZIP)" "$$posturl=$(notdir $(ZIP))&access_token=$(GITHUB_ACCESS_TOKEN)" | jq -r .browser_download_url | sed 's/[\{\}]//g') && \
 	echo "$(REPO) now available for download at $$dload"
 else
-release:
-	@echo You need to export \$$GITHUB_ACCESS_TOKEN to make a release!
+upload:
+	@echo You need to export \$$GITHUB_ACCESS_TOKEN to make an upload!
 	@exit 1
 endif
 
@@ -445,5 +449,5 @@ stp_jsc:
 
 $(V).SILENT: # enjoy the silence
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/SwiftSupport
-.PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% testrelease submake_% statics dynamics stp_symbols stp_jsc
+.PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% submake_% statics dynamics stp_symbols stp_jsc
 .SUFFIXES:
