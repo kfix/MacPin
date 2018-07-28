@@ -55,6 +55,22 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		//replyEvent == ??
 	}
 
+	@objc func aboutPopup() {
+		if #available(macOS 10.13, *) {
+			//let verstr = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") ?? "?.?.?"
+			NSApp.orderFrontStandardAboutPanel(options: [
+				.applicationVersion: """
+				WebKit (\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny))
+				Safari (\(Safari_version))
+				MacPin
+				"""
+			])
+		} else {
+			NSApp.orderFrontStandardAboutPanel()
+		}
+
+	}
+
 	@objc func updateProxies() {
 		let alert = NSAlert()
 		alert.messageText = "Set HTTP(s) proxy"
@@ -96,14 +112,14 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		warn()
 		NSUserNotificationCenter.default.delegate = self
 		let app = notification.object as? NSApplication
-		//let appname = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleName") ?? NSProcessInfo.processInfo().processName
+		//let appname = Bundle.main.objectForInfoDictionaryKey("CFBundleName") ?? ProcessInfo.processInfo().processName
 		let appname = NSRunningApplication.current.localizedName ?? ProcessInfo.processInfo.processName
 
 		app!.mainMenu = NSMenu()
 
 		let appMenu = NSMenuItem()
 		appMenu.submenu = NSMenu()
-		appMenu.submenu?.addItem(MenuItem("About \(appname)", "orderFrontStandardAboutPanel:"))
+		appMenu.submenu?.addItem(MenuItem("About \(appname)", #selector(MacPinAppDelegateOSX.aboutPopup)))
 		appMenu.submenu?.addItem(MenuItem("Restart \(appname)", #selector(AppScriptRuntime.loadMainScript)))
 		appMenu.submenu?.addItem(NSMenuItem.separator())
 		appMenu.submenu?.addItem(MenuItem("Hide \(appname)", "hide:", "h", [.command]))

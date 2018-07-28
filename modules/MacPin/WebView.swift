@@ -756,7 +756,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 			case "savePage": return true
 			case "printWebView:": return true
 			default:
-				warn("not capturing selector but passing to super: \(anItem.action)")
+				warn("not capturing selector but passing to super: \(anItem.action ?? "no-name")")
 				return super.validateUserInterfaceItem(anItem)
 		}
 

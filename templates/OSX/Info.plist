@@ -380,7 +380,7 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>0.0.0</string>
+	<string>${VERSION}</string>
 	<key>LSHasLocalizedDisplayName</key>
 	<true/>
 	<key>LSMinimumSystemVersion</key>
@@ -401,6 +401,8 @@
 		<key>NSThirdPartyExceptionRequiresForwardSecrecy</key>
 		<false/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Websites you visit may request to use your camera.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHighResolutionMagnifyAllowed</key>
@@ -413,6 +415,8 @@
 	<string>Websites you visit may request your location.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Websites you visit may request your location.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Websites you visit may request to use your microphone.</string>
 	<key>NSServices</key>
 	<array/>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
