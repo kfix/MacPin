@@ -112,7 +112,7 @@ let clicker = (url, tab, mainFrame) => {
 
 	return false;
 };
-app.on('decideNavigationForURL', clicker);
+//app.on('decideNavigationForURL', clicker);
 app.on('decideNavigationForClickedURL', clicker);
 
 app.on('launchURL', (url) => {
@@ -144,7 +144,7 @@ let enVibrant = function(tab) {
 app.on('tabTransparencyToggled', (transparent, tab) => {
 	console.log(transparent, tab);
 	let idx = tab.styles.indexOf('transparent');
-	(!transparent && idx >= 0) ? tab.popStyle(idx) : tab.style('transparent');
+	//(!transparent && idx >= 0) ? tab.popStyle(idx) : tab.style('transparent');
 	setTimeout(tab.repaint.bind(tab), 0.3);
 	return; // cannot affect built-in transperatizing of tab
 });

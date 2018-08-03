@@ -206,7 +206,8 @@ ts-message,
 #message-input, .message_input,
 .p-emoji_picker__input_container, .p-emoji_picker__input,
 .title, .c-message__file_meta_title,
-.reply_broadcast_label_container
+.reply_broadcast_label_container,
+.inline_message_input_container
 {
     background: none !important;
     color: whitesmoke !important;
@@ -232,7 +233,7 @@ ts-message,
 .c-file_container,
 .file_container .CodeMirror .CodeMirror-code>div:before,
 .file_container .CodeMirror .CodeMirror-code>div pre,
-pre.c-mrkdwn__pre
+pre.c-mrkdwn__pre, pre, .btn_msg_action
 {
 	background: black !important;
 	background-color: inherit !important;
@@ -271,3 +272,9 @@ background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(255, 255, 255, 0.1)) 
 	border-bottom: 1px solid darkgrey !important;
 }
 
+body pre {
+	/* popped out snippets in "Raw" mode should only wrap for hard line breaks */
+	/* great for log files */
+	white-space: pre !important;
+	word-wrap: initial !important;
+}
