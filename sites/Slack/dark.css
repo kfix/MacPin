@@ -1,7 +1,9 @@
 /* https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99 */
 /* https://a.slack-edge.com/4e3ef/style/rollup-client_secondary.css */
+/* https://github.com/frankdilo/sblack/blob/master/Sblack/Resources/night_mode.css */
 
 /* hoping that Slack eventually Darkens up: https://twitter.com/slackhq/status/531941157283315712 */
+/* nope! because my condishuns: https://twitter.com/SlackHQ/status/1024986923604107265 */
 
 /*
 ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
@@ -43,7 +45,8 @@ ts-message,
 #quick_switcher_btn,
 .p-message_pane__unread_banner__banner,
 .c-message_list__day_divider__label__pill,
-.c_message {
+.c_message, .c-message_group,
+.c-search, .c-search_modal .popover>div {
     background: #2B2B2B !important;
 	font-family: -apple-system-font !important;
 }
@@ -207,7 +210,9 @@ ts-message,
 .p-emoji_picker__input_container, .p-emoji_picker__input,
 .title, .c-message__file_meta_title,
 .reply_broadcast_label_container,
-.inline_message_input_container
+.inline_message_input_container,
+.c-search_message__body, .p-search_filters,
+.c-search_autocomplete__suggestion_content
 {
     background: none !important;
     color: whitesmoke !important;
@@ -272,7 +277,7 @@ background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(255, 255, 255, 0.1)) 
 	border-bottom: 1px solid darkgrey !important;
 }
 
-body pre {
+body > pre {
 	/* popped out snippets in "Raw" mode should only wrap for hard line breaks */
 	/* great for log files */
 	white-space: pre !important;
