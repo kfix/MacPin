@@ -3,7 +3,7 @@ export
 #^ export all the variables
 builddir			?= build
 
-VERSION				 := 1.6.0
+VERSION				:= 1.6.0
 
 # 1 == use STP.app's WebKit if its present at runtime
 STP 				?= 1
@@ -164,6 +164,8 @@ LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin
 ZIP			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch).zip
+TXZ			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch).tar.xz
+DMG			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch).dmg
 GH_RELEASE_JSON = '{"tag_name": "v$(VERSION)","target_commitish": "master","name": "v$(VERSION)","body": "MacPin $(plaform) $(arch) build of version $(VERSION)","draft": false, "prerelease": true}'
 #####
 
@@ -420,8 +422,19 @@ tag:
 zip: $(ZIP)
 $(ZIP): .zipignore
 	[ ! -f $(ZIP) ] || rm $(ZIP)
-	zip -r $@ extras/*.workflow --exclude @extras/.zipignore
+	zip -9 -r $@ extras/*.workflow --exclude @extras/.zipignore
 	cd $(appdir) && zip -g -ws -r $@ *.app --exclude @$(realpath $+)
+# zip can't do head-to-tail cross-file dedup ... so astoundingly poor non-compression of all the duplicate SwiftSupport/*s
+
+txz: $(TXZ)
+$(TXZ): .zipignore
+	[ ! -f $(TXZ) ] || rm $(TXZ)
+	cd $(appdir) && tar -v -c --xz -f $@ -X $(realpath $+) *.app
+# Archive Utility after 10.10 has a bug with unpacking these ...
+
+dmg: $(DMG)
+$(DMG):
+	hdiutil create -srcfolder "$(appdir)" -format UDZO -imagekey zlib-level=9 "$@" -volname "$(macpin) $(VERSION)" -scrub -quiet
 
 release: clean tag allapps $(ZIP)
 ifneq ($(GITHUB_ACCESS_TOKEN),)
