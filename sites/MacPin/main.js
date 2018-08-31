@@ -171,7 +171,8 @@ let launchRepl = () => {
 
 	var cfgRepl = {
 		transparent: true,
-		url: 'file://'+ app.resourcePath + '/repl.html',
+		//url: 'file://'+ app.resourcePath + '/repl.html', // < doesn't work from spaces in names ...
+		url: app.resourceURL + '/repl.html',
 		handlers: {
 			'evalREPL': [evalRepl, true, "hello", 42],
 			'closeREPL': closeRepl,
@@ -180,9 +181,17 @@ let launchRepl = () => {
 		}
 	};
 
-	replTab = new WebView(cfgRepl);
-	console.log(`selecting ${replTab.url}`);
-	browser.tabSelected = replTab;
+    try {
+	  replTab = new WebView(cfgRepl);
+	  console.log(`selecting ${replTab.url}`);
+	  browser.tabSelected = replTab;
+	} catch (e) {
+      if (e instanceof TypeError) {
+         console.error("could not load WebView!", cfgRepl);
+      } else {
+        throw e;
+      }
+    }
 
 	// https://github.com/remy/jsconsole is much prettier than my repl.html ...
 	//    https://github.com/remy/jsconsole/blob/master/public/inject.html

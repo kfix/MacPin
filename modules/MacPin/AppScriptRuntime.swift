@@ -77,7 +77,9 @@ extension JSValue {
 
 @objc protocol AppScriptExports : JSExport { // '$.app'
 	var appPath: String { get }
+	var appURL: String { get }
 	var resourcePath: String { get }
+	var resourceURL: String { get }
 	var arguments: [String] { get }
 	var environment: [AnyHashable: Any] { get }
 	var name: String { get }
@@ -525,7 +527,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	var arguments: [String] { return ProcessInfo.processInfo.arguments }
 	var environment: [AnyHashable: Any] { return ProcessInfo.processInfo.environment }
 	var appPath: String { return Bundle.main.bundlePath }
+	var appURL: String { return Bundle.main.bundleURL.absoluteString }
 	var resourcePath: String { return Bundle.main.resourcePath ?? String() }
+	var resourceURL: String { return Bundle.main.resourceURL?.absoluteString ?? String() }
 	var hostname: String { return ProcessInfo.processInfo.hostName }
 	var bundleID: String { return Bundle.main.bundleIdentifier ?? String() }
 
@@ -1121,9 +1125,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	var messageHandlers: [String: [JSValue]] = [:]
 }
 
-/*
-enum AppScriptEventPrototypes: String, CustomStringConvertible, CaseIterable {
-	var description: String { return "\(type(of: self)).\(self.rawValue)" }
+enum AppScriptReactions: CustomStringConvertible {
+	var description: String { return "\(type(of: self)).\(self)" }
 	// TODO: how to describe allowed arguments?
 	// cases can be tuples: https://github.com/OAuthSwift/OAuthSwift/blob/master/Sources/OAuthWebViewController.swift#L64
 	//   each declared event is like an anon-struct
@@ -1134,8 +1137,10 @@ enum AppScriptEventPrototypes: String, CustomStringConvertible, CaseIterable {
 	//	any way to spread the tuple comps generically?
 	//		eventArgs = Mirror(reflecting: event).children.allValues // makes [Any]
 	//		AppScriptRuntime.shared.eventHandlers[event.rawValue].callAsFunction(args: eventArgs)
+
+	case launchURL(url: URL)
+	case printToREPL(result: Any)
 }
-*/
 
 enum AppScriptEvent: String, CustomStringConvertible, CaseIterable {
 	var description: String { return "\(type(of: self)).\(self.rawValue)" }
@@ -1156,8 +1161,8 @@ enum AppScriptEvent: String, CustomStringConvertible, CaseIterable {
 		// TODO: these should be in BrowsingEvents
 		// WKNavigationDelegate, WebViewDelegates
 		networkIsOffline, //url, tab
-		decideNavigationForURL, // url, tab
-		decideNavigationForClickedURL, // url, targetIsMainFrame, tab
+		decideNavigationForURL, // url, tab, targetIsMainFrame
+		decideNavigationForClickedURL, // url, tab, targetIsMainFrame
 		receivedRedirectionToURL, // url, tab
 		decideNavigationForMIME, // mime, url, webview -> Bool
 		receivedCookie, // tab, cookieName, cookieValue
