@@ -424,6 +424,29 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		return JSValueMakeUndefined(ctx) // ECMA spec for console.log
 	}
 
+	static let conerr: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
+		//TODO: colorize JS outputs
+
+		if let args = args, argc > 0 {
+			var strs: [String] = []
+			for idx in (0..<argc) {
+				// need to coerce to strings
+				//strs.append(JSValue(jsValueRef: args[idx], in: JSContext(jsGlobalContextRef: ctx)).toString()) // reverse Objc-bridge
+				//strs.append(JSValue(jsValueRef: args[idx], in: JSContext.current()).toString()) // reverse Objc-bridge
+				strs.append(JSStringCopyCFString(kCFAllocatorDefault, JSValueToStringCopy(ctx, args[idx], exception)) as String)
+			}
+
+			if argc == 1 { warn(strs[0], function: "conerr"); } else { warn(strs.description, function: "conerr"); }
+	        let error = NSError(domain: "MacPin", code: 4, userInfo: [ NSURLErrorKey: "JavaScript console.error",
+					NSLocalizedDescriptionKey: strs.joined(separator:", ") ])
+			displayError(error)
+		} else {
+			warn("", function: "conerr")
+		}
+
+		return JSValueMakeUndefined(ctx) // ECMA spec for console.err
+	}
+
 	static let functions: [JSStaticFunction] = [
 		JSStaticFunction(name: "require", callAsFunction: cjsrequire,
 			attributes: JSPropertyAttributes(kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete)),
@@ -470,6 +493,18 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 			//console.log("conlog hooked");
 		})(this);
 		""" as CFString), JSObjectMakeFunctionWithCallback(ctx!, nil, conlog)!, nil, 1, nil)
+
+		JSEvaluateScript(ctx, JSStringCreateWithCFString("""
+		((conerr) => { // protecc the namespace
+			const _errOriginal = console.err.bind(console);
+			const err = (...args) => {
+				_errOriginal.apply(console, args);
+				conerr(args);
+			}
+			console.err = err;
+		})(this);
+		""" as CFString), JSObjectMakeFunctionWithCallback(ctx!, nil, conerr)!, nil, 1, nil)
+
 
 		JSEvaluateScript(ctx, JSStringCreateWithCFString("""
 		((contrace) => { // protecc the namespace
