@@ -25,8 +25,13 @@ import WebKitPrivates
 	}
 }
 
+//let wkhtr = NSClassFromString("_WKHitTestResult")
+// _WKHTR not avail in wk605.1.33 | osx10.11 | sf11.0
+// try running a build without rpath to see if it crashes..
+
 @objc class StatusBarController: NSViewController {
 	let statusbox = StatusBarField()
+
 
 	@objc weak var hovered: _WKHitTestResult? = nil {
 		didSet {

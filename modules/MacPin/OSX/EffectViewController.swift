@@ -20,4 +20,7 @@ class EffectViewController: NSViewController {
 		view.autoresizesSubviews = true
 		view.autoresizingMask = [.width, .height, .minXMargin, .minYMargin, .maxXMargin, .maxYMargin]
 	}
+
+	// make this view intercept all hits @ sendEvent:NSEvent so we can try to shunt right-clicks to toolbar items?
+	//   https://stackoverflow.com/a/30558497/3878712
 }

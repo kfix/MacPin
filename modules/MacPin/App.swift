@@ -5,6 +5,8 @@ import MachO
 // https://opensource.apple.com/source/dyld/dyld-519.2.2/dyld3/APIs.cpp.auto.html
 // Mach-O dylib version numbers are encoded as 32-bit unsigned integers, with the major version in the high 16 bits, the minor version in bits 8 through 15, and the patch level in the low 8 bits
 
+// https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/DisplayWebContent/Tasks/WebKitAvail.html#//apple_ref/doc/uid/20001846-171303
+
 // https://github.com/WebKit/webkit/commits/master/Source/WebKit/Configurations/Version.xcconfig
 //   olden hitory: https://github.com/WebKit/webkit/commits/4ccac179a8c9ea2a96d60f10e6cdb2f6a4fa0989/Source/WebKit2/Configurations/Version.xcconfig
 // https://github.com/WebKit/webkit/commits/master/Source/JavaScriptCore/Configurations/Version.xcconfig
@@ -24,6 +26,7 @@ let JavaScriptCore_version: (major: Int, minor: Int, tiny: Int) = {
 let Safari_version: String = { v in switch true {
 	case v>=(606, 1, 25):	return "12.0" //STP61
 	case v>=(605, 3,  8):	return "11.1"
+	// wk605.1.33 | osx10.11 | sf11.0
 	case v>=(604, 1, 28):	return "11.0"
 	case v>=(602, 1, 50):	return "10.0"
 	default:				return "???"

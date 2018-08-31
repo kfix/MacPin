@@ -133,6 +133,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 		let appearance = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") ?? "Light"
 		if appearance == "Dark" {
 			urlbox.textColor = NSColor.labelColor
+			// BUG: 10.11 dark-dock + high-constrast mode set a black textColor on a black-menu-bar-bg
 		}
 		urlbox.toolTip = ""
 

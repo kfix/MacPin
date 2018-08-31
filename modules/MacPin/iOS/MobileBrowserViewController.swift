@@ -5,8 +5,13 @@
 /// This is already a ball of wax...
 //  -reconcile childViewControllers. selectedViewController, tabSelected, and tabs
 //		https://github.com/codepath/ios_guides/wiki/Container-View-Controllers
+//		https://github.com/Ruzard/ContainerSequencedView/blob/master/SampleContainerSequencedView/ContentManagerViewController.swift
 //  -break the controlviews into subclasses & controllers
 /// http://doing-it-wrong.mikeweller.com/2013/06/ios-app-architecture-and-tdd-1.html
+
+// use rich Enums as model-objects for the Tabs:
+//   https://www.47deg.com/blog/swift-enum-oriented-dev-table-views/
+//   https://github.com/47deg/enum-oriented-table-view-sample/blob/master/EnumTableViewTest/ViewControllers/MainViewController.swift
 
 import WebKit
 import UIKit

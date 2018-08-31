@@ -68,8 +68,8 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 	}
 
 	@objc dynamic func focus() { warn("method not implemented by \(type(of: self))!") }
-
 	@objc dynamic func dismiss() { warn("method not implemented by \(type(of: self))!") }
+	@objc dynamic func close() { warn("method not implemented by \(type(of: self))!") }
 
 	deinit { warn(description) }
 
