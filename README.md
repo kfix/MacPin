@@ -47,7 +47,6 @@ All other branches are obsolete.
 * [Slack.app](https://signin.slack.com): A hackable runtime for Slack (your co-workers will be thrilled)
 * [Salesforce.app](https://signin.salesforce.com): _[ALWAYS BE CLOSING](https://www.youtube.com/watch?v=r6Lf8GtMe4M)_ without tying up your main browser
 * [Trello.app](http://trello.com): Mind-mapper and project planner
-* [CloudPebble.app](https://cloudpebble.net/ide): Use the Interweb to program your Dick Tracy watch.
 * [DevDocs.app](http://devdocs.io): Code documentaion browser for most front-end frameworks
 
 ## Creating an App
