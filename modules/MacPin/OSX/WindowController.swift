@@ -16,7 +16,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
 		// take care of awakeFromNib() & windowDidLoad() tasks, which are not called for NIBless windows
 		super.init(window: window)
 
-		let appearance = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") ?? "Light"
+        interfaceStyleChanged()
 		if let window = window {
 			window.collectionBehavior = [.fullScreenPrimary, .participatesInCycle, .managed]
 			window.styleMask.insert(.unifiedTitleAndToolbar) // FIXME: toggle for borderless?
@@ -27,11 +27,6 @@ class WindowController: NSWindowController, NSWindowDelegate {
 			//window.ignoresMouseEvents = false
 			//window.acceptsMouseMovedEvents = false
 			window.titleVisibility = .hidden
-			if appearance == "Dark" {
-				window.appearance = NSAppearance(named: NSAppearance.Name.vibrantDark) // match overall system dark-mode
-			} else {
-				window.appearance = NSAppearance(named: NSAppearance.Name.vibrantLight) // Aqua LightContent VibrantDark VibrantLight
-			} // NSVisualEffectMaterialAppearanceBased ??
 			window.identifier = NSUserInterfaceItemIdentifier("browser")
 			//window.registerForDraggedTypes([NSPasteboardTypeString, NSURLPboardType, NSFilenamesPboardType]) //wkwebviews do this themselves
 			window.cascadeTopLeft(from: NSMakePoint(20,20))
@@ -45,6 +40,18 @@ class WindowController: NSWindowController, NSWindowDelegate {
 		}
 		shouldCascadeWindows = false // messes with Autosave
 		windowFrameAutosaveName = NSWindow.FrameAutosaveName("browser")
+
+		DistributedNotificationCenter.default.addObserver(self, selector: #selector(interfaceStyleChanged),
+			name: NSNotification.Name(rawValue: "AppleInterfaceThemeChangedNotification"), object: nil)
+	}
+
+	@objc func interfaceStyleChanged() {
+		let appearance = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") ?? "Light"
+		if appearance == "Dark" {
+			window?.appearance = NSAppearance(named: NSAppearance.Name.vibrantDark) // match overall system dark-mode
+		} else {
+			window?.appearance = NSAppearance(named: NSAppearance.Name.vibrantLight) // Aqua LightContent VibrantDark VibrantLight
+		} // NSVisualEffectMaterialAppearanceBased ??
 	}
 
 	// these just handle drags to a tabless-background, webviews define their own
