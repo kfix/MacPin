@@ -73,7 +73,7 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 // https://bugs.webkit.org/show_bug.cgi?id=177022
 @property (nonatomic, readonly) WKPageRef _pageRefForTransitionToWKWebView  WK_API_AVAILABLE(macosx(WK_MAC_TBA));
 
-- (void)_setFrame:(NSRect)rect andScrollBy:(NSSize)offset WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_setFrame:(NSRect)rect andScrollBy:(NSSize)offset WK_API_AVAILABLE(macosx(10.13.4));
 
 - (void)_gestureEventWasNotHandledByWebCore:(NSEvent *)event WK_API_AVAILABLE(macosx(10.13.4));
 - (void)_setCustomSwipeViews:(NSArray *)customSwipeViews WK_API_AVAILABLE(macosx(10.13.4));
@@ -179,8 +179,9 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 
 @property (nonatomic, setter=_setMediaCaptureEnabled:) BOOL _mediaCaptureEnabled WK_API_AVAILABLE(macosx(10.13), ios(11.0));
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
-#endif
+//@property (nonatomic, readonly) _WKInspector *_inspector WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
+@property (nonatomic, readonly) _WKFrameHandle *_mainFrame WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
+
 @end
 
 // https://github.com/WebKit/webkit/commit/1e291e88d96caa8e5421f81bd570e90b1af02ff4
@@ -188,16 +189,8 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @interface WKWebView (WKNSTextFinderClient) <NSTextFinderClient>
 @end
 
-typedef enum : NSUInteger {
-    NSTextFinderAsynchronousDocumentFindOptionsBackwards = 1 << 0,
-    NSTextFinderAsynchronousDocumentFindOptionsWrap = 1 << 1,
-    NSTextFinderAsynchronousDocumentFindOptionsCaseInsensitive = 1 << 2,
-    NSTextFinderAsynchronousDocumentFindOptionsStartsWith = 1 << 3,
-} NSTextFinderAsynchronousDocumentFindOptions;
-
-
-@protocol NSTextFinderAsynchronousDocumentFindMatch <NSObject>
-@property (retain, nonatomic, readonly) NSArray *textRects;
+@interface WKTextFinderMatch : NSObject <NSTextFinderAsynchronousDocumentFindMatch>
+@property (nonatomic, readonly) unsigned index;
 @end
 
 @interface WKWebView (NSTextFinderSupport)

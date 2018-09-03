@@ -169,6 +169,19 @@ class MPWebView: WKWebView, WebViewScriptExports {
 
 	}
 
+/*
+	var inspector: _WKInspector? {
+		get {
+			if WebKit_version >= (607, 1, 3) {
+				// https://github.com/WebKit/webkit/commit/1f7d382aa1e6fc67476787ce6a7b9a791b32f434
+				return _inspector
+			} else {
+				return nil
+			}
+		}
+	}
+*/
+
 #if os(OSX)
 	var inspectorAttachmentView: NSView? {
 		// when inspector is open, subviews.first is actually the inspector (WKWebInspectorWKWebView), not the WKView
@@ -911,4 +924,44 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		super._gestureEventWasNotHandled(byWebCore: event)
 	}
 #endif
+}
+
+extension MPWebView { // NSTextFinderClient
+
+	// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/mac/WKTextFinderClient.mm#L39
+	@objc func scrollFindMatchToVisible(_ findMatch: WKTextFinderMatch) {
+		//warn(obj: findMatch.containingView) // segs!
+			// https://github.com/WebKit/webkit/blob/master/Source/WebCore/PAL/pal/spi/mac/NSTextFinderSPI.h
+		//warn(obj: findMatch.textRects) // NSRect: {{230, 392}, {32, 20}}  {x, y}, {width, height}
+
+		guard let rect = findMatch.textRects.first as? NSRect else { return }
+		let scrollBox = CGSize(width: 0, height: rect.origin.y)
+#if os(OSX)
+		warn(obj: scrollBox)
+		//_setFrame(frame, andScrollBy: scrollBox) // WebKit availability?
+#endif
+
+		//scrollRangeToVisible(range)
+    }
+
+	// https://developer.apple.com/documentation/appkit/nstextfinderclient/1526989-scrollrangetovisible
+	@objc override func scrollRangeToVisible(_ range: NSRange) {
+		warn(obj: range)
+
+		guard let frects = self.rects(forCharacterRange: range),
+			let firstRect = frects.first?.rectValue
+				else { return }
+
+		warn(obj: firstRect)
+		super.scrollRangeToVisible(range)
+	/*
+		let clipView = scrollView.contentView // only on io-freaking-s
+		// check for sure that NSSCrollView has NSClipView
+		if( [clipView isKindOfClass:[NSClipView class]] ) {
+			firstRect = [clipView convertRect:firstRect fromView:clipView.documentView];
+			[clipView scrollRectToVisible:firstRect];
+		}
+	*/
+	}
+
 }

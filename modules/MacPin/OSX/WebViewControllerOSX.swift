@@ -53,10 +53,11 @@ import WebKitPrivates
 		//webview._editable = true //makes about:blank editable by default
 		textFinder.client = webview
 		textFinder.findBarContainer = self
-		textFinder.isIncrementalSearchingEnabled = true
-		textFinder.incrementalSearchingShouldDimContentView = true
-		// FIXME: webview doesn't auto-scroll to found matches
-		//  https://github.com/WebKit/webkit/blob/112c663463807e8676765cb7a006d415c372f447/Source/WebKit2/UIProcess/mac/WKTextFinderClient.mm#L39
+		// FIXME: webview doesn't auto-scroll to matches when in "overlay" mode
+		//   clicking into whitespace to cancel the overlay permits scroll-to-match again
+			//textFinder.isIncrementalSearchingEnabled = true
+			//textFinder.incrementalSearchingShouldDimContentView = true
+		// so keeping overlay off until that is fixed in WK
 		// MiniBrowser: https://github.com/WebKit/webkit/commit/67ec9eb4a3e9f04ababc7ea6c0e5f9b5bf69ca1c
 
 		view.addSubview(statusbar.view)
