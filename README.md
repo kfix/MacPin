@@ -1,6 +1,7 @@
 # MacPin
 <center>
 MacPin creates pseudo-browsers managed with internal JavaScripts.  
+
 ![screenie](/dock_screenshot.png?raw=true "screen shot")  
 </center>
 
@@ -8,8 +9,6 @@ The produced apps can be run on any Mac with Safari 11.1 installed.
 
 While less featureful than Electron (no Node and Chromium here),   
 they are [slim and fast like MacGap](https://discuss.atom.io/t/app-too-big/28845), thanks to use of macOS-shipped components.  
-
-![office space](https://pbs.twimg.com/media/DboF1VHXkAAXOSF?format=jpg&name=small 2 at the Same time...)
 
 Each app is about 15MB, which is mostly SwiftSupport libraries.  
 When Swift reaches ABI stability, those could be stripped away to leave behind only a 2MiB binary!  
