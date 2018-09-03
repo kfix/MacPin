@@ -100,7 +100,8 @@ pre,
 #mentions_options,
 #search_tab, #flex_contents, #search_results,
 #search_options, #search_filters, #search_results_loading,
-.thread_messages{
+.thread_messages, .global_notification_block,
+.display_real_names_block_sample {
     background: none !important;
 	background-color: inherit !important;
 }
@@ -259,7 +260,8 @@ pre.c-mrkdwn__pre, pre, .btn_msg_action
 .c-member--large,
 .c-member__display-name--large,
 .c-member__title,
-.c-member__other-names {
+.c-member__other-names, .sidebar_menu_list_item
+{
 	color: darkseagreen !important;
 }
 
