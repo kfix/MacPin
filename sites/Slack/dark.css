@@ -260,7 +260,8 @@ pre.c-mrkdwn__pre, pre, .btn_msg_action
 .c-member--large,
 .c-member__display-name--large,
 .c-member__title,
-.c-member__other-names, .sidebar_menu_list_item
+.c-member__other-names, .sidebar_menu_list_item,
+.c-search_autocomplete__suggestion_item
 {
 	color: darkseagreen !important;
 }
