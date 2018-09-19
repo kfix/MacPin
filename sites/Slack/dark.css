@@ -32,6 +32,10 @@ ts-message,
 	font-family: -apple-system-font !important;
 }
 
+.c-message__body {
+	margin-left: 3px !important;
+}
+
 /* ts-message.active .star, ts-message:hover .star */
 
 /* make callouts a little less burning */
