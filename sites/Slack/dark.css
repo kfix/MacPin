@@ -11,7 +11,7 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
 }
 */
 
-:root, #client-ui {
+:root, #client-ui, .card, .headroom {
 	background: black !important;
 	/* if tab is made transparent, these are overriden */
 }
@@ -243,7 +243,8 @@ ts-message,
 .c-file_container,
 .file_container .CodeMirror .CodeMirror-code>div:before,
 .file_container .CodeMirror .CodeMirror-code>div pre,
-pre.c-mrkdwn__pre, pre, .btn_msg_action
+pre.c-mrkdwn__pre, pre, .btn_msg_action,
+.card .CodeMirror
 {
 	background: black !important;
 	background-color: inherit !important;
@@ -254,7 +255,7 @@ pre.c-mrkdwn__pre, pre, .btn_msg_action
 .p-emoji_picker__heading, .p-emoji_picker__heading,
 .search_menu, .query_header, .footer__navigation-help,
 .fs_modal_file_viewer_header, .viewer,
-.contents_container, .channel_list_container
+.contents_container, .channel_list_container,
 {
 	background: black !important;
 	color: lime !important;
