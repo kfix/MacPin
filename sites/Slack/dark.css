@@ -60,7 +60,7 @@ ts-message,
 .p-message_pane__top_banners,
 .c-virtual_list__item--sticky,
 .p-message_pane__unread_banner, .p-message_pane__banner,
-.search_input, #msg_input {
+.search_input, #msg_input, #fs_modal {
 	font-family: -apple-system-font !important;
 }
 
@@ -212,7 +212,6 @@ ts-message,
 .messages_header,
 #typing_text,
 #message-input, .message_input,
-.p-emoji_picker__input_container, .p-emoji_picker__input,
 .title, .c-message__file_meta_title,
 .reply_broadcast_label_container,
 .inline_message_input_container,
@@ -252,10 +251,12 @@ pre.c-mrkdwn__pre, pre, .btn_msg_action,
 }
 
 .p-emoji_picker, .p-emoji_picker__list_container,
-.p-emoji_picker__heading, .p-emoji_picker__heading,
+.p-emoji_picker__heading, .p-emoji_picker__footer,
+.p-emoji_picker__preview_text, .p-emoji_picker__list_scroller,
+.p-emoji_picker__input_container, .p-emoji_picker__input,
 .search_menu, .query_header, .footer__navigation-help,
-.fs_modal_file_viewer_header, .viewer,
-.contents_container, .channel_list_container,
+#fs_modal_bg, .fs_modal_file_viewer_header, .viewer,
+.contents_container, .channel_list_container
 {
 	background: black !important;
 	color: lime !important;
