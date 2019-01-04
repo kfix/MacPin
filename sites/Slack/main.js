@@ -7,7 +7,7 @@
 const {app, BrowserWindow, WebView} = require('@MacPin');
 
 let slackTab, slack = {
-	url: 'https://slack.com/ssb/',
+	url: 'https://slack.com/ssb/', // use /signin/ instead... or if no cookie ?
 	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Slack_SSB/2.0.3', // MacGap app
 	//agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleWebKit/537.36 (KHTML, like Gecko) AtomShell/2.5.2 Chrome/53.0.2785.143 Electron/1.4.15 Safari/537.36 MacAppStore/16.5.0 Slack_SSB/2.5.2', // new Electron app (env SLACK_DEVELOPER_MENU=true)
 	//preinject: ['shim_notification_promises'],
@@ -36,6 +36,7 @@ app.on('networkIsOffline', (url, tab) => {
 });
 
 app.on('receivedRedirectionToURL', (url, tab) => {
+	console.log(`server-redirected ${url} ...`);
 	var comps = url.split('/'),
 		scheme = comps.shift();
 	comps.shift();
@@ -57,11 +58,10 @@ app.on('receivedRedirectionToURL', (url, tab) => {
 				// if login was success, navigate to team page
 				host = url.split('/')[2]
 				let redir = `${scheme}://${host}/`
-				console.log(`redirecting from ${url} to ${redir}!`);
+				console.log(`app redirecting from ${url} to ${redir}!`);
 				tab.loadURL(redir);
 				return true; //tell webkit that we handled this
 			}
-			if (host.endsWith('.slack.com')) break;
 		case "about":
 		case "file":
 		default:
@@ -87,17 +87,25 @@ let clicker = (url, tab, mainFrame) => {
 				return true; //tell webkit to do nothing
 			} else if ((host != "slack.com")
 				&& !host.endsWith('.slack.com')
+
+				// CDNs
+				&& !host.endsWith('.slack-edge.com')
 				&& !host.endsWith('.cedexis-test.com')
 				&& !host.endsWith('.cloudfront.net')
-				&& !host.endsWith('.doubleclick.net')
-				&& !host.endsWith('.perf.linkedin.com')
-				&& !host.endsWith('adservice.google.com')
-
 				&& !host.endsWith('.youtube.com')
 				&& !host.endsWith('.giphy.com')
 				&& !host.endsWith('.imgur.com')
 				&& !host.endsWith('.vimeo.com')
 				&& !host.endsWith('.fbcdn.net')
+
+				// metrics | trackers
+				&& !host.endsWith('.doubleclick.net')
+				&& !host.endsWith('.perf.linkedin.com')
+				&& !host.endsWith('adservice.google.com')
+
+				// SSO | SAML'rs
+				&& !host.endsWith('.okta.com')
+				&& !host.endsWith('.duosecurity.com')
 			) {
 				app.openURL(url);
 				return true;
@@ -150,8 +158,7 @@ app.on('tabTransparencyToggled', (transparent, tab) => {
 });
 
 var alwaysAllowRedir = false;
-let toggleRedirection = function(state) { alwaysAllowRedir = (state) ? true : false; };
-
+let toggleRedirection = function(tab, state) { alwaysAllowRedir = (state != null) ? state : !alwaysAllowRedir; };
 
 app.on('AppWillFinishLaunching', (AppUI) => {
 	//browser.unhideApp();
@@ -159,7 +166,7 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	// FIXME: use LocalStorage to save slackTab's team-domain after sign-in, and restore that on every start up
 	browser.addShortcut('Dark Mode', [], enDarken);
 	browser.addShortcut('Darkly Vibrant Mode', [], enVibrant);
-	browser.addShortcut('Enable Redirection to external domains', [true], toggleRedirection);
+	browser.addShortcut('Toggle redirection to external domains', [], toggleRedirection);
 	// FIXME add themes: https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99  DrewML/Theming-Slack-OSX.md
 	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
 	//browser.tabSelected = slackTab; // no key-focus, omnibox blank
