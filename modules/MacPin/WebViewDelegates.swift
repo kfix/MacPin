@@ -484,8 +484,7 @@ extension WebViewController: _WKDownloadDelegate {
 }
 
 extension WebViewController: _WKIconLoadingDelegate {
-	@objc(webView:shouldLoadIconWithParameters:completionHandler:) // give WK2 what it wants...
-	func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Void) -> Void) { // but swiftc insists on this ...
+	func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Void) -> Void) {
 		completionHandler() { [unowned webView] data in
 			// data.length
 			//parameters . mimeType iconType
