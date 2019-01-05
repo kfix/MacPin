@@ -186,9 +186,9 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 				wv.gotoURL(url)
 				cancelOperation(self)
 			} else if let parent = parent { // tab-less browser window ...
-				parent.addChildViewController(WebViewControllerOSX(webview: MPWebView(url: url))) // is parentVC the toolbar or contentView VC??
-			} else if let presenter = presenting { // urlbox is a popover/sheet ...
-				presenter.addChildViewController(WebViewControllerOSX(webview: MPWebView(url: url)))
+				parent.addChild(WebViewControllerOSX(webview: MPWebView(url: url))) // is parentVC the toolbar or contentView VC??
+			} else if let presenter = presentingViewController { // urlbox is a popover/sheet ...
+				presenter.addChild(WebViewControllerOSX(webview: MPWebView(url: url)))
 				// need parent of the presenter?
 			} else {
 				warn("no webviews-tabs and no parentVC ... WTF!!")
@@ -207,7 +207,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	override func cancelOperation(_ sender: Any?) {
 		warn()
 		view.resignFirstResponder() // relinquish key focus to webview
-		presenting?.dismissViewController(self) //if a thoust art a popover, close thyself
+		presentingViewController?.dismiss(self) //if a thoust art a popover, close thyself
 	}
 
 	deinit { webview = nil; representedObject = nil }

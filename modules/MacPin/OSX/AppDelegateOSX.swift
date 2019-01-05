@@ -339,7 +339,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 		//NSApp.setServicesProvider(ServiceOSX())
 
-		self.windowController = self.browserController.present()
+		self.windowController = self.browserController.presentBrowser()
 
 		if let wc = self.windowController, let window = wc.window, let fr = window.firstResponder {
 			// window.makeFirstResponder(self.browserController.view)

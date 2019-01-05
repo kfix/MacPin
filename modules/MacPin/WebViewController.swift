@@ -63,7 +63,7 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 	// sugar for delgates' opening a new tab in parent browser VC
 	func popup(_ webview: MPWebView) -> WebViewController {
 		let wvc = type(of: self).init(webview: webview)
-		parent?.addChildViewController(wvc)
+		parent?.addChild(wvc)
 		return wvc
 	}
 

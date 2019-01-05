@@ -16,10 +16,10 @@ let NSImageNameApplicationIcon = "icon"
 #endif
 
 @objc class FavIcon: NSObject {
-	@objc dynamic unowned var icon = IconImage(named: NSImage.Name.applicationIcon)!
+	@objc dynamic unowned var icon = IconImage(named: NSImage.applicationIconName)!
 #if os(OSX)
 	//need 24 & 36px**2 representations of the NSImage for bigger grid views
-	@objc dynamic unowned var icon16 = IconImage(named: NSImage.Name.statusNone)! {
+	@objc dynamic unowned var icon16 = IconImage(named: NSImage.statusNoneName)! {
 		willSet {
 			newValue.size = NSSize(width: 16, height: 16)
 		}

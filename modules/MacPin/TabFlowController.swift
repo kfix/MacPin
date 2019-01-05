@@ -76,7 +76,7 @@ class TabGridController: NSViewController {
 	}
 
 	var browser: BrowserViewController? { get {
-		if let browser = presenting as? BrowserViewController { return browser }
+		if let browser = presentingViewController as? BrowserViewController { return browser }
 		if let browser = parent as? BrowserViewController { return browser }
 		return nil
 	}} // optionally exposes tvc as a browser if it is one ...

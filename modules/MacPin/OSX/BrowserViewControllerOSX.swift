@@ -61,7 +61,7 @@ struct WeakThing<T: AnyObject> {
 		self.view.window?.makeFirstResponder(nil)
 
 		self.tabViewItems.forEach { // quickly close any remaining tabs
-			//dismissViewController($0.viewController?)
+			//dismiss($0.viewController?)
 			$0.view?.removeFromSuperviewWithoutNeedingDisplay()
 			self.removeTabViewItem($0)
 		}
@@ -178,7 +178,7 @@ struct WeakThing<T: AnyObject> {
 			//let btnCell = btn.cell
 			//btnCell.controlSize = .SmallControlSize
 			btn.toolTip = itemIdentifier.rawValue
-			btn.image = NSImage(named: NSImage.Name.preferencesGeneral) // https://hetima.github.io/fucking_nsimage_syntax/
+			btn.image = NSImage(named: NSImage.preferencesGeneralName) // https://hetima.github.io/fucking_nsimage_syntax/
 			btn.bezelStyle = .recessed // RoundRectBezelStyle ShadowlessSquareBezelStyle
 			btn.setButtonType(.momentaryLight) //MomentaryChangeButton MomentaryPushInButton
 			btn.target = nil // walk the Responder Chain
@@ -187,13 +187,13 @@ struct WeakThing<T: AnyObject> {
 
 			switch (btnType) {
 				case .Share:
-					btn.image = NSImage(named: NSImage.Name.shareTemplate)
+					btn.image = NSImage(named: NSImage.shareTemplateName)
 					btn.action = #selector(WebViewControllerOSX.shareButtonClicked(_:))
 					return ti
 
 				case .Sidebar:
 					if #available(macOS 10.13, iOS 10, *) {
-						btn.image = NSImage(named: NSImage.Name.touchBarSidebarTemplate)
+						btn.image = NSImage(named: NSImage.touchBarSidebarTemplateName)
 						btn.action = #selector(BrowserViewControllerOSX.sidebarButtonClicked(_:))
 						return ti
 					} else {
@@ -202,7 +202,7 @@ struct WeakThing<T: AnyObject> {
 
 				case .Snapshot:
 					if #available(macOS 10.13, iOS 10, *) {
-						btn.image = NSImage(named: NSImage.Name.quickLookTemplate)
+						btn.image = NSImage(named: NSImage.quickLookTemplateName)
 						btn.action = #selector(WebViewControllerOSX.snapshotButtonClicked(_:))
 						return ti
 					} else {
@@ -211,22 +211,22 @@ struct WeakThing<T: AnyObject> {
 
 				//case .Inspect: // NSMagnifyingGlass
 				case .NewTab:
-					btn.image = NSImage(named: NSImage.Name.addTemplate)
+					btn.image = NSImage(named: NSImage.addTemplateName)
 					btn.action = #selector(BrowserViewControllerOSX.newTabPrompt)
 					return ti
 
 				case .CloseTab:
-					btn.image = NSImage(named: NSImage.Name.removeTemplate)
+					btn.image = NSImage(named: NSImage.removeTemplateName)
 					btn.action = #selector(BrowserViewControllerOSX.closeTab(_:))
 					return ti
 
 				case .Forward:
-					btn.image = NSImage(named: NSImage.Name.goRightTemplate)
+					btn.image = NSImage(named: NSImage.goRightTemplateName)
 					btn.action = #selector(WebView.goForward(_:))
 					return ti
 
 				case .Back:
-					btn.image = NSImage(named: NSImage.Name.goLeftTemplate)
+					btn.image = NSImage(named: NSImage.goLeftTemplateName)
 					btn.action = #selector(WebView.goBack(_:))
 					return ti
 
@@ -238,12 +238,12 @@ struct WeakThing<T: AnyObject> {
 					seg.trackingMode = .momentary
 					seg.action = #selector(WebView.goBack(_:))
 
-					seg.setImage(NSImage(named: NSImage.Name.goLeftTemplate), forSegment: 0)
+					seg.setImage(NSImage(named: NSImage.goLeftTemplateName), forSegment: 0)
 					//seg.setLabel(BackButton, forSegment: 0)
 					//seg.setMenu(backMenu, forSegment: 0) // wvc.webview.backForwardList.backList (WKBackForwardList)
 					segCell.setTag(0, forSegment: 0)
 
-					seg.setImage(NSImage(named: NSImage.Name.goRightTemplate), forSegment: 1)
+					seg.setImage(NSImage(named: NSImage.goRightTemplateName), forSegment: 1)
 					//seg.setLabel(ForwardButton, forSegment: 1)
 					segCell.setTag(1, forSegment: 1)
 
@@ -252,7 +252,7 @@ struct WeakThing<T: AnyObject> {
 					return ti
 
 				case .Refresh:
-					btn.image = NSImage(named: NSImage.Name.refreshTemplate)
+					btn.image = NSImage(named: NSImage.refreshTemplateName)
 					btn.action = #selector(WebView.reload)
 					return ti
 
@@ -266,7 +266,7 @@ struct WeakThing<T: AnyObject> {
 					return ti
 
 				case .TabList:
-					btn.image = NSImage(named: NSImage.Name(rawValue: "ToolbarButtonTabOverviewTemplate.pdf"))
+					btn.image = NSImage(named: "ToolbarButtonTabOverviewTemplate.pdf")
 					//btn.action = #selector(BrowserViewControllerOSX.tabListButtonClicked(sender:))
 					return ti
 
@@ -388,20 +388,20 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	}
 
 	@discardableResult
-	func present() -> WindowController {
+	func presentBrowser() -> WindowController {
 		warn()
 		NSApp.reply(toApplicationShouldTerminate: false) // cancel any termination in progress
 		if tabs.count < 1 { newTabPrompt() } //don't allow a tabless state
 		if let win = self.windowController.window {
 			win.makeKeyAndOrderFront(self)
 			if self.selectedTabViewItemIndex > -1 {
-				let vc = childViewControllers[selectedTabViewItemIndex]
+				let vc = children[selectedTabViewItemIndex]
 				self.prepareTab(vc) // retroactively prep current Tab (JS may have made some headlessly)
 			}
 		} else {
 			warn("window is gone, need to re-init windowController!")
 			windowController = makeWindow()
-			return present()
+			return presentBrowser()
 		}
 
 		return windowController
@@ -610,7 +610,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	var tabs: [MPWebView] {
 		get {
 			//return children.flatMap({ $0 as? WebViewControllerOSX }).flatMap({ $0.webview }) // xc10
-			return childViewControllers.flatMap({ $0 as? WebViewControllerOSX }).flatMap({ $0.webview })
+			return children.flatMap({ $0 as? WebViewControllerOSX }).flatMap({ $0.webview })
 			// returns mutable *copy* array, which is why JS .push() doesn't invoke the setter below: https://developer.apple.com/documentation/javascriptcore/jsvalue
 			// > NSArray objects or Swift arrays become JavaScript arrays and vice versa, with elements recursively copied and converted.
 			//  https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSValue.mm
@@ -632,17 +632,17 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 					warn("setting #\(idx)")
 					if idx >= self.tabViewItems.endIndex {
 						// insert
-						self.childViewControllers.append(WebViewControllerOSX(webview: webview))
-					} else if let ro = self.childViewControllers[idx].representedObject as? MPWebView, ro == webview {
+						self.children.append(WebViewControllerOSX(webview: webview))
+					} else if let ro = self.children[idx].representedObject as? MPWebView, ro == webview {
 						warn("no-op at #\(idx)")
 					} else {
 						// update
 						let nwvc = WebViewControllerOSX(webview: webview)
 						//self.insertChild(nwvc, at: idx+1) //xc10
-						self.insertChildViewController(nwvc, at: idx+1) //push
+						self.insertChild(nwvc, at: idx+1) //push
 
 						//self.removeChild(at: idx) //xc10
-						self.removeChildViewController(at: idx) //pop
+						self.removeChild(at: idx) //pop
 						// NSTVI will automatically set selectedTabViewItemIndex=idx+1
 					}
 				}
@@ -653,7 +653,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 						// delete
 						let shifted = idx + newWebs.endIndex
 						//self.removeChild(at: shifted) //xc10
-						self.removeChildViewController(at: shifted)
+						self.removeChild(at: shifted)
 					}
 				}
 
@@ -665,7 +665,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	var tabSelected: AnyObject? { // FIXME: make protocol
 		get {
 			if selectedTabViewItemIndex == -1 { return nil } // no tabs? bupkiss!
-			let vc = childViewControllers[selectedTabViewItemIndex]
+			let vc = children[selectedTabViewItemIndex]
 			if let obj: AnyObject = vc.representedObject as AnyObject? { return obj } // try returning an actual model first
 			return vc
 		}
@@ -673,7 +673,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			switch (obj) {
 				case let vc as NSViewController:
 					if self.tabViewItem(for: vc) == nil {
-						self.childViewControllers.append(vc) // add the given vc as a child if it isn't already
+						self.children.append(vc) // add the given vc as a child if it isn't already
 					}
 					if let tvi = self.tabViewItem(for: vc) {
 						let idx = self.tabView.indexOfTabViewItem(tvi)
@@ -684,7 +684,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 						}
 					}
 				case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
-					self.tabSelected = self.childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
+					self.tabSelected = self.children.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
 					//FIXME: a backref in the wv to wvc would be helpful
 				//case let js as JSValue: guard let wv = js.toObjectOfClass(MPWebView.self) { self.tabSelected = wv } //custom bridging coercion
 				default:
@@ -693,15 +693,15 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		}
 	}
 
-	override func addChildViewController(_ childViewController: NSViewController) {
+	override func addChild(_ childViewController: NSViewController) {
 		warn()
-		super.addChildViewController(childViewController)
+		super.addChild(childViewController)
 	}
 
-	override func insertChildViewController(_ childViewController: NSViewController, at index: Int) {
+	override func insertChild(_ childViewController: NSViewController, at index: Int) {
 		warn("#\(index)")
 		//If a child view controller has a different parent when you call this method, the child is first be removed from its existing parent by calling the child’s removeFromParent() method.
-		super.insertChildViewController(childViewController, at: index)
+		super.insertChild(childViewController, at: index)
 		//tabsController.insert(childViewController, atArrangedObjectIndex: index)
 
 		if let _ = childViewController as? WebViewController {
@@ -723,44 +723,44 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		let omnibox = OmniBoxController(webViewController: self)
 
 		if let btn = sender? as? NSView {
-			presentViewController(omnibox, asPopoverRelativeToRect: btn.bounds, ofView: btn, preferredEdge:NSMinYEdge, behavior: .Semitransient)
+			present(omnibox, asPopoverRelativeToRect: btn.bounds, ofView: btn, preferredEdge:NSMinYEdge, behavior: .Semitransient)
 		} else {
-			presentViewControllerAsSheet(omnibox) //Keyboard shortcut
+			presentAsSheet(omnibox) //Keyboard shortcut
 		}
 	}
 */
 /*
 	func tabListButtonClicked(sender: AnyObject?) {
 		if let sender = sender? as? NSView { //OpenTab toolbar button
-			presentViewController(tabFlow, asPopoverRelativeToRect: sender.bounds, ofView: sender, preferredEdge:NSMinYEdge, behavior: .Semitransient)
+			present(tabFlow, asPopoverRelativeToRect: sender.bounds, ofView: sender, preferredEdge:NSMinYEdge, behavior: .Semitransient)
 		} else { //keyboard shortcut
-			//presentViewControllerAsSheet(tabFlow) // modal, yuck
+			//presentAsSheet(tabFlow) // modal, yuck
 			var poprect = view.bounds
 			poprect.size.height -= tabFlow.preferredContentSize.height + 12 // make room at the top to stuff the popover
-			presentViewController(tabFlow, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSMaxYEdge, behavior: .Semitransient)
+			present(tabFlow, asPopoverRelativeToRect: poprect, ofView: view, preferredEdge: NSMaxYEdge, behavior: .Semitransient)
 		}
 	}
 */
-	override func removeChildViewController(at index: Int) {
+	override func removeChild(at index: Int) {
 		warn("#\(index)")
-		super.removeChildViewController(at: index)
+		super.removeChild(at: index)
 		// if index was the currentselected, NSTVC will reselect to the left if this was the last controller, else to the right
 		//tabsController.remove(atArrangedObjectIndex: index)
 	}
 
-	override func dismissViewController(_ viewController: NSViewController) {
-		if childViewControllers[selectedTabViewItemIndex] == viewController {
+	override func dismiss(_ viewController: NSViewController) {
+		if children[selectedTabViewItemIndex] == viewController {
 			warn("dismissing current tab")
 			selectedTabViewItemIndex += (selectedTabViewItemIndex > 0) ? -1 : 1
 		} else {
 			// could be a popover or sheet or whatever
-			super.dismissViewController(viewController)
+			super.dismiss(viewController)
 		}
 	}
 
-	override func presentViewController(_ viewController: NSViewController, animator: NSViewControllerPresentationAnimator) {
+	override func present(_ viewController: NSViewController, animator: NSViewControllerPresentationAnimator) {
 		warn()
-		super.presentViewController(viewController, animator: animator)
+		super.present(viewController, animator: animator)
 	}
 
 	override func transition(from fromViewController: NSViewController, to toViewController: NSViewController,
@@ -846,7 +846,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		revealOmniBox()
 	}
 
-	//@objc func pushTab(_ webview: AnyObject) { if let webview = webview as? MPWebView { addChildViewController(WebViewControllerOSX(webview: webview)) } }
+	//@objc func pushTab(_ webview: AnyObject) { if let webview = webview as? MPWebView { addChild(WebViewControllerOSX(webview: webview)) } }
 
 	@objc func closeTab(_ tab: AnyObject?) {
 		switch (tab) {
@@ -855,7 +855,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 				removeTabViewItem(ti)
 				return
 			case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
-				guard let vc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first else { break }
+				guard let vc = children.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first else { break }
 				guard let ti = tabViewItem(for: vc) else { break } // not a loaded tab
 				removeTabViewItem(ti)
 				return
@@ -867,7 +867,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 		// close currently selected tab
 		if selectedTabViewItemIndex == -1 { return } // no tabs? bupkiss!
-		removeChildViewController(at: selectedTabViewItemIndex)
+		removeChild(at: selectedTabViewItemIndex)
 	}
 
 	@objc func revealOmniBox() {
@@ -879,10 +879,10 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		} else if view.window != nil {
 			//let omnibox = OmniBoxController(webViewController: self)
 			// otherwise, present it as a sheet or popover aligned under the window-top/toolbar
-			//presentViewControllerAsSheet(omnibox) // modal, yuck
+			//presentAsSheet(omnibox) // modal, yuck
 			var poprect = view.bounds
 			poprect.size.height -= omnibox.preferredContentSize.height + 12 // make room at the top to stuff the popover
-			presentViewController(omnibox, asPopoverRelativeTo: poprect, of: view, preferredEdge: NSRectEdge.maxY, behavior: NSPopover.Behavior.transient)
+			present(omnibox, asPopoverRelativeTo: poprect, of: view, preferredEdge: NSRectEdge.maxY, behavior: NSPopover.Behavior.transient)
 		} else {
 			warn("headless browser?? no window to sheet/popover omnibox into!")
 		}
@@ -890,8 +890,8 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	@objc func sidebarButtonClicked(_ tab: AnyObject?) {
 		warn()
-		if self.sidebar.presenting != nil {
-			dismissViewController(self.sidebar)
+		if self.sidebar.presentingViewController != nil {
+			dismiss(self.sidebar)
 		} else {
 
 			//DispatchQueue.main.async() {
@@ -907,8 +907,8 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 					)
 				*/
 			//}
-			presentViewControllerAsModalWindow(self.sidebar)
-			//presentViewControllerAsSheet(self.sidebar)
+			presentAsModalWindow(self.sidebar)
+			//presentAsSheet(self.sidebar)
 			return
 		}
 
@@ -917,7 +917,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 				guard let ti = tabViewItem(for: vc) else { break } // not a loaded tab
 
 			case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
-				guard let vc = childViewControllers.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first else { break }
+				guard let vc = children.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first else { break }
 				guard let ti = tabViewItem(for: vc) else { break } // not a loaded tab
 				//DispatchQueue.main.async() { self.removeTabViewItem(ti) }
 				return

@@ -180,12 +180,12 @@ extension WebViewControllerOSX { // AppGUI funcs
 
 	override func dismiss() {
 		warn()
-		parent?.dismissViewController(self)
+		parent?.dismiss(self)
 	}
 
 	override func close() {
 		warn()
-		removeFromParentViewController()
+		removeFromParent()
 	}
 
 	@objc func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }
@@ -286,7 +286,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		// snapCfg.snapshotWidth =  width-in-points (height is auto-calc'd to scale)
 		// webview.takeSnapshot(with: snapCfg) { (img, err) in snapshot = img }
 
-		presentViewController(snap, asPopoverRelativeTo: poprect, of: popview, preferredEdge: NSRectEdge.maxY, behavior: NSPopover.Behavior.transient)
+		present(snap, asPopoverRelativeTo: poprect, of: popview, preferredEdge: NSRectEdge.maxY, behavior: NSPopover.Behavior.transient)
 	}
 
 	func displayAlert(_ alert: NSAlert, _ completionHandler: @escaping (NSApplication.ModalResponse) -> Void) {

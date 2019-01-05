@@ -29,7 +29,7 @@ import AppKit
 	// https://github.com/electron/electron/blob/master/docs/api/menu.md#notes-on-macos-application-menu
 	func addShortcut(_ title: String, _ obj: AnyObject?, _ cb: JSValue?)
 
-	func present() -> WindowController
+	func presentBrowser() -> WindowController
 }
 
 @objc protocol BrowserViewController: BrowserViewControllerJS {
@@ -39,7 +39,7 @@ import AppKit
 	var tabMenu: NSMenu { get } // FIXME: cross-plat menuitem enumerable
 	var shortcutsMenu: NSMenu { get } // FIXME: cross-plat menuitem enumerable
 #endif
-	var childViewControllers: [ViewController] { get set }
+	//var children: [ViewController] { get set }
 	static func exportSelf(_ mountObj: JSValue, _ name: String)
 }
 

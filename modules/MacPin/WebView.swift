@@ -800,8 +800,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	// try to accept DnD'd links from other browsers more gracefully than default WebKit behavior
 	// this mess ain't funny: https://hsivonen.fi/kesakoodi/clipboard/
 	override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-		if sender.draggingSource() == nil { //dragged from external application
-			let pboard = sender.draggingPasteboard()
+		if sender.draggingSource == nil { //dragged from external application
+			let pboard = sender.draggingPasteboard
 
 			if let file = pboard.string(forType: NSPasteboard.PasteboardType(kUTTypeFileURL as String)) { //drops from Finder
 				warn("DnD: file from Finder: \(file)")
