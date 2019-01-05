@@ -24,7 +24,7 @@ target_ver_iOS		?= 9
 
 xcode				?= /Applications/Xcode.app
 swifttoolchain		?= XcodeDefault
-swiftver			?= 4
+swiftver			?= 4.2
 nextswiftver		?= 5
 
 ifneq ($(xcode),)
