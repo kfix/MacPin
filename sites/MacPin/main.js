@@ -14,8 +14,8 @@ const {app, BrowserWindow, WebView} = require('@MacPin');
 let injectTab = require('app_injectTab.js');
 let enDarken = require('enDarken.js');
 
-var ntpTab = new WebView("file:///usr/share/doc/ntp/index.html");
-//var gitTab = new WebView({url: 'http://github.com/kfix/MacPin'});
+var docTab = new WebView("file:///usr/share/doc/cups/index.html");
+var gitTab = new WebView({url: 'http://github.com/kfix/MacPin'});
 //var gooTab = new WebView({url: "http://google.com"})
 
 let browser = new BrowserWindow();
@@ -291,7 +291,8 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	launchRepl(); // late-create a WebView and select it
 
 	// shuffle the _tabs using the tabs Proxy
-	browser.tabs.push(ntpTab);
+	browser.tabs.push(gitTab);
+	browser.tabs.push(docTab);
 	browser.tabs.reverse(); // selection will change to the pushed tab that was flipped #0
 
 	console.log(`reselecting ${replTab.url}`);

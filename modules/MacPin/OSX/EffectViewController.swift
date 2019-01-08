@@ -5,6 +5,7 @@ class EffectViewController: NSViewController {
 		var view = NSVisualEffectView() // https://gist.github.com/vilhalmer/3052f7e9e7f34b92a40f
 		view.blendingMode = .behindWindow
 		view.material = .appearanceBased //.Dark .Light .Titlebar
+		//	.fullScreenUI .contentBackground .windowBackground .underWindowBackground
 		view.state = .active // set it to always be blurry regardless of window state
 		view.blendingMode = .behindWindow
 		view.frame = NSMakeRect(0, 0, 600, 800) // default size
