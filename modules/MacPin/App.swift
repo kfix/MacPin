@@ -34,14 +34,14 @@ let Safari_version: String = { v in switch true {
 } }( WebKit_version )
 
 @objc(MacPinApp)
-class MacPinApp: Application {
+public class MacPinApp: Application {
 	/*
 	override static func shared() -> MacPinApp {
 		let app = super.shared()
 		return app as! MacPinApp
 	}
 	*/
-	@objc override static var shared: MacPinApp {
+	@objc override static public var shared: MacPinApp {
 		get {
 			return super.shared as! MacPinApp
 		}

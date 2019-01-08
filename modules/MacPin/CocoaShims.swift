@@ -18,13 +18,13 @@ import AppKit
 	//  also, must assign .view from loadView() override: `override func loadView() { view = withFoo }`
 //}
 
-typealias View = NSView
-typealias ViewController = NSViewController
-typealias Image = NSImage
-typealias Window = NSWindow
-typealias Application = NSApplication
-typealias ApplicationDelegate = NSApplicationDelegate
-typealias MacPinAppDelegatePlatform = MacPinAppDelegateOSX
+public typealias View = NSView
+public typealias ViewController = NSViewController
+public typealias Image = NSImage
+public typealias Window = NSWindow
+public typealias Application = NSApplication
+public typealias ApplicationDelegate = NSApplicationDelegate
+public typealias MacPinAppDelegatePlatform = MacPinAppDelegateOSX
 
 #elseif os(iOS)
 
@@ -33,17 +33,17 @@ typealias MacPinAppDelegatePlatform = MacPinAppDelegateOSX
 
 import UIKit
 
-typealias View = UIView
-typealias ViewController = UIViewController
+public typealias View = UIView
+public typealias ViewController = UIViewController
 
-typealias Image = UIImage
+public typealias Image = UIImage
 
 class Window: UIWindow {
 	func setFrame() { } // UIWindows are always size of UIScreen. They only handle focus and z-depth (level)
 }
 
-typealias Application = UIApplication
-typealias ApplicationDelegate = UIApplicationDelegate
-typealias MacPinAppDelegatePlatform = MacPinAppDelegateIOS
+public typealias Application = UIApplication
+public typealias ApplicationDelegate = UIApplicationDelegate
+public typealias MacPinAppDelegatePlatform = MacPinAppDelegateIOS
 
 #endif

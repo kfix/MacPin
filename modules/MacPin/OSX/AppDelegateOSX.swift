@@ -5,7 +5,7 @@ import Darwin
 //import Bookmarks
 
 //@NSApplicationMain // doesn't work without NIBs, using main.swift instead
-open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
+public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 	var browserController: BrowserViewController = BrowserViewControllerOSX()
 	var windowController: WindowController? // optional so app can run "headless" if desired
@@ -14,7 +14,7 @@ open class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	let shortcutsMenu = NSMenuItem(title: "Shortcuts", action: nil, keyEquivalent: "")
 	let tabListMenu = NSMenuItem(title: "Tabs", action: nil, keyEquivalent: "")
 
-	override init() {
+	public override init() {
 		// gotta set these before MacPin()->NSWindow()
 		UserDefaults.standard.register(defaults: [
 			//"NSQuitAlwaysKeepsWindows":	true, // insist on Window-to-Space/fullscreen persistence between launches
