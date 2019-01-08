@@ -107,10 +107,11 @@ $(info modules/ => $(build_mods))
 exec_mods			:= $(sort $(patsubst %/$(platform),%,$(patsubst modules/%/,%,$(dir $(wildcard modules/*/main.swift modules/*/$(platform)/main.swift)))))
 exec_mods			:= $(sort $(exec_mods) $(patsubst %/$(platform),%,$(patsubst modules/%/,%,$(dir $(shell grep -l -s -e ^@NSApplicationMain -e ^@UIApplicationMain modules/*/*.swift modules/*/$(platform)/*.swift)))))
 execs				:= $(exec_mods:%=$(outdir)/exec/%)
+lexecs				:= $(exec_mods:%=$(outdir)/lexec/%)
 #$(info [$(eXmk)] $$(execs) (executables available to assemble): $(execs))
 
 #assume modules that ship executables will not need to be made into intermediate objects nor libraries
-build_mods			:= $(filter-out $(exec_mods),$(build_mods))
+#build_mods			:= $(filter-out $(exec_mods),$(build_mods))
 
 # any modules left should be built into static libraries
 statics				:= $(patsubst %,$(outdir)/obj/lib%.a,$(build_mods:modules/%=%))
@@ -186,7 +187,7 @@ $(swiftlibdir):
 	xcode-select --install
 ########################
 
-$(outdir)/MacOS $(outdir)/exec $(outdir)/Frameworks $(outdir)/obj $(outdir)/Contents: ; install -d $@
+$(outdir)/MacOS $(outdir)/exec $(outdir)/lexec $(outdir)/Frameworks $(outdir)/obj $(outdir)/Contents: ; install -d $@
 
 define bundle_libswift
 	for lib in $$(otool -L $@ | awk -F '[/ ]' '$$2 ~ /^libswift.*\.dylib/ { printf $$2 " " }'); do \
@@ -204,19 +205,38 @@ endef
 #   https://github.com/apple/swift/blob/master/docs/ABIStabilityManifesto.md https://swift.org/abi-stability/
 
 # https://modocache.io/swift-stdlib-tool
-$(outdir)/SwiftSupport: $(outdir)/exec
+#$(outdir)/SwiftSupport: $(outdir)/exec
+#	install -d $@
+#	$(swift-stdlibtool) --copy --verbose --scan-folder $(outdir)/exec --destination $@
+#	touch $@
+
+$(outdir)/SwiftSupport: $(outdir)/lexec
 	install -d $@
-	$(swift-stdlibtool) --copy --verbose --scan-folder $(outdir)/exec --destination $@
+	$(swift-stdlibtool) --copy --verbose --scan-folder $(outdir)/lexec --destination $@
 	touch $@
 
-$(outdir)/exec/%.dSYM: $(outdir)/exec/%
+$(outdir)/exec/%.dSYM $(outdir)/lexec/%.dSYM: $(outdir)/exec/%
 	dsymutil $< 2>/dev/null
 
 #$(outdir)/exec/%: libdirs += -L $(swiftlibdir)
-$(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks
-	# grab the .d's of $^ and build any used modules ....
-	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../SwiftSupport $(linkopts_main) -o $@ $^
-	touch $(dir $@)
+#$(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks
+#	# grab the .d's of $^ and build any used modules ....
+#	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../SwiftSupport $(linkopts_main) -o $@ $^
+#	touch $(dir $@)
+
+#$(outdir)/lexec/%: %.o | $(outdir)/exec $(outdir)/Frameworks
+#	# grab the .d's of $^ and build any used modules ....
+#	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../SwiftSupport $(linkopts_main) -o $@
+#	touch $(dir $@)
+
+$(outdir)/lexec/%: modules/%/$(platform)/main.swift | $(outdir)/lexec
+	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
+		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
+		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
+		$(linkopts_exec) \
+		-module-name $*.MainExec \
+		-emit-executable -o $@ \
+		$(filter %/main.swift,$+)
 
 %.3.swift: %.swift
 	$(swift-update) $^ > $@
@@ -237,13 +257,13 @@ $(outdir)/Symbols/%.symbol: $(outdir)/exec/%
 	xcrun -sdk $(sdk) symbols -noTextInSOD -noDaemon -arch all -symbolsPackageDir $(outdir)/Symbols $^
 
 $(outdir)/Frameworks/lib%.dylib $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/$(platform)/*.swift | $(outdir)/Frameworks
-	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
+	$(swiftc) $(debug) -v $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-parse-as-library \
 		-whole-module-optimization \
 		-Xlinker -install_name -Xlinker @rpath/lib$*.dylib \
  		-emit-module -module-name $* -emit-module-path $(outdir)/$*.swiftmodule \
 		-emit-library -o $@ \
-		$(filter-out %/main.swift,$(filter %.swift,$^))
+		$(filter-out %/main.swift,$(filter %.swift,$^)) $(extrainputs)
 
 $(outdir)/obj/%.o $(outdir)/obj/%.d $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/$(platform)/*.swift | $(outdir)/obj
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(linklibs) $(libdirs) \
@@ -251,7 +271,7 @@ $(outdir)/obj/%.o $(outdir)/obj/%.d $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc
  		-module-name $* -emit-module-path $(outdir)/$*.swiftmodule \
 		-emit-dependencies \
 		-emit-object -o $@ \
-		$(filter %.swift,$^)
+		$(filter %.swift,$^) $(extrainputs)
 
 $(outdir)/Frameworks/lib%.dylib: modules/%/*.m | $(outdir)/Frameworks
 	$(clang) -ObjC -Wl,-dylib -Wl,-install_name,@rpath/lib$*.dylib $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) -o $@ $(filter %.m,$^)

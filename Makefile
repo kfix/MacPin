@@ -87,18 +87,34 @@ mobileprov_team_id	?=
 
 ifeq (,$(filter $(arch),$(archs_macosx)))
 # only intel platforms have libedit so only those execs can have terminal CLIs
-$(execs): $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics))
+$(lexecs): $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics))
 $(info $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics)))
 else
 endif
+
 # use static libs, not dylibs to build all executable modules
-$(execs): $(statics)
+#$(execs): $(statics)
+
+# make a jumbo framework and its stub launcher
+#
+jumbolib := $(firstword $(filter %/lib$(macpin).dylib, $(dynamics)))
+jumbodeps := $(filter-out %/lib$(macpin).a, $(statics))
+$(jumbolib): linklibs := $(patsubst lib%.a,-l%, $(notdir $(jumbodeps)))
+#jumbodeps := $(filter-out %/$(macpin).o, $(objs))
+#$(jumbolib): linklibs := $(patsubst %, -Xlinker -l%, $(notdir $(jumbodeps)))
+#$(jumbolib): extrainputs := $(jumbodeps)
+$(jumbolib): $(jumbodeps)
+$(lexecs): $(jumbolib)
+$(lexecs): linklibs := -l$(macpin)
+$(info Jumbo-execs: $(lexecs))
+$(info Jumbo-deps: $(jumbodeps))
+$(info Jumbo-lib: $(jumbolib))
 
 ifeq ($(platform),OSX)
 endif
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
 allapps install: $(gen_apps)
-zip test apirepl tabrepl wknightly stp $(gen_apps): $(execs) $(outdir)/SwiftSupport
+zip test apirepl tabrepl wknightly stp $(gen_apps): $(lexecs) $(outdir)/SwiftSupport
 doc test apirepl tabrepl test.app test.ios dbg dbg.app stp stp.app test_% $(appnames:%=test_%): debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
 #-D WK2LOG
 
@@ -131,7 +147,7 @@ webkitver				:= $(shell defaults read "$(webkitdir)/Resources/Info" CFBundleVers
 $(info $(safaridir) => $(safariver))
 $(info $(webkitdir) => $(webkitver))
 
-test apirepl tabrepl test.app dbg dbg.app test.ios stp stp.app: | $(execs:%=%.dSYM)
+test apirepl tabrepl test.app dbg dbg.app test.ios stp stp.app: | $(lexecs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))
 codesign :=
@@ -237,17 +253,17 @@ $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/
 # https://blog.bugsnag.com/symbolicating-ios-crashes/ https://www.cnblogs.com/feng9exe/p/7978040.html
 $(appdir)/%.dSYM:
 	@install -d $@ $@/Contents/Resources/DWARF
-	$(patsubst %,cp -f % $@/Contents/Resources/DWARF/$*,$(filter $(outdir)/exec/%.dSYM/Contents/Resources/DWARF/%,$^))
+	$(patsubst %,cp -f % $@/Contents/Resources/DWARF/$*,$(filter $(outdir)/lexec/%.dSYM/Contents/Resources/DWARF/%,$^))
 
-$(appdir)/%.app/Contents/SwiftSupport: $(outdir)/exec
+$(appdir)/%.app/Contents/SwiftSupport: $(outdir)/Frameworks/lib$(macpin).dylib
 	@install -d $@
-	[ ! -z "$(codesign)" ] || $(swift-stdlibtool) --copy --verbose --scan-folder $(outdir)/exec --destination $@
-	[ ! -n "$(codesign)" ] || $(swift-stdlibtool) --copy --verbose --sign $(appsig) --scan-folder $(outdir)/exec --destination $@
+	[ ! -z "$(codesign)" ] || $(swift-stdlibtool) --copy --verbose --scan-folder $(outdir)/Frameworks --destination $@
+	[ ! -n "$(codesign)" ] || $(swift-stdlibtool) --copy --verbose --sign $(appsig) --scan-folder $(outdir)/Frameworks --destination $@
 	@touch $@
 
-$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/Contents/SwiftSupport
+$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(outdir)/lexec/$(macpin)
 	@install -d $@ $@/Contents/MacOS $@/Contents/Resources
-	$(patsubst %,COMMAND_MODE=legacy cp -f % $@/Contents/MacOS/$*;,$(filter $(outdir)/exec/%,$^))
+	$(patsubst %,COMMAND_MODE=legacy cp -f % $@/Contents/MacOS/$*;,$(filter $(outdir)/lexec/%,$^))
 	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/Contents/MacOS/$*.dSYM,$(filter $(outdir)/exec/%.dSYM,$^))
 	COMMAND_MODE=legacy cp -fRL templates/Resources $@/Contents
 	#git ls-files -zc $(bundle_untracked) $(macpin_sites)/$* | xargs -0 -J % install -DT % $@/Contents/Resources/
@@ -334,7 +350,7 @@ clean: unregister
 	-rm -rf $(outdir) $(xcassets)
 
 binclean:
-	rm -f $(execs) $(objs) $(statics) $(dynamics) $(outdir)/obj/*.o
+	rm -f $(lexecs) $(objs) $(statics) $(dynamics) $(outdir)/obj/*.o
 	rm -rf $(outdir)/SwiftSupport
 
 cached:
@@ -399,7 +415,7 @@ wkdoc:
 	{ for i in WebKitPrivates; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -swift-version $(swiftver) -suppress-warnings -Xfrontend -color-diagnostics -deprecated-integrated-repl; done ;} | { [ -t 1 ] && less || cat; }
 
 # need to gen static html with https://github.com/realm/jazzy
-doc stpdoc: $(execs) $(objs)
+doc stpdoc: $(lexecs) $(objs)
 	{ for i in $(build_mods) WebKit WebKitPrivates JavaScriptCore; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -swift-version $(swiftver) -suppress-warnings -Xfrontend -color-diagnostics -deprecated-integrated-repl; done ;} | { [ -t 1 ] && less || cat; }
 	#xcrun swift-ide-test -print-module -source-filename /dev/null -print-regular-comments -module-to-print Prompt
 	#xcrun swift-ide-test -sdk "$(sdkpath)" -source-filename=. -print-module -module-to-print="Prompt" -synthesize-sugar-on-types -module-print-submodules -print-implicit-attrs
