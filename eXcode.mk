@@ -202,6 +202,8 @@ endef
 # 10.13: /System/Library/PrivateFrameworks/Swift/*.dylib for Apple's apps, ABI not vendorable until Swift5
 #  https://blog.timac.org/2017/1115-state-of-swift-ios11-1-macos10-13/
 #   https://github.com/apple/swift/blob/master/docs/ABIStabilityManifesto.md https://swift.org/abi-stability/
+# 10.14 its happening!!
+#    https://github.com/bazelbuild/rules_swift/issues/162
 
 # https://modocache.io/swift-stdlib-tool
 $(outdir)/SwiftSupport: $(outdir)/exec
@@ -215,7 +217,7 @@ $(outdir)/exec/%.dSYM: $(outdir)/exec/%
 #$(outdir)/exec/%: libdirs += -L $(swiftlibdir)
 $(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks
 	# grab the .d's of $^ and build any used modules ....
-	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../SwiftSupport $(linkopts_main) -o $@ $^
+	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,/usr/lib/swift -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../SwiftSupport $(linkopts_main) -o $@ $^
 	touch $(dir $@)
 
 %.3.swift: %.swift
@@ -224,6 +226,7 @@ $(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks
 # this is for standalone utility/helper programs, use module/main.swift for Application starters
 $(outdir)/exec/%: execs/$(platform)/%.swift | $(outdir)/exec
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
+		-Xlinker -rpath -Xlinker /usr/lib/swift \
 		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
 		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
 		$(linkopts_exec) \
