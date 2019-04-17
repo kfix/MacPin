@@ -118,7 +118,7 @@ statics				:= $(patsubst %,$(outdir)/obj/lib%.a,$(build_mods:modules/%=%))
 #$(info [$(eXmk)] $$(statics) (static libraries available to build): $(statics))
 #statics:	$(statics);
 
-dynamics			:= $(patsubst %,$(outdir)/Frameworks/lib%.dylib,$(build_mods:modules/%=%))
+dynamics			:= $(patsubst %,$(outdir)/obj/lib%.dylib,$(build_mods:modules/%=%))
 #$(info [$(eXmk)] $$(dynamics) (dynamic libraries available to build): $(dynamics))
 #dynamics:	$(dynamics);
 
@@ -221,18 +221,18 @@ $(outdir)/exec/%.dSYM $(outdir)/lexec/%.dSYM: $(outdir)/exec/%
 #$(outdir)/exec/%: libdirs += -L $(swiftlibdir)
 #$(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks
 #	# grab the .d's of $^ and build any used modules ....
-#	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../SwiftSupport $(linkopts_main) -o $@ $^
+#	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,/usr/lib/swift $(linkopts_main) -o $@ $^
 #	touch $(dir $@)
 
 #$(outdir)/lexec/%: %.o | $(outdir)/exec $(outdir)/Frameworks
 #	# grab the .d's of $^ and build any used modules ....
-#	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../SwiftSupport $(linkopts_main) -o $@
+#	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,/usr/lib/swift $(linkopts_main) -o $@
 #	touch $(dir $@)
 
 $(outdir)/lexec/%: modules/%/$(platform)/main.swift | $(outdir)/lexec
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
+		-Xlinker -rpath -Xlinker /usr/lib/swift \
 		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
-		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
 		$(linkopts_exec) \
 		-module-name $*.MainExec \
 		-emit-executable -o $@ \
@@ -244,8 +244,8 @@ $(outdir)/lexec/%: modules/%/$(platform)/main.swift | $(outdir)/lexec
 # this is for standalone utility/helper programs, use module/main.swift for Application starters
 $(outdir)/exec/%: execs/$(platform)/%.swift | $(outdir)/exec
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
+		-Xlinker -rpath -Xlinker /usr/lib/swift \
 		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
-		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
 		$(linkopts_exec) \
 		-module-name $*.MainExec \
 		-emit-executable -o $@ \
@@ -256,7 +256,7 @@ $(outdir)/Symbols/%.symbol: $(outdir)/exec/%
 	install -d %(outdir)/Symbols
 	xcrun -sdk $(sdk) symbols -noTextInSOD -noDaemon -arch all -symbolsPackageDir $(outdir)/Symbols $^
 
-$(outdir)/Frameworks/lib%.dylib $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/$(platform)/*.swift | $(outdir)/Frameworks
+$(outdir)/obj/lib%.dylib $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/$(platform)/*.swift | $(outdir)/obj
 	$(swiftc) $(debug) -v $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-parse-as-library \
 		-whole-module-optimization \
@@ -273,7 +273,7 @@ $(outdir)/obj/%.o $(outdir)/obj/%.d $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc
 		-emit-object -o $@ \
 		$(filter %.swift,$^) $(extrainputs)
 
-$(outdir)/Frameworks/lib%.dylib: modules/%/*.m | $(outdir)/Frameworks
+$(outdir)/obj/lib%.dylib: modules/%/*.m | $(outdir)/obj
 	$(clang) -ObjC -Wl,-dylib -Wl,-install_name,@rpath/lib$*.dylib $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) -o $@ $(filter %.m,$^)
 
 #$(outdir)/%.ShareExtension.bundle: $(outdir)/%.ShareExtension/*.swift
@@ -315,7 +315,7 @@ modules.$(nextswiftver)/%/: modules.$(swiftver)/%/*.swift modules.$(swiftver)/%/
 		$(filter %.swift,$^) || { rm -vrf $@; exit 1; }
 	# -c -primary-file this.swift -emit-migrated-file-path that.swift
 
-.PRECIOUS: $(outdir)/Frameworks/lib%.dylib $(outdir)/obj/%.o $(outdir)/exec/% $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc
+.PRECIOUS: $(outdir)/Frameworks/lib%.dylib $(outdir)/obj/%.o $(outdir)/exec/% $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc $(outdir)/obj/lib%.dylib
 .PHONY: submake_% statics dynamics
 .LIBPATTERNS: lib%.dylib lib%.a
 MAKEFLAGS += --no-builtin-rules
