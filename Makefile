@@ -99,6 +99,7 @@ endif
 #
 #jumbolib := $(firstword $(filter %/lib$(macpin).dylib, $(dynamics)))
 jumbolib := $(outdir)/Frameworks/$(macpin).framework
+# need SharedFramework https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Tasks/InstallingFrameworks.html
 jumbodeps := $(filter-out %/lib$(macpin).a, $(statics))
 $(jumbolib): linklibs := $(patsubst lib%.a,-l%, $(notdir $(jumbodeps)))
 #jumbodeps := $(filter-out %/$(macpin).o, $(objs))
@@ -258,6 +259,9 @@ $(appdir)/%.dSYM:
 	@install -d $@ $@/Contents/Resources/DWARF
 	$(patsubst %,cp -f % $@/Contents/Resources/DWARF/$*,$(filter $(outdir)/lexec/%.dSYM/Contents/Resources/DWARF/%,$^))
 
+$(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist: templates/framework/Info-macOS.plist
+	$(gen_plist_template)
+
 # build the umbrella framework bundle
 # https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Concepts/FrameworkAnatomy.html
 # https://developer.apple.com/library/archive/technotes/tn2435/_index.html#//apple_ref/doc/uid/DTS40017543-CH1-EMBED_SECTION
@@ -268,8 +272,9 @@ $(outdir)/Frameworks/%.framework/Versions/A/Frameworks:
 	[ ! -n "$(codesign)" ] || $(swift-stdlibtool) --copy --verbose --sign $(appsig) --scan-folder $(outdir)/Frameworks --destination $@
 	@touch $@
 
-$(outdir)/Frameworks/%.framework: $(outdir)/obj/lib%.dylib $(outdir)/Frameworks/%.framework/Versions/A/Frameworks
-	@install -d $@ $@/Versions/A/Resources
+$(outdir)/Frameworks/%.framework: $(outdir)/obj/lib%.dylib $(outdir)/Frameworks/%.framework/Versions/A/Frameworks $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist 
+	@install -dv $@
+	@rm -fv $@/Versions/Current $@/Resources $@/Frameworks %@/$*
 	@ln -sf A $@/Versions/Current
 	@ln -sf Versions/Current/$* $@/$*
 	@ln -sf Versions/Current/Resources $@/Resources
@@ -277,6 +282,7 @@ $(outdir)/Frameworks/%.framework: $(outdir)/obj/lib%.dylib $(outdir)/Frameworks/
 	$(patsubst %,cp -RL % $@/Versions/A/$*,$(filter %.dylib,$^))
 	$(patsubst %,cp -RL % $@/Versions/A/$*.dSYM,$(filter %.dSYM,$^))
 	# need a Resources/Info-macos.plist & version.plist
+	-[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
 
 #build the app bundle
 $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(outdir)/lexec/$(macpin)
@@ -301,11 +307,12 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 #xattr -w com.apple.application-instance $(shell echo uuidgen) $@
 
 # the main macpin app contains the core framework
-$(appdir)/$(macpin).app/Frameworks: $(outdir)/Frameworks/$(macpin).framework
-	@install -d $@
-	$(patsubst %,cp -RL % $@/,$(filter %.framework,$^))
+$(appdir)/$(macpin).app/Contents/Frameworks: $(outdir)/Frameworks/$(macpin).framework
+	rm -rfv $@
+	@install -dv $@
+	$(patsubst %,cp -R % $@/,$(filter %.framework,$^))
 
-$(appdir)/$(macpin).app: $(appdir)/$(macpin).app/Frameworks
+$(appdir)/$(macpin).app: $(appdir)/$(macpin).app/Contents/Frameworks
 
 else ifeq ($(platform),iOS)
 
@@ -502,6 +509,6 @@ stp_jsc:
 	$(env) "$(stpframes)/JavaScriptCore.framework/Resources/jsc" -i
 
 $(V).SILENT: # enjoy the silence
-.PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/SwiftSupport $(outdir)/Frameworks/%.framework
+.PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/SwiftSupport $(outdir)/Frameworks/%.framework $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist $(outdir)/Frameworks/%.framework/Versions/A/Frameworks
 .PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% submake_% statics dynamics stp_symbols stp_jsc
 .SUFFIXES:
