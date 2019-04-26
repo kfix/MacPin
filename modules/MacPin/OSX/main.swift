@@ -17,40 +17,31 @@ let mainBundle = Bundle.main
 // For a running app, the main bundle offers access to the app’s bundle directory.
 // For code running in a framework, the main bundle offers access to the framework’s bundle directory.
 
-let fbundleURL: URL
-
 print(mainBundle.executablePath ?? "no exec path")
 print(mainBundle.resourcePath ?? "no resource path")
 print(mainBundle.sharedFrameworksPath ?? "no frameworks path")
+print(mainBundle.privateFrameworksPath ?? "no frameworks path")
 
-if let framesURL = mainBundle.sharedFrameworksURL, let localfbundleURL = mainBundle.url(forResource: "MacPin", withExtension: "framework", subdirectory: "SharedFrameworks") {
-	print("found SharedFramworks/MacPin.framework!")
-	fbundleURL = localfbundleURL
-} else if let localfbundleURL = Bundle.url(forResource: "MacPin", withExtension: "framework", subdirectory: "Frameworks", in: mainBundle.bundleURL) {
-    // The value of this property is nil of the application does not have a bundle structure.
-	fbundleURL = localfbundleURL
-} else if let bundleMPapp = Bundle(identifier: "com.github.kfix.MacPin") { // find MacPin.app/Frameworks/MacPin.framework
-
-	guard let bundleURL = Bundle.url(forResource: "MacPin", withExtension: "framework", subdirectory: "Frameworks", in: bundleMPapp.bundleURL) else {
-		os_log("Could not find %{public}s/MacPin.framework!", log: log, type: .error, bundleMPapp.bundleURL.absoluteString)
-		print("Could not find \(bundleMPapp.bundleURL)/MacPin.framework!")
+if let frames = mainBundle.sharedFrameworksPath, let MPdir = Bundle.path(forResource: "MacPin", ofType: "framework", inDirectory: frames),
+	let MPframe = Bundle(path: MPdir), MPframe.load() {
+		print("loaded \(MPdir)")
+} else if let frames = mainBundle.privateFrameworksPath, let MPdir = Bundle.path(forResource: "MacPin", ofType: "framework", inDirectory: frames),
+	let MPframe = Bundle(path: MPdir), MPframe.load() {
+		print("loaded \(MPdir)")
+} else if let bundleMPapp = Bundle(identifier: "com.github.kfix.MacPin"),
+	let frames = bundleMPapp.sharedFrameworksPath ?? bundleMPapp.privateFrameworksPath { // find MacPin.app/(Shared)Frameworks/MacPin.framework
+	guard let MPdir = Bundle.path(forResource: "MacPin", ofType: "framework", inDirectory: frames),
+	let MPframe = Bundle(path: MPdir), MPframe.load() else {
+		os_log("Could not find %{public}s/MacPin.framework!", log: log, type: .error, bundleMPapp.bundlePath)
+		print("Could not find \(bundleMPapp.bundlePath)/MacPin.framework!")
 		exit(1)
 	}
-	fbundleURL = bundleURL
-
+	print("loaded \(MPdir)")
 } else {
 	os_log("Could not find [com.github.kfix.MacPin].app", log: log, type: .error)
-	print("Could not find [com.github.kfix.MacPin].app")
+	print("Could not find MacPin.framework locally or in [com.github.kfix.MacPin].app")
 	exit(1)
 }
-
-guard let framework = Bundle(url: fbundleURL) else {
-	os_log("Could not load %{public}s!", log: log, type: .error, fbundleURL.absoluteString)
-	print("Could not load \(fbundleURL)!")
-	exit(1)
-}
-
-framework.load() // loads MacPin.framework/MacPin
 
 guard NSClassFromString("MacPin.MacPinApp") != nil else {
 	os_log("Could not find MacPinApp() in MacPin.framework!", log: log, type: .error)
@@ -67,14 +58,6 @@ guard let appDelCls = NSClassFromString("MacPin.MacPinAppDelegateOSX") as? NSObj
 	print("failed to initialize MacPinAppDelegateOSX()")
 	exit(1)
 }
-// need to redo this in Obj-C, so the stub exec doesn't need to have swiftlibs in rpath
-
-/*
-import MacPin
-let app = MacPin.MacPinApp.shared //connect to CG WindowServer, always accessible as var:NSApp
-app.setActivationPolicy(.regular) //lets bundle-less binaries (`make test`) get app menu and fullscreen button
-let applicationDelegate = MacPin.MacPinAppDelegatePlatform()
-*/
 
 app.delegate = applicationDelegate
 app.run()
