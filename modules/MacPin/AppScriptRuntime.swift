@@ -313,6 +313,10 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 //   would need a native-hooked transpile() func to babel out the import statements from the filetexts to require()ese
 //      https://github.com/babel/babel/tree/master/packages/babel-parser
 
+// ITS HAPPENING!
+// https://github.com/WebKit/webkit/commit/105499e40a416befe631f0897c5d8047db195fff
+		//   ES6: loadAndEvaluateJSScriptModule  kJSScriptTypeModule
+
 	static let cjsrequire: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
 		// https://developer.apple.com/documentation/javascriptcore/jsobjectcallasfunctioncallback
 		// called as `thisObject.function(args);` within ctx
