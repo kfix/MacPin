@@ -233,7 +233,8 @@ sites/% %.app: $(appdir)/%.app
 	@echo Finished building $<
 #modules/%: $(outdir)/obj/%.o
 
-test_%: $(appdir)/%.app
+test_%: $(appdir)/%.app | $(appdir)/MacPin.app
+	-/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -v $(outdir)/apps/ -apps com.github.kfix.MacPin.MacPin
 	($(env) $^/Contents/MacOS/$(basename $(notdir $^)) -i) #|| { echo $$?; [ -t 1 ] && stty sane; }
 
 ifeq ($(platform),OSX)
