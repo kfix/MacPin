@@ -3,7 +3,7 @@ export
 #^ export all the variables
 builddir			?= build
 
-VERSION				:= 1.6.0
+VERSION				:= 2019.5.0
 
 # 1 == use STP.app's WebKit if its present at runtime
 STP 				?= 1
@@ -189,9 +189,9 @@ endif
 LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin
-ZIP			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch).zip
-TXZ			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch).tar.xz
-DMG			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch).dmg
+ZIP			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch)-$(VERSION).zip
+TXZ			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch)-$(VERSION).tar.xz
+DMG			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch)-$(VERSION).dmg
 GH_RELEASE_JSON = '{"tag_name": "v$(VERSION)","target_commitish": "master","name": "v$(VERSION)","body": "MacPin $(plaform) $(arch) build of version $(VERSION)","draft": false, "prerelease": true}'
 #####
 
