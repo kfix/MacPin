@@ -495,11 +495,12 @@ release: clean tag allapps $(ZIP)
 ifneq ($(GITHUB_ACCESS_TOKEN),)
 upload: release
 	git push -f --tags
-	posturl=$$(curl --data $(GH_RELEASE_JSON) "https://api.github.com/repos/$(USER)/$(REPO)/releases?access_token=$(GITHUB_ACCESS_TOKEN)" | jq -r .upload_url | sed 's/[\{\}]//g') && \
-	dload=$$(curl --fail -X POST -H "Content-Type: application/gzip" --data-binary "@$(ZIP)" "$$posturl=$(notdir $(ZIP))&access_token=$(GITHUB_ACCESS_TOKEN)" | jq -r .browser_download_url | sed 's/[\{\}]//g') && \
+	posturl=$$(curl -u $(USER):$(GITHUB_ACCESS_TOKEN) --data $(GH_RELEASE_JSON) "https://api.github.com/repos/$(USER)/$(REPO)/releases" | jq -r .upload_url | sed 's/{.*//g') && [ -n "$$posturl" ] && \
+	dload=$$(curl -u $(USER):$(GITHUB_ACCESS_TOKEN) --fail -X POST -H "Content-Type: application/gzip" --data-binary "@$(ZIP)" "$${posturl}?name=$(notdir $(ZIP))" | jq -r .browser_download_url | sed 's/[\{\}]//g') && \
 	echo "$(REPO) now available for download at $$dload"
 else
 upload:
+	# https://developer.github.com/v3/auth/#basic-authentication
 	@echo You need to export \$$GITHUB_ACCESS_TOKEN to make an upload!
 	@exit 1
 endif
