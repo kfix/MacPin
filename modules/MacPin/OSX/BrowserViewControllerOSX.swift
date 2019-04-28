@@ -1020,8 +1020,8 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			switch (shortcut.representedObject) {
 				case let urlstr as String: AppScriptRuntime.shared.emit(.launchURL, urlstr as NSString)
 				// FIXME: fire event in jsdelegate if string, only validated-and-bridged NSURLs should do launchURL
-				case let dict as [String:AnyObject]: tabSelected = MPWebView(object: dict) // FIXME: do a try here
-				case let dict as [WebViewInitProps:AnyObject]: tabSelected = MPWebView(props: dict) // FIXME: do a try here
+				case let dict as [String:AnyObject]: tabSelected = MPWebView(options: dict) // FIXME: do a try here
+				case let dict as [WebViewInitProps:AnyObject]: tabSelected = MPWebView(options: dict) // FIXME: do a try here
 				case let jsobj as [String: JSValue]:
 					warn("\(jsobj)")
 				case let arr as [AnyObject?] where arr.count > 0 && arr.first is String?:

@@ -23,6 +23,52 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	transparent, isolated, privacy = "private", allowsMagnification, allowsRecording, // Bool
 	preinject, postinject, style, subscribeTo, // [String]
 	handlers // {} ~> [String: [JSValue]]
+
+	// eh? https://www.swiftbysundell.com/posts/enum-iterations-in-swift-42
+	static func fromJS(object: JSValue) -> [WebViewInitProps: Any] {
+		var props: [WebViewInitProps: Any] = [:]
+		for prop in WebViewInitProps.allCases {
+			if object.hasProperty(prop.rawValue) {
+				guard let jsval = object.forProperty(prop.rawValue) else { warn("no value for \(prop)!"); continue }
+				switch prop {
+					case .url, .agent, .agentApp, .icon where jsval.isString:
+						props[prop] = jsval.toString()
+					case .transparent, .isolated, .privacy, .allowsMagnification, .allowsRecording where jsval.isBoolean:
+						props[prop] = jsval.toBool()
+					case .preinject, .postinject, .style, .subscribeTo where jsval.isArray:
+						props[prop] = jsval.toArray().flatMap { $0 as? String }
+					case .handlers where jsval.isObject:
+						var handlers: [String: [JSValue]] = [:]
+						let handlerNames = jsval.toDictionary().keys.flatMap({$0 as? String})
+						warn(handlerNames.description)
+						for name in handlerNames {
+							guard let hval = jsval.objectForKeyedSubscript(name) else { warn("no handler for \(name)!"); continue }
+							if hval.isArray { // array of handler funcs (hopefully) was passed
+								guard let hval = hval.invokeMethod("slice", withArguments: [0]) else { continue }// dup the array so pop() won't mutate the original
+								// for handler in hval.toArray() { // -> Any .. not useful
+								guard let numHandlers = hval.forProperty("length").toNumber() as? Int, numHandlers > 0 else { continue }
+								for num in 1...numHandlers { // C-Loop ftw
+									//guard let handler = hvals.atIndex(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
+									//guard let handler = hval.objectAtIndexedSubscript(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
+									// JSC BUG: dict-of-array contained functions are `undefined` when pulled with atIndex/objAtIndexSub
+									guard let handler = hval.invokeMethod("pop", withArguments: []) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
+
+									if !handler.isNull && !handler.isUndefined && handler.hasProperty("call") {
+										handlers[name, default: []].append(handler)
+									}
+								}
+							} else if !hval.isNull && !hval.isUndefined && hval.hasProperty("call") { // a single handler func was passed
+								handlers[name, default: []].append(hval)
+							}
+						}
+						props[prop] = handlers
+					default:
+						warn("unhandled init prop: \(prop.rawValue)")
+				}
+			}
+		}
+		return props
+	}
 }
 
 @objc protocol WebViewScriptExports: JSExport { // $.WebView & $.browser.tabs[WebView]
@@ -375,50 +421,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 				self.init(url: URL(string: "about:blank")!)
 			}
 		} else if object.isObject { // new WebView({url: "http://webkit.org", transparent: true, ... });
-			var props: [WebViewInitProps: Any] = [:]
-
-			for prop in WebViewInitProps.allCases {
-				if object.hasProperty(prop.rawValue) {
-					guard let jsval = object.forProperty(prop.rawValue) else { warn("no value for \(prop)!"); continue }
-					switch prop {
-						case .url, .agent, .agentApp, .icon where jsval.isString:
-							props[prop] = jsval.toString()
-						case .transparent, .isolated, .privacy, .allowsMagnification, .allowsRecording where jsval.isBoolean:
-							props[prop] = jsval.toBool()
-						case .preinject, .postinject, .style, .subscribeTo where jsval.isArray:
-							props[prop] = jsval.toArray().flatMap { $0 as? String }
-						case .handlers where jsval.isObject:
-							var handlers: [String: [JSValue]] = [:]
-							let handlerNames = jsval.toDictionary().keys.flatMap({$0 as? String})
-							warn(handlerNames.description)
-							for name in handlerNames {
-								guard let hval = jsval.objectForKeyedSubscript(name) else { warn("no handler for \(name)!"); continue }
-								if hval.isArray { // array of handler funcs (hopefully) was passed
-									guard let hval = hval.invokeMethod("slice", withArguments: [0]) else { continue }// dup the array so pop() won't mutate the original
-									// for handler in hval.toArray() { // -> Any .. not useful
-									guard let numHandlers = hval.forProperty("length").toNumber() as? Int, numHandlers > 0 else { continue }
-									for num in 1...numHandlers { // C-Loop ftw
-										//guard let handler = hvals.atIndex(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
-										//guard let handler = hval.objectAtIndexedSubscript(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
-										// JSC BUG: dict-of-array contained functions are `undefined` when pulled with atIndex/objAtIndexSub
-										guard let handler = hval.invokeMethod("pop", withArguments: []) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
-
-										if !handler.isNull && !handler.isUndefined && handler.hasProperty("call") {
-											handlers[name, default: []].append(handler)
-										}
-									}
-								} else if !hval.isNull && !hval.isUndefined && hval.hasProperty("call") { // a single handler func was passed
-									handlers[name, default: []].append(hval)
-								}
-							}
-							props[prop] = handlers
-						default:
-							warn("unhandled init prop: \(prop.rawValue)")
-					}
-				}
-			}
-
-			self.init(props: props)
+			var props = WebViewInitProps.fromJS(object: object)
+			self.init(options: props) // FIXME: needs to be @obj init'r
 		} else { // isUndefined, isNull
 			// returning nil will actually SIGSEGV
 			//warn(obj: object)
@@ -430,57 +434,48 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		self.init(config: config, agent: agent, isolated: isolated ?? false, privacy: privacy ?? false, transparent: transparent ?? false)
 	}
 
-	@nonobjc convenience required init?(object: [String:AnyObject]?) {
-		guard let object = object else { warn("no config object given!"); return nil} // JS can dump a nil on us
-		// this is just for addShortcut() & gotoShortcut(), I think ...
-		var props: [WebViewInitProps: Any] = [:]
-		for (key, value) in object {
-			// convert all stringish keys for enum conformance
-			guard let prop = WebViewInitProps(rawValue: key) else { warn(key); continue }
-			props[prop] = value
-		}
-		self.init(props: props)
-	}
+	@objc convenience required init?(options: [AnyHashable: Any]) {
+	// does objc support failable inits?
 
-	convenience required init?(props: [WebViewInitProps: Any]) {
-		// check for isolated pre-init
-		if let isolated = props[.isolated] as? Bool {
-			//self.init(config: nil, isolated: isolated)
+		// isolated must be set during init before all other props
+		if let isolated = options[WebViewInitProps.isolated] as? Bool {
 		    self.init(config: nil, agent: nil, isolated: isolated, privacy: false, transparent: false)
-		} else if let privacy = props[.privacy] as? Bool {
+		} else if let privacy = options[WebViewInitProps.privacy] as? Bool {
 			// a private tab would imply isolation, not sweating lack of isolated+private corner case
-			//self.init(config: nil, privacy: privacy)
 		    self.init(config: nil, agent: nil, isolated: false, privacy: privacy, transparent: false)
 		} else {
 			self.init(config: nil)
 		}
+
 		var url: URL? = nil
-		for (key, value) in props {
+
+		for (key, value) in options {
+		    guard let prop = key.base as? WebViewInitProps else { continue } // https://bugs.swift.org/browse/SR-7049
 			switch value {
-				case let urlstr as String where key == .url:
+				case let urlstr as String where prop == .url:
 					url = URL(string: urlstr)
 					if url == nil { return nil } // hard-fail for bad urls
-				case let agent as String where key == .agent: _customUserAgent = agent
-				case let appName as String where key == .agentApp: _applicationNameForUserAgent = appName
+				case let agent as String where prop == .agent: _customUserAgent = agent
+				case let appName as String where prop == .agentApp: _applicationNameForUserAgent = appName
 				//TODO: if v.startsWith('+='), then append to whatever self.userAgent & self.userAgentAppName return
 				// lots of JS libs pick from many expressions in the UA, but we may not always want to be hardcoding platform version numbers
 				// so a dynamic append feature on init is desirable
 
-				case let icon as String where key == .icon: loadIcon(icon)
-				case let magnification as Bool where key == .allowsMagnification: allowsMagnification = magnification
-				case let recordable as Bool where key == .allowsRecording: _mediaCaptureEnabled = recordable
-				case let transparent as Bool where key == .transparent:
+				case let icon as String where prop == .icon: loadIcon(icon)
+				case let magnification as Bool where prop == .allowsMagnification: allowsMagnification = magnification
+				case let recordable as Bool where prop == .allowsRecording: _mediaCaptureEnabled = recordable
+				case let transparent as Bool where prop == .transparent:
 					if WebKit_version >= (602, 1, 11) {
 						_drawsBackground = !transparent
 					} else {
 						_drawsTransparentBackground = transparent
 					}
-				case let value as [String] where key == .preinject: for script in value { preinject(script) }
-				case let value as [String] where key == .postinject: for script in value { postinject(script) }
-				case let value as [String] where key == .style: for css in value { style(css) }
+				case let value as [String] where prop == .preinject: for script in value { preinject(script) }
+				case let value as [String] where prop == .postinject: for script in value { postinject(script) }
+				case let value as [String] where prop == .style: for css in value { style(css) }
 				//case let value as [String] where key == .handlers: for handler in value { addHandler(handler) } //FIXME kill delegate.`handlerStr` indirect-str-refs
-				case let value as [String: [JSValue]] where key == .handlers: addHandlers(value)
-				case let value as [String] where key == .subscribeTo: for handler in value { subscribeTo(handler) }
+				case let value as [String: [JSValue]] where prop == .handlers: addHandlers(value)
+				case let value as [String] where prop == .subscribeTo: for handler in value { subscribeTo(handler) }
 				default: warn("unhandled param: `<\(type(of: key))>\(key): <\(type(of: value))>\(value)`")
 			}
 		}
