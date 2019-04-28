@@ -39,7 +39,6 @@ but they will recieve no updates.
 ## Included Apps in the [Release](https://github.com/kfix/MacPin/releases)
 
 ### da G-Suite
-* [Inbox.app](https://inbox.google.com): eMail Email, wut wut, da email!
 * [Google Drive.app](https://drive.google.com)
 * [Google Photos.app](https://photos.google.com)
 * [Hangouts.app](https://plus.google.com/hangouts): SMS/IM/Video chat client for the desktop
