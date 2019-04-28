@@ -304,7 +304,11 @@ struct WeakThing<T: AnyObject> {
 		//tabStyle = .SegmentedControlOnBottom
 
 		// http://www.raywenderlich.com/2502/calayers-tutorial-for-ios-introduction-to-calayers-tutorial
-		view.wantsLayer = true //use CALayer
+		if #available(macOS 10.14, *) {
+			// https://developer.apple.com/videos/play/wwdc2018/209/?time=1446
+		} else {
+			view.wantsLayer = true //use CALayer
+		}
 		view.layer?.cornerRadius = cornerRadius
 		view.layer?.masksToBounds = true // include layer contents in clipping effects
 		view.canDrawSubviewsIntoLayer = true // coalesce all subviews' layers into this one
