@@ -11,7 +11,11 @@ the GitHub released apps are runnable under macOS 10.14.
 While less featureful than Electron (no Node and Chromium here),   
 they are [slim and fast like MacGap](https://discuss.atom.io/t/app-too-big/28845), thanks to use of macOS-shipped components.  
 
-When Swift reaches ABI stability, those could be stripped away to leave behind only a 2MiB binary!  
+```
+$ du -hs build/macosx-x86_64-apple-macosx10.11/apps/{Slack,MacPin}.app/
+2.0M	build/macosx-x86_64-apple-macosx10.11/apps/Slack.app/  (mostly Assets.car icons)
+4.5M	build/macosx-x86_64-apple-macosx10.11/apps/MacPin.app/ (icons + 2.5MB MacPin.framework)
+```
 
 ## Project Status
 Uses swift 4.2 & WKWebView instead of ObjC & WebView like ye old MacGap.  
