@@ -19,7 +19,7 @@ archs_macosx		?= x86_64
 archs_iphonesimulator	?= x86_64
 
 archs_iphoneos		?= arm64
-target_ver_OSX		?= 10.12
+target_ver_OSX		?= 10.11
 target_ver_iOS		?= 9
 
 xcode				?= /Applications/Xcode.app
