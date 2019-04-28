@@ -114,11 +114,17 @@ $(info Jumbo-execs: $(lexecs))
 $(info Jumbo-deps: $(jumbodeps))
 $(info Jumbo-lib: $(jumbolib))
 
-ifeq ($(platform),OSX)
-endif
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
 allapps install: $(gen_apps)
-zip test apirepl tabrepl wknightly stp $(gen_apps): $(lexecs) $(outdir)/SwiftSupport
+
+ifeq ($(platform)$(osswiftlibdir),OSX)
+# need to vendor SwiftSupport from the SDK, because this host OS doesn't come with them
+swiftsupport := $(outdir)/SwiftSupport
+else
+swiftsupport :=
+endif
+
+zip test apirepl tabrepl wknightly stp $(gen_apps): $(lexecs) $(swiftsupport)
 doc test apirepl tabrepl test.app test.ios dbg dbg.app stp stp.app test_% $(appnames:%=test_%): debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
 #-D WK2LOG
 
@@ -269,6 +275,7 @@ $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist: template
 # https://www.bignerdranch.com/blog/it-looks-like-you-are-trying-to-use-a-framework/
 $(outdir)/Frameworks/%.framework/Versions/A/Frameworks:
 	@install -d $@
+	# if SwiftSupport is needed, the rpath of the Frameworks/*.dylib should point to it and stdlib tool will find it
 	[ ! -z "$(codesign)" ] || $(swift-stdlibtool) --copy --verbose --scan-folder $(outdir)/Frameworks --destination $@
 	[ ! -n "$(codesign)" ] || $(swift-stdlibtool) --copy --verbose --sign $(appsig) --scan-folder $(outdir)/Frameworks --destination $@
 	@touch $@
@@ -295,7 +302,6 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	(($(bundle_untracked))) || git archive HEAD $(macpin_sites)/$*/ | tar -xv --strip-components 2 -C $@/Contents/Resources
 	(($(bundle_untracked))) && COMMAND_MODE=legacy cp -fRL $(macpin_sites)/$*/* $@/Contents/Resources/ || true
 	[ ! -d $@/Contents/Resources/Library ] || ln -sfh Resources/Library $@/Contents/Library
-	#[ ! -n "$(wildcard $(outdir)/Frameworks/*.dylib)" ] || cp -a $(outdir)/Frameworks $@/Contents
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist >/dev/null
 	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
 	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@

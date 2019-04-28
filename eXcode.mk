@@ -168,6 +168,7 @@ incdirs				+= -I $(sdkpath)/System/Library/Frameworks
 incdirs				+= -I $(outdir)
 os_frameworks		:= -F $(sdkpath)/System/Library/Frameworks -L $(sdkpath)/System/Library/Frameworks
 frameworks			:= -F $(outdir)/Frameworks
+osswiftlibdir		:= $(lastword $(wildcard /usr/lib/swift))
 swiftlibdir			:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift/$(sdk) $(shell $(xcs) -p)/Toolchains/$(swifttoolchain).xctoolchain/usr/lib/swift/$(sdk)))
 swiftstaticdir		:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift_static/$(sdk) $(shell $(xcs) -p)/Toolchains/$(swifttoolchain).xctoolchain/usr/lib/swift_static/$(sdk)))
 $(info $(platform) sdk:)
@@ -189,27 +190,7 @@ $(swiftlibdir):
 
 $(outdir)/MacOS $(outdir)/exec $(outdir)/lexec $(outdir)/Frameworks $(outdir)/obj $(outdir)/Contents: ; install -d $@
 
-define bundle_libswift
-	for lib in $$(otool -L $@ | awk -F '[/ ]' '$$2 ~ /^libswift.*\.dylib/ { printf $$2 " " }'); do \
-		cp $(swiftlibdir)/$$lib $(outdir)/SwiftSupport; \
-		for sublib in $$(otool -L $(swiftlibdir)/$$lib | awk -F '[/ ]' '$$2 ~ /libswift.*\.dylib/ { printf $$2 " " }'); do \
-			[ -f $(outdir)/SwiftSupport/$$sublib ] || cp $(swiftlibdir)/$$sublib $(outdir)/SwiftSupport; \
-		done; \
-	done;
-endef
-#^ my hope is that Swift will eventually become a system framework when Apple starts using it to build iOS/OSX system apps ...
-#  https://forums.developer.apple.com/message/9714
-#  http://mjtsai.com/blog/2015/06/12/swift-libraries-not-included-in-ios-9-or-el-capitan/
-# 10.13: /System/Library/PrivateFrameworks/Swift/*.dylib for Apple's apps, ABI not vendorable until Swift5
-#  https://blog.timac.org/2017/1115-state-of-swift-ios11-1-macos10-13/
-#   https://github.com/apple/swift/blob/master/docs/ABIStabilityManifesto.md https://swift.org/abi-stability/
-
 # https://modocache.io/swift-stdlib-tool
-#$(outdir)/SwiftSupport: $(outdir)/exec
-#	install -d $@
-#	$(swift-stdlibtool) --copy --verbose --scan-folder $(outdir)/exec --destination $@
-#	touch $@
-
 $(outdir)/SwiftSupport: $(outdir)/lexec
 	install -d $@
 	$(swift-stdlibtool) --copy --verbose --scan-folder $(outdir)/lexec --destination $@
@@ -218,20 +199,10 @@ $(outdir)/SwiftSupport: $(outdir)/lexec
 $(outdir)/exec/%.dSYM $(outdir)/lexec/%.dSYM: $(outdir)/exec/%
 	dsymutil $< 2>/dev/null
 
-#$(outdir)/exec/%: libdirs += -L $(swiftlibdir)
-#$(outdir)/exec/%: $(outdir)/obj/%.o | $(outdir)/exec $(outdir)/Frameworks
-#	# grab the .d's of $^ and build any used modules ....
-#	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,/usr/lib/swift $(linkopts_main) -o $@ $^
-#	touch $(dir $@)
-
-#$(outdir)/lexec/%: %.o | $(outdir)/exec $(outdir)/Frameworks
-#	# grab the .d's of $^ and build any used modules ....
-#	$(clang) $(debug) $(libdirs) $(os_frameworks) $(frameworks) -L $(swiftlibdir) -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,/usr/lib/swift $(linkopts_main) -o $@
-#	touch $(dir $@)
-
 $(outdir)/lexec/%: modules/%/$(platform)/main.swift | $(outdir)/lexec
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-Xlinker -rpath -Xlinker /usr/lib/swift \
+		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
 		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
 		$(linkopts_exec) \
 		-module-name $*.MainExec \
@@ -245,6 +216,7 @@ $(outdir)/lexec/%: modules/%/$(platform)/main.swift | $(outdir)/lexec
 $(outdir)/exec/%: execs/$(platform)/%.swift | $(outdir)/exec
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-Xlinker -rpath -Xlinker /usr/lib/swift \
+		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
 		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
 		$(linkopts_exec) \
 		-module-name $*.MainExec \
@@ -256,7 +228,7 @@ $(outdir)/Symbols/%.symbol: $(outdir)/exec/%
 	install -d %(outdir)/Symbols
 	xcrun -sdk $(sdk) symbols -noTextInSOD -noDaemon -arch all -symbolsPackageDir $(outdir)/Symbols $^
 
-$(outdir)/obj/lib%.dylib $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/$(platform)/*.swift | $(outdir)/obj
+$(outdir)/obj/lib%.dylib $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/$(platform)/*.swift modules/%/*.h | $(outdir)/obj
 	$(swiftc) $(debug) -v $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-parse-as-library \
 		-whole-module-optimization \
