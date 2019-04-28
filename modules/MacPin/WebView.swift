@@ -81,7 +81,9 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	//func stopLoading() -> WKNavigation?
 	//var snapshotURL: String { get } // gets a data:// of the WKThumbnailView
 }
-
+// USETHESE:
+// https://github.com/apple/swift-evolution/blob/master/proposals/0195-dynamic-member-lookup.md
+// https://github.com/apple/swift-evolution/blob/master/proposals/0216-dynamic-callable.md
 
 @objcMembers
 class MPWebView: WKWebView, WebViewScriptExports {
@@ -249,7 +251,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 
 	let favicon: FavIcon = FavIcon()
 
-	convenience init(config: WKWebViewConfiguration? = nil, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = false) {
+	@objc convenience init(config: WKWebViewConfiguration?, agent: String?, isolated: Bool, privacy: Bool, transparent: Bool) {
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
 		let configuration = config ?? WKWebViewConfiguration()
 		if config == nil {
@@ -296,7 +298,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 			warn("WebRTC not available for WebKit: \(WebKit_version)")
 		}
 #endif
-		if let privacy = privacy, privacy {
+		if privacy {
 			//prevent HTML5 application cache and asset/page caching by WebKit, MacPin never saves any history itself
 			prefs._storageBlockingPolicy = .blockAll
 		}
@@ -313,19 +315,19 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		//prefs._loadsImagesAutomatically = true // STP v20: https://github.com/WebKit/webkit/commit/326fc529da43b4a028a3a1644edb2198d23ecb68
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
-		if let privacy = privacy, privacy {
+		if privacy {
 			//if #available(OSX 10.11, iOS 9, *) {
 			if WebKit_version >= (601, 1, 30) {
 				configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
 			}
 		}
-		if let isolated = isolated, isolated {
+		if isolated {
 			configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
 		} else {
 			configuration.processPool = config?.processPool ?? (MPWebView.self.sharedWebProcessPool)!
 		}
 
-		self.init(frame: CGRect.zero, configuration: configuration)
+		self.init(frame: CGRect.zero, configuration: configuration) // should be good now?
 #if SAFARIDBG
 		_allowsRemoteInspection = true // start webinspectord child
 		// enables Safari.app->Develop-><computer name> remote debugging of JSCore and all webviews' JS threads
@@ -424,6 +426,10 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		}
 	}
 
+	@nonobjc convenience required init(config: WKWebViewConfiguration?, agent: String?, isolated: Bool?, privacy: Bool?, transparent: Bool?) {
+		self.init(config: config, agent: agent, isolated: isolated ?? false, privacy: privacy ?? false, transparent: transparent ?? false)
+	}
+
 	@nonobjc convenience required init?(object: [String:AnyObject]?) {
 		guard let object = object else { warn("no config object given!"); return nil} // JS can dump a nil on us
 		// this is just for addShortcut() & gotoShortcut(), I think ...
@@ -439,10 +445,12 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	convenience required init?(props: [WebViewInitProps: Any]) {
 		// check for isolated pre-init
 		if let isolated = props[.isolated] as? Bool {
-			self.init(config: nil, isolated: isolated)
+			//self.init(config: nil, isolated: isolated)
+		    self.init(config: nil, agent: nil, isolated: isolated, privacy: false, transparent: false)
 		} else if let privacy = props[.privacy] as? Bool {
 			// a private tab would imply isolation, not sweating lack of isolated+private corner case
-			self.init(config: nil, privacy: privacy)
+			//self.init(config: nil, privacy: privacy)
+		    self.init(config: nil, agent: nil, isolated: false, privacy: privacy, transparent: false)
 		} else {
 			self.init(config: nil)
 		}
@@ -480,12 +488,27 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		if let url = url { gotoURL(url) }
 	}
 
+	@objc convenience required init(config: WKWebViewConfiguration?) {
+		self.init(config: config, agent: nil, isolated: false, privacy: false, transparent: false)
+	}
+
+	@objc convenience required init(url: URL) {
+		//self.init(config: nil, agent: nil, isolated: False, privacy: False, transparent: False)
+		self.init(config: nil)
+		gotoURL(url)
+	}
+
+	convenience required init(config: WKWebViewConfiguration?, agent: String?) {
+		self.init(config: config, agent: agent, isolated: false, privacy: false, transparent: false)
+	}
+
 	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = false) {
 		self.init(url: url as URL, agent: agent, isolated: isolated, privacy: privacy, transparent: transparent)
 	}
 
 	convenience required init(url: URL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = false) {
 		self.init(config: nil, agent: agent, isolated: isolated, privacy: privacy, transparent: transparent)
+		warn("navigating to \(url)")
 		gotoURL(url)
 	}
 
