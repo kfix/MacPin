@@ -5,27 +5,32 @@ MacPin creates pseudo-browsers managed with internal JavaScripts.
 ![screenie](/dock_screenshot.png?raw=true "screen shot")  
 </center>
 
-The produced apps can be run on any Mac with Safari 11.1 installed.  
+the GitHub released apps are runnable under macOS 10.14.
+* Backporting releases to older macOS's with Safari 11.1 may be possible, but 15MB of SwiftSupport libraries must also be shipped
 
 While less featureful than Electron (no Node and Chromium here),   
 they are [slim and fast like MacGap](https://discuss.atom.io/t/app-too-big/28845), thanks to use of macOS-shipped components.  
 
-Each app is about 15MB, which is mostly SwiftSupport libraries.  
 When Swift reaches ABI stability, those could be stripped away to leave behind only a 2MiB binary!  
 
 ## Project Status
-Uses swift 4.0 & WKWebView instead of ObjC & WebView like ye old MacGap.  
-`sites/**/main.js` tries to support some Electron idioms.
+Uses swift 4.2 & WKWebView instead of ObjC & WebView like ye old MacGap.  
+`sites/**/main.js` tries to support some Electron idioms.  
+* federation of the applet packaging [is being explored](https://github.com/kfix/MacPin/issues/31)
 
 Apps present within a semi-featured Browser UI, having just an ["OmniBox"](https://www.chromium.org/user-experience/omnibox) and tab buttons.  
 
 MacPin-built apps are normal .app bundles that show in the Dock (or Springboard on iOS), tabbing App Switcher, & Launchpad.  
-They are fully self-sufficient, so you can copy them to other systems without needing a base App.  
+
+They are dependent on the core MacPin.app (4.5MB) to be registered on the system, since it contains the MacPin.framework.  
+* future work could create an easy-button "exporter" to vendor the framework
 
 Custom URL schemes can also be registered to launch a MacPin App from any other app on your Mac.  
 
-Building `swift4.0` branch requires OSX 10.12 "Sierra" with Xcode 9 installed.  
-All other branches are obsolete.  
+Building `swift5.0` branch requires OSX 10.14 "Mojave" with Xcode 10.2 installed.  
+
+All other branches are obsolete & archived for users locked on older macOS (hardware),  
+but they will recieve no updates.  
 
 ## Included Apps in the [Release](https://github.com/kfix/MacPin/releases)
 
@@ -44,7 +49,6 @@ All other branches are obsolete.
 * [WhatsApp.app](https://web.whatsapp.com): WhatsApp, this app is. [HAP](https://www.youtube.com/watch?v=5tJt9hs7-vo)!
 
 * [Slack.app](https://signin.slack.com): A hackable runtime for Slack (your co-workers will be thrilled)
-* [Salesforce.app](https://signin.salesforce.com): _[ALWAYS BE CLOSING](https://www.youtube.com/watch?v=r6Lf8GtMe4M)_ without tying up your main browser
 * [Trello.app](http://trello.com): Mind-mapper and project planner
 * [DevDocs.app](http://devdocs.io): Code documentaion browser for most front-end frameworks
 
