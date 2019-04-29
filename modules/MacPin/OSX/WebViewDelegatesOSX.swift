@@ -4,7 +4,7 @@
 
 import WebKit
 import WebKitPrivates
-//import AVFoundation
+import AVFoundation
 
 @objc extension WebViewControllerOSX: WKUIDelegate {
 
@@ -279,11 +279,19 @@ extension WebViewController { // _WKInputDelegate
 		// navigator.mediaDevices.getUserMedia({audio: true, video: true});
 		warn("\(url.absoluteString)\n\tnavigator.mediaDevices.getUserMedia({video: \(devices.contains(.camera)), audio: \(devices.contains(.microphone))})")
 
-		//if #available(OSX 10.14, iOS 7, *) {
-		//AVCaptureDevice.devices()
-		// AVAuthorizationStatus.requestAccess(for: ) { }
-		//warn(AVAuthorizationStatus.authorizationStatus(for: .audio).debugDescription)
-		//warn(AVAuthorizationStatus.authorizationStatus(for: .video).debugDescription)
+		if #available(OSX 10.14, iOS 7, *) {
+			warn(AVCaptureDevice.devices().debugDescription)
+
+			if devices.contains(.camera) {
+				 AVCaptureDevice.requestAccess(for: .video) { _ in }
+			}
+			if devices.contains(.microphone) {
+				 AVCaptureDevice.requestAccess(for: .audio) { _ in }
+			}
+
+			warn(AVCaptureDevice.authorizationStatus(for: .audio).rawValue)
+			warn(AVCaptureDevice.authorizationStatus(for: .video).rawValue)
+		}
 
 		decisionHandler(true)
 	}

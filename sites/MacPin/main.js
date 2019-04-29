@@ -229,8 +229,8 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut('File Upload test', 'https://mdn.github.io/learning-area/html/forms/file-examples/simple-file.html');
 	browser.addShortcut('WebRTC effect test', 'https://webkit.org/blog-files/webrtc/pc-with-effects/index.html');
 	browser.addShortcut('WebRTC samples', 'https://webrtc.github.io/samples/');
-	browser.addShortcut('WebRTC recorder', 'https://www.webrtc-experiment.com/RecordRTC/');
-	browser.addShortcut('WebRTC test', 'https://test.webrtc.org');
+	browser.addShortcut('WebRTC resolution tester', 'https://webrtchacks.github.io/WebRTC-Camera-Resolution/');
+	browser.addShortcut('WebRTC loopback test', 'https://appr.tc/?hd=true&stereo=true&debug=loopback');
 	// window.AudioContext = window.AudioContext || window.webkitAudioContext;
 	// navigator.mediaDevices.getUserMedia({ audio: true })
 	// 		always fails with `result: NotReadableError: The I/O read operation failed.`
