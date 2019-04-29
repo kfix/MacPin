@@ -11,10 +11,12 @@ import UIKit
 
 import Foundation
 import JavaScriptCore // https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
+// https://raw.githubusercontent.com/WebKit/webkit/master/Source/JavaScriptCore/ChangeLog
 // https://developer.apple.com/videos/play/wwdc2013/615/
 import WebKitPrivates
 
 //import XMLHTTPRequest // https://github.com/Lukas-Stuehrk/XMLHTTPRequest
+//  but fetch tho
 
 #if arch(x86_64) || arch(i386)
 import Prompt // https://github.com/neilpa/swift-libedit
@@ -62,7 +64,7 @@ extension JSValue {
 			/*ctx:*/ context.jsGlobalContextRef,
 			/*script:*/ JSStringCreateWithCFString(code as CFString),
 			/*thisObject:*/ JSValueToObject(context.jsGlobalContextRef, self.jsValueRef, nil),
-			/*sourceURL:*/ source ?? nil,
+			/*sourceURL:*/ source ?? nil, /*   this can be a module namespace identifier.... */
 			/*startingLineNumber:*/ 1,
 			/*exception:*/ &excRef
 		) {
@@ -82,8 +84,10 @@ extension JSValue {
 	var resourceURL: String { get }
 	var arguments: [String] { get }
 	var environment: [AnyHashable: Any] { get }
+	var basename: String { get }
 	var name: String { get }
 	var bundleID: String { get }
+	var groupID: String { get }
 	var hostname: String { get }
 	var architecture: String { get }
 	var arches: [AnyObject]? { get }
@@ -102,6 +106,9 @@ extension JSValue {
 	func pathExists(_ path: String) -> Bool
 	func loadAppScript(_ urlstr: String) -> JSValue?
 
+	var localResourcePath: String { get }
+	var localResourceURL: String { get }
+
 #if DEBUG
 	func evalJXA(_ script: String)
 	func callJXALibrary(_ library: String, _ call: String, _ args: [AnyObject])
@@ -117,13 +124,14 @@ extension JSValue {
 struct AppScriptGlobals {
 	// global @convention(c) codes for using JavaScriptCore C-APIs
 	// TODO: use dis moar so we can support Loonix without objc
+	//  https://karhm.com/JavaScriptCore_C_API/
 	/// https://forums.swift.org/t/what-is-the-plan-for-objc-on-non-darwin-platforms/12971
 	//	https://github.com/tris-foundation/javascript/blob/master/Sources/
 
 	static let modSpace = "_nativeModules"
 
 	@discardableResult
-	static func loadCommonJSScript(urlstr: String, ctx: JSContextRef, cls: JSClassRef? = nil, mods: [String: AnyObject]? = nil, asMain: Bool = false) -> JSValueRef {
+	static func loadCommonJSScript(urlstr: String, ctx: JSContextRef, cls: JSClassRef? = nil, mods: [String: AnyObject]? = nil, asMain: Bool = false) -> (JSScriptRef?, JSValueRef) {
 		// loosely impl node-ish require(scriptname, ...state) -> module.exports
 		// http://www.commonjs.org/specs/modules/1.0/
 		// TODO: RequireJS mandates AMD define() http://requirejs.org/docs/commonjs.html
@@ -187,8 +195,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 8   libdyld.dylib                 	0x00007fff5cdc6015 start + 1
 */
 
-			return exports
-
+			return (nil, exports)
 		}
 
 		// not a synthetic require, so going to source a real file
@@ -197,7 +204,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 
 		guard let sourceURL = getResourceURL(urlstr) else {
 			warn("\(urlstr): could not be found", function: "loadCommonJSScript")
-			return JSValueMakeNull(ctx)
+			return (nil, JSValueMakeNull(ctx))
 		}
 
 		if let source = try? String(contentsOf: sourceURL, encoding: .utf8) {
@@ -205,7 +212,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 			scriptURL = sourceURL.absoluteString
 		} else {
 			warn("\(sourceURL): could not be read", function: "loadCommonJSScript")
-			return JSValueMakeNull(ctx)
+			return (nil, JSValueMakeNull(ctx))
 		}
 
 		warn("\(scriptURL): read", function: "loadCommonJSScript")
@@ -217,7 +224,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		var errorLine = Int32(0)
 		let script = JSScriptCreateFromString(
 			contextGroup,
-			jsurl,
+			jsurl, /* .sourceUrl, can also by module-namespace identifier */
 			/*startingLineNumber:*/ 1,
 			/*script:*/ JSStringCreateWithCFString(scriptTxt as CFString),
 			/*errorMessage*/ UnsafeMutablePointer(jsErrorMsg),
@@ -287,9 +294,9 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 			let this = JSValueToObject(contxt, exports, nil)
 
 			if let ret = JSScriptEvaluate(contxt, script, this, &exception) {
-				return JSObjectGetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString), nil)
+				return (script, JSObjectGetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString), nil))
 			} else if !JSValueIsUndefined(contxt, exception) {
-				return exception!
+				return (nil, exception!)
 			}
 		} else {
 			warn("bad syntax: \(scriptURL) @ line \(errorLine)", function: "loadCommonJSScript")
@@ -297,25 +304,13 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 			warn(errMessage)
 		} // or pop open the script source-code in a new tab and highlight the offender
 
-		return JSValueMakeNull(ctx) // generates an exception if called via JS:require()
+		return (script, JSValueMakeNull(ctx)) // generates an exception if called via JS:require()
 	}
 
 //ES6 async imports of .mjs?
-// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/runtime/JSGlobalObjectFunctions.cpp#L782
-// https://github.com/WebKit/webkit/blob/310778e7d2a10e8ba10b22a62b6949b9071f7415/Source/JavaScriptCore/runtime/JSGlobalObject.cpp#L779
-// https://github.com/WebKit/webkit/blob/6e18e26e3a8dc8527949110b403bb943070a07bc/Source/JavaScriptCore/jsc.cpp#L786
-// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/runtime/JSModuleLoader.cpp
-// https://github.com/WebKit/webkit/blob/c340b151a8adc98e719539174aa13386d46e0851/Source/WebCore/bindings/js/ScriptModuleLoader.cpp
-//  will need to reimpl ASG in a .cxx to expose those JSC:: goodies
-//	https://github.com/tris-foundation/javascript/blob/master/Sources/CV8/c_v8.cpp
-//	https://karhm.com/JavaScriptCore_C_API/
-// could also require() in SystemJS.import: https://github.com/systemjs/systemjs/blob/master/docs/module-formats.md
-//   would need a native-hooked transpile() func to babel out the import statements from the filetexts to require()ese
-//      https://github.com/babel/babel/tree/master/packages/babel-parser
-
-// ITS HAPPENING!
 // https://github.com/WebKit/webkit/commit/105499e40a416befe631f0897c5d8047db195fff
-		//   ES6: loadAndEvaluateJSScriptModule  kJSScriptTypeModule
+//    loadAndEvaluateJSScriptModule  kJSScriptTypeModule
+// https://github.com/WebKit/webkit/commit/16bf7415addce141c0c5bfe91d53d8bea3929fa9
 
 	static let cjsrequire: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
 		// https://developer.apple.com/documentation/javascriptcore/jsobjectcallasfunctioncallback
@@ -324,10 +319,9 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		if argc > 0 {
 			if let args = args, JSValueIsString(ctx, args[0]) {
 				let globalObjClass = JSClassCreate(&globalClassDef)
-					let url = JSStringCopyCFString(kCFAllocatorDefault, JSValueToStringCopy(ctx, args[0], nil)) as String
-				return loadCommonJSScript(urlstr: url, ctx: ctx!, cls: globalObjClass, mods: AppScriptRuntime.shared.nativeModules)
+				let url = JSStringCopyCFString(kCFAllocatorDefault, JSValueToStringCopy(ctx, args[0], nil)) as String
+				return loadCommonJSScript(urlstr: url, ctx: ctx!, cls: globalObjClass, mods: AppScriptRuntime.shared.nativeModules).1
 				//	JSContext.current().nativeModules ?? globalObjClass.getProperty(modSpace)
-
 			}
 		}
 		return JSValueMakeNull(ctx) // generates an exception
@@ -576,9 +570,42 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	var name: String { return NSRunningApplication.current.localizedName ?? String() }
 	let platform = "OSX"
 #elseif os(iOS)
-	var name: String { return Bundle.main.objectForInfoDictionaryKey("CFBundleDisplayName") as? String }
+	var name: String { return Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String }
 	let platform = "iOS"
 #endif
+
+	var basename: String { return Bundle.main.object(forInfoDictionaryKey: "CFBundleExecutable") as? String ?? String() }
+
+	var groupID: String {
+		if self.bundleID.hasSuffix(".\(self.basename)") {
+			return String(self.bundleID.dropLast(self.basename.count + 1))
+	    }
+	    return String()
+	}
+
+	var localResourceURL: String {
+		if !self.groupID.isEmpty {
+			if let localURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: self.groupID) {
+				// https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_security_application-groups
+				// print("\(sharedURL)") // could load self-modified, user customized, main.js's from here
+				return localURL.absoluteString
+				// would need to make sure require() & injectCSS/JS's will also use this overlay
+			}
+		}
+	    return String()
+	}
+
+	var localResourcePath: String {
+		if !self.groupID.isEmpty {
+			if let localURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: self.groupID) {
+				// https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_security_application-groups
+				// print("\(sharedURL)") // could load self-modified, user customized, main.js's from here
+				return localURL.path
+				// would need to make sure require() & injectCSS/JS's will also use this overlay
+			}
+		}
+	    return String()
+	}
 
 	// http://nshipster.com/swift-system-version-checking/
 	var platformVersion: String { return ProcessInfo.processInfo.operatingSystemVersionString }
@@ -727,22 +754,28 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	@objc func loadMainScript() -> Bool {
+		let jsval: JSValue
+		let script: JSScriptRef? // JSScript will be getting a high-level wrapping soon
+
 		let app = (Bundle.main.object(forInfoDictionaryKey:"MacPin-MainScriptName") as? String) ?? AppScriptRuntime.mainScriptFile
 
-		if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
+		let local_app_js = URL(fileURLWithPath: "\(self.localResourcePath)/\(self.basename)/\(AppScriptRuntime.mainScriptFile).js")
 
-			let jsval = loadCommonJSScript(app_js.absoluteString, asMain: true)
-
-			// check for error
-			if jsval.isObject && !jsval.hasProperty("exception") {
-				warn("\(app_js) loaded as main script")
-				jsdelegate = JSValue(nullIn: self.context)
-				return true
-			}
-
-			// dump exception
+		if (try? local_app_js.checkResourceIsReachable()) ?? false {
+			(script, jsval) = importCommonJSScript(local_app_js.absoluteString, asMain: true)
+		} else if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
+			(script, jsval) = importCommonJSScript(app_js.absoluteString, asMain: true)
+		} else {
+			return false
 		}
 
+		// check for error
+        if jsval.isObject && !jsval.hasProperty("exception") {
+			jsdelegate = JSValue(nullIn: self.context)
+			return true
+		}
+
+		// dump exception
 		return false
 	}
 
@@ -806,11 +839,22 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	@discardableResult
-	func loadCommonJSScript(_ urlstr: String, asMain: Bool = false) -> JSValue {
+	@objc func loadCommonJSScript(_ urlstr: String, asMain: Bool = false) -> JSValue {
 		// just a bridgeable-wrapper for JSContext.loadCommonJSScript
-		return JSValue(jsValueRef:
-			AppScriptGlobals.loadCommonJSScript(urlstr: urlstr, ctx: context.jsGlobalContextRef, cls: globalObjClass, mods: nativeModules, asMain: asMain),
-		in: context)
+		return JSValue(
+			jsValueRef: AppScriptGlobals.loadCommonJSScript(urlstr: urlstr, ctx: context.jsGlobalContextRef,
+						cls: globalObjClass, mods: nativeModules, asMain: asMain).1,
+			in: context
+		)
+	}
+
+	@discardableResult
+	@nonobjc func importCommonJSScript(_ urlstr: String, asMain: Bool = false) -> (JSScriptRef?, JSValue) {
+		let (script, value) = AppScriptGlobals.loadCommonJSScript(urlstr: urlstr, ctx: context.jsGlobalContextRef,
+									cls: globalObjClass, mods: nativeModules, asMain: asMain)
+		warn("loaded \(urlstr) script - main-scope:\(asMain)")
+		// will eventually return (<JSScript>script, <JSValue>promise)
+		return ( script, JSValue(jsValueRef: value, in: context) )
 	}
 
 	func resetStates() {
