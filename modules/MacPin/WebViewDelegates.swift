@@ -483,8 +483,9 @@ extension WebViewController: _WKDownloadDelegate {
 	func _downloadDidCancel(_ download: _WKDownload!) { warn(download.request.description) }
 }
 
-extension WebViewController: _WKIconLoadingDelegate {
-	func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: @escaping ((Data) -> Void) -> Void) {
+@objc extension WebViewController: _WKIconLoadingDelegate {
+	func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: (@escaping (Data) -> Void) -> Void) {
+		// make doc is wrong about the annotation: https://bugs.swift.org/browse/SR-8873 https://github.com/apple/swift/commit/8cf6189f128c9d6fc409e5826f2cf28019cd6d63
 		completionHandler() { [unowned webView] data in
 			// data.length
 			//parameters . mimeType iconType
@@ -498,13 +499,22 @@ extension WebViewController: _WKIconLoadingDelegate {
 			}
 		}
 	}
+
+}
+
+@available(OSX 10.10, *)
+@objc extension WebViewController: WKHistoryDelegatePrivate {
+   @objc func _webView(_ webView: WKWebView!, didPerformClientRedirectFrom sourceURL: URL!, to destinationURL: URL!) { warn() }
+   @objc func _webView(_ webView: WKWebView!, didPerformServerRedirectFrom sourceURL: URL!, to destinationURL: URL!) { warn() }
+   @objc func _webView(_ webView: WKWebView!, didUpdateHistoryTitle title: String!, for URL: URL!) { warn() }
 }
 
 @objc extension WebViewController { //WKUIDelegatePrivate .. but platform/Delagtes will declare the conformation
 	// https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKitCocoa/UIDelegate.mm
 	//@objc func _webView(_ webView: WKWebView!, getToolbarsAreVisibleWithCompletionHandler completionHandler: ((Bool) -> Void)!)
 
-	@objc func _webView(_ webView: WKWebView!, requestNotificationPermissionForSecurityOrigin securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
+	//func _webView(_ webView: WKWebView!, requestNotificationPermissionFor securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
+	func _webView(_ webView: WKWebView!, requestNotificationPermissionForSecurityOrigin securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
 		warn("Notification.requestPermission(...) <= \(webView.url?.absoluteString ?? "")")
 		//FIXME: prompt
 		decisionHandler(true) // Notification.permission == "default" => "granted"

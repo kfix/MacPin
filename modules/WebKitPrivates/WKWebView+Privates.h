@@ -54,10 +54,15 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @protocol _WKFindDelegate;
 @protocol _WKDiagnosticLoggingDelegate;
 //@protocol _WKInputDelegate;
+@protocol WKHistoryDelegatePrivate;
 @protocol _WKIconLoadingDelegate;
+
 @interface WKWebView (Privates)
+
 @property (nonatomic, readonly) WKBrowsingContextHandle *_handle;
+
 - (WKPageRef)_pageForTesting;
+
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
 //@property (nonatomic, readonly) _WKWebViewPrintFormatter *_webViewPrintFormatter;
 //@property (nonatomic, getter=_allowsLinkPreview, setter=_setAllowsLinkPreview:) BOOL _allowsLinkPreview
@@ -71,7 +76,7 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @property (nonatomic, setter=_setAutomaticallyAdjustsContentInsets:) BOOL _automaticallyAdjustsContentInsets;
 
 // https://bugs.webkit.org/show_bug.cgi?id=177022
-@property (nonatomic, readonly) WKPageRef _pageRefForTransitionToWKWebView  WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+@property (nonatomic, readonly) WKPageRef _pageRefForTransitionToWKWebView WK_API_AVAILABLE(macos(10.13.4));
 
 - (void)_setFrame:(NSRect)rect andScrollBy:(NSSize)offset WK_API_AVAILABLE(macosx(10.13.4));
 
@@ -141,6 +146,7 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @property (nonatomic, readonly) NSURL *_unreachableURL;
 @property (nonatomic, readonly) NSURL *_committedURL;
 @property (nonatomic, readonly) NSString *_MIMEType;
+
 @property (nonatomic, weak, setter=_setDiagnosticLoggingDelegate:) id <_WKDiagnosticLoggingDelegate> _diagnosticLoggingDelegate WK_API_AVAILABLE(macosx(10.11), ios(9.0));
 //https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKFormDelegate.h
 //@property (nonatomic, weak, setter=_setFormDelegate:) id <_WKFormDelegate> _formDelegate;
@@ -152,8 +158,9 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 
 @property (nonatomic, weak, setter=_setInputDelegate:) id <_WKInputDelegate> _inputDelegate WK_API_AVAILABLE(macosx(10.12), ios(10.0));
 
-// Icon delegate
-// https://github.com/WebKit/webkit/commit/583510ef68c8aa56558c17263791b5cd8f762f99
+@property (nonatomic, weak, setter=_setHistoryDelegate:) id <WKHistoryDelegatePrivate> _historyDelegate;
+
+// Icon delegate https://github.com/WebKit/webkit/commit/583510ef68c8aa56558c17263791b5cd8f762f99
 @property (nonatomic, weak, setter=_setIconLoadingDelegate:) id <_WKIconLoadingDelegate> _iconLoadingDelegate;
 
 @property (strong, nonatomic, setter=_setInspectorAttachmentView:) NSView *_inspectorAttachmentView WK_API_AVAILABLE(macosx(10.13.4));

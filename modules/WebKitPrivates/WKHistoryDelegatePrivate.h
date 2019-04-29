@@ -1,7 +1,8 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKIconLoadingDelegate.h
  *
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKHistoryDelegatePrivate.h
+ *
+ * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,15 +28,18 @@
 
 #import <WebKit/WKFoundation.h>
 
-NS_ASSUME_NONNULL_BEGIN
+#import <Foundation/Foundation.h>
 
-@class _WKLinkIconParameters;
+@class WKNavigationData;
+@class WKWebView;
 
-@protocol _WKIconLoadingDelegate <NSObject>
+@protocol WKHistoryDelegatePrivate <NSObject>
+
 @optional
 
-- (void)webView:(WKWebView *)webView shouldLoadIconWithParameters:(_WKLinkIconParameters *)parameters completionHandler:(void (^)(void (^)(NSData*)))completionHandler;
+- (void)_webView:(WKWebView *)webView didNavigateWithNavigationData:(WKNavigationData *)navigationData;
+- (void)_webView:(WKWebView *)webView didPerformClientRedirectFromURL:(NSURL *)sourceURL toURL:(NSURL *)destinationURL;
+- (void)_webView:(WKWebView *)webView didPerformServerRedirectFromURL:(NSURL *)sourceURL toURL:(NSURL *)destinationURL;
+- (void)_webView:(WKWebView *)webView didUpdateHistoryTitle:(NSString *)title forURL:(NSURL *)URL;
 
 @end
-
-NS_ASSUME_NONNULL_END
