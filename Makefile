@@ -314,7 +314,7 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 #xattr -w com.apple.application-instance $(shell echo uuidgen) $@
 
 # the main macpin app contains the core framework
-$(appdir)/$(macpin).app/Contents/Frameworks: $(outdir)/Frameworks/$(macpin).framework
+$(appdir)/$(macpin).app/Contents/Frameworks: $(jumbolib)
 	rm -rfv $@
 	@install -dv $@
 	$(patsubst %,cp -R % $@/,$(filter %.framework,$^))
@@ -406,7 +406,7 @@ reset:
 uninstall: $(wildcard $(appnames:%=$(installdir)/%))
 	for a in $(filter %.app,$^); do echo del $$a; rm -rf $$a; done
 
-stp test:
+stp test: $(appdir)/$(macpin).app
 	#-defaults delete $(macpin)
 	($(env) $< -i http://browsingtest.appspot.com) #|| { echo $$?; [ -t 1 ] && stty sane; }
 
