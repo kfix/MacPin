@@ -308,9 +308,9 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 	}
 
 //ES6 async imports of .mjs?
-// https://github.com/WebKit/webkit/commit/105499e40a416befe631f0897c5d8047db195fff
+// JSScript v1 https://github.com/WebKit/webkit/commit/16bf7415addce141c0c5bfe91d53d8bea3929fa9
+// JSScript v2 https://github.com/WebKit/webkit/commit/105499e40a416befe631f0897c5d8047db195fff
 //    loadAndEvaluateJSScriptModule  kJSScriptTypeModule
-// https://github.com/WebKit/webkit/commit/16bf7415addce141c0c5bfe91d53d8bea3929fa9
 
 	static let cjsrequire: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
 		// https://developer.apple.com/documentation/javascriptcore/jsobjectcallasfunctioncallback
@@ -612,11 +612,12 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	var libraries: [String: Any] {
 		var infos: [String: Any] = [:]
-		for bun in ["com.apple.WebKit", "com.apple.JavaScriptCore"] {
+		for bun in ["com.apple.WebKit", "com.apple.JavaScriptCore", "com.github.kfix.MacPin.MacPin"] {
 			if let bunDict = Bundle(identifier: bun)?.infoDictionary { infos[bun] = bunDict }
 		}
 		infos["WebKit.dylib"] = "\(WebKit_version)"
 		infos["JavaScriptCore.dylib"] = "\(JavaScriptCore_version)"
+		infos["Safari.app"] = "\(Safari_version)"
 		return infos
 	}
 
