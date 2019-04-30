@@ -150,6 +150,7 @@ env += DYLD_PRINT_LIBRARIES=1
 linkopts_main 			:= -Wl,-dyld_env,DYLD_VERSIONED_FRAMEWORK_PATH="$(rpath)"
 
 webkitdir				?= /System/Library/Frameworks/WebKit.framework
+jscdir					?= /System/Library/Frameworks/JavaScriptCore.framework
 safaridir				?= /Applications/Safari.app
 
 safariver				:= $(shell defaults read "$(safaridir)/Contents/Info" CFBundleShortVersionString)
@@ -508,8 +509,15 @@ endif
 wk_symbols:
 	symbols "$(webkitdir)/Versions/A/WebKit" | less
 
+jsc_symbols:
+	symbols "$(jscdir)/Versions/A/JavaScriptCore" | less
+
+jsc:
+	$(env) "$(jscdir)/Resources/jsc" -i
+
 stp_symbols:
 	symbols "$(stpframes)/WebKit.framework/Versions/A/WebKit" | less
+	symbols "$(stpframes)/JavaScriptCore.framework/Versions/Current/JavaScriptCore" | less
 	symbols "$(stpframes)/Safari.framework/Versions/Current/Safari" | less
 
 stp_jsc:
