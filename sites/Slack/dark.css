@@ -81,6 +81,7 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight),
 pre,
 #edit_topic_inner:before,
 #msg_input,
+.p-message_input_field,
 .flex_header,
 #channel_header_info,
 #primary_file_button,
@@ -105,7 +106,8 @@ pre,
 #search_tab, #flex_contents, #search_results,
 #search_options, #search_filters, #search_results_loading,
 .thread_messages, .global_notification_block,
-.display_real_names_block_sample {
+.display_real_names_block_sample
+{
     background: none !important;
 	background-color: inherit !important;
 }
@@ -128,7 +130,9 @@ span.match {
 .c-message_attachment__text,
 .c-message_attachment__field_value,
 .c-message_list__day_divider__label__pill,
+.c-message_kit__text, .c-timestamp,
 #msg_input,
+.p-message_input_field,
 .timestamp,
 .initial_comment .comment,
 #im_title,
@@ -216,11 +220,15 @@ ts-message,
 .reply_broadcast_label_container,
 .inline_message_input_container,
 .c-search_message__body, .p-search_filters,
-.c-search_autocomplete__suggestion_content
+.c-search_autocomplete__suggestion_content,
+.p-threads_flexpane__separator_count,
+.p-flexpane_header,
+.c-timestamp, .c-channel_name__text,
+.p-message_input_file_button, .c-icon--plus-thick
 {
     background: none !important;
     color: whitesmoke !important;
-	font-family: -apple-system-font !important;
+    font-family: -apple-system-font !important;
 }
 
 #message-input:placeholder {
@@ -239,7 +247,7 @@ ts-message,
 }
 
 .snippet_container, .file_container, .CodeMirror, .CodeMirror-code,
-.c-file_container,
+.c-file_container, .c-pillow_file_container,
 .file_container .CodeMirror .CodeMirror-code>div:before,
 .file_container .CodeMirror .CodeMirror-code>div pre,
 pre.c-mrkdwn__pre, pre, .btn_msg_action,
