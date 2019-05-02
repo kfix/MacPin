@@ -248,6 +248,7 @@ ts-message,
 
 .snippet_container, .file_container, .CodeMirror, .CodeMirror-code,
 .c-file_container, .c-pillow_file_container,
+.c-pillow_file__content, .c-pillow_file__content--collapsed:after, 
 .file_container .CodeMirror .CodeMirror-code>div:before,
 .file_container .CodeMirror .CodeMirror-code>div pre,
 pre.c-mrkdwn__pre, pre, .btn_msg_action,
