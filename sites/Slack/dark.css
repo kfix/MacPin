@@ -16,6 +16,22 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
 	/* if tab is made transparent, these are overriden */
 }
 
+/* current channel title */
+.p-client, .p-classic-nav__right_search {
+	background-color: inherit !important;
+	color: whitesmoke !important;
+}
+
+/* current channel sub-title & buttons */
+.p-classic_nav__model__title__info,
+.p-classic_nav__model__button,
+.p-classic_nav__right__button,
+.p-classic_nav__right__search__icon
+{
+	color: inherit !important;
+}
+
+/* current channel sub-title & buttons */
 code {
 	border: none !important;
 	background-color: inherit !important;
