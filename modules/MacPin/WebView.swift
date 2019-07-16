@@ -361,12 +361,35 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		//prefs._loadsImagesAutomatically = true // STP v20: https://github.com/WebKit/webkit/commit/326fc529da43b4a028a3a1644edb2198d23ecb68
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
-		if privacy {
-			//if #available(OSX 10.11, iOS 9, *) {
-			if WebKit_version >= (601, 1, 30) {
-				configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
-			}
+
+		//let dataStoreConf = privacy ? _WKWebsiteDataStoreConfiguration(nonPersistentConfiguration: ()) : _WKWebsiteDataStoreConfiguration()
+		let dataStoreConf = _WKWebsiteDataStoreConfiguration()
+
+		/*
+		if proxy {
+			dataStoreConf.httpProxy = proxy
+			// TODO: use https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKitCocoa/Proxy.mm API
+			//    https://github.com/WebKit/webkit/commit/7bdeec136717857a3b650836ff1d461015f3f0f7#diff-84daab162379443d4398aaae7e4d1a04
+			//    https://github.com/WebKit/webkit/commit/55fe463db0c6f37be5fcfeb63aa76510a230f865#diff-5672501199d56b84b3a69bd2c04814f9
 		}
+		*/
+
+		let dataStore = privacy ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default()
+		//let dataStore = ( privacy ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default() )._initWithConfiguration(dataStoreConf)
+		//let dataStore = ( privacy ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default() )._init(with: dataStoreConf)
+		//let dataStore = WKWebsiteDataStore()._init(with: dataStoreConf)
+/*
+ extension WKWebsiteDataStore {
+*  @discardableResult @objc func _init(with configuration: _WKWebsiteDataStoreConfiguration) -> Self
+*  @available(swift, obsoleted: 3, renamed: "_init(with:)") @objc func _initWithConfiguration(_ configuration: _WKWebsiteDataStoreConfiguration) -> Self
+ }
+*/
+
+		//if #available(OSX 10.11, iOS 9, *) {
+		if WebKit_version >= (601, 1, 30) {
+			configuration.websiteDataStore = dataStore
+		}
+
 		if isolated {
 			configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
 		} else {
