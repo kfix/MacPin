@@ -83,6 +83,9 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	func inspect() -> String
 	// https://nodejs.org/api/util.html#util_custom_inspection_functions_on_objects
 
+	// https://github.com/WebKit/webkit/commit/e5b28462f7cfd7114f7fa0982249659df6fcfb32
+	// ^ can we has exports of native props now (10.15+)?
+
 	var hash: Int { get }
 	var transparent: Bool { get set }
 	var caching: Bool { get set }
@@ -363,7 +366,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		configuration.suppressesIncrementalRendering = false
 
 		//let dataStoreConf = privacy ? _WKWebsiteDataStoreConfiguration(nonPersistentConfiguration: ()) : _WKWebsiteDataStoreConfiguration()
-		let dataStoreConf = _WKWebsiteDataStoreConfiguration()
+		//let dataStoreConf = _WKWebsiteDataStoreConfiguration()
 
 		/*
 		if proxy {
