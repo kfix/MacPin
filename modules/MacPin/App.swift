@@ -24,7 +24,9 @@ let JavaScriptCore_version: (major: Int, minor: Int, tiny: Int) = {
 // https://en.wikipedia.org/wiki/Safari_version_history#
 // https://github.com/apple/swift-evolution/blob/master/proposals/0015-tuple-comparison-operators.md
 let Safari_version: String = { v in switch true {
+	case v>=(608, 1, 33):	return "13.0"	// STP87
 	case v>=(608, 1, 16):	return "12.2"	// STP80
+	case v>=(607, 2, 6):	return "12.1.1"	// osx10.14.5
 	case v>=(607, 1, 40):	return "12.1"	// osx10.14.4
 	case v>=(606, 3, 4):	return "12.0.2"	// osx10.14.2
 	case v>=(606, 1, 25):	return "12.0"	// STP61
