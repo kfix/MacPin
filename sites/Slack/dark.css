@@ -126,6 +126,7 @@ pre,
 {
     background: none !important;
 	background-color: inherit !important;
+	font-family: -apple-system-font !important;
 }
 
 /*
@@ -250,6 +251,14 @@ ts-message,
 #message-input:placeholder {
     background: white !important;
     color: initial !important;
+}
+
+.c-message__editor {
+    color: black !important;
+}
+
+.c-message__editor__input {
+	font-family: -apple-system-font !important;
 }
 
 .special_formatting {
