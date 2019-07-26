@@ -31,6 +31,10 @@ ts-message:hover:not(.standalone):not(.multi_delete_mode):not(.highlight) {
 	color: inherit !important;
 }
 
+.c-fullscreen_modal__content {
+	background-color: grey !important;
+}
+
 /* current channel sub-title & buttons */
 code {
 	border: none !important;
@@ -282,6 +286,7 @@ pre.c-mrkdwn__pre, pre, .btn_msg_action,
 	background: black !important;
 	background-color: inherit !important;
 	color: lime !important;
+	font-family: Monaco,Menlo,Consolas,Courier New,monospace !important;
 }
 
 .p-emoji_picker, .p-emoji_picker__list_container,
