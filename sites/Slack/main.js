@@ -7,7 +7,7 @@
 const {app, BrowserWindow, WebView} = require('@MacPin');
 
 let slackTab, slack = {
-	url: 'https://slack.com/ssb/', // use /signin/ instead... or if no cookie ?
+	url: 'https://slack.com/signin' // show workspace picker on open
 };
 slackTab = new WebView(slack); // get it started early
 
