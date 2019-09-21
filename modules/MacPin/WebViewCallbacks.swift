@@ -8,7 +8,6 @@ struct WebViewNotificationCallbacks {
 	// Requests that a notification be shown.
 	// https://www.w3.org/TR/notifications/#showing-a-notification
 	static let showCallback: WKNotificationProviderShowCallback = { page, notification, clientInfo in
-		let webview = unsafeBitCast(clientInfo, to: MPWebView.self)
 
 		// https://www.w3.org/TR/notifications/#model
 		let title = WKStringCopyCFString(CFAllocatorGetDefault().takeUnretainedValue(),
@@ -37,11 +36,12 @@ struct WebViewNotificationCallbacks {
 		let idnum = WKNotificationGetID(notification)
 
 		warn("\(title) - \(body) - \(iconurl) - \(origin)", function: "showCallback")
-		webview.showDesktopNotification(title: title, tag: tag, body: body, iconurl: iconurl, id: Int(idnum), type: type, origin: origin, lang: lang, dir: dir)
 
-		if let manager = getManager(webview) {
+		weak var webview = unsafeBitCast(clientInfo, to: MPWebView.self)
+		if webview != nil {
+			webview?.showDesktopNotification(title: title, tag: tag, body: body, iconurl: iconurl, id: Int(idnum), type: type, origin: origin, lang: lang, dir: dir)
 			// let the webview know we sent it
-			WKNotificationManagerProviderDidShowNotification(manager, idnum)
+			WKNotificationManagerProviderDidShowNotification(getManager(webview!), idnum)
 		}
 	}
 
