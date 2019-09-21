@@ -47,6 +47,12 @@
 #ifndef WK_FRAMEWORK_HEADER_POSTPROCESSING_ENABLED
 
 // http://clang.llvm.org/docs/AttributeReference.html#availability
+#define JSC_API_AVAILABLE(...)
+// Use zero since it will be less than any possible version number.
+#define JSC_MAC_VERSION_TBA 0
+#define JSC_IOS_VERSION_TBA 0
+#define JSC_CLASS_AVAILABLE(...)
+
 #define WK_API_AVAILABLE(...)
 #define WK_CLASS_AVAILABLE(...) __attribute__((visibility("default"))) WK_API_AVAILABLE(__VA_ARGS__)
 #define WK_API_DEPRECATED(_message, ...) __attribute__((deprecated(_message)))
