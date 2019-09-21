@@ -1,5 +1,6 @@
 # Makefile.eXcode: making ObjC & Swift apps without .xcodeproj
 # it's no CocoaPods, but it's as "simple":
+# TODO look into SPM or https://github.com/apple/swift-llbuild ?
 
 # import this near the top of your Makefile, only input variable is $builddir
 # then put your ObjC & Swift code into modules/<import-name>
@@ -14,44 +15,54 @@ $(info [$(eXmk)])
 # Cross-Compilation via Recursive Make Madness
 ########################
 #installed_sdks		!= xcodebuild -showsdks | awk '$NF > 1 && $(NF-1)=="-sdk" {printf $NF " "}'
-platforms			?= OSX iOS
-platform			?= OSX
+platforms			?= macos ios
+platform			?= macos
 
 sdks				?= macosx iphoneos iphonesimulator
-sdks_OSX			?= macosx
-sdks_iOS			?= iphoneos iphonesimulator
+sdks_macos			?= macosx
+sdks_ios			?= iphoneos iphonesimulator
+sdks_iosmac			?= macosx
 sdk					?= macosx
 
-archs_macosx		?= i386 x86_64
-archs_iphonesimulator	?= $(archs_macosx)
+archs_macosx		?= x86_64
+archs_iphonesimulator	?= x86_64
 archs_iphoneos		?= armv7 arm64
 arch				?= $(shell uname -m)
 
-target_ver_OSX		?= 10.11
-target_OSX			?= apple-macosx$(target_ver_OSX)
-target_ver_iOS		?= 9.1
-target_iOS			?= apple-ios$(target_ver_iOS)
-target				?= $(target_OSX)
+target_ver_macos	?= 10.11
+target_macos		?= apple-macosx$(target_ver_macos)
+target_ver_ios		?= 9.1
+target_ios			?= apple-ios$(target_ver_ios)
+target				?= $(target_macos)
 
+# Variants
 ifeq (sim,$(only))
-$(info Only building for iOS Simlator)
+$(info Only building for iOS Simulator)
 sdk := iphonesimulator
-platform := iOS
-target := $(target_iOS)
+platform := ios
+target := $(target_ios)-simulator
 else ifeq (a7,$(only))
 $(info Only building for iphone5s+, ipad Air, ipad Mini Retina)
 sdk := iphoneos
-platform := iOS
-target := $(target_iOS)
+platform := ios
+target := $(target_ios)
 arch := arm64
 archs_iphoneos := arm64
 else ifeq (a6,$(only))
 $(info Only building for iphone5, ipad4)
 sdk := iphoneos
-platform := iOS
-target := $(target_iOS)
+platform := ios
+target := $(target_ios)
 arch := armv7
 archs_iphoneos := armv7
+else ifeq (uikit,$(only))
+$(info Only building for UIKit-on-Mac)
+sdk := macosx
+platform := ios
+target_ver_ios		?= 13.0
+target_ios	:= apple-ios$(target_ver_ios)-macabi
+target	:= $(target_ios)
+arch := x86_64
 endif
 
 outdir				:= $(builddir)/$(sdk)-$(arch)-$(target_$(platform))
@@ -100,12 +111,12 @@ incdirs				:= -I modules
 #incdirs += /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(sdk)/$(arch)/
 
 #find all modules with compilable source code
-build_mods			:= $(sort $(filter-out %/$(platform),$(patsubst modules/%/,%,$(dir $(wildcard modules/*/*.m modules/*/$(platform)/*.m modules/*/*.swift modules/*/$(platform)/*.swift modules/*/*.mm modules/*/$(platform)/*.mm)))))
+build_mods			:= $(sort $(filter-out %/_$(platform),$(patsubst modules/%/,%,$(dir $(wildcard modules/*/*.m modules/*/_$(platform)/*.m modules/*/*.swift modules/*/_$(platform)/*.swift modules/*/*.mm modules/*/_$(platform)/*.mm)))))
 $(info modules/ => $(build_mods))
 
 #modules with compilable main() routines that can be built into executables
-exec_mods			:= $(sort $(patsubst %/$(platform),%,$(patsubst modules/%/,%,$(dir $(wildcard modules/*/main.swift modules/*/$(platform)/main.swift)))))
-exec_mods			:= $(sort $(exec_mods) $(patsubst %/$(platform),%,$(patsubst modules/%/,%,$(dir $(shell grep -l -s -e ^@NSApplicationMain -e ^@UIApplicationMain modules/*/*.swift modules/*/$(platform)/*.swift)))))
+exec_mods			:= $(sort $(patsubst %/_$(platform),%,$(patsubst modules/%/,%,$(dir $(wildcard modules/*/main.swift modules/*/_$(platform)/main.swift)))))
+exec_mods			:= $(sort $(exec_mods) $(patsubst %/_$(platform),%,$(patsubst modules/%/,%,$(dir $(shell grep -l -s -e ^@NSApplicationMain -e ^@UIApplicationMain modules/*/*.swift modules/*/_$(platform)/*.swift)))))
 execs				:= $(exec_mods:%=$(outdir)/exec/%)
 lexecs				:= $(exec_mods:%=$(outdir)/lexec/%)
 #$(info [$(eXmk)] $$(execs) (executables available to assemble): $(execs))
@@ -178,10 +189,15 @@ $(info =>    $(swiftlibdir))
 $(info =>    $(swiftstaticdir))
 $(info swiftc:)
 $(info =>    $(shell $(swiftc) --version))
-ifeq ($(platform),OSX)
-clang += -mmacosx-version-min=$(target_ver_OSX)
-else ifeq ($(platform),iOS)
-clang += -miphoneos-version-min=$(target_ver_iOS)
+ifeq ($(platform),macos)
+clang += -mmacosx-version-min=$(target_ver_macos)
+else ifeq ($(platform),ios)
+clang += -miphoneos-version-min=$(target_ver_ios)
+else ifneq (,$(findstring macabi,$(target))
+# https://github.com/CocoaPods/CocoaPods/issues/8877#issuecomment-499258506
+clang += -miphoneos-version-min=$(target_ver_ios)
+swiftlibdir		:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift/uikitformac $(shell $(xcs) -p)/Toolchains/$(swifttoolchain).xctoolchain/usr/lib/swift/uikitformac))
+os_frameworks		:= -F $(sdkpath)/System/iOSSupport/System/Library/Frameworks -L $(sdkpath)/System/iOSSupport/System/Library/Frameworks
 endif
 
 $(swiftlibdir):
@@ -199,7 +215,7 @@ $(outdir)/SwiftSupport: $(outdir)/lexec
 $(outdir)/exec/%.dSYM $(outdir)/lexec/%.dSYM: $(outdir)/exec/%
 	dsymutil $< 2>/dev/null
 
-$(outdir)/lexec/%: modules/%/$(platform)/main.swift | $(outdir)/lexec
+$(outdir)/lexec/%: modules/%/_$(platform)/main.swift | $(outdir)/lexec
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-Xlinker -rpath -Xlinker /usr/lib/swift \
 		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
@@ -213,7 +229,7 @@ $(outdir)/lexec/%: modules/%/$(platform)/main.swift | $(outdir)/lexec
 	$(swift-update) $^ > $@
 
 # this is for standalone utility/helper programs, use module/main.swift for Application starters
-$(outdir)/exec/%: execs/$(platform)/%.swift | $(outdir)/exec
+$(outdir)/exec/%: execs/_$(platform)/%.swift | $(outdir)/exec
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-Xlinker -rpath -Xlinker /usr/lib/swift \
 		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
@@ -228,7 +244,7 @@ $(outdir)/Symbols/%.symbol: $(outdir)/exec/%
 	install -d %(outdir)/Symbols
 	xcrun -sdk $(sdk) symbols -noTextInSOD -noDaemon -arch all -symbolsPackageDir $(outdir)/Symbols $^
 
-$(outdir)/obj/lib%.dylib $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/$(platform)/*.swift | $(outdir)/obj
+$(outdir)/obj/lib%.dylib $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/_$(platform)/*.swift | $(outdir)/obj
 	$(swiftc) $(debug) -v $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-parse-as-library \
 		-whole-module-optimization \
@@ -237,7 +253,7 @@ $(outdir)/obj/lib%.dylib $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%
 		-emit-library -o $@ \
 		$(filter-out %/main.swift,$(filter %.swift,$^)) $(extrainputs)
 
-$(outdir)/obj/%.o $(outdir)/obj/%.d $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/$(platform)/*.swift | $(outdir)/obj
+$(outdir)/obj/%.o $(outdir)/obj/%.d $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/_$(platform)/*.swift | $(outdir)/obj
 	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(linklibs) $(libdirs) \
 		-whole-module-optimization \
  		-module-name $* -emit-module-path $(outdir)/$*.swiftmodule \
@@ -280,7 +296,7 @@ modules.$(swiftver)/%/:
 	install -v -d $@
 	cp -van modules/$* $(dir $@)
 
-modules.$(nextswiftver)/%/: modules.$(swiftver)/%/*.swift modules.$(swiftver)/%/$(platform)/*.swift
+modules.$(nextswiftver)/%/: modules.$(swiftver)/%/*.swift modules.$(swiftver)/%/_$(platform)/*.swift
 	install -v -d $@
 	$(swift-migrate) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(linklibs) $(libdirs) \
 		-o /dev/null \

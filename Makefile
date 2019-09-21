@@ -3,7 +3,7 @@ export
 #^ export all the variables
 builddir			?= build
 
-VERSION				:= 2019.5.0
+VERSION				:= 2019.9.0
 
 # 1 == use STP.app's WebKit if its present at runtime
 STP 				?= 1
@@ -19,8 +19,8 @@ archs_macosx		?= x86_64
 archs_iphonesimulator	?= x86_64
 
 archs_iphoneos		?= arm64
-target_ver_OSX		?= 10.11
-target_ver_iOS		?= 9
+target_ver_macos	?= 10.11
+target_ver_ios		?= 9
 
 xcode				?= /Applications/Xcode.app
 swifttoolchain		?= XcodeDefault
@@ -62,7 +62,7 @@ template_bundle_id	:= com.github.kfix.MacPin
 xcassets			:= $(builddir)/xcassets/$(platform)
 icontypes			:= imageset
 
-ifeq ($(platform),OSX)
+ifeq ($(platform),macos)
 icontypes			+= iconset
 else
 icontypes			+= appiconset
@@ -77,8 +77,8 @@ endif
 -include apple_dev_id.mk
 appsig				?= -
 # ^ ad-hoc, not so great
-#appsig_OSX			:= Mac Developer
-appsig_iOS			:= iPhone Developer
+#appsig_macos			:= Mac Developer
+appsig_ios			:= iPhone Developer
 # open Xcode -> Preferences -> Accounts -> +Add: Apple ID -> Manage Certificates -> +Add: iOS Development
 #  `security find-identity` will then show your Developer keys you can use for appsig*:
 mobileprov_team_id	?=
@@ -117,7 +117,7 @@ $(info Jumbo-lib: $(jumbolib))
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
 allapps install: $(gen_apps)
 
-ifeq ($(platform)$(osswiftlibdir),OSX)
+ifeq ($(platform)$(osswiftlibdir),macos)
 # need to vendor SwiftSupport from the SDK, because this host OS doesn't come with them
 swiftsupport := $(outdir)/SwiftSupport
 else
@@ -219,7 +219,7 @@ endef
 # https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/SysServices/Articles/properties.html#//apple_ref/doc/uid/20000852-CHDJDFIC
 $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/Info.plist: templates/$(platform)/Info.plist
 	$(gen_plist_template)
-ifeq ($(platform),OSX)
+ifeq ($(platform),macos)
 	[ ! -f $(macpin_sites)/$*/ServicesOSX.plist ] || /usr/libexec/PlistBuddy -c 'merge $(macpin_sites)/$*/ServicesOSX.plist :NSServices' -c save $@
 endif
 
@@ -244,7 +244,7 @@ test_%: $(appdir)/%.app | $(appdir)/MacPin.app
 	-/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -v $(outdir)/apps/ -apps com.github.kfix.MacPin.MacPin
 	($(env) $^/Contents/MacOS/$(basename $(notdir $^)) -i) #|| { echo $$?; [ -t 1 ] && stty sane; }
 
-ifeq ($(platform),OSX)
+ifeq ($(platform),macos)
 
 %.scpt: %.jxa
 	osacompile -l JavaScript -o "$@" "$<"
@@ -322,12 +322,12 @@ $(appdir)/$(macpin).app/Contents/Frameworks: $(jumbolib)
 
 $(appdir)/$(macpin).app: $(appdir)/$(macpin).app/Contents/Frameworks
 
-else ifeq ($(platform),iOS)
+else ifeq ($(platform),ios)
 
 $(appdir)/%.app/Assets.car: $(xcassets)/%.xcassets $(xcassets)/icons8.xcassets
 	@install -d $(dir $@)
 	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
-		--platform $(sdk) --minimum-deployment-target $(target_ver_iOS)  --target-device iphone  --target-device ipad --app-icon AppIcon \
+		--platform $(sdk) --minimum-deployment-target $(target_ver_ios)  --target-device iphone  --target-device ipad --app-icon AppIcon \
 		--compress-pngs --compile $(dir $@) $(realpath $(filter %.xcassets, $^)) > /dev/null
 	test -f $@ || { echo "error: $@ was not created by actool!" && cat $@.plist && exit 1; }
 
