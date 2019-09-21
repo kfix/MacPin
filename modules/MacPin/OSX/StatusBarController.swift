@@ -6,28 +6,14 @@ import AppKit
 import WebKitPrivates
 
 @objc class StatusBarField: NSTextField { // FIXMEios UILabel + UITextField
-	// override func minSizeForContent -> NSSize {} // https://brockerhoff.net/blog/2006/10/02/autoresizing-nstextfields/
-	// FIXME adjust width to fit stringValue
-
-	// http://devetc.org/code/2014/07/07/auto-layout-and-views-that-wrap.html
-	//var preferredMaxLayoutWidth: CGFloat { get set }
-
-	// https://www.objc.io/issues/3-views/advanced-auto-layout-toolbox/
-	// var fittingSize: NSSize { get }
-	//var intrinsicContentSize: NSSize { get }
-
 	override var stringValue: String {
 		didSet {
-			//TODO: scale intrisicContentSize.width to fit URL length, like safari does
 			invalidateIntrinsicContentSize()
+			sizeToFit() // shrink field to match text, like Safari
 			isHidden = stringValue.isEmpty
 		}
 	}
 }
-
-//let wkhtr = NSClassFromString("_WKHitTestResult")
-// _WKHTR not avail in wk605.1.33 | osx10.11 | sf11.0
-// try running a build without rpath to see if it crashes..
 
 @objc class StatusBarController: NSViewController {
 	let statusbox = StatusBarField()
@@ -52,18 +38,13 @@ import WebKitPrivates
 		self.init(nibName:nil, bundle:nil)
 	}
 
-	override func viewDidLoad() {
+	@objc override func viewDidLoad() {
 		super.viewDidLoad()
 
 		view.autoresizingMask = [.width]
 
-		let appearance = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") ?? "Light"
-		if appearance == "Dark" {
-			//statusbox.drawsBackground = false
-			statusbox.textColor = NSColor.labelColor
-		}
-		statusbox.wantsLayer = true
-		statusbox.bezelStyle = .roundedBezel
+		statusbox.backgroundColor = NSColor.textBackgroundColor
+		statusbox.textColor = NSColor.labelColor
 		statusbox.toolTip = ""
 
 		if let cell = statusbox.cell as? NSTextFieldCell {
@@ -74,10 +55,17 @@ import WebKitPrivates
 			cell.focusRingType = .none
 			cell.isEditable = false
 			cell.isSelectable = false
+			cell.backgroundStyle = .lowered
 		}
 
 		statusbox.isHidden = true
 		statusbox.maximumNumberOfLines = 1
+
+		statusbox.isBezeled = false
+		// "In order to prevent inconsistent rendering, background color rendering is disabled for rounded-bezel text fields."
+		///   seems that any .bezelStyle disables background color...
+		statusbox.isBordered = true // in case we have more issues with text colors, at least the box will be apparent
+		statusbox.drawsBackground = true
 	}
 
 	deinit { hovered = nil }
