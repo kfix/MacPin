@@ -84,7 +84,7 @@ let clicker = (url, tab, mainFrame) => {
 			} else if ((host != "slack.com")
 				&& !host.endsWith('.slack.com')
 
-				// CDNs
+				// CDNs for unfurled/inline media shares
 				&& !host.endsWith('.slack-edge.com')
 				&& !host.endsWith('.cedexis-test.com')
 				&& !host.endsWith('.cloudfront.net')
@@ -93,6 +93,8 @@ let clicker = (url, tab, mainFrame) => {
 				&& !host.endsWith('.imgur.com')
 				&& !host.endsWith('.vimeo.com')
 				&& !host.endsWith('.fbcdn.net')
+				&& !host.endsWith('.tumblr.com')
+				&& !host.endsWith('.twimg.com')
 
 				// metrics | trackers
 				&& !host.endsWith('.doubleclick.net')
