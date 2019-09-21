@@ -1,5 +1,6 @@
 /*
- *  https://github.com/WebKit/webkit/blob/6e2abf83b020f6eec356c019a213b5ca0d4e1fb0/Source/WebKit2/UIProcess/API/C/WKContext.h
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/C/WKContext.h
+ *
  * Copyright (C) 2010, 2011 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

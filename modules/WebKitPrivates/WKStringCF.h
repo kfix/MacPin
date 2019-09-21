@@ -1,5 +1,6 @@
 /*
- * https://github.com/WebKit/webkit/blob/67985c34ffc405f69995e8a35f9c38618625c403/Source/WebKit2/Shared/API/c/cf/WKStringCF.h
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/c/cf/WKStringCF.h
+ *
  * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

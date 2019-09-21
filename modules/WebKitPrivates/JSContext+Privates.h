@@ -68,7 +68,6 @@
 @property (setter=_setDebuggerRunLoop:) CFRunLoopRef _debuggerRunLoop NS_AVAILABLE(10_10, 8_0);
 
 /*! @abstract The delegate the context will use when trying to load a module. Note, this delegate will be ignored for contexts returned by UIWebView. */
-@property (nonatomic, weak) id <JSModuleLoaderDelegate> moduleLoaderDelegate; /* JSC_API_AVAILABLE(macosx(JSC_MAC_TBA), ios(JSC_IOS_TBA)); */
 @property (nonatomic, weak) id <JSModuleLoaderDelegate> moduleLoaderDelegate JSC_API_AVAILABLE(macos(10.15), ios(13.0));
 
 /*!
