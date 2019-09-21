@@ -136,27 +136,6 @@ app.on('launchURL', (url) => {
 	}
 });
 
-//let enDarken = require('enDarken.js');
-// ^^ uses CSS filters, CPU intensive
-let enDarken = function(tab) {
-	let idx = tab.styles.indexOf('dark');
-	(idx >= 0) ? tab.popStyle(idx) : tab.style('dark');
-	return;
-};
-
-let enVibrant = function(tab) {
-	enDarken(tab);
-	tab.transparent = !tab.transparent;
-}
-
-app.on('tabTransparencyToggled', (transparent, tab) => {
-	console.log(transparent, tab);
-	let idx = tab.styles.indexOf('transparent');
-	//(!transparent && idx >= 0) ? tab.popStyle(idx) : tab.style('transparent');
-	setTimeout(tab.repaint.bind(tab), 0.3);
-	return; // cannot affect built-in transperatizing of tab
-});
-
 var alwaysAllowRedir = false;
 let toggleRedirection = function(tab, state) { alwaysAllowRedir = (state != null) ? state : !alwaysAllowRedir; };
 
@@ -164,8 +143,6 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	//browser.unhideApp();
 	//$.browser.addShortcut('Slack', slack);
 	// FIXME: use LocalStorage to save slackTab's team-domain after sign-in, and restore that on every start up
-	browser.addShortcut('Dark Mode', [], enDarken);
-	browser.addShortcut('Darkly Vibrant Mode', [], enVibrant);
 	browser.addShortcut('Toggle redirection to external domains', [], toggleRedirection);
 	// FIXME add themes: https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99  DrewML/Theming-Slack-OSX.md
 	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
