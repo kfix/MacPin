@@ -226,15 +226,15 @@ extension WebViewController { // _WKInputDelegate
 	@objc func _webView(_ webView: WKWebView!, requestGeolocationPermissionForFrame frame: WKFrameInfo!, decisionHandler: ((Bool) -> Void)!) {
 		warn(webView.url?.absoluteString ?? "")
 
-		//TODO: prompt for approval which could "unlock" the thunk that uiClient will fire after handler(). thunk actaully calls the C api to push approval
-		// if unapproved, handle(false) & return now
-
-		if let mpwv = webView as? MPWebView {
-			decisionHandler(Geolocator.shared.subscribeToLocationEvents(webview: mpwv))
+		guard let mpwv = webView as? MPWebView else {
+			// not a MacPin webview
+			decisionHandler(false)
+			warn("not a MPWebView, geolocation not supported!")
 			return
 		}
 
-		decisionHandler(false)
+		Geolocator.shared.subscribeToLocationEvents(webview: mpwv)
+		decisionHandler(true)
 	}
 
 	//func _webView(_ webView: WKWebView!, editorStateDidChange editorState: [AnyHashable : Any]!)
@@ -333,11 +333,11 @@ extension WebViewController { // _WKInputDelegate
 
 	// @objc func _webView(_ webView: WKWebView!, getContextMenuFromProposedMenu menu: NSMenu!, forElement element: _WKContextMenuElementInfoQ, userInfo: Any!, completionHandler: ((NSMenu) -> Void)!) {}
 
-	func _webView(_ webview: WKWebView!, mouseDidMoveOverElement hitTestResult: _WKHitTestResult!, with flags: NSEvent.ModifierFlags, userInfo: NSSecureCoding!) {
+	@objc func _webView(_ webview: WKWebView!, mouseDidMoveOverElement hitTestResult: _WKHitTestResult!, with flags: NSEvent.ModifierFlags, userInfo: NSSecureCoding!) {
 		// TODO: check flags for option|command|control, alter status text to show ("Open <url> in new window|tabbehind|externally")
-
 		// this is called when elements are hovered over & hovered off of
 		if let webview = webview as? MPWebView, showStatusBar {
+			//warn(hitTestResult.absoluteLinkURL.absoluteString)
 			statusbar.hovered = hitTestResult
 		}
     }
