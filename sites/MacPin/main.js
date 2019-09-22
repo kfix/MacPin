@@ -224,23 +224,19 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut('WebKit Feature Status', 'https://webkit.org/status/');
 	browser.addShortcut('WebKit Blog', 'https://webkit.org/blog/');
 	browser.addShortcut('Apple WebKit API reference', 'https://developer.apple.com/reference/webkit');
-	browser.addShortcut('Browsing Test', 'http://browsingtest.appspot.com');
+	browser.addShortcut('Navigation Tests', 'http://browsingtest.appspot.com');
 	browser.addShortcut('resizeMyBrowser', 'http://resizemybrowser.com');
 	browser.addShortcut('File Upload test', 'https://mdn.github.io/learning-area/html/forms/file-examples/simple-file.html');
 	browser.addShortcut('WebRTC effect test', 'https://webkit.org/blog-files/webrtc/pc-with-effects/index.html');
 	browser.addShortcut('WebRTC samples', 'https://webrtc.github.io/samples/');
 	browser.addShortcut('WebRTC resolution tester', 'https://webrtchacks.github.io/WebRTC-Camera-Resolution/');
 	browser.addShortcut('WebRTC loopback test', 'https://appr.tc/?hd=true&stereo=true&debug=loopback');
-	// window.AudioContext = window.AudioContext || window.webkitAudioContext;
-	// navigator.mediaDevices.getUserMedia({ audio: true })
-	// 		always fails with `result: NotReadableError: The I/O read operation failed.`
-	// 		https://github.com/WebKit/webkit/blob/4c854e1b185d80d853b12442e9d59aa25226388b/Source/WebCore/Modules/mediastream/UserMediaRequest.cpp#L285
-	// 		{video:true} streams work fine
 
-	browser.addShortcut('Geolocation test', 'https://onury.io/geolocator/?content=examples');
-	browser.addShortcut('Notification test', 'https://ttsvetko.github.io/HTML5-Desktop-Notifications/');
-	browser.addShortcut('Notification test (generated)', ["testing tab notification"], sendNoteFromTab);
-	browser.addShortcut('Apple Maps test', 'https://maps.apple.com/place?address=One%20Infinite%20Loop');
+	browser.addShortcut('HTML5 features report', 'https://html5test.com/');
+	browser.addShortcut('HTML5 Geolocation test', 'https://lab.html5test.com/geolocation/');
+	browser.addShortcut('HTML5 Notification test', 'https://lab.html5test.com/notification/');
+	browser.addShortcut('AppScript Notification test', ["notified title of current tab"], sendNoteFromTab);
+	browser.addShortcut('WebSocket test', 'https://www.websocket.org/echo.html');
 
 	// http://user-agents.me
 	browser.addShortcut('Show current User-Agent', [], getAgent);
