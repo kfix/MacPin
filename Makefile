@@ -19,12 +19,12 @@ archs_macosx		?= x86_64
 archs_iphonesimulator	?= x86_64
 
 archs_iphoneos		?= arm64
-target_ver_macos	?= 10.11
+target_ver_macos	?= 10.13
 target_ver_ios		?= 9
 
 xcode				?= /Applications/Xcode.app
 swifttoolchain		?= XcodeDefault
-swiftver			?= 4.2
+swiftver			?= 5
 nextswiftver		?= 5
 
 ifneq ($(xcode),)

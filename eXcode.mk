@@ -2,6 +2,8 @@
 # it's no CocoaPods, but it's as "simple":
 # TODO look into SPM or https://github.com/apple/swift-llbuild ?
 
+#SHELL=/bin/bash -O nullglob -c
+
 # import this near the top of your Makefile, only input variable is $builddir
 # then put your ObjC & Swift code into modules/<import-name>
 # ObjC modules will need module.modulemap files to describe their headers and linkage
@@ -160,11 +162,12 @@ sdkpath				:= $(shell $(xcrun) --show-sdk-path --sdk $(sdk))
 # https://github.com/apple/swift/blob/master/include/swift/Option/FrontendOptions.td
 # https://github.com/apple/swift/blob/master/docs/Diagnostics.md
 # https://www.bignerdranch.com/blog/build-log-groveling-for-fun-and-profit-manual-swift-continued/
-swflags				:= $(SWFTFLAGS) $(SWCCFLAGS:%=-Xcc %) -swift-version $(swiftver) -target $(arch)-$(target_$(platform)) $(swflags) -Xfrontend -color-diagnostics $(verbose)
+swflags				:= $(SWFTFLAGS) $(SWCCFLAGS:%=-Xcc %) -swift-version $(swiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
+swmigflags			:= $(SWFTFLAGS) $(SWCCFLAGS:%=-Xcc %) -swift-version $(nextswiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
 swiftc				:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swiftc $(swflags)
 swift-update		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swift-update $(swflags)
 # https://github.com/apple/swift/tree/master/lib/Migrator
-swift-migrate		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swiftc -update-code $(swflags)
+swift-migrate		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swiftc -update-code $(swmigflags)
 clang				:= $(xcrun) -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platform)) $(verbose)
 clangpp				:= $(xcrun) -sdk $(sdk) clang++ -fmodules -fcxx-modules -std=c++11 -stdlib=libc++ -target $(arch)-$(target_$(platform)) $(verbose)
 #-fobj-arc
@@ -296,11 +299,12 @@ modules.$(swiftver)/%/:
 	install -v -d $@
 	cp -van modules/$* $(dir $@)
 
-modules.$(nextswiftver)/%/: modules.$(swiftver)/%/*.swift modules.$(swiftver)/%/_$(platform)/*.swift
-	install -v -d $@
+modules.$(nextswiftver)/%/: modules.$(swiftver)/%/
 	$(swift-migrate) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(linklibs) $(libdirs) \
 		-o /dev/null \
-		$(filter %.swift,$^) || { rm -vrf $@; exit 1; }
+		$(filter %,$(shell echo $+/*.swift $+/_$(platform)/*.swift))
+	#|| { rm -vrf $+; exit 1; }
+	cp -a $+ $@
 	# -c -primary-file this.swift -emit-migrated-file-path that.swift
 
 .PRECIOUS: $(outdir)/Frameworks/lib%.dylib $(outdir)/obj/%.o $(outdir)/exec/% $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc $(outdir)/obj/lib%.dylib
