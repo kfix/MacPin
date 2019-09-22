@@ -6,19 +6,21 @@
 const {app, BrowserWindow, WebView} = require('@MacPin');
 let browser = new BrowserWindow();
 
-const mozUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:62.0) Gecko/20100101 Firefox/62.0'
-const mozApp = 'Gecko/20100101 Firefox/62.0'
+const mozUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:68.0) Gecko/20100101 Firefox/68.0'
+const mozApp = 'Gecko/20100101 Firefox/68.0'
 //    https://blog.mozilla.org/webrtc/firefox-is-now-supported-by-google-hangouts-and-meet/ should we pretend to be FireFox 60?
 // https://bloggeek.me/webrtc-adapter-js/ https://github.com/webrtc/adapter
 //  https://webkit.org/blog/7763/a-closer-look-into-webrtc/
+const mozariUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) Gecko/20100101 Firefox/68.0 (KHTML, like Gecko) Version/13.0 Safari/605.1.15'
+// google is looking for AppleWebKit, jsSip is looking for Safari
 
 // (app.libraries['com.apple.WebKit'].CFBundleShortVersionString.startsWith('136') || 
 let useChromeAV, useFirefoxAV;
 useChromeAV = (!app.pathExists('/Library/Internet Plug-Ins/googletalkbrowserplugin.plugin') && app.doesAppExist("com.google.Chrome"))
 useFirefoxAV = (!app.pathExists('/Library/Internet Plug-Ins/googletalkbrowserplugin.plugin') && app.doesAppExist("org.mozilla.firefox"))
 
-const meet = { url: "https://meet.google.com", agent: mozUA };
-const allo = { url: "https://g.co/alloforweb", agent: mozUA };
+const meet = { url: "https://meet.google.com", agent: mozariUA };
+const allo = { url: "https://g.co/alloforweb", agent: mozariUA };
 // https://www.androidpolice.com/2017/10/03/allo-web-adds-support-firefox-opera-ios/
 
 // https://support.google.com/meet/answer/7353922?hl=en
@@ -26,7 +28,15 @@ const allo = { url: "https://g.co/alloforweb", agent: mozUA };
 // but they dont in classic hangouts???
 // https://github.com/NicoSantangelo/hangouts-chrome-notifications/blob/master/content.js would need to wrap chrome.extension & chrome.runtime
 
-const voice = { url: "https://voice.google.com" }; //agent: mozUA };
+const voice = {
+	url: "https://voice.google.com",
+	//agent: mozariUA
+};
+// window.JsSip. window._gv
+// wss://web.voice.telephony.goog/websocket doesn't work because Goog dgaf about standards
+//   https://support.google.com/voice/thread/14998073?msgid=14998073
+//  voiceTab.evalJS(`JsSIP.debug.enable('JsSIP:*');`);
+
 // http://voice.google.com/messages
 // will get in-page RTC calling: https://productforums.google.com/forum/#!topic/voice/aI7m1PrV21Y;context-place=topicsearchin/voice/notifications
 let voiceTab = new WebView(voice); // start loading right way, its a big Closure app
@@ -38,10 +48,6 @@ _gv.Tsa == window.angular.module("voice.service.NotificationSenderModule") // "t
 `new window.Notification` has a hit in the main minified @
 	https://www.gstatic.com/_/voice/_/js/k=voice.voice_module_set.en_US.LRmWe0b1qLs.O/am=AAE/rt=j/d=1/rs=AJAOlGkr58y4dSXuNrjlUOOThgCPvCXA3w/m=base
 tag starts with 'gv:'
-
-`Refused to set unsafe header "Connection"` <- https://15.client-channel.google.com/client-channel/js/1429953678-lcs_client_bin.js
-    seems to be messing up desktop notifications and message list updates
-    https://www.w3.org/TR/2014/WD-XMLHttpRequest-20140130/#the-setrequestheader()-method
 
 */
 
@@ -201,8 +207,8 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	//browser.addShortcut("Hangouts Meet", meet);
 	//browser.addShortcut("Allo for Web", allo);
 	browser.addShortcut('Dark Mode', [], enDarken);
-	browser.addShortcut("Test call to MCI ANAC", "tel:18004444444");
-	browser.addShortcut('UA: Mac Firefox', [mozUA], setAgent);
+	//browser.addShortcut("Test call to MCI ANAC", "tel:18004444444");
+	browser.addShortcut('UA: Mac Firefox', [mozariUA], setAgent);
 	browser.addShortcut('UA: default', [false], setAgent);
 
 	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
@@ -214,7 +220,7 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 
 app.on('AppFinishedLaunching', function(launchURLs) {
 	//app.registerURLScheme('sms'); // `open -a Messages.app imessage:18004444444` still works
-	app.registerURLScheme('tel'); // `open -a Facetime.app tel:18004444444` still works
+	//app.registerURLScheme('tel'); // `open -a Facetime.app tel:18004444444` still works
 	//app.registerURLScheme('googlevoice');
 	// OSX Yosemite safari recognizes and launches sms and tel links to any associated app
 	// https://github.com/WebKit/webkit/blob/ce77bdb93dbd24df1af5d44a475fe29b5816f8f9/Source/WebKit2/UIProcess/mac/WKActionMenuController.mm#L691
