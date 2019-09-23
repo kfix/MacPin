@@ -307,10 +307,9 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 		return (script, JSValueMakeNull(ctx)) // generates an exception if called via JS:require()
 	}
 
-//ES6 async imports of .mjs?
-// JSScript v1 https://github.com/WebKit/webkit/commit/16bf7415addce141c0c5bfe91d53d8bea3929fa9
-// JSScript v2 https://github.com/WebKit/webkit/commit/105499e40a416befe631f0897c5d8047db195fff
-//    loadAndEvaluateJSScriptModule  kJSScriptTypeModule
+// if JavaScriptCore_version >= (608, 1, 8)
+// https://webkit.googlesource.com/WebKit/+/master/Source/JavaScriptCore/ChangeLog
+// JSContextFetchDelegate contextWithBlockForFetch:
 
 	static let cjsrequire: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
 		// https://developer.apple.com/documentation/javascriptcore/jsobjectcallasfunctioncallback
@@ -660,6 +659,11 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		// all app-scripts and cjs-mods will get their own contexts when evaluated, but within the same context-group
 		context = JSContext(jsGlobalContextRef: JSGlobalContextCreateInGroup(contextGroup, globalObjClass))
 
+		//if #available(OSX 10.15, *, iOS 13) {
+		// if JavaScriptCore_version >= (6??, ?, ??) {
+		//	context.moduleLoaderDelegate = self
+		//}
+
 		jsdelegate = JSValue(newObjectIn: context) //default property-less delegate obj
 
 #if SAFARIDBG
@@ -672,27 +676,27 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		context._remoteInspectionEnabled = false
 		//context.logToSystemConsole = false
 #endif
-			// make thrown exceptions popup an nserror displaying the file name and error type,
-			//   which will be shunted to console.log
-			context.exceptionHandler = { context, exception in
-				let errstr = exception?.toString()
-				let line = exception?.forProperty("line").toNumber()
-				let column = exception?.forProperty("column").toNumber()
-				let source = exception?.forProperty("sourceURL").toString()
-				let stack = exception?.forProperty("stack").toString()
-				let message = exception?.forProperty("message").toString()
-				let type = exception?.forProperty("name").toString()
-				let error = NSError(domain: "MacPin", code: 4, userInfo: [
-					NSURLErrorKey: context?.name as Any,
-					NSLocalizedDescriptionKey: "<\(source ?? ""):\(line ?? -1):\(column ?? -1)> \(type ?? "noType"): \(message ?? "?")\n\(stack ?? "?")"
-					// exception seems to be Error.toString(). I want .message|line|column|stack too
-				])
-				//if !WKInspectorIsConnected(inspectorRef) how do I get inspectorref of a JSContext ??
-				displayError(error) // FIXME: would be nicer to pop up an inspector pane or tab to interactively debug this
-				context?.exception = exception //default in JSContext.mm
-				return // gets returned to evaluateScript()?
-			}
-			// JSC will always pass exceptions to console.* so they can bubble up to any RemoteInspectors (Safari->Develop)
+		// make thrown exceptions popup an nserror displaying the file name and error type,
+		//   which will be shunted to console.log
+		context.exceptionHandler = { context, exception in
+			let errstr = exception?.toString()
+			let line = exception?.forProperty("line").toNumber()
+			let column = exception?.forProperty("column").toNumber()
+			let source = exception?.forProperty("sourceURL").toString()
+			let stack = exception?.forProperty("stack").toString()
+			let message = exception?.forProperty("message").toString()
+			let type = exception?.forProperty("name").toString()
+			let error = NSError(domain: "MacPin", code: 4, userInfo: [
+				NSURLErrorKey: context?.name as Any,
+				NSLocalizedDescriptionKey: "<\(source ?? ""):\(line ?? -1):\(column ?? -1)> \(type ?? "noType"): \(message ?? "?")\n\(stack ?? "?")"
+				// exception seems to be Error.toString(). I want .message|line|column|stack too
+			])
+			//if !WKInspectorIsConnected(inspectorRef) how do I get inspectorref of a JSContext ??
+			displayError(error) // FIXME: would be nicer to pop up an inspector pane or tab to interactively debug this
+			context?.exception = exception //default in JSContext.mm
+			return // gets returned to evaluateScript()?
+		}
+		// JSC will always pass exceptions to console.* so they can bubble up to any RemoteInspectors (Safari->Develop)
 
 		//context._debuggerRunLoop = CFRunLoopRef // FIXME: make a new thread for REPL and Web Inspector console eval()s
 		JSRemoteInspectorSetLogToSystemConsole(false)
@@ -782,59 +786,53 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	@discardableResult
 	func loadAppScript(_ urlstr: String) -> JSValue? {
-		let scriptTxt: String
-		let scriptURL: String
 
 		guard let sourceURL = getResourceURL(urlstr) else {
 			warn("\(urlstr): could not be found", function: "loadCommonJSScript")
 			return nil
 		}
 
-		if let source = try? String(contentsOf: sourceURL, encoding: .utf8) {
-			scriptTxt = source
-			scriptURL = sourceURL.absoluteString
-		} else {
+		guard let source = try? String(contentsOf: sourceURL, encoding: .utf8) else {
 			warn("\(sourceURL): could not be read", function: "loadCommonJSScript")
 			return nil
 		}
 
-			warn("\(scriptURL): read")
+		warn("\(sourceURL): read")
 
-			var exception = JSValue()
+		let jsurl = JSStringCreateWithCFString(sourceURL.absoluteString as CFString)
+		let jsErrorMsg = JSStringCreateWithCFString("" as CFString)
+		var errorLine = Int32(0)
+		let script = JSScriptCreateFromString(
+			/*group*/ contextGroup,
+			/*url*/ jsurl,
+			/*startingLineNumber:*/ 1,
+			/*script:*/ JSStringCreateWithCFString(source as CFString),
+			/*errorMessage*/ UnsafeMutablePointer(jsErrorMsg),
+			/*errorLine*/ &errorLine
+		)
 
-			let jsurl = JSStringCreateWithCFString(scriptURL as CFString)
-			let jsErrorMsg = JSStringCreateWithCFString("" as CFString)
-			var errorLine = Int32(0)
-			let script = JSScriptCreateFromString(
-				/*group*/ contextGroup,
-				/*url*/ jsurl,
-				/*startingLineNumber:*/ 1,
-				/*script:*/ JSStringCreateWithCFString(scriptTxt as CFString),
-				/*errorMessage*/ UnsafeMutablePointer(jsErrorMsg),
-				/*errorLine*/ &errorLine
-			)
+		if errorLine != 0 {
+			warn("bad syntax: \(sourceURL) @ line \(errorLine)")
+			let errMessage = JSStringCopyCFString(kCFAllocatorDefault, jsErrorMsg) as String
+			warn(errMessage) // WISH: pop open the script source-code in a new tab and highlight the offender
+			return nil
+		}
 
-			if errorLine == 0 {
-				warn("\(scriptURL): syntax checked ok")
+		warn("\(sourceURL): syntax checked ok")
 
-				let contxt = context.jsGlobalContextRef // want to share scope with console & inspectors
+		let contxt = context.jsGlobalContextRef // want to share scope with console & inspectors
 
-				let globalObj = JSContextGetGlobalObject(contxt)
-				var exception = JSValueMakeUndefined(contxt)
+		let globalObj = JSContextGetGlobalObject(contxt)
+		var exception = JSValueMakeUndefined(contxt)
 
-				// `this` === module.exports in node.js, in electron main.js this==[[main-process]].window
-				let this = globalObj //JSValueToObject(contxt, exports, nil)
+		// `this` === module.exports in node.js, in electron main.js this==[[main-process]].window
+		let this = globalObj //JSValueToObject(contxt, exports, nil)
 
-				if let ret = JSScriptEvaluate(contxt, script, this, &exception) {
-					return JSValue(jsValueRef: ret, in: context)
-				} else if !JSValueIsUndefined(contxt, exception) {
-					return JSValue(jsValueRef: exception!, in: context)
-				}
-			} else {
-				warn("bad syntax: \(scriptURL) @ line \(errorLine)")
-				let errMessage = JSStringCopyCFString(kCFAllocatorDefault, jsErrorMsg) as String
-				warn(errMessage)
-			} // or pop open the script source-code in a new tab and highlight the offender
+		if let ret = JSScriptEvaluate(contxt, script, this, &exception) {
+			return JSValue(jsValueRef: ret, in: context)
+		} else if !JSValueIsUndefined(contxt, exception) {
+			return JSValue(jsValueRef: exception!, in: context)
+		}
 
 		return nil
 	}
@@ -854,9 +852,44 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		let (script, value) = AppScriptGlobals.loadCommonJSScript(urlstr: urlstr, ctx: context.jsGlobalContextRef,
 									cls: globalObjClass, mods: nativeModules, asMain: asMain)
 		warn("loaded \(urlstr) script - main-scope:\(asMain)")
-		// will eventually return (<JSScript>script, <JSValue>promise)
 		return ( script, JSValue(jsValueRef: value, in: context) )
 	}
+
+/*
+	@discardableResult
+	@available(OSX 10.15, *, iOS 13)
+	@nonobjc func importJSScript(_ urlstr: String, asMain: Bool = false, asModule: Bool = false) -> (JSScript?, JSValue) {
+		guard let sourceURL = getResourceURL(urlstr) else {
+			warn("\(urlstr): could not be found")
+			return (nil, JSValue(nullIn: self.context) )
+		}
+
+		guard let source = try? String(contentsOf: sourceURL, encoding: .utf8) else {
+			warn("\(sourceURL): could not be read")
+			return (nil, JSValue(nullIn: self.context) )
+		}
+
+		guard let script = try? JSScript(
+			of: (asModule) ? .module : .program,
+			withSource: source,
+			andSourceURL: sourceURL,
+			andBytecodeCache: nil,
+			in: self.context.virtualMachine
+		) else {
+			warn("script \(urlstr) failed to load or compile!")
+			return (nil, JSValue(nullIn: self.context) )
+		}
+
+		let contxt = (asMain) ? self.context : JSContext(virtualMachine: self.context.virtualMachine)!
+
+		guard let value = contxt.evaluateJSScript(script) else {
+			return (script, JSValue(nullIn: self.context) )
+		}
+
+		warn("loaded \(urlstr) script - main-scope:\(asMain) - module:\(asModule)")
+		return ( script, value )
+	}
+*/
 
 	func resetStates() {
 		jsdelegate = JSValue(nullIn: context)
@@ -1208,6 +1241,19 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	var messageHandlers: [String: [JSValue]] = [:]
 }
+
+/*
+@available(OSX 10.15, *, iOS 13)
+@objc extension AppScriptRuntime: JSModuleLoaderDelegate {
+
+	@available(OSX 10.15, *, iOS 13)
+	@objc func context(_ context: JSContext!, fetchModuleForIdentifier identifier: JSValue!, withResolveHandler resolve: JSValue!, andRejectHandler reject: JSValue!) {
+	// JSScript v1 https://github.com/WebKit/webkit/commit/16bf7415addce141c0c5bfe91d53d8bea3929fa9
+	// JSScript v2 https://github.com/WebKit/webkit/commit/105499e40a416befe631f0897c5d8047db195fff
+	// https://trac.webkit.org/changeset/247403/webkit
+	}
+}
+*/
 
 enum AppScriptReactions: CustomStringConvertible {
 	var description: String { return "\(type(of: self)).\(self)" }
