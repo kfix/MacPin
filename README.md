@@ -6,21 +6,20 @@ MacPin creates pseudo-browsers managed with internal JavaScripts.
 </center>
 
 the GitHub released apps are runnable under macOS 10.14.
-* Backporting releases to older macOS's with Safari 11.1 may be possible, but 15MB of SwiftSupport libraries must also be shipped
 
 While less featureful than Electron (no Node and Chromium here),   
 they are [slim and fast like MacGap](https://discuss.atom.io/t/app-too-big/28845), thanks to use of macOS-shipped components.  
 
 ```
-$ du -hs build/macosx-x86_64-apple-macosx10.11/apps/{Slack,MacPin}.app/
-2.0M	build/macosx-x86_64-apple-macosx10.11/apps/Slack.app/  (mostly Assets.car icons)
-4.5M	build/macosx-x86_64-apple-macosx10.11/apps/MacPin.app/ (icons + 2.5MB MacPin.framework)
+$ du -hs build/macosx-x86_64-apple-macosx10.13/apps/{Slack,MacPin}.app/
+2.0M	build/macosx-x86_64-apple-macosx10.13/apps/Slack.app/  (mostly Assets.car icons)
+4.0M	build/macosx-x86_64-apple-macosx10.13/apps/MacPin.app/ (icons + 1.5MB MacPin.framework)
 ```
 
 ## Project Status
-Uses swift 4.2 & WKWebView instead of ObjC & WebView like ye old MacGap.  
+Uses swift 5 & WKWebView.
 `sites/**/main.js` tries to support some Electron idioms.  
-* federation of the applet packaging [is being explored](https://github.com/kfix/MacPin/issues/31)
+* federation of the applet packaging using ES6 modules [is being explored](https://github.com/kfix/MacPin/issues/31)
 
 Apps present within a semi-featured Browser UI, having just an ["OmniBox"](https://www.chromium.org/user-experience/omnibox) and tab buttons.  
 
@@ -31,26 +30,26 @@ They are dependent on the core MacPin.app (4.5MB) to be registered on the system
 
 Custom URL schemes can also be registered to launch a MacPin App from any other app on your Mac.  
 
-Building `swift5.0` branch requires OSX 10.14 "Mojave" with Xcode 10.2 installed.  
+Building `swift5.0` branch requires macOS 10.14 "Mojave" with Xcode 10.2 installed.  
 
 All other branches are obsolete & archived for users locked on older macOS (hardware),  
 but they will recieve no updates.  
 
 ## Included Apps in the [Release](https://github.com/kfix/MacPin/releases)
 
-### da G-Suite
+### Gooblers
 * [Google Drive.app](https://drive.google.com)
 * [Google Photos.app](https://photos.google.com)
 * [Hangouts.app](https://plus.google.com/hangouts): SMS/IM/Video chat client for the desktop
-* [Google Voice.app](https://voice.google.com): SMS/Tellyphone client for the desktop
-* [YouTube_TV.app](http://youtube.com/tv): TV edition for the desktop.
+* [Google Voice.app](https://voice.google.com): SMS client for the desktop
+  * calling is broken because Google is [loose with web standards](https://support.google.com/voice/thread/14998073?msgid=14998073).
 
-### Face Holes
+### FaceHoles
 * [Facebook.app](https://m.facebook.com/home.php): Mobilized for efficiency
 * [Messenger.app](https://www.messenger.com/hangouts)
-  * not as hawt as [Caprine](https://github.com/sindresorhus/caprine) but also does not suffer from [Electrobeetis](https://www.youtube.com/watch?v=pod4jIKT_kA)
-* [WhatsApp.app](https://web.whatsapp.com): WhatsApp, this app is. [HAP](https://www.youtube.com/watch?v=5tJt9hs7-vo)!
+* [WhatsApp.app](https://web.whatsapp.com)
 
+### et cetera
 * [Slack.app](https://signin.slack.com): A hackable runtime for Slack (your co-workers will be thrilled)
 * [Trello.app](http://trello.com): Mind-mapper and project planner
 * [DevDocs.app](http://devdocs.io): Code documentaion browser for most front-end frameworks
@@ -59,7 +58,7 @@ but they will recieve no updates.
 Some call these Apps [Site-specific Browsers](https://en.wikipedia.org/wiki/Site-specific_browser).  
 
 "Psuedo-browser" has a better ring to it and MacPin tries to support "normal" browsing behavior,   
-(address/status bars, middle-click, pop-ups) complementary to any scripting controlling the app.  
+(address/status bars, middle-click, pop-ups) complementary to any scripts managing the app.  
 
 ```
 cd ~/src/MacPin
@@ -76,6 +75,13 @@ make test_MySite
 make install
 open -a MySite.app
 ```
+
+Work is ongoing to make editing and creating app scripts easier, without requiring Xcode:CLI tools.
+
+## App porting issues
+
+* DRM: Many sites (Spotify, Netflix) are using Chrome/FF only DRMs (Widevine) but Apple-built WebKit only supports FairPlay DRM.
+* WebRTC: WebKit is compatible with [H264 & VP8 codecs](https://webkit.org/blog/8672/on-the-road-to-webrtc-1-0-including-vp8/), but Google Chrome is pushing hardware-unaccelerated VP9 on all fronts (incl. general <video>).
 
 ### sample main.js
 ```
@@ -97,7 +103,9 @@ app.on('AppFinishedLaunching', function() {
 
 ## Hacking MacPin
 Its written in Swift using WKWebView and NSTabViewController with a fully programmatic NIB-less UI layout.  
-You need [Xcode 9](https://developer.apple.com/xcode/) installed on macOS 12.12+ to get the Swift compiler and Cocoa headers.  
+The AppScriptRuntime is purely based on JavaScriptCore's C and ObjC APIs.
+MacPin's UI ClassTypes are bridged to ObjC by SwiftCore and once more into Javascript space using the JSWrapperMap facility in the Apple JSC.  
+You need [Xcode 10](https://developer.apple.com/xcode/) installed on macOS 12.13+ to get the Swift compiler and Cocoa headers.  
 `make` & `$EDITOR` are your hammer and chisel.  
 
 ```
@@ -129,13 +137,13 @@ open hybrid/SomeWebApp.com.app
 
 #### iOS
 ~~Basic support has landed for generating iOS apps.~~  
-iOS has not been migrated to swift4 yet.
+the iOS port has not been migrated to swift4 yet.   
+I keep it in the tree because there should be no blocking issues to bring it back up to parity with macOS.  
+iOS 10 has some PWA support now and macOS 10.15 will ship with UIKit-on-Mac (aka Project Catalyst aka Marzipan)
+which should accelerate the compile->test dev-cycle and provide a native macOS app.
 
 Anyhow, its kinda pointless for most of `sites/*` since native apps exist for all of them.  
 But maybe you want to quickly package a React.js application for offline mobile use...  
-
-iOS 10 has some PWA support now... so I may or may not revive `*/iOS/*`  
-Perhaps when macOS 10.14 ships with "Marzipan" (UIKit)...
 
 #### can i haz LinPin? WinPin?
 Ok! A stubby port running `/Lin/main.swift + AppScriptRuntime()` using a ["JSConly"](https://bugs.webkit.org/show_bug.cgi?id=154512) [build](http://constellation.github.io/blog/2016/05/02/how-to-build-javascriptcore-on-your-machine/) of JavaScriptCore  
@@ -161,3 +169,4 @@ tvPin? No [WKWebView on tvOS](https://github.com/lionheart/openradar-mirror/issu
 * [Chrome for iOS](https://chromium.googlesource.com/chromium/src/+/master/docs/ios/build_instructions.md)[*](https://chromium.googlesource.com/chromium/src.git/+/master/ios/chrome/app/main_application_delegate.mm)
 * [go-webkit2](https://github.com/sourcegraph/go-webkit2)
 * [Puny Browser](https://github.com/ahungry/puny-browser)
+* [yue](https://github.com/yue/yue-sample-apps/tree/master/browser) on [Mac](https://github.com/yue/yue/blob/master/nativeui/mac/browser_mac.mm) & [Linux](https://github.com/yue/yue/blob/master/nativeui/gtk/browser_gtk.cc)
