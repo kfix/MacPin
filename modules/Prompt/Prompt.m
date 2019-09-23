@@ -37,6 +37,7 @@ struct termios ttyopts; // are these sane by default?
 void exceptionHandler(NSException *exception) {
     // app crashed mid-prompt, so lets restore the term
     tcsetattr(1, TCSANOW, &ttyopts);
+    tcflush(1, TCIOFLUSH);
     return;
 }
 
@@ -49,14 +50,14 @@ void signalHandler(int sig) {
    	// https://github.com/freebsd/freebsd/blob/master/sys/sys/ttydefaults.h
    	// https://opensource.apple.com/source/xnu/xnu-344.49/bsd/sys/ttydefaults.h.auto.html
    	// https://github.com/freebsd/freebsd/blob/master/bin/stty/key.c#L258
-	ttyopts.c_iflag |= TTYDEF_IFLAG; // input
+	ttyopts.c_iflag |= TTYDEF_IFLAG; // input modes
 	//ttyopts.c_iflag |= (BRKINT | ICRNL | IMAXBEL);
-	ttyopts.c_oflag |= TTYDEF_OFLAG; // output
-	//ttyopts.c_lflag |= TTYDEF_LFLAG; // local
-	ttyopts.c_lflag = TTYDEF_LFLAG | (ECHOKE|ECHOE|ECHOK|ECHOPRT|ECHOCTL|ALTWERASE|TOSTOP|NOFLSH);
-	ttyopts.c_cflag |= TTYDEF_CFLAG; // control
+	ttyopts.c_oflag |= TTYDEF_OFLAG; // output modes
+	ttyopts.c_lflag = TTYDEF_LFLAG | (ECHOKE|ECHOE|ECHOK|ECHOPRT|ECHOCTL|ALTWERASE|TOSTOP|NOFLSH); // local modes
+	ttyopts.c_cflag |= TTYDEF_CFLAG; // control modes
     tcsetattr(1, TCSANOW, &ttyopts); // TCSADRAIN, TCSAFLUSH
     // el_set(el, EL_SETTY, "-d", "-isig", NULL);
+    tcflush(1, TCIOFLUSH);
     signal(sig, SIG_DFL); // uninstall sighandler
     return;
 }
@@ -69,7 +70,10 @@ HistEvent _ev;
 
 - (instancetype) initWithArgv0:(const char*)argv0 prompt:(NSString *)prompt {
     if (self = [super init]) {
-    	tcgetattr(1, &ttyopts); // backup original terminal settings in case we crash
+        tcgetattr(1, &ttyopts); // backup original terminal settings in case we crash
+        ttyopts.c_lflag &= ~ISIG; // pass control seqs to app instead of signalling
+        tcsetattr(1, TCSANOW, &ttyopts);
+
         historypath = [[NSTemporaryDirectory() stringByAppendingString:@".REPL_history"] UTF8String];
         el_prompt = [[NSString stringWithFormat:@"<%s> %@", argv0, prompt] UTF8String];
         // Setup the editor
@@ -106,6 +110,7 @@ HistEvent _ev;
         _hist = NULL;
     }
     el_reset(_el); // make tty sane
+    tcflush(1, TCIOFLUSH);
     if (_el != NULL) {
         el_end(_el);
         _el = NULL;
