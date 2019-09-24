@@ -14,12 +14,7 @@ import JavaScriptCore // https://github.com/WebKit/webkit/tree/master/Source/Jav
 // https://raw.githubusercontent.com/WebKit/webkit/master/Source/JavaScriptCore/ChangeLog
 // https://developer.apple.com/videos/play/wwdc2013/615/
 import WebKitPrivates
-
-//import XMLHTTPRequest // https://github.com/Lukas-Stuehrk/XMLHTTPRequest
-//  but fetch tho
-
 import UserNotificationPrivates
-//import SSKeychain // https://github.com/soffes/sskeychain
 
 func getResourceURL(_ urlstr: String, function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) -> URL? {
 	guard let fileURL = Bundle.main.url(forResource: urlstr, withExtension: nil) ??
@@ -698,9 +693,6 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		JSRemoteInspectorSetLogToSystemConsole(false)
 
 		exports = JSValue(newObjectIn: context)
-		//XMLHttpRequest().extend(context) // allows `new XMLHTTPRequest` for doing xHr's
-		//FIXME: extend Fetch API instead: https://facebook.github.io/react-native/docs/network.html
-		//JSFetch.provideToContext(context: self.context!, hostURL: "")
 
 		super.init() // all undef'd props assigned, now we can be an NSObject
 		context.name = "\(self.name) \(self.description)"
