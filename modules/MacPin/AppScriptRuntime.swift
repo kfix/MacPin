@@ -1075,6 +1075,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 
 	func REPL() -> DispatchWorkItem? {
+#if os(OSX)
+		ProcessInfo.processInfo.disableSuddenTermination() // ensure closed window won't kill this prompter if still active
+#endif
 		var stderr = FileHandle.standardError
 		// ^ stderr is unbuffered and is where warn() prints too
 
@@ -1117,10 +1120,10 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			abort: { () -> (()->Void)? in
 				// EOF'd by Ctrl-D
 #if os(OSX)
+				ProcessInfo.processInfo.enableSuddenTermination() // FIXME debug race condition with below NSApp.reply
+				NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
 				return {
 					warn("got EOF from stdin, stopping app")
-					ProcessInfo.processInfo.enableSuddenTermination() // FIXME debug race condition with below NSApp.reply
-					NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
 					NSApplication.shared.terminate(self)
 				}
 #endif
