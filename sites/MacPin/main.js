@@ -306,6 +306,11 @@ if (!('printToREPL' in app.eventCallbacks)) {
 	app.on('printToREPL', repl);
 }
 
+app.on('AppShouldTerminate', (app) => {
+	console.log("main.js shutting down!");
+	docTab = null;
+	gitTab = null;
+}
 
 // https://www.lucidchart.com/techblog/2018/02/14/javascriptcore-the-holy-grail-of-cross-platform/
 //app.loadAppScript('fetchDeps.js`);

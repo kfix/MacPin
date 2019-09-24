@@ -18,10 +18,6 @@ import WebKitPrivates
 //import XMLHTTPRequest // https://github.com/Lukas-Stuehrk/XMLHTTPRequest
 //  but fetch tho
 
-#if arch(x86_64) || arch(i386)
-import Prompt // https://github.com/neilpa/swift-libedit
-#endif
-
 import UserNotificationPrivates
 //import SSKeychain // https://github.com/soffes/sskeychain
 
@@ -1086,15 +1082,11 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 
-	func REPL() {
-#if os(OSX)
-		//NSProcessInfo.processInfo().disableSuddenTermination()
-		//NSProcessInfo.processInfo().disableAutomaticTermination("REPL")
-#endif
+	func REPL() -> DispatchWorkItem? {
 		var stderr = FileHandle.standardError
 		// ^ stderr is unbuffered and is where warn() prints too
 
-		termiosREPL(
+		return termiosREPL(
 			{ [unowned self] (line: String) -> Void in
 				let val = self.context.evaluateScript(line)
 				if self.context.exception != nil {
@@ -1130,17 +1122,17 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			},
 			ps1: #file,
 			ps2: #function,
-			abort: { () -> Void in
+			abort: { () -> (()->Void)? in
 				// EOF'd by Ctrl-D
 #if os(OSX)
-				warn("got EOF from stdin, stopping app")
-				//NSProcessInfo.processInfo().enableAutomaticTermination("REPL")
-				ProcessInfo.processInfo.enableSuddenTermination()
-				NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
-				// FIXME: make sure prompter is deinit'd
-				prompter = nil
-				NSApplication.shared.terminate(self)
+				return {
+					warn("got EOF from stdin, stopping app")
+					ProcessInfo.processInfo.enableSuddenTermination() // FIXME debug race condition with below NSApp.reply
+					NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
+					NSApplication.shared.terminate(self)
+				}
 #endif
+				return nil
 			}
 		)
 	}

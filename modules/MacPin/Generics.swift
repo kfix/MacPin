@@ -15,10 +15,8 @@ import UIKit
 #endif
 
 #if arch(x86_64) || arch(i386)
-import Async // https://github.com/duemunk/Async
 import Prompt // https://github.com/neilpa/swift-libedit
 // https://github.com/onevcat/Rainbow
-var prompter: Async? = nil
 #endif
 
 var startTime = Date()
@@ -311,11 +309,11 @@ func searchForKeywords(_ str: String) -> URL? {
 }
 
 // TODO: exposing a websocketREPL would also be neat: https://github.com/siuying/IGJavaScriptConsole https://github.com/zwopple/PocketSocket
-func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2: StaticString = #function, abort:(()->Void)? = nil) {
+func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2: StaticString = #function, abort:(()->(()->Void)?)? = nil) -> DispatchWorkItem? {
 #if arch(x86_64) || arch(i386)
-	prompter = Async.background {
-	//prompter = DispatchQueue(label: "prompter").global(qos: .background).async(execute: {
-		let prompt = Prompt(argv0: CommandLine.unsafeArgv[0], prompt: "% ")
+	var final: (()->Void)? = nil
+	let prompter = DispatchWorkItem {
+		var prompt = Prompt(argv0: CommandLine.unsafeArgv[0], prompt: "% ")
 		while (true) {
 		    if let line = prompt?.gets() { // R: blocks here until Enter pressed
 				if !line.hasPrefix("\n") {
@@ -329,19 +327,21 @@ func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2:
 					//println() //newline
 				}
 		    } else { // stdin closed or EOF'd
-				if let abort = abort { abort() }
+				if let abort = abort { final = abort(); break }
 				else { print("\(ps1): got EOF from stdin, stopping \(ps2)") }
 				break
 			}
 			// L: command dispatched, restart loop
 		}
-		// prompt loop killed, dealloc'd?
-		NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
-		//warn("restarting REPL!")
-		//termiosREPL(eval, ps1: ps1, ps2: ps2, abort: abort) //restart!
+		prompt = nil // deinit to reset TTY
+
+		if final != nil { final!(); } // exec shutdown commands
 	}
+	DispatchQueue.global(qos: .background).async(execute: prompter)
+	return prompter
 #else
 	print("Prompt() not available on this device.")
+	return nil
 #endif
 }
 

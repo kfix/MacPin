@@ -14,6 +14,8 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	let shortcutsMenu = NSMenuItem(title: "Shortcuts", action: nil, keyEquivalent: "")
 	let tabListMenu = NSMenuItem(title: "Tabs", action: nil, keyEquivalent: "")
 
+	var prompter: DispatchWorkItem? = nil
+
 	public override init() {
 		// gotta set these before MacPin()->NSWindow()
 		UserDefaults.standard.register(defaults: [
@@ -304,7 +306,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 							]
 						}
 					}
-					AppScriptRuntime.shared.REPL()
+					prompter = AppScriptRuntime.shared.REPL()
 					// would like to natively implement a simple remote console for webkit-using osx apps, Valence only targets IOS-usbmuxd based stuff.
 					// https://www.webkit.org/blog/1875/announcing-remote-debugging-protocol-v1-0/
 					// https://bugs.webkit.org/show_bug.cgi?id=124613
@@ -314,17 +316,20 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 					// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/inspector/remote/RemoteInspector.mm
 					// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/inspector/remote/RemoteInspectorConstants.h
 					// https://github.com/siuying/IGJavaScriptConsole
+					// [PlayStation] Restructuring Remote Inspector classes to support multiple platform.  https://bugs.webkit.org/show_bug.cgi?id=197030
+					//    webkit/Source/JavaScriptCore/inspector/remote/socket/RemoteInspectorServer.cpp
+					//    webkit/Source/JavaScriptCore/inspector/remote/socket/RemoteInspectorSocketEndpoint.cpp
 				case "-t" where isatty(1) == 1:
 					if idx + 1 >= CommandLine.arguments.count { // no arg after this one
-						browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
+						prompter = browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
 						break
 					}
 
 					if let tabnum = Int(CommandLine.arguments[idx + 1]), browserController.tabs.count >= tabnum { // next argv should be tab number
-						browserController.tabs[tabnum].REPL() // open a JS Console on the requested tab number
+						prompter = browserController.tabs[tabnum].REPL() // open a JS Console on the requested tab number
 						// FIXME skip one more arg
 					} else {
-						browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
+						prompter = browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
 					}
 					// ooh, pretty: https://github.com/Naituw/WBWebViewConsole
 					// https://github.com/Naituw/WBWebViewConsole/blob/master/WBWebViewConsole/Views/WBWebViewConsoleInputView.m
@@ -374,14 +379,16 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		windowController?.close() // kill the window if it still exists
 		windowController?.window = nil
 		windowController = nil // deinit the wc
-		//browserController.close() // kill any zombie tabs -- causes lock-loop?
+		//browserController.close() // kill any zombie tabs 
 		// unfocus app?
 #if arch(x86_64) || arch(i386) // !TARGET_OS_EMBEDDED || TARGET_OS_SIMULATOR
 		if prompter != nil { return .terminateLater } // wait for user to EOF the Prompt
+		// ^ how to tell is active?
 		// This return value is for delegates that need to provide document modal alerts (sheets) in order to decide whether to quit.
 		// Returning this value causes Cocoa to run the run loop in the NSModalPanelRunLoopMode until your app subsequently calls replyToApplicationShouldTerminate: with the value YES or NO
 #endif
-		AppScriptRuntime.shared.emit(.AppShouldTerminate, self) // allow JS to clean up its refs
+		// AppScriptRuntime.shared.emit(.AppShouldTerminate, self) // allow JS to clean up its refs
+		//   ^  seems to hang the shutdown!
 		AppScriptRuntime.shared.resetStates() // then run a GC
 		return .terminateNow
 	}
@@ -391,7 +398,9 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		UserDefaults.standard.synchronize()
 #if arch(x86_64) || arch(i386)
 		if let prompter = prompter {
+			warn("waiting on prompter")
 			prompter.wait()	// let prompter deinit and cleanup the TTY
+			warn("prompter done")
 		}
 #endif
 	}

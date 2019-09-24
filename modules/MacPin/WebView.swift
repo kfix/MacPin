@@ -381,6 +381,12 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		//let dataStore = ( privacy ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default() )._initWithConfiguration(dataStoreConf)
 		//let dataStore = ( privacy ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default() )._init(with: dataStoreConf)
 		//let dataStore = WKWebsiteDataStore()._init(with: dataStoreConf)
+		// https://github.com/WebKit/webkit/commit/d72d2cf58e66f28da8da164d98ebc97e43954524#diff-aa1748d3c633ac19f4eee94f7b2405e1
+			//if (options.useEphemeralSession) {
+			//auto ephemeralDataStore = adoptWK(WKWebsiteDataStoreCreateNonPersistentDataStore());
+			//WKPageConfigurationSetWebsiteDataStore(pageConfiguration.get(), ephemeralDataStore.get());
+		// https://github.com/WebKit/webkit/commit/d72d2cf58e66f28da8da164d98ebc97e43954524#diff-610a6eec5162ec2e1bd37da1d4342bd2
+			//[copiedConfiguration setWebsiteDataStore:[WKWebsiteDataStore nonPersistentDataStore]];
 /*
  extension WKWebsiteDataStore {
 *  @discardableResult @objc func _init(with configuration: _WKWebsiteDataStoreConfiguration) -> Self
@@ -724,9 +730,9 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		configuration.userContentController.add(AppScriptRuntime.shared, name: handler)
 	}
 
-	func REPL() {
+	func REPL() -> DispatchWorkItem? {
 		var stderr = FileHandle.standardError
-		termiosREPL({ (line: String) -> Void in
+		return termiosREPL({ (line: String) -> Void in
 			self.evaluateJavaScript(line, completionHandler:{ (result: Any?, exception: Error?) -> Void in
 				// FIXME: the JS execs async so these print()s don't consistently precede the REPL thread's prompt line
 				if let result = result { Swift.print(result, to: &stderr) }
@@ -745,15 +751,17 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		},
 		ps1: #file,
 		ps2: #function,
-		abort: { () -> Void in
+		abort: { () -> (()->Void)? in
 			// EOF'd by Ctrl-D
-			warn("got EOF from stdin, stopping console")
 			// self.close() // FIXME: self is still retained (by the browser?)
 #if os(OSX)
-			//NSProcessInfo.processInfo().enableAutomaticTermination("REPL")
-			ProcessInfo.processInfo.enableSuddenTermination()
-			NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
+			return {
+				warn("got EOF from stdin, stopping console")
+				ProcessInfo.processInfo.enableSuddenTermination()
+				NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
+			}
 #endif
+			return nil
 		})
 	}
 
