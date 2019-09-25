@@ -27,8 +27,6 @@
 
 #import <WebKit/WKWebViewConfiguration.h>
 
-#if WK_API_ENABLED
-
 #import <WebKitPrivates/WKBase.h>
 
 #if TARGET_OS_IPHONE
@@ -103,5 +101,3 @@ typedef NS_ENUM(NSUInteger, _WKDragLiftDelay) {
 @property (nonatomic, setter=_setAllowMediaContentTypesRequiringHardwareSupportAsFallback:) BOOL _allowMediaContentTypesRequiringHardwareSupportAsFallback WK_API_AVAILABLE(macosx(10.13), ios(11.0));
 
 @end
-
-#endif

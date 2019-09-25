@@ -26,8 +26,6 @@
 
 #import "WKFoundation.h"
 
-#if WK_API_ENABLED
-
 typedef NS_OPTIONS(NSUInteger, _WKRenderingProgressEvents) {
     _WKRenderingProgressEventFirstLayout = 1 << 0,
     _WKRenderingProgressEventFirstVisuallyNonEmptyLayout WK_ENUM_AVAILABLE(10_11, 9_0) = 1 << 1,
@@ -37,5 +35,3 @@ typedef NS_OPTIONS(NSUInteger, _WKRenderingProgressEvents) {
     _WKRenderingProgressEventFirstPaintAfterSuppressedIncrementalRendering WK_ENUM_AVAILABLE(10_11, 9_0) = 1 << 5,
     _WKRenderingProgressEventFirstPaint WK_ENUM_AVAILABLE(10_11, 9_0) = 1 << 6,
 } WK_ENUM_AVAILABLE(10_10, 8_0);
-
-#endif

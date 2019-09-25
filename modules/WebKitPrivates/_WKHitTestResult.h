@@ -26,9 +26,6 @@
  */
 
 #import <WebKit/WKFoundation.h>
-
-#if WK_API_ENABLED && !TARGET_OS_IPHONE
-
 #import <Foundation/Foundation.h>
 
 // https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Concepts/WeakLinking.html#//apple_ref/doc/uid/20002378-106633-CJBGFCAC
@@ -53,5 +50,3 @@ __attribute__((weak_import))
 @property (nonatomic, readonly) CGRect elementBoundingBox;
 
 @end
-
-#endif // WK_API_ENABLED

@@ -27,9 +27,6 @@
  */
 
 #import <WebKit/WKFoundation.h>
-
-#if WK_API_ENABLED
-
 #import <wtf/Forward.h>
 // https://github.com/WebKit/webkit/blob/master/Source/WTF/wtf/Forward.h
 // https://github.com/WebKit/webkit/blob/master/Source/WTF/wtf/text/CString.h
@@ -42,5 +39,3 @@
 - (id)initWithWebView:(WKWebView *)webView frameHandle:(_WKFrameHandle *)frameHandle urlString:(const String&)urlString;
 
 @end
-
-#endif

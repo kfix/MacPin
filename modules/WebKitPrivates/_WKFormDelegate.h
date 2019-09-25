@@ -25,9 +25,6 @@
  */
 
 #import "WKFoundation.h"
-
-#if WK_API_ENABLED
-
 #import "_WKInputDelegate.h"
 
 /**
@@ -36,5 +33,3 @@
  */
 @protocol _WKFormDelegate <_WKInputDelegate>
 @end
-
-#endif // WK_API_ENABLED

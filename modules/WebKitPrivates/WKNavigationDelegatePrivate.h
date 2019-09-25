@@ -31,8 +31,6 @@
 #import "_WKRenderingProgressEvents.h"
 #import "_WKSameDocumentNavigationType.h"
 
-#if WK_API_ENABLED
-
 @class _WKWebsitePolicies;
 
 static const WKNavigationActionPolicy _WKNavigationActionPolicyDownload = (WKNavigationActionPolicy)(WKNavigationActionPolicyAllow + 1);
@@ -75,5 +73,3 @@ static const WKNavigationResponsePolicy _WKNavigationResponsePolicyBecomeDownloa
 #endif
 
 @end
-
-#endif

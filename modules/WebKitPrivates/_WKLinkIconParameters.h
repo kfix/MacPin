@@ -27,8 +27,6 @@
 
 #import <WebKit/WKFoundation.h>
 
-#if WK_API_ENABLED
-
 #import <Foundation/Foundation.h>
 
 typedef NS_ENUM(NSInteger, WKLinkIconType) {
@@ -48,5 +46,3 @@ WK_CLASS_AVAILABLE(macosx(10.12.3), ios(10.3))
 @property (nonatomic, readonly, copy) NSDictionary *attributes WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
 
 @end
-
-#endif

@@ -26,10 +26,6 @@
 
 #import "WKFoundation.h"
 
-#if WK_API_ENABLED
-
 WK_CLASS_AVAILABLE(10_10, 8_0)
 @interface WKBrowsingContextHandle : NSObject <NSSecureCoding>
 @end
-
-#endif

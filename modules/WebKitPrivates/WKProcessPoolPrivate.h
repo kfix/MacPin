@@ -1,8 +1,6 @@
 @import WebKit;
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKProcessPoolPrivate.h
 
-#if WK_API_ENABLED
-
 @class _WKProcessPoolConfiguration;
 @protocol _WKDownloadDelegate;
 
@@ -47,5 +45,3 @@
 @property (nonatomic, getter=_isCookieStoragePartitioningEnabled, setter=_setCookieStoragePartitioningEnabled:) BOOL _cookieStoragePartitioningEnabled WK_API_AVAILABLE(macosx(10.12.3), ios(10.3));
 @property (nonatomic, getter=_isStorageAccessAPIEnabled, setter=_setStorageAccessAPIEnabled:) BOOL _storageAccessAPIEnabled WK_API_AVAILABLE(macosx(10.13.4), ios(11.3));
 @end
-
-#endif

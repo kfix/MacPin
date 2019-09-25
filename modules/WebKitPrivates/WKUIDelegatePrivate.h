@@ -25,9 +25,6 @@
  */
 
 #import <WebKit/WKUIDelegate.h>
-
-#if WK_API_ENABLED
-
 #import <WebKit/WKSecurityOrigin.h>
 #import <WebKitPrivates/_WKActivatedElementInfo.h>
 #import <WebKitPrivates/_WKHitTestResult.h>
@@ -190,5 +187,3 @@ struct UIEdgeInsets;
 #endif // TARGET_OS_IPHONE
 
 @end
-
-#endif // WK_API_ENABLED

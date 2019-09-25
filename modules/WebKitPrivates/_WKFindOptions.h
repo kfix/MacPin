@@ -27,8 +27,6 @@
 
 #import <WebKit/WKFoundation.h>
 
-#if WK_API_ENABLED
-
 typedef NS_OPTIONS(NSUInteger, _WKFindOptions) {
     _WKFindOptionsCaseInsensitive = 1 << 0,
     _WKFindOptionsAtWordStarts = 1 << 1,
@@ -44,5 +42,3 @@ typedef NS_OPTIONS(NSUInteger, _WKFindOptions) {
     _WKFindOptionsIrrelevantForBatchResults = _WKFindOptionsBackwards | _WKFindOptionsWrapAround | _WKFindOptionsIrrelevantForIncrementalResults
 
 } WK_API_AVAILABLE(macosx(10.10), ios(8.0));
-
-#endif

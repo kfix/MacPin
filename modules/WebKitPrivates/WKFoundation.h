@@ -30,14 +30,6 @@
 // /usr/include/Availability.h
 #import <TargetConditionals.h>
 
-#if !defined(WK_API_ENABLED)
-#if TARGET_OS_IPHONE
-#define WK_API_ENABLED 1
-#else
-#define WK_API_ENABLED (defined(__clang__) && defined(__APPLE__) && !defined(__i386__))
-#endif
-#endif
-
 #ifdef __cplusplus
 #define WK_EXTERN extern "C" __attribute__((visibility ("default")))
 #else

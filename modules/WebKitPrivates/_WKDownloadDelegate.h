@@ -25,8 +25,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if WK_API_ENABLED
-
 #import <Foundation/Foundation.h>
 
 @class _WKDownload;
@@ -41,5 +39,3 @@
 - (void)_download:(_WKDownload *)download didFailWithError:(NSError *)error;
 - (void)_downloadDidCancel:(_WKDownload *)download;
 @end
-
-#endif

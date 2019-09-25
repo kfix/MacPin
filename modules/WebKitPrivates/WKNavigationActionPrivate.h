@@ -25,8 +25,6 @@
 
 #import <WebKit/WKNavigationAction.h>
 
-#if WK_API_ENABLED
-
 //@class _WKUserInitiatedAction;
 
 #if TARGET_OS_IPHONE
@@ -57,5 +55,3 @@ typedef NS_ENUM(NSInteger, WKSyntheticClickType) {
 @property (nonatomic, readonly) BOOL _isRedirect WK_API_AVAILABLE(macosx(10.13), ios(11.0));
 
 @end
-
-#endif

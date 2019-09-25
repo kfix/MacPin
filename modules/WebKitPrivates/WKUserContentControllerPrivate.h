@@ -27,8 +27,6 @@
 
 #import <WebKit/WKUserContentController.h>
 
-#if WK_API_ENABLED
-
 @class WKUserScript;
 @class _WKUserContentFilter;
 @class _WKUserContentWorld;
@@ -56,5 +54,3 @@
 - (void)_removeAllScriptMessageHandlersAssociatedWithUserContentWorld:(_WKUserContentWorld *)userContentWorld;
 
 @end
-
-#endif

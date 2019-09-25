@@ -26,8 +26,6 @@
 
 #import <WebKit/WKFoundation.h>
 
-#if WK_API_ENABLED
-
 #import <Foundation/Foundation.h>
 
 typedef NS_ENUM(NSInteger, _WKDiagnosticLoggingResultType) {
@@ -44,6 +42,3 @@ typedef NS_ENUM(NSInteger, _WKDiagnosticLoggingResultType) {
 - (void)_webView:(WKWebView *)webView logDiagnosticMessageWithValue:(NSString *)message description:(NSString *)description value:(NSString *) value;
 
 @end
-
-#endif // WK_API_ENABLED
-

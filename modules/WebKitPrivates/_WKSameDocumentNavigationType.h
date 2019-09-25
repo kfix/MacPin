@@ -25,13 +25,9 @@
 
 #import "WKFoundation.h"
 
-#if WK_API_ENABLED
-
 typedef NS_ENUM(NSInteger, _WKSameDocumentNavigationType) {
     _WKSameDocumentNavigationTypeAnchorNavigation,
     _WKSameDocumentNavigationTypeSessionStatePush,
     _WKSameDocumentNavigationTypeSessionStateReplace,
     _WKSameDocumentNavigationTypeSessionStatePop,
 } WK2_AVAILABLE(10_10, 8_0);
-
-#endif

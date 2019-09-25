@@ -24,9 +24,6 @@
  */
 
 #import <WebKit/WKFoundation.h>
-
-#if WK_API_ENABLED
-
 #import <Foundation/Foundation.h>
 
 @class WKWebView;
@@ -48,5 +45,3 @@
 #endif
 
 @end
-
-#endif // WK_API_ENABLED

@@ -26,8 +26,6 @@
 
 #import <WebKit/WKFoundation.h>
 
-#if WK_API_ENABLED
-
 #if TARGET_OS_IPHONE
 @class UIImage;
 #else
@@ -54,5 +52,3 @@ WK_CLASS_AVAILABLE(10_10, 8_0)
 #endif
 
 @end
-
-#endif // WK_API_ENABLED
