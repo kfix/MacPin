@@ -219,7 +219,7 @@ $(outdir)/exec/%.dSYM $(outdir)/lexec/%.dSYM: $(outdir)/exec/%
 	dsymutil $< 2>/dev/null
 
 $(outdir)/lexec/%: modules/%/_$(platform)/main.swift | $(outdir)/lexec
-	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
+	$(swiftc) $(debug) $(frameworks) $(os_frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-Xlinker -rpath -Xlinker /usr/lib/swift \
 		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
 		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
@@ -233,7 +233,7 @@ $(outdir)/lexec/%: modules/%/_$(platform)/main.swift | $(outdir)/lexec
 
 # this is for standalone utility/helper programs, use module/main.swift for Application starters
 $(outdir)/exec/%: execs/_$(platform)/%.swift | $(outdir)/exec
-	$(swiftc) $(debug) $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
+	$(swiftc) $(debug) $(frameworks) $(os_frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-Xlinker -rpath -Xlinker /usr/lib/swift \
 		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
 		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
@@ -248,10 +248,10 @@ $(outdir)/Symbols/%.symbol: $(outdir)/exec/%
 	xcrun -sdk $(sdk) symbols -noTextInSOD -noDaemon -arch all -symbolsPackageDir $(outdir)/Symbols $^
 
 $(outdir)/obj/lib%.dylib $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc: modules/%/*.swift modules/%/_$(platform)/*.swift | $(outdir)/obj
-	$(swiftc) $(debug) -v $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) \
+	$(swiftc) $(debug) -v $(frameworks) $(os_frameworks) $(incdirs) $(libdirs) $(linklibs) \
 		-parse-as-library \
 		-whole-module-optimization \
-		-Xlinker -install_name -Xlinker @rpath/lib$*.dylib \
+		-Xlinker -install_name -Xlinker @rpath/lib$*.dylib -Xlinker -v \
  		-emit-module -module-name $* -emit-module-path $(outdir)/$*.swiftmodule \
 		-emit-library -o $@ \
 		$(filter-out %/main.swift,$(filter %.swift,$^)) $(extrainputs)

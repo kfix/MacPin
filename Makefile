@@ -5,10 +5,13 @@ builddir			?= build
 
 VERSION				:= 2019.9.0
 
-# 1 == use STP.app's WebKit if its present at runtime
+# 1 == link against STP.app's WebKit if its present
 STP 				?= 1
 # https://github.com/Homebrew/homebrew-cask-versions/commits/master/Casks/safari-technology-preview.rb
 # https://webkit.org/build-archives/
+
+# 1 == link against Safari.app's WebKit if its present
+SF					?= 1
 
 SWFTFLAGS			?= -suppress-warnings
 SWCCFLAGS			?= -Wno-unreachable-code
@@ -48,7 +51,6 @@ $(info )
 $(info [$(mk)])
 $(info )
 
-# print webkit.framework version?
 
 appdir				:= $(outdir)/apps
 
@@ -68,7 +70,6 @@ else
 icontypes			+= appiconset
 endif
 
-
 # http://www.objc.io/issue-17/inside-code-signing.html
 # https://developer.apple.com/library/mac/documentation/Security/Conceptual/CodeSigningGuide/Procedures/Procedures.html#//apple_ref/doc/uid/TP40005929-CH4-SW13
 # https://developer.apple.com/library/mac/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919-CH1-TNTAG20
@@ -84,6 +85,40 @@ appsig_ios			:= iPhone Developer
 mobileprov_team_id	?=
 # https://developer.apple.com/account/#/membership/ "Team ID"
 
+ifeq ($(SF),1)
+ifeq ($(target_ver_macos),10.13)
+sfframes				:= /System/Library/StagedFrameworks/Safari
+endif
+ifneq ($(sfframes),)
+rpath					:= $(sfframes)
+webkitdir				:= $(sfframes)/WebKit.framework
+jsclib					:= $(outdir)/obj/libJavaScriptCorePrivates.dylib
+jscdir					?= $(sfframes)/JavaScriptCore.framework
+env += DYLD_VERSIONED_FRAMEWORK_PATH="$(sfframes)"
+$(jsclib):
+	mkdir -p $(dir $@)
+ifneq ($(sfframes),)
+	ln -sfv $(jscdir)/JavaScriptCore $@
+endif
+endif
+endif
+
+ifeq ($(STP),1)
+ifeq ($(target_ver_macos),10.15)
+stpdir					:= /Applications/Safari\ Technology\ Preview.app
+stpframes				:= $(wildcard $(stpdir)/Contents/Frameworks)
+ifneq ($(stpframes),)
+webkitdir				:= $(stpframes)/WebKit.framework
+safaridir				:= $(wildcard $(stpdir))
+
+# FIXME: only release builds should have STP burned into the RPATH
+#rpath					+= :$(stpframes)
+
+# man dyld
+env += DYLD_VERSIONED_FRAMEWORK_PATH="$(stpframes)"
+endif
+endif
+endif
 
 ifeq (,$(filter $(arch),$(archs_macosx)))
 # only intel platforms have libedit so only those execs can have terminal CLIs
@@ -100,15 +135,16 @@ endif
 #jumbolib := $(firstword $(filter %/lib$(macpin).dylib, $(dynamics)))
 jumbolib := $(outdir)/Frameworks/$(macpin).framework
 # need SharedFramework https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Tasks/InstallingFrameworks.html
-jumbodeps := $(filter-out %/lib$(macpin).a, $(statics))
-$(jumbolib): linklibs := $(patsubst lib%.a,-l%, $(notdir $(jumbodeps)))
+jumbodeps := $(filter-out %/lib$(macpin).a, $(statics)) $(jumbodeps)
+$(jumbolib): linklibs := $(patsubst lib%.a,-l%, $(notdir $(jumbodeps))) $(patsubst lib%.dylib,-l%, $(notdir $(jsclib)))
 #jumbodeps := $(filter-out %/$(macpin).o, $(objs))
 #$(jumbolib): linklibs := $(patsubst %, -Xlinker -l%, $(notdir $(jumbodeps)))
 #$(jumbolib): extrainputs := $(jumbodeps)
 jumbody := $(firstword $(filter %/lib$(macpin).dylib, $(dynamics)))
-$(jumbody): $(jumbodeps)
+$(jumbody): $(jumbodeps) $(jsclib)
 $(jumbolib): $(jumbody)
 $(lexecs): $(jumbolib)
+
 #$(lexecs): linklibs := -l$(macpin)
 $(info Jumbo-execs: $(lexecs))
 $(info Jumbo-deps: $(jumbodeps))
@@ -129,22 +165,6 @@ doc test apirepl tabrepl test.app test.ios dbg dbg.app stp stp.app test_% $(appn
 #-D WK2LOG
 
 # older OSX/macOS with backported Safari.app have vendored WK/JSC frameworks
-rpath					:= /System/Library/StagedFrameworks/Safari
-
-ifeq ($(STP),1)
-stpdir					:= /Applications/Safari\ Technology\ Preview.app
-stpframes				:= $(wildcard $(stpdir)/Contents/Frameworks)
-ifneq ($(stpframes),)
-webkitdir				:= $(stpframes)/WebKit.framework
-safaridir				:= $(wildcard $(stpdir))
-
-# FIXME: only release builds should have STP burned into the RPATH
-#rpath					+= :$(stpframes)
-
-# man dyld
-env += DYLD_VERSIONED_FRAMEWORK_PATH="$(stpframes)"
-endif
-endif
 env += DYLD_PRINT_LIBRARIES=1
 
 linkopts_exec 			:= -Xlinker -dyld_env -Xlinker DYLD_VERSIONED_FRAMEWORK_PATH="$(rpath)"
@@ -505,6 +525,10 @@ upload:
 	@echo You need to export \$$GITHUB_ACCESS_TOKEN to make an upload!
 	@exit 1
 endif
+
+sf_symbols:
+	symbols "$(sfframesdir)/WebKit.framework/WebKit" | less
+	symbols "$(sfframesdir)/JavaScriptCore.framework/JavaScriptCore" | less
 
 wk_symbols:
 	symbols "$(webkitdir)/Versions/A/WebKit" | less
