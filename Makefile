@@ -147,7 +147,7 @@ endif
 endif
 env += DYLD_PRINT_LIBRARIES=1
 
-linkopts_main 			:= -Wl,-dyld_env,DYLD_VERSIONED_FRAMEWORK_PATH="$(rpath)"
+linkopts_exec 			:= -Xlinker -dyld_env -Xlinker DYLD_VERSIONED_FRAMEWORK_PATH="$(rpath)"
 
 webkitdir				?= /System/Library/Frameworks/WebKit.framework
 jscdir					?= /System/Library/Frameworks/JavaScriptCore.framework
