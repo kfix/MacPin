@@ -1120,11 +1120,19 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			abort: { () -> (()->Void)? in
 				// EOF'd by Ctrl-D
 #if os(OSX)
-				ProcessInfo.processInfo.enableSuddenTermination() // FIXME debug race condition with below NSApp.reply
-				NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a terminate()
+				ProcessInfo.processInfo.enableSuddenTermination()
 				return {
+					// this final closure is run by the invoker (termiosREPL) right after it tears down the prompter/TTY
 					warn("got EOF from stdin, stopping app")
+
 					NSApplication.shared.terminate(self)
+
+					//DispatchQueue.main.asyncAfter(deadline: .now()) { exit(0); } // works but prevents delegate from saving states
+
+					DispatchQueue.main.asyncAfter(deadline: .now() + 1, qos: .userInteractive, flags: .enforceQoS) {
+						// FIXME: race condition between NSApp.reply & appDel:applicationShouldTerminate requires the +1 sleep
+						NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a pre-existing terminate()
+					}
 				}
 #endif
 				return nil

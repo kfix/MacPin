@@ -14,7 +14,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	let shortcutsMenu = NSMenuItem(title: "Shortcuts", action: nil, keyEquivalent: "")
 	let tabListMenu = NSMenuItem(title: "Tabs", action: nil, keyEquivalent: "")
 
-	var prompter: DispatchWorkItem? = nil
+	var prompter: DispatchWorkItem? = nil // aka, a "threaded job"
 
 	public override init() {
 		// gotta set these before MacPin()->NSWindow()
@@ -307,6 +307,8 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 						}
 					}
 					prompter = AppScriptRuntime.shared.REPL()
+
+				// case "-s" where isatty(1) == 1:
 					// would like to natively implement a simple remote console for webkit-using osx apps, Valence only targets IOS-usbmuxd based stuff.
 					// https://www.webkit.org/blog/1875/announcing-remote-debugging-protocol-v1-0/
 					// https://bugs.webkit.org/show_bug.cgi?id=124613
@@ -319,6 +321,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 					// [PlayStation] Restructuring Remote Inspector classes to support multiple platform.  https://bugs.webkit.org/show_bug.cgi?id=197030
 					//    webkit/Source/JavaScriptCore/inspector/remote/socket/RemoteInspectorServer.cpp
 					//    webkit/Source/JavaScriptCore/inspector/remote/socket/RemoteInspectorSocketEndpoint.cpp
+
 				case "-t" where isatty(1) == 1:
 					if idx + 1 >= CommandLine.arguments.count { // no arg after this one
 						prompter = browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
@@ -383,7 +386,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		// unfocus app?
 #if arch(x86_64) || arch(i386) // !TARGET_OS_EMBEDDED || TARGET_OS_SIMULATOR
 		if prompter != nil { return .terminateLater } // wait for user to EOF the Prompt
-		// ^ how to tell is active?
+		// ^ how to tell if REPL hasn't EOF'd yet?
 		// This return value is for delegates that need to provide document modal alerts (sheets) in order to decide whether to quit.
 		// Returning this value causes Cocoa to run the run loop in the NSModalPanelRunLoopMode until your app subsequently calls replyToApplicationShouldTerminate: with the value YES or NO
 #endif
