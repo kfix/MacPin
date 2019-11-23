@@ -26,6 +26,7 @@ let JavaScriptCore_version: (major: Int, minor: Int, tiny: Int) = {
 let Safari_version: String = { v in switch true {
 	case v>=(609, 1, 4):	return "13.1"	// STP92
 	case v>=(609, 1, 3):	return "13.1"	// STP91
+	case v>=(608, 3, 10):	return "13.0"	// S13 for osx10.14.5
 	case v>=(608, 1, 33):	return "13.0"	// STP87
 	case v>=(608, 1, 16):	return "12.2"	// STP80
 	case v>=(607, 2, 6):	return "12.1.1"	// osx10.14.5
