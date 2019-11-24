@@ -19,7 +19,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	var description: String { return "\(type(of: self)).\(self.rawValue)" }
 
 	/* legacy MacPin event names */
-	case url, agent, agentApp, icon, // String
+	case url, agent, agentApp, icon, proxy, sproxy, // String
 	transparent, isolated, privacy = "private", allowsMagnification, allowsRecording, // Bool
 	preinject, postinject, style, subscribeTo, // [String]
 	handlers // {} ~> [String: [JSValue]]
@@ -31,7 +31,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 			if object.hasProperty(prop.rawValue) {
 				guard let jsval = object.forProperty(prop.rawValue) else { warn("no value for \(prop)!"); continue }
 				switch prop {
-					case .url, .agent, .agentApp, .icon where jsval.isString:
+					case .url, .agent, .agentApp, .icon, .proxy, .sproxy where jsval.isString:
 						props[prop] = jsval.toString()
 					case .transparent, .isolated, .privacy, .allowsMagnification, .allowsRecording where jsval.isBoolean:
 						props[prop] = jsval.toBool()
@@ -300,7 +300,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 
 	let favicon: FavIcon = FavIcon()
 
-	@objc convenience init(config: WKWebViewConfiguration?, agent: String?, isolated: Bool, privacy: Bool, transparent: Bool) {
+	@objc convenience init(config: WKWebViewConfiguration?, agent: String?, proxy: String?, sproxy: String?, isolated: Bool, privacy: Bool, transparent: Bool) {
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
 		let configuration = config ?? WKWebViewConfiguration()
 		if config == nil {
@@ -365,34 +365,21 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
 
-		//let dataStoreConf = privacy ? _WKWebsiteDataStoreConfiguration(nonPersistentConfiguration: ()) : _WKWebsiteDataStoreConfiguration()
-		//let dataStoreConf = _WKWebsiteDataStoreConfiguration()
+		var dataStore = privacy ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default()
 
-		/*
-		if proxy {
-			dataStoreConf.httpProxy = proxy
-			// TODO: use https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKitCocoa/Proxy.mm API
-			//    https://github.com/WebKit/webkit/commit/7bdeec136717857a3b650836ff1d461015f3f0f7#diff-84daab162379443d4398aaae7e4d1a04
-			//    https://github.com/WebKit/webkit/commit/55fe463db0c6f37be5fcfeb63aa76510a230f865#diff-5672501199d56b84b3a69bd2c04814f9
+		if #available(macOS 10.14.4, iOS 12.2, *) {
+			let dataStoreConf = privacy ? _WKWebsiteDataStoreConfiguration(nonPersistentConfiguration: ()) : _WKWebsiteDataStoreConfiguration()
+
+			if let proxy = proxy, !proxy.isEmpty, let proxyURL = URL(string: proxy) {
+				dataStoreConf.httpProxy = proxyURL
+				warn("HTTP proxy: \(dataStoreConf.httpProxy)")
+			}
+			if let sproxy = sproxy, !sproxy.isEmpty, let sproxyURL = URL(string: sproxy) {
+				dataStoreConf.httpsProxy = sproxyURL
+				warn("HTTPS proxy: \(dataStoreConf.httpsProxy)")
+			}
+			dataStore = dataStore._init(with: dataStoreConf)
 		}
-		*/
-
-		let dataStore = privacy ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default()
-		//let dataStore = ( privacy ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default() )._initWithConfiguration(dataStoreConf)
-		//let dataStore = ( privacy ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default() )._init(with: dataStoreConf)
-		//let dataStore = WKWebsiteDataStore()._init(with: dataStoreConf)
-		// https://github.com/WebKit/webkit/commit/d72d2cf58e66f28da8da164d98ebc97e43954524#diff-aa1748d3c633ac19f4eee94f7b2405e1
-			//if (options.useEphemeralSession) {
-			//auto ephemeralDataStore = adoptWK(WKWebsiteDataStoreCreateNonPersistentDataStore());
-			//WKPageConfigurationSetWebsiteDataStore(pageConfiguration.get(), ephemeralDataStore.get());
-		// https://github.com/WebKit/webkit/commit/d72d2cf58e66f28da8da164d98ebc97e43954524#diff-610a6eec5162ec2e1bd37da1d4342bd2
-			//[copiedConfiguration setWebsiteDataStore:[WKWebsiteDataStore nonPersistentDataStore]];
-/*
- extension WKWebsiteDataStore {
-*  @discardableResult @objc func _init(with configuration: _WKWebsiteDataStoreConfiguration) -> Self
-*  @available(swift, obsoleted: 3, renamed: "_init(with:)") @objc func _initWithConfiguration(_ configuration: _WKWebsiteDataStoreConfiguration) -> Self
- }
-*/
 
 		//if #available(OSX 10.11, iOS 9, *) {
 		if WebKit_version >= (601, 1, 30) {
@@ -462,22 +449,19 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		}
 	}
 
-	@nonobjc convenience required init(config: WKWebViewConfiguration?, agent: String?, isolated: Bool?, privacy: Bool?, transparent: Bool?) {
-		self.init(config: config, agent: agent, isolated: isolated ?? false, privacy: privacy ?? false, transparent: transparent ?? false)
+	@nonobjc convenience required init(config: WKWebViewConfiguration?, agent: String?, proxy: String?, sproxy: String?, isolated: Bool?, privacy: Bool?, transparent: Bool?) {
+		self.init(config: config, agent: agent, proxy: proxy, sproxy: sproxy, isolated: isolated ?? false, privacy: privacy ?? false, transparent: transparent ?? false)
 	}
 
 	@objc convenience required init?(options: [AnyHashable: Any]) {
 	// does objc support failable inits?
 
-		// isolated must be set during init before all other props
-		if let isolated = options[WebViewInitProps.isolated] as? Bool {
-		    self.init(config: nil, agent: nil, isolated: isolated, privacy: false, transparent: false)
-		} else if let privacy = options[WebViewInitProps.privacy] as? Bool {
-			// a private tab would imply isolation, not sweating lack of isolated+private corner case
-		    self.init(config: nil, agent: nil, isolated: false, privacy: privacy, transparent: false)
-		} else {
-			self.init(config: nil)
-		}
+		// some props must be set during init before all other props
+		let isolated = options[WebViewInitProps.isolated] as? Bool ?? false
+		let privacy = options[WebViewInitProps.privacy] as? Bool ?? false
+		let proxy = options[WebViewInitProps.proxy] as? String ?? ""
+		let sproxy = options[WebViewInitProps.sproxy] as? String ?? ""
+		self.init(config: nil, agent: nil, proxy: proxy, sproxy: sproxy, isolated: isolated, privacy: privacy, transparent: false)
 
 		var url: URL? = nil
 
@@ -508,6 +492,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 				//case let value as [String] where key == .handlers: for handler in value { addHandler(handler) } //FIXME kill delegate.`handlerStr` indirect-str-refs
 				case let value as [String: [JSValue]] where prop == .handlers: addHandlers(value)
 				case let value as [String] where prop == .subscribeTo: for handler in value { subscribeTo(handler) }
+				case _ where prop == .isolated || prop == .privacy || prop == .proxy || prop == .sproxy: break // already handled
 				default: warn("unhandled param: `<\(type(of: key))>\(key): <\(type(of: value))>\(value)`")
 			}
 		}
@@ -516,7 +501,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	}
 
 	@objc convenience required init(config: WKWebViewConfiguration?) {
-		self.init(config: config, agent: nil, isolated: false, privacy: false, transparent: false)
+		self.init(config: config, agent: nil, proxy: nil, sproxy: nil, isolated: false, privacy: false, transparent: false)
 	}
 
 	@objc convenience required init(url: URL) {
@@ -526,7 +511,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	}
 
 	convenience required init(config: WKWebViewConfiguration?, agent: String?) {
-		self.init(config: config, agent: agent, isolated: false, privacy: false, transparent: false)
+		self.init(config: config, agent: agent, proxy: nil, sproxy: nil, isolated: false, privacy: false, transparent: false)
 	}
 
 	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = false) {
@@ -534,7 +519,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	}
 
 	convenience required init(url: URL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = false) {
-		self.init(config: nil, agent: agent, isolated: isolated, privacy: privacy, transparent: transparent)
+		self.init(config: nil, agent: agent, proxy: nil, sproxy: nil, isolated: isolated, privacy: privacy, transparent: transparent)
 		warn("navigating to \(url)")
 		gotoURL(url)
 	}

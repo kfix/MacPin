@@ -15,7 +15,7 @@ let injectTab = require('app_injectTab.js');
 let enDarken = require('enDarken.js');
 
 var docTab = new WebView("file:///usr/share/doc/cups/index.html");
-var gitTab = new WebView({url: 'http://github.com/kfix/MacPin'});
+var gitTab = new WebView({url: 'https://github.com/kfix/MacPin'});
 //var gooTab = new WebView({url: "http://google.com"})
 
 let browser = new BrowserWindow();
@@ -129,6 +129,10 @@ app.on('decideNavigationForMIME', (mime, url, webview) => {
 	return false;
 });
 
+let proxiedTab = function(proxy, sproxy, currentTab) {
+	browser.tabSelected = new WebView({proxy: proxy, sproxy: sproxy});
+};
+
 let setAgent = function(agent, tab) { tab.userAgent = agent; };
 let getAgent = function(tab) { tab.evalJS(`window.alert(navigator.userAgent);`); };
 let img2data = function(tab) {
@@ -219,6 +223,9 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	//browser.unhideApp();
 	browser.addShortcut('Paint It Black', [], enDarken);
 	browser.addShortcut('Make it Readable', [], readability);
+
+	browser.addShortcut('localhost:8080 proxied tab', ["http://localhost:8080", "http://localhost:8080"], proxiedTab);
+	// cask install squidman
 
 	browser.addShortcut('MacPin @ GitHub', 'http://github.com/kfix/MacPin');
 	browser.addShortcut('WebKit Feature Status', 'https://webkit.org/status/');

@@ -39,7 +39,8 @@ typedef NS_OPTIONS(NSUInteger, _WKWebsiteDataStoreFetchOptions) {
 } WK_API_AVAILABLE(macos(10.12), ios(10.0));
 
 @interface WKWebsiteDataStore ()
-- (instancetype)_initWithConfiguration:(_WKWebsiteDataStoreConfiguration *)configuration __attribute__((objc_method_family(init))) WK_DESIGNATED_INITIALIZER; // WK_API_AVAILABLE(macos(10.13), ios(11.0));
+//- (instancetype)init NS_UNAVAILABLE;
+- (instancetype)_initWithConfiguration:(_WKWebsiteDataStoreConfiguration *)configuration __attribute__((objc_method_family(init))) WK_DESIGNATED_INITIALIZER WK_API_AVAILABLE(macos(10.13), ios(11.0));
 @end
 
 @interface WKWebsiteDataStore (WKPrivate)
