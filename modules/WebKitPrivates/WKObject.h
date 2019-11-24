@@ -1,5 +1,6 @@
 /*
- * https://github.com/WebKit/webkit/blob/67985c34ffc405f69995e8a35f9c38618625c403/Source/WebKit2/Shared/Cocoa/WKObject.h
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/Cocoa/WKObject.h
+ *
  * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +25,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "WKFoundation.h"
+#import <WebKit/WKFoundation.h>
 
 #ifdef __cplusplus
 #import <type_traits>

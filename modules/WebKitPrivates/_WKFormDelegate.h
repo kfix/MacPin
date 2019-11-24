@@ -1,5 +1,4 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKFormDelegate.h
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,12 +23,14 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "WKFoundation.h"
+#import <WebKit/WKFoundation.h>
 #import "_WKInputDelegate.h"
 
 /**
  * We are transitioning _WKFormDelegate to _WKInputDelegate. This header is here temporarily for source compatibility and
  * should be removed when we are ready to make the switch.
+ https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKFormInputSession.h
  */
+
 @protocol _WKFormDelegate <_WKInputDelegate>
 @end

@@ -1,5 +1,6 @@
 /*
- * https://github.com/WebKit/webkit/blob/21a4dcb584f205c2b5ecc326be846f0db7a7ecac/Source/WebKit2/UIProcess/API/Cocoa/_WKActivatedElementInfo.h
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKActivatedElementInfo.h
+ *
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,17 +36,22 @@
 typedef NS_ENUM(NSInteger, _WKActivatedElementType) {
     _WKActivatedElementTypeLink,
     _WKActivatedElementTypeImage,
-    _WKActivatedElementTypeAttachment WK_ENUM_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA),
-} WK_ENUM_AVAILABLE(10_10, 8_0);
+    _WKActivatedElementTypeAttachment WK_API_AVAILABLE(macos(10.12), ios(10.0)),
+    _WKActivatedElementTypeUnspecified WK_API_AVAILABLE(macos(10.13), ios(11.0)),
+} WK_API_AVAILABLE(macos(10.10), ios(8.0));
 
-WK_CLASS_AVAILABLE(10_10, 8_0)
+WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
 @interface _WKActivatedElementInfo : NSObject
 
 @property (nonatomic, readonly) NSURL *URL;
+@property (nonatomic, readonly) NSURL *imageURL;
 @property (nonatomic, readonly) NSString *title;
 @property (nonatomic, readonly) _WKActivatedElementType type;
 @property (nonatomic, readonly) CGRect boundingRect;
+@property (nonatomic, readonly) NSString *ID WK_API_AVAILABLE(macos(10.12), ios(10.0));
+@property (nonatomic, readonly) BOOL isAnimatedImage WK_API_AVAILABLE(macos(10.15), ios(13.0));
 #if TARGET_OS_IPHONE
+@property (nonatomic, readonly) NSDictionary *userInfo WK_API_AVAILABLE(ios(11.0));
 @property (nonatomic, readonly, copy) UIImage *image;
 #else
 @property (nonatomic, readonly, copy) NSImage *image;

@@ -3,6 +3,7 @@
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/Cocoa/WebViewImpl.h
 // https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/Settings.in
 
+#import "WebKitAvailability.h"
 #import "_WKLayoutMode.h"
 #import "_WKFindOptions.h"
 #import "_WKInputDelegate.h"
@@ -126,7 +127,7 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @property (nonatomic, getter=_isEditable, setter=_setEditable:) BOOL _editable WK_API_AVAILABLE(macosx(10.11), ios(9.0));
 @property (nonatomic, setter=_setAddsVisitedLinks:) BOOL _addsVisitedLinks;
 @property (nonatomic, setter=_setAllowsRemoteInspection:) BOOL _allowsRemoteInspection;
-@property (nonatomic, copy, setter=_setRemoteInspectionNameOverride:) NSString *_remoteInspectionNameOverride WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, copy, setter=_setRemoteInspectionNameOverride:) NSString *_remoteInspectionNameOverride WK_API_AVAILABLE(macos(10.12), ios(10.0));
 @property (copy, setter=_setCustomUserAgent:) NSString *_customUserAgent;
 @property (copy, setter=_setApplicationNameForUserAgent:) NSString *_applicationNameForUserAgent;
 @property (nonatomic, readonly) NSString *_userAgent WK_API_AVAILABLE(macosx(10.11), ios(9.0));

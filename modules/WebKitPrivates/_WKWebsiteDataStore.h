@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "WKFoundation.h"
+#import <WebKit/WKFoundation.h>
 
 #import <WebKit/WKWebsiteDataStore.h>
 

@@ -23,11 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "WKFoundation.h"
+#import <WebKit/WKFoundation.h>
 
 typedef NS_ENUM(NSInteger, _WKSameDocumentNavigationType) {
     _WKSameDocumentNavigationTypeAnchorNavigation,
     _WKSameDocumentNavigationTypeSessionStatePush,
     _WKSameDocumentNavigationTypeSessionStateReplace,
     _WKSameDocumentNavigationTypeSessionStatePop,
-} WK2_AVAILABLE(10_10, 8_0);
+} WK_CLASS_AVAILABLE(macos(10.10), ios(8.0));

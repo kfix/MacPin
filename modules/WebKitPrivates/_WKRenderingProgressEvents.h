@@ -1,5 +1,6 @@
 /*
- *  https://github.com/WebKit/webkit/blob/67985c34ffc405f69995e8a35f9c38618625c403/Source/WebKit2/Shared/API/Cocoa/_WKRenderingProgressEvents.h
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/Cocoa/_WKRenderingProgressEvents.h
+ *
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,14 +25,16 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "WKFoundation.h"
+#import <WebKit/WKFoundation.h>
 
 typedef NS_OPTIONS(NSUInteger, _WKRenderingProgressEvents) {
     _WKRenderingProgressEventFirstLayout = 1 << 0,
-    _WKRenderingProgressEventFirstVisuallyNonEmptyLayout WK_ENUM_AVAILABLE(10_11, 9_0) = 1 << 1,
+    _WKRenderingProgressEventFirstVisuallyNonEmptyLayout WK_API_AVAILABLE(macos(10.11), ios(9.0)) = 1 << 1,
     _WKRenderingProgressEventFirstPaintWithSignificantArea = 1 << 2,
-    _WKRenderingProgressEventReachedSessionRestorationRenderTreeSizeThreshold WK_ENUM_AVAILABLE(10_11, 9_0) = 1 << 3,
-    _WKRenderingProgressEventFirstLayoutAfterSuppressedIncrementalRendering WK_ENUM_AVAILABLE(10_11, 9_0) = 1 << 4,
-    _WKRenderingProgressEventFirstPaintAfterSuppressedIncrementalRendering WK_ENUM_AVAILABLE(10_11, 9_0) = 1 << 5,
-    _WKRenderingProgressEventFirstPaint WK_ENUM_AVAILABLE(10_11, 9_0) = 1 << 6,
-} WK_ENUM_AVAILABLE(10_10, 8_0);
+    _WKRenderingProgressEventReachedSessionRestorationRenderTreeSizeThreshold WK_API_AVAILABLE(macos(10.11), ios(9.0)) = 1 << 3,
+    _WKRenderingProgressEventFirstLayoutAfterSuppressedIncrementalRendering WK_API_AVAILABLE(macos(10.11), ios(9.0)) = 1 << 4,
+    _WKRenderingProgressEventFirstPaintAfterSuppressedIncrementalRendering WK_API_AVAILABLE(macos(10.11), ios(9.0)) = 1 << 5,
+    _WKRenderingProgressEventFirstPaint WK_API_AVAILABLE(macos(10.11), ios(9.0)) = 1 << 6,
+    _WKRenderingProgressEventDidRenderSignificantAmountOfText WK_API_AVAILABLE(macos(10.14), ios(12.0)) = 1 << 7,
+    _WKRenderingProgressEventFirstMeaningfulPaint WK_API_AVAILABLE(macos(10.14.4), ios(12.2)) = 1 << 8,
+} WK_API_AVAILABLE(macos(10.10), ios(8.0));

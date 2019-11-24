@@ -1,4 +1,6 @@
-/* https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKFormInputSession.h
+/* 
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKFormInputSession.h
+ *
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,11 +33,11 @@
 
 @property (nonatomic, readonly, getter=isValid) BOOL valid;
 @property (nonatomic, readonly) NSObject <NSSecureCoding> *userObject;
-@property (nonatomic, readonly) id <_WKFocusedElementInfo> focusedElementInfo WK2_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
+@property (nonatomic, readonly) id <_WKFocusedElementInfo> focusedElementInfo WK_API_AVAILABLE(macos(10.12), ios(10.0));
 
 #if TARGET_OS_IPHONE
 @property (nonatomic, copy) NSString *accessoryViewCustomButtonTitle;
-@property (nonatomic, strong) UIView *customInputView WK2_AVAILABLE(NA, WK_IOS_TBA);
+@property (nonatomic, strong) UIView *customInputView WK_API_AVAILABLE(ios(10.0));
 #endif
 
 @end

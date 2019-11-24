@@ -25,7 +25,7 @@
 
 #pragma once
 
-#import <WebKitPrivates/WKFoundation.h>
+#import <WebKit/WKFoundation.h>
 
 #import <Foundation/Foundation.h>
 

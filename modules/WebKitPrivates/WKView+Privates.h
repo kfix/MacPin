@@ -33,7 +33,7 @@
 //@property (copy, nonatomic) NSColor *underlayColor;
 
 // https://github.com/WebKit/webkit/commit/eea322e40e200c93030702aa0a6524d249e9795f
-@property (strong, nonatomic, setter=_setInspectorAttachmentView:) NSView *_inspectorAttachmentView WK2_AVAILABLE(10_11, NA);
+@property (strong, nonatomic, setter=_setInspectorAttachmentView:) NSView *_inspectorAttachmentView WK_API_AVAILABLE(macos(10.11));
 
 // https://github.com/WebKit/webkit/commit/75af252811a234a2cf2642bde59307630c622e2a
 @property (nonatomic, setter=_setThumbnailView:) _WKThumbnailView *_thumbnailView;

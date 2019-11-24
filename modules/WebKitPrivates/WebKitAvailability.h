@@ -1,6 +1,6 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/Cocoa/WKFoundation.h
-
 /*
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/Cocoa/WKFoundation.h
+ *
  * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,6 +25,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __WebKitFoundationP__
+#define __WebKitFoundationP__
+
 #import <Availability.h>
 // /usr/include/AvailabilityInternal.h
 // /usr/include/Availability.h
@@ -44,14 +47,6 @@
 #define WK_API_DEPRECATED(_message, ...) __attribute__((deprecated(_message)))
 #define WK_API_DEPRECATED_WITH_REPLACEMENT(_replacement, ...) __attribute__((deprecated("use " #_replacement)))
 #define WK_CLASS_DEPRECATED_WITH_REPLACEMENT(_replacement, ...) __attribute__((visibility("default"))) __attribute__((deprecated("use " #_replacement)))
-
-#define WK2_AVAILABLE(_mac, _ios)
-#define WK2_CLASS_AVAILABLE(_mac, _ios) __attribute__((visibility ("default")))
-#define WK2_DEPRECATED(_macIntro, _macDep, _iosIntro, _iosDep, ...) __attribute__((deprecated(__VA_ARGS__)))
-#define WK2_CLASS_DEPRECATED(_macIntro, _macDep, _iosIntro, _iosDep, ...) __attribute__((visibility("default"))) __attribute__((deprecated(__VA_ARGS__)))
-
-#define WK_ENUM_AVAILABLE(_mac, _ios)
-#define WK_ENUM_AVAILABLE_IOS(_ios)
 
 #if __has_feature(objc_generics) && (!defined(__MAC_OS_X_VERSION_MAX_ALLOWED) || __MAC_OS_X_VERSION_MAX_ALLOWED >= 101100)
 
@@ -124,3 +119,5 @@ typedef NSUInteger NSEventModifierFlags;
 #endif
 
 #endif
+
+#endif /* __WebKitFoundationP__ */
