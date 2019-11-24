@@ -10,7 +10,8 @@ import UIKit
 #endif
 
 import Foundation
-import JavaScriptCore // https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
+import JavaScriptCore // https://webkit.googlesource.com/WebKit/+/master/Source/JavaScriptCore/ChangeLog
+import JavaScriptCorePrivates // https://github.com/WebKit/webkit/tree/master/Source/JavaScriptCore/API
 // https://raw.githubusercontent.com/WebKit/webkit/master/Source/JavaScriptCore/ChangeLog
 // https://developer.apple.com/videos/play/wwdc2013/615/
 import WebKitPrivates
@@ -297,10 +298,6 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 
 		return (script, JSValueMakeNull(ctx)) // generates an exception if called via JS:require()
 	}
-
-// if JavaScriptCore_version >= (608, 1, 8)
-// https://webkit.googlesource.com/WebKit/+/master/Source/JavaScriptCore/ChangeLog
-// JSContextFetchDelegate contextWithBlockForFetch:
 
 	static let cjsrequire: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
 		// https://developer.apple.com/documentation/javascriptcore/jsobjectcallasfunctioncallback
@@ -650,11 +647,6 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		// all app-scripts and cjs-mods will get their own contexts when evaluated, but within the same context-group
 		context = JSContext(jsGlobalContextRef: JSGlobalContextCreateInGroup(contextGroup, globalObjClass))
 
-		//if #available(OSX 10.15, *, iOS 13) {
-		// if JavaScriptCore_version >= (6??, ?, ??) {
-		//	context.moduleLoaderDelegate = self
-		//}
-
 		jsdelegate = JSValue(newObjectIn: context) //default property-less delegate obj
 
 #if SAFARIDBG
@@ -697,6 +689,12 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		super.init() // all undef'd props assigned, now we can be an NSObject
 		context.name = "\(self.name) \(self.description)"
 
+		if #available(OSX 10.15, *, iOS 13) {
+			if JavaScriptCore_version >= (608, 1, 8) {
+				context.moduleLoaderDelegate = self // `import`
+			}
+		}
+
 		// aggregate our exposable classes & instances for `require("@MacPin")`
 		// TODO: use the Reflection to find all .wrapSelf()s
 		// for k in exportedTypes {}; for k in wrappedTypes {}
@@ -733,6 +731,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		}
 
 		if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
+			// use OLD
 			if let jsval = loadAppScript(app_js.description) {
 				if jsval.isObject {
 					// use legacy API convention
@@ -756,14 +755,16 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 		if (try? local_app_js.checkResourceIsReachable()) ?? false {
 			(script, jsval) = importCommonJSScript(local_app_js.absoluteString, asMain: true)
+			//(script, jsval) = importJSScript(local_app_js.absoluteString, asMain: true)
 		} else if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
 			(script, jsval) = importCommonJSScript(app_js.absoluteString, asMain: true)
+			//(script, jsval) = importJSScript(app_js.absoluteString, asMain: true)
 		} else {
 			return false
 		}
 
 		// check for error
-        if jsval.isObject && !jsval.hasProperty("exception") {
+		if jsval.isObject && !jsval.hasProperty("exception") {
 			jsdelegate = JSValue(nullIn: self.context)
 			return true
 		}
@@ -773,15 +774,40 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	@discardableResult
-	func loadAppScript(_ urlstr: String) -> JSValue? {
+	@available(OSX 10.15, *, iOS 13) // ensures we only weakly link to JSC::JSScript symbols
+	func loadAppJSScript(_ urlstr: String) -> JSValue? {
+		let jsval: JSValue
+		let script: JSScript?
 
 		guard let sourceURL = getResourceURL(urlstr) else {
-			warn("\(urlstr): could not be found", function: "loadCommonJSScript")
+			warn("\(urlstr): could not be found", function: "loadAppJSScript")
+			return nil
+		}
+
+		if (try? sourceURL.checkResourceIsReachable()) ?? false {
+			(script, jsval) = importJSScript(sourceURL.absoluteString, asMain: true)
+		} else {
+			return nil
+		}
+
+		// check for error
+        if jsval.isObject && !jsval.hasProperty("exception") {
+			jsdelegate = jsval
+			return jsval
+		}
+
+		return nil
+	}
+
+	@discardableResult
+	func loadAppScript(_ urlstr: String) -> JSValue? {
+		guard let sourceURL = getResourceURL(urlstr) else {
+			warn("\(urlstr): could not be found", function: "loadAppScript")
 			return nil
 		}
 
 		guard let source = try? String(contentsOf: sourceURL, encoding: .utf8) else {
-			warn("\(sourceURL): could not be read", function: "loadCommonJSScript")
+			warn("\(sourceURL): could not be read", function: "loadAppScript")
 			return nil
 		}
 
@@ -843,10 +869,21 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		return ( script, JSValue(jsValueRef: value, in: context) )
 	}
 
-/*
 	@discardableResult
-	@available(OSX 10.15, *, iOS 13)
+	@available(OSX 10.15, *, iOS 13) // ensures we only weakly link to JSC::JSScript symbols
 	@nonobjc func importJSScript(_ urlstr: String, asMain: Bool = false, asModule: Bool = false) -> (JSScript?, JSValue) {
+/*
+		if JavaScriptCore_version >= (608, 3, 10) {
+			// Safari 13 == JSC supports esm import
+		} else {
+			assertionFailure("""
+			JSC \(JavaScriptCore_version) < 608.3.10
+			**********************************************************************************************
+			This app's JavaScriptCore.framework cannot import *.esm. Minimum requirement is satisfied by Safari 13
+			""")
+		}
+*/
+
 		guard let sourceURL = getResourceURL(urlstr) else {
 			warn("\(urlstr): could not be found")
 			return (nil, JSValue(nullIn: self.context) )
@@ -877,7 +914,6 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		warn("loaded \(urlstr) script - main-scope:\(asMain) - module:\(asModule)")
 		return ( script, value )
 	}
-*/
 
 	func resetStates() {
 		jsdelegate = JSValue(nullIn: context)
@@ -1298,4 +1334,15 @@ enum AppScriptEvent: String, CustomStringConvertible, CaseIterable {
 
 
 // TOIMPL: https://electronjs.org/docs/api/app#events
+}
+
+@objc extension AppScriptRuntime: JSModuleLoaderDelegate {
+	// TODO: support file://**.mjs imports
+	func context(_ context: JSContext!, fetchModuleForIdentifier identifier: JSValue!, withResolveHandler resolve: JSValue!, andRejectHandler reject: JSValue!) {
+		warn()
+		// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/tests/testapi.mm JSContextFetchDelegate
+	}
+
+	func willEvaluateModule(_ url: NSURL) { warn(url); }
+	func didEvaluateModule(_ url: NSURL) { warn(url); }
 }

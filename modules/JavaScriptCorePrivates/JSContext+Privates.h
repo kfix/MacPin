@@ -1,6 +1,9 @@
-// from https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSContextPrivate.h
+@import JavaScriptCore;
+#include "WebKitAvailability.h"
 
 /*
+ * from https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSContextPrivate.h
+ *
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,9 +28,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@import JavaScriptCore;
-#import "JSScript.h"
-#import <JavaScriptCore/JSContext.h>
+#ifndef JSContextPrivate_h
+#define JSContextPrivate_h
+
+#if JSC_OBJC_API_ENABLED
+
+#include <JavaScriptCorePrivates/JSScript.h>
 
 @protocol JSModuleLoaderDelegate <NSObject>
 
@@ -45,6 +51,18 @@
  */
 - (void)context:(JSContext *)context fetchModuleForIdentifier:(JSValue *)identifier withResolveHandler:(JSValue *)resolve andRejectHandler:(JSValue *)reject;
 
+@optional
+
+/*! @abstract This is called before the module with "key" is evaluated.
+ @param key The module key for the module that is about to be evaluated.
+ */
+- (void)willEvaluateModule:(NSURL *)key;
+
+/*! @abstract This is called after the module with "key" is evaluated.
+ @param key The module key for the module that was just evaluated.
+ */
+- (void)didEvaluateModule:(NSURL *)key;
+
 @end
 
 @interface JSContext(Private)
@@ -53,19 +71,19 @@
 @property
 @discussion Remote inspection setting of the JSContext. Default value is YES.
 */
-@property (setter=_setRemoteInspectionEnabled:) BOOL _remoteInspectionEnabled NS_AVAILABLE(10_10, 8_0);
+@property (setter=_setRemoteInspectionEnabled:) BOOL _remoteInspectionEnabled JSC_API_AVAILABLE(macos(10.10), ios(8.0));
 
 /*!
 @property
 @discussion Set whether or not the native call stack is included when reporting exceptions. Default value is YES.
 */
-@property (setter=_setIncludesNativeCallStackWhenReportingExceptions:) BOOL _includesNativeCallStackWhenReportingExceptions NS_AVAILABLE(10_10, 8_0);
+@property (setter=_setIncludesNativeCallStackWhenReportingExceptions:) BOOL _includesNativeCallStackWhenReportingExceptions JSC_API_AVAILABLE(macos(10.10), ios(8.0));
 
 /*!
 @property
 @discussion Set the run loop the Web Inspector debugger should use when evaluating JavaScript in the JSContext.
 */
-@property (setter=_setDebuggerRunLoop:) CFRunLoopRef _debuggerRunLoop NS_AVAILABLE(10_10, 8_0);
+@property (setter=_setDebuggerRunLoop:) CFRunLoopRef _debuggerRunLoop JSC_API_AVAILABLE(macos(10.10), ios(8.0));
 
 /*! @abstract The delegate the context will use when trying to load a module. Note, this delegate will be ignored for contexts returned by UIWebView. */
 @property (nonatomic, weak) id <JSModuleLoaderDelegate> moduleLoaderDelegate JSC_API_AVAILABLE(macos(10.15), ios(13.0));
@@ -90,3 +108,7 @@
 - (JSValue *)dependencyIdentifiersForModuleJSScript:(JSScript *)script JSC_API_AVAILABLE(macos(10.15), ios(13.0));
 
 @end
+
+#endif
+
+#endif // JSContextInternal_h

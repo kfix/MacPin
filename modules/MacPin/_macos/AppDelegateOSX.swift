@@ -442,7 +442,11 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 					return true
 				case "com.netscape.javascript-source": //.js
 					warn(filename)
-					AppScriptRuntime.shared.loadAppScript("file://\(filename)")
+					if #available(macOS 10.15, iOS 13.0, *) {
+						AppScriptRuntime.shared.loadAppJSScript("file://\(filename)")
+					} else {
+						AppScriptRuntime.shared.loadAppScript("file://\(filename)")
+					}
 					AppScriptRuntime.shared.emit(.AppFinishedLaunching)
 					return true
 				// FIXME: make a custom .macpinjs ftype
