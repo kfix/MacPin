@@ -492,17 +492,37 @@ extension WebViewController: _WKDownloadDelegate {
 @objc extension WebViewController: _WKIconLoadingDelegate {
 	func webView(_ webView: WKWebView, shouldLoadIconWith parameters: _WKLinkIconParameters, completionHandler: (@escaping (Data) -> Void) -> Void) {
 		// make doc is wrong about the annotation: https://bugs.swift.org/browse/SR-8873 https://github.com/apple/swift/commit/8cf6189f128c9d6fc409e5826f2cf28019cd6d63
-		completionHandler() { [unowned webView] data in
-			// data.length
-			//parameters . mimeType iconType
-			switch parameters.iconType {
-				case .favicon:
-					warn("page (\(webView.url?.absoluteString ?? "") got favicon from <- \(parameters.url?.absoluteString ?? "")")
+
+		guard let icourl = parameters.url else {
+				completionHandler() {_ in}
+				return
+		}
+		//parameters . mimeType iconType
+
+		switch (parameters.iconType, icourl.scheme) {
+			case (.favicon, "file"):
+				if !FileManager.default.fileExists(atPath: icourl.standardizedFileURL.path) {
+					warn("missing icon src=\(icourl) via \(webView.url?.absoluteString ?? "")")
+					break // no such icon file, would rather not see a console message about failure to load it
+
+					// this could be the "default" file:///favicon.ico....
+
+					// webkit refuses to resolve the link src for file:// schemes:
+					//    https://github.com/WebKit/webkit/blob/89c28d471fae35f1788a0f857067896a10af8974/Source/WebCore/html/LinkIconCollector.cpp#L92
+					// & later scheme-unconditionally attempts the file://favicon.ico
+					//   https://github.com/WebKit/webkit/blob/fcefeb83c41e6ab26859cdfcbe3e0e9844306fec/Source/WebCore/loader/DocumentLoader.cpp#L1923
+				}
+			case (.favicon, "http"), (.favicon, "https"):
+				completionHandler() { [unowned webView] data in
+					warn("got page-linked icon src=\(icourl) via \(webView.url?.absoluteString ?? "")")
 					if let webview = webView as? MPWebView {
 						webview.favicon.data = data as NSData //skip the middleman
+						// data.length
 					}
-				default: break
-			}
+				}
+			default:
+				completionHandler() {_ in} // FIXME: doesn't prevent GET request for bad urls!
+				break
 		}
 	}
 
