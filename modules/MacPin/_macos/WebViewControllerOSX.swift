@@ -355,6 +355,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		let alert = NSAlert()
 		alert.messageText = "Set HTTP(s) proxy for the clone"
 		alert.addButton(withTitle: "Clone Tab")
+		alert.addButton(withTitle: "Cancel")
 		alert.informativeText = "Enter the proxy URL for http: and https: links"
 		alert.icon = Application.shared.applicationIconImage
 		let input = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
@@ -365,7 +366,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 		input.placeholderString = "http://localhost:8080"
 		alert.accessoryView = input
 		alert.beginSheetModal(for: window, completionHandler: { [unowned self] (response: NSApplication.ModalResponse) -> Void in
-		    if input.stringValue != self.webview.usesProxy {
+			if response == .alertFirstButtonReturn && input.stringValue != self.webview.usesProxy {
 				self.popup(self.webview.proxied_clone(input.stringValue, input.stringValue))
 			}
 		})
