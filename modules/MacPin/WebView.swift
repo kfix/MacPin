@@ -715,9 +715,9 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		configuration.userContentController.add(AppScriptRuntime.shared, name: handler)
 	}
 
-	func REPL() -> DispatchWorkItem? {
+	func REPL() -> Prompter? {
 		var stderr = FileHandle.standardError
-		return termiosREPL({ (line: String) -> Void in
+		return Prompter.termiosREPL({ (line: String) -> Void in
 			self.evaluateJavaScript(line, completionHandler:{ (result: Any?, exception: Error?) -> Void in
 				// FIXME: the JS execs async so these print()s don't consistently precede the REPL thread's prompt line
 				if let result = result { Swift.print(result, to: &stderr) }

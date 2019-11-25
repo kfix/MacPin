@@ -14,7 +14,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 	let shortcutsMenu = NSMenuItem(title: "Shortcuts", action: nil, keyEquivalent: "")
 	let tabListMenu = NSMenuItem(title: "Tabs", action: nil, keyEquivalent: "")
 
-	var prompter: DispatchWorkItem? = nil // aka, a "threaded job"
+	var prompter: Prompter? = nil
 
 	public override init() {
 		// gotta set these before MacPin()->NSWindow()
@@ -343,6 +343,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 					// FIXME unqualified URL from cmdline get openFile()d for some reason
 					warn("unrecognized argv[\(idx)]: `\(arg)`")
 			}
+			prompter?.start()
 		}
 
 		//NSApp.setServicesProvider(ServiceOSX())
@@ -382,16 +383,15 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		windowController?.close() // kill the window if it still exists
 		windowController?.window = nil
 		windowController = nil // deinit the wc
-		//browserController.close() // kill any zombie tabs 
+		browserController.close() // kill any zombie tabs
 		// unfocus app?
 #if arch(x86_64) || arch(i386) // !TARGET_OS_EMBEDDED || TARGET_OS_SIMULATOR
-		if prompter != nil { return .terminateLater } // wait for user to EOF the Prompt
-		// ^ how to tell if REPL hasn't EOF'd yet?
-		// This return value is for delegates that need to provide document modal alerts (sheets) in order to decide whether to quit.
-		// Returning this value causes Cocoa to run the run loop in the NSModalPanelRunLoopMode until your app subsequently calls replyToApplicationShouldTerminate: with the value YES or NO
+		if let prompter = prompter, prompter.running {
+			warn("prompt still active! \(prompter.running)")
+			return .terminateLater
+		}
 #endif
-		// AppScriptRuntime.shared.emit(.AppShouldTerminate, self) // allow JS to clean up its refs
-		//   ^  seems to hang the shutdown!
+		AppScriptRuntime.shared.emit(.AppShouldTerminate, self) // allow JS to clean up its refs
 		AppScriptRuntime.shared.resetStates() // then run a GC
 		return .terminateNow
 	}
@@ -400,9 +400,9 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		warn()
 		UserDefaults.standard.synchronize()
 #if arch(x86_64) || arch(i386)
-		if let prompter = prompter {
-			warn("waiting on prompter")
-			prompter.wait()	// let prompter deinit and cleanup the TTY
+		if let prompter = prompter, prompter.running {
+			warn("waiting on prompter to cleanup")
+			prompter.wait()
 			warn("prompter done")
 		}
 #endif

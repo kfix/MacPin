@@ -14,20 +14,14 @@ import AppKit
 import UIKit
 #endif
 
-#if arch(x86_64) || arch(i386)
-import Prompt // https://github.com/neilpa/swift-libedit
-// https://github.com/onevcat/Rainbow
-#endif
-
 var startTime = Date()
 
 extension FileHandle: TextOutputStream {
-  public func write(_ string: String) {
-    guard let data = string.data(using: .utf8) else { return }
-    self.write(data)
-  }
+	public func write(_ string: String) {
+		guard let data = string.data(using: .utf8) else { return }
+		self.write(data)
+	}
 }
-
 
 extension TimeInterval {
     // builds string in app's labels format 00:00.0
@@ -41,23 +35,38 @@ extension TimeInterval {
     }
 }
 
+class StandardErrorOutputStream {
+	let stderr = OutputStream(toFileAtPath: "/dev/stderr", append: true)!
+
+	func write(_ string: String) {
+		guard let data = string.data(using: .utf8) else { return } // encoding failure
+		if stderr.hasSpaceAvailable {
+			stderr.write(string, maxLength: string.utf8.count)
+			// stderr.streamError
+		}
+	}
+
+	init() {
+		stderr.open()
+	}
+}
+
+let g_stdErr = StandardErrorOutputStream()
+
 func warn(_ msg: String = String(), function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
 	// https://forums.swift.org/t/supplement-file-line-and-function-with-context/9505/2
 	// https://github.com/swisspol/XLFacility ?
-
-	// FIXME if REPL waiting, reset TTY cursor to line^?
-
-	var stderr = FileHandle.standardError
 
 	var out = ""
 	// [min:sec.ms] <codeloc> [fn] message
 	if #available(OSX 10.12, iOS 10, *) {
 		out = "\r[\(DateInterval(start: startTime, end: Date()).duration.stopwatch())] <\(file):\(line):\(column)> [\(function)] \(msg)"
 	} else {
-		out = "[\((startTime.timeIntervalSinceNow.stopwatch(invert: true)))] <\(file):\(line):\(column)> [\(function)] \(msg)"
+		out = "\r[\((startTime.timeIntervalSinceNow.stopwatch(invert: true)))] <\(file):\(line):\(column)> [\(function)] \(msg)"
 	}
 
-	print(out, to: &stderr)
+	g_stdErr.write(out + "\n") // NSOutputStream.write is resilient to closed files, unlike NSFileHandle.write
+
 #if WARN2NSLOG
 	NSLog(out)
 #endif
@@ -307,44 +316,6 @@ func searchForKeywords(_ str: String) -> URL? {
 		// https://developer.mozilla.org/en-US/Add-ons/Creating_OpenSearch_plugins_for_Firefox
 	return nil
 }
-
-// TODO: exposing a websocketREPL would also be neat: https://github.com/siuying/IGJavaScriptConsole https://github.com/zwopple/PocketSocket
-func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2: StaticString = #function, abort:(()->(()->Void)?)? = nil) -> DispatchWorkItem? {
-#if arch(x86_64) || arch(i386)
-	var final: (()->Void)? = nil
-	let prompter = DispatchWorkItem {
-		var prompt = Prompt(argv0: CommandLine.unsafeArgv[0], prompt: "% ")
-		while (true) {
-		    if let line = prompt?.gets() { // R: blocks here until Enter pressed
-				if !line.hasPrefix("\n") {
-					//print("| ") // result prefix
-
-					DispatchQueue.main.sync {
-						// JS can mutate native UI objects that are not BG-thread-safe
-						eval?(line) // E:, P:
-					}
-
-					//println() //newline
-				}
-		    } else { // stdin closed or EOF'd
-				if let abort = abort { final = abort(); break }
-				else { print("\(ps1): got EOF from stdin, stopping \(ps2)") }
-				break
-			}
-			// L: command dispatched, restart loop
-		}
-		prompt = nil // deinit to reset TTY
-
-		if final != nil { final!(); } // exec shutdown commands
-	}
-	DispatchQueue.global(qos: .background).async(execute: prompter)
-	return prompter
-#else
-	print("Prompt() not available on this device.")
-	return nil
-#endif
-}
-
 
 //@objc protocol JS2NSArray: JSExport { func push2(obj: AnyObject) -> NSArray }
 //extension NSArray: JS2NSArray { func push2(obj: AnyObject) -> NSArray { warn(obj.description); return arrayByAddingObject(obj) } }

@@ -1109,15 +1109,14 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #endif
 	}
 
-
-	func REPL() -> DispatchWorkItem? {
+	func REPL() -> Prompter? {
 #if os(OSX)
 		ProcessInfo.processInfo.disableSuddenTermination() // ensure closed window won't kill this prompter if still active
 #endif
 		var stderr = FileHandle.standardError
 		// ^ stderr is unbuffered and is where warn() prints too
 
-		return termiosREPL(
+		return Prompter.termiosREPL(
 			{ [unowned self] (line: String) -> Void in
 				let val = self.context.evaluateScript(line)
 				if self.context.exception != nil {
@@ -1156,25 +1155,25 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			abort: { () -> (()->Void)? in
 				// EOF'd by Ctrl-D
 #if os(OSX)
-				ProcessInfo.processInfo.enableSuddenTermination()
 				return {
 					// this final closure is run by the invoker (termiosREPL) right after it tears down the prompter/TTY
-					warn("got EOF from stdin, stopping app")
+					stderr.closeFile()
+					ProcessInfo.processInfo.enableSuddenTermination()
+					warn("got EOF from stdin")
 
-					NSApplication.shared.terminate(self)
+					NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a pre-existing UI terminate()
 
-					//DispatchQueue.main.asyncAfter(deadline: .now()) { exit(0); } // works but prevents delegate from saving states
-
-					DispatchQueue.main.asyncAfter(deadline: .now() + 1, qos: .userInteractive, flags: .enforceQoS) {
-						// FIXME: race condition between NSApp.reply & appDel:applicationShouldTerminate requires the +1 sleep
-						NSApp.reply(toApplicationShouldTerminate: true) // now close App if this was deferring a pre-existing terminate()
+					if isatty(0) == 1 {
+						// an interactive-stdin TTY is in use, so the EOF came from a user
+						warn("stopping interactive app")
+						NSApplication.shared.terminate(self) // effectively nonreturning!
 					}
 				}
 #endif
 				return nil
 			}
-		)
-	}
+		) //termiosREPL
+	} //REPL
 
 	func evalJXA(_ script: String) {
 		// FIXME: force a confirmation panel with printout of script and func+args to be called.....
