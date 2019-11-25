@@ -351,7 +351,25 @@ extension WebViewControllerOSX { // AppGUI funcs
 	}
 */
 
-
+	@objc func selectProxies() {
+		let alert = NSAlert()
+		alert.messageText = "Set HTTP(s) proxy for the clone"
+		alert.addButton(withTitle: "Clone Tab")
+		alert.informativeText = "Enter the proxy URL for http: and https: links"
+		alert.icon = Application.shared.applicationIconImage
+		let input = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
+		input.isEditable = true
+		guard let window = view.window else { return }
+		guard webview != nil else { return }
+		input.stringValue = webview.usesProxy
+		input.placeholderString = "http://localhost:8080"
+		alert.accessoryView = input
+		alert.beginSheetModal(for: window, completionHandler: { [unowned self] (response: NSApplication.ModalResponse) -> Void in
+		    if input.stringValue != self.webview.usesProxy {
+				self.popup(self.webview.proxied_clone(input.stringValue, input.stringValue))
+			}
+		})
+	}
 }
 
 extension WebViewControllerOSX: NSSharingServicePickerDelegate { }

@@ -140,6 +140,11 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	//@objc dynamic var isLoading: Bool
 	//@objc dynamic var estimatedProgress: Double
 
+	var isIsolated = false
+	var isPrivate = false
+	var usesProxy = ""
+	var usesSproxy = ""
+
 	static var MatchedAddressOptions: [String:String] = [:] // cvar singleton
 
 	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
@@ -372,11 +377,11 @@ class MPWebView: WKWebView, WebViewScriptExports {
 
 			if let proxy = proxy, !proxy.isEmpty, let proxyURL = URL(string: proxy) {
 				dataStoreConf.httpProxy = proxyURL
-				warn("HTTP proxy: \(dataStoreConf.httpProxy)")
+				warn("HTTP proxy: \(dataStoreConf.httpProxy?.absoluteString)")
 			}
 			if let sproxy = sproxy, !sproxy.isEmpty, let sproxyURL = URL(string: sproxy) {
 				dataStoreConf.httpsProxy = sproxyURL
-				warn("HTTPS proxy: \(dataStoreConf.httpsProxy)")
+				warn("HTTPS proxy: \(dataStoreConf.httpsProxy?.absoluteString)")
 			}
 			dataStore = dataStore._init(with: dataStoreConf)
 		}
@@ -393,6 +398,11 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		}
 
 		self.init(frame: CGRect.zero, configuration: configuration) // should be good now?
+		isIsolated = isolated
+		isPrivate = privacy
+		usesProxy = proxy ?? ""
+		usesSproxy = sproxy ?? ""
+
 #if SAFARIDBG
 		_allowsRemoteInspection = true // start webinspectord child
 		// enables Safari.app->Develop-><computer name> remote debugging of JSCore and all webviews' JS threads
@@ -961,6 +971,16 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		super._gestureEventWasNotHandled(byWebCore: event)
 	}
 #endif
+
+	func proxied_clone(_ proxy: String? = nil, _ sproxy: String? = nil) -> MPWebView {
+		// create a new proxied MPWebView sharing the same URL, cookie/sesssion data, useragent
+		let clone = MPWebView(config: self.configuration, agent: self._customUserAgent,
+			proxy: proxy ?? self.usesProxy,
+			sproxy: sproxy ?? self.usesSproxy,
+			isolated: self.isIsolated, privacy: self.isPrivate, transparent: self.transparent)
+		if let url = url { clone.gotoURL(url) }
+		return clone
+	}
 }
 
 extension MPWebView { // NSTextFinderClient

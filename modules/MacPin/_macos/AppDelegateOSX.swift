@@ -26,8 +26,6 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 			//		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/Cocoa/WebProcessPoolCocoa.mm
 			// 		WebKit2HTTPProxy, WebKit2HTTPSProxy, WebKitOmitPDFSupport, all the cache directories ...
 			// 		https://lists.webkit.org/pipermail/webkit-dev/2016-May/028233.html
-			"WebKit2HTTPProxy": "",
-			"WebKit2HTTPSProxy": ""
 			//"URLParserEnabled": "" // JS: new URL()
 			// wish there was defaults for:
 			// 		https://github.com/WebKit/webkit/blob/master/Source/WebKit2/NetworkProcess/mac/NetworkProcessMac.mm overrideSystemProxies()
@@ -73,24 +71,6 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 	}
 
-	@objc func updateProxies() {
-		let alert = NSAlert()
-		alert.messageText = "Set HTTP(s) proxy"
-		alert.addButton(withTitle: "Update")
-		alert.informativeText = "Enter the proxy URL:"
-		alert.icon = Application.shared.applicationIconImage
-		let input = NSTextField(frame: NSMakeRect(0, 0, 200, 24))
-		input.stringValue = UserDefaults.standard.string(forKey: "WebKit2HTTPProxy") ?? ""
-		input.isEditable = true
-		alert.accessoryView = input
-		guard let window = browserController.view.window else { return }
-		alert.beginSheetModal(for: window, completionHandler: { (response: NSApplication.ModalResponse) -> Void in
-			UserDefaults.standard.set(input.stringValue, forKey: "WebKit2HTTPProxy")
-			UserDefaults.standard.set(input.stringValue, forKey: "WebKit2HTTPSProxy")
-			UserDefaults.standard.synchronize()
-			// FIXME: need to serialize all tabs & reinit them for proxy change to take effect?
-		})
-	}
 }
 
 @objc extension MacPinAppDelegateOSX: ApplicationDelegate {
@@ -134,7 +114,6 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		let svcMenu = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
 		svcMenu.submenu = app!.servicesMenu!
 		appMenu.submenu?.addItem(svcMenu)
-		appMenu.submenu?.addItem(MenuItem("Preferences...", #selector(MacPinAppDelegateOSX.updateProxies))) // not much for now
 		appMenu.submenu?.addItem(MenuItem("Quit \(appname)", "terminate:", "q"))
 
 		let editMenu = NSMenuItem() //NSTextArea funcs
@@ -179,6 +158,8 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Save Web Archive...", #selector(MPWebView.saveWebArchive), "s", [.command, .shift]))
 		tabMenu.submenu?.addItem(MenuItem("Save Page...", #selector(MPWebView.savePage), "s", [.command]))
 		tabMenu.submenu?.addItem(MenuItem("Open with Default Browser", #selector(WebViewControllerOSX.askToOpenCurrentURL), "d", [.command]))
+		tabMenu.submenu?.addItem(NSMenuItem.separator())
+		tabMenu.submenu?.addItem(MenuItem("Clone via Proxy...", #selector(WebViewControllerOSX.selectProxies)))
 		app!.mainMenu?.addItem(tabMenu)
 
 		let winMenu = NSMenuItem() //BrowserViewController and NSWindow funcs
