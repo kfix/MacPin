@@ -6,34 +6,36 @@
  * https://github.com/WebKit/webkit/blob/master/Source/WebCore/css/fullscreen.css
 */
 
-/* root inversion to darken all the (usually) bright pages */
-:root:not(:root:-webkit-full-screen, :root:-webkit-full-screen-ancestor) {
-    filter: invert(1) hue-rotate(180deg);
+@media not print {
+	/* root inversion to darken all the (usually) bright pages */
+	:root:not(:root:-webkit-full-screen, :root:-webkit-full-screen-ancestor) {
+		filter: invert(1) hue-rotate(180deg);
+	}
+	
+	/* double-inversion to undarken all the image-like things in a page */
+	:matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]):not(html,body,body>div,input,a,:-webkit-full-screen), /* I h8 these pseudo-img div's*/
+	:not(:not(html,body,body>div,input,a):matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],
+	[style*="background-image: url"]),:-webkit-full-screen,.ytp-large-width-mode,.player_area *):not(:-webkit-full-screen):matches(
+		/* image-like things, excluding children of pseudo-img's & fullscreened elems */
+		/*  -ed: why can't anybody use <video poster=blah.img> */
+		/* FIXME: background-imgs added by CSS classes (not in HTML markup) cannot be matched! */
+		img, video, iframe,
+		object, :not(object)>embed /* Flash */
+	):not(:-webkit-full-screen),
+		/* YouTube explictly blacks-out the theater bg... and we screw that up :-( */
+		.ytp-large-width-mode:not(:-webkit-full-screen),
+		.player_area:not(:-webkit-full-screen) /* same with Vimeo */
+	{
+		filter: invert(1) hue-rotate(180deg);
+		/* wish I could set additive properties ... some imgs use filter: */
+	}
+	/* FIXME: wish I could do a negation or exclusion instead of double-GPUing these elements */
+	
+	/*
+	 * I'd prefer to specifically target all body, div, section, main that have explicitly set white background-color: 000
+	 * or exclude items with explicity set black background-color:#FFF
+	*/
+	
+	/* make docroots transperanizable */
+	:root:not(:root:-webkit-full-screen, :root:-webkit-full-screen-ancestor), body { background: none !important; }
 }
-
-/* double-inversion to undarken all the image-like things in a page */
-:matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],[style*="background-image: url"]):not(html,body,body>div,input,a,:-webkit-full-screen), /* I h8 these pseudo-img div's*/
-:not(:not(html,body,body>div,input,a):matches([style*="background:url"],[style*="background-image:url"],[style*="background: url"],
-[style*="background-image: url"]),:-webkit-full-screen,.ytp-large-width-mode,.player_area *):not(:-webkit-full-screen):matches(
-	/* image-like things, excluding children of pseudo-img's & fullscreened elems */
-	/*  -ed: why can't anybody use <video poster=blah.img> */
-	/* FIXME: background-imgs added by CSS classes (not in HTML markup) cannot be matched! */
-	img, video, iframe,
-	object, :not(object)>embed /* Flash */
-):not(:-webkit-full-screen),
-	/* YouTube explictly blacks-out the theater bg... and we screw that up :-( */
-	.ytp-large-width-mode:not(:-webkit-full-screen),
-	.player_area:not(:-webkit-full-screen) /* same with Vimeo */
-{
-    filter: invert(1) hue-rotate(180deg);
-    /* wish I could set additive properties ... some imgs use filter: */
-}
-/* FIXME: wish I could do a negation or exclusion instead of double-GPUing these elements */
-
-/*
- * I'd prefer to specifically target all body, div, section, main that have explicitly set white background-color: 000
- * or exclude items with explicity set black background-color:#FFF
-*/
-
-/* make docroots transperanizable */
-:root:not(:root:-webkit-full-screen, :root:-webkit-full-screen-ancestor), body { background: none !important; }
