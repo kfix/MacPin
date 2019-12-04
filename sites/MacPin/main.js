@@ -253,7 +253,7 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut('UA: Safari 8 Mac', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/600.6.3 (KHTML, like Gecko) Version/8.0.6 Safari/600.6.3"], setAgent);
 	browser.addShortcut('UA: iPhone', ["Mozilla/5.0 (iPhone; CPU iPhone OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"], setAgent);
 	browser.addShortcut('UA: iPad', ["Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"], setAgent);
-	browser.addShortcut('UA: iPod Touch', ["Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"], setAgent);
+	browser.addShortcut('UA: iPod Touch', ["Mozilla/5.0 (iPod touch; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"], setAgent);
 	browser.addShortcut('UA: Mac Chrome 29', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.57 Safari/537.36"], setAgent);
 	browser.addShortcut('UA: Mac Firefox 23', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:23.0) Gecko/20100101 Firefox/23.0"], setAgent);
 	browser.addShortcut('UA: Mac Firefox 62', ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:62.0) Gecko/20100101 Firefox/62.0"], setAgent);
