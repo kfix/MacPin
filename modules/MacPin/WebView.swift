@@ -22,7 +22,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	case url, agent, agentApp, icon, proxy, sproxy, // String
 	transparent, isolated, privacy = "private", allowsMagnification, allowsRecording, // Bool
 	preinject, postinject, style, subscribeTo, // [String]
-	handlers // {} ~> [String: [JSValue]]
+	handlers, styles // {} ~> [String: [JSValue]]
 
 	// eh? https://www.swiftbysundell.com/posts/enum-iterations-in-swift-42
 	static func fromJS(object: JSValue) -> [WebViewInitProps: Any] {
@@ -37,31 +37,34 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 						props[prop] = jsval.toBool()
 					case .preinject, .postinject, .style, .subscribeTo where jsval.isArray:
 						props[prop] = jsval.toArray().flatMap { $0 as? String }
-					case .handlers where jsval.isObject:
-						var handlers: [String: [JSValue]] = [:]
-						let handlerNames = jsval.toDictionary().keys.flatMap({$0 as? String})
-						warn(handlerNames.description)
-						for name in handlerNames {
-							guard let hval = jsval.objectForKeyedSubscript(name) else { warn("no handler for \(name)!"); continue }
-							if hval.isArray { // array of handler funcs (hopefully) was passed
-								guard let hval = hval.invokeMethod("slice", withArguments: [0]) else { continue }// dup the array so pop() won't mutate the original
+					case .handlers, .styles where jsval.isObject:
+						// [prop] takes a Obj of Arrays (of Objs or Strings)
+						var newObjs: [String: [JSValue]] = [:]
+						//   we will double check all keys and filter valid ones into newObjs
+						let objNames = jsval.toDictionary().keys.flatMap({$0 as? String})
+						warn(objNames.description)
+						for name in objNames {
+							guard let obj = jsval.objectForKeyedSubscript(name) else { warn("no object given for \(name)!"); continue }
+								// if .style, can treat that as a request for a plain .css injection
+							if obj.isArray { // array of handler funcs (hopefully) was passed
+								guard let arr = obj.invokeMethod("slice", withArguments: [0]) else { continue }// dup the array so pop() won't mutate the original
 								// for handler in hval.toArray() { // -> Any .. not useful
-								guard let numHandlers = hval.forProperty("length").toNumber() as? Int, numHandlers > 0 else { continue }
-								for num in 1...numHandlers { // C-Loop ftw
-									//guard let handler = hvals.atIndex(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
-									//guard let handler = hval.objectAtIndexedSubscript(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
+								guard let arrLen = arr.forProperty("length").toNumber() as? Int, arrLen > 0 else { continue }
+								for num in 1...arrLen { // C-Loop ftw
+									//guard let arrVal = obj.atIndex(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
+									//guard let arrVal = obj.objectAtIndexedSubscript(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
 									// JSC BUG: dict-of-array contained functions are `undefined` when pulled with atIndex/objAtIndexSub
-									guard let handler = hval.invokeMethod("pop", withArguments: []) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
+									guard let arrVal = obj.invokeMethod("pop", withArguments: []) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
 
-									if !handler.isNull && !handler.isUndefined && handler.hasProperty("call") {
-										handlers[name, default: []].append(handler)
+									if prop == .handlers && !arrVal.isNull && !arrVal.isUndefined && arrVal.hasProperty("call") { // got a func
+										newObjs[name, default: []].append(arrVal)
 									}
 								}
-							} else if !hval.isNull && !hval.isUndefined && hval.hasProperty("call") { // a single handler func was passed
-								handlers[name, default: []].append(hval)
+							} else if prop == .handlers && !obj.isNull && !obj.isUndefined && obj.hasProperty("call") { // a single handler func was passed
+								newObjs[name, default: []].append(obj)
 							}
 						}
-						props[prop] = handlers
+						props[prop] = newObjs
 					default:
 						warn("unhandled init prop: \(prop.rawValue)")
 				}
@@ -82,9 +85,7 @@ enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
 	var description: String { get }
 	func inspect() -> String
 	// https://nodejs.org/api/util.html#util_custom_inspection_functions_on_objects
-
-	// https://github.com/WebKit/webkit/commit/e5b28462f7cfd7114f7fa0982249659df6fcfb32
-	// ^ can we has exports of native props now (10.15+)?
+	func toString() -> String
 
 	var hash: Int { get }
 	var transparent: Bool { get set }
@@ -538,6 +539,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 
 	override var description: String { return "<\(type(of: self))> `\(title ?? String())` [\(urlstr)]" }
 	func inspect() -> String { return "`\(title ?? String())` [\(urlstr)]" }
+	func toString() -> String { return "`\(title ?? String())` [\(urlstr)]" }
 
 	deinit {
 		warn(description)
@@ -720,6 +722,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		}
 	}
 
+	// TODO: addStyles(_ stylesMap: [String: [JSValue]])
+
 	func subscribeTo(_ handler: String) {
 		configuration.userContentController.removeScriptMessageHandler(forName: handler)
 		configuration.userContentController.add(AppScriptRuntime.shared, name: handler)
@@ -900,13 +904,23 @@ class MPWebView: WKWebView, WebViewScriptExports {
 			// _printOperation not avail in 10.11.4's WebKit
 			//   but what about Safari 11 back-releases to 10.11/ElCap?
 		if WebKit_version >= (602, 1, 12) { // 11/2015 602.1.11.1 probably works too
-			guard let printer = _printOperation(with: NSPrintInfo.shared) else { return }
-			// nil is returned if page contains encrypted/secured PDF, and maybe other qualms
+			guard let printer = _printOperation(with: NSPrintInfo.shared) else {
+				warn("failed to get NSPrintOperation! (perhaps encrypted/secured content present)")
+				// nil is returned if page contains encrypted/secured PDF, and maybe other qualms
+				return
+			}
 
 			printer.showsPrintPanel = true
+			printer.showsProgressPanel = true
+			printer.canSpawnSeparateThread = true
+			printer.printPanel.jobStyleHint = .allPresets
+			printer.printPanel.options = [.showsPreview, .showsPageRange, .showsPageSetupAccessory, .showsCopies]
+
 			if let window = self.window {
+				// will get a pop-over
 				printer.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
 			} else {
+				// non-selected tab/popup requested window.print(), will be a floating dialog
 				printer.run()
 			}
 		}
