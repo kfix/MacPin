@@ -87,7 +87,7 @@ mobileprov_team_id	?=
 
 ifeq ($(SF),1)
 ifeq ($(target_ver_macos),10.13)
-sfframes				:= /System/Library/StagedFrameworks/Safari
+sfframes				:= $(lastword $(wildcard /System/Library/Frameworks /System/Library/StagedFrameworks/Safari))
 endif
 ifneq ($(sfframes),)
 rpath					:= $(sfframes)
@@ -262,7 +262,7 @@ sites/% %.app: $(appdir)/%.app
 
 test_%: $(appdir)/%.app | $(appdir)/MacPin.app
 	-/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -v $(outdir)/apps/ -apps com.github.kfix.MacPin.MacPin
-	($(env) $^/Contents/MacOS/$(basename $(notdir $^)) -i) #|| { echo $$?; [ -t 1 ] && stty sane; }
+	($(env) $^/Contents/MacOS/$(basename $(notdir $^)) -i)
 
 ifeq ($(platform),macos)
 
@@ -429,7 +429,7 @@ uninstall: $(wildcard $(appnames:%=$(installdir)/%))
 
 stp test: $(appdir)/$(macpin).app
 	#-defaults delete $(macpin)
-	($(env) $</Contents/MacOS/$(macpin) -i http://browsingtest.appspot.com) #|| { echo $$?; [ -t 1 ] && stty sane; }
+	($(env) $</Contents/MacOS/$(macpin) -i http://browsingtest.appspot.com)
 
 apirepl: ; ($< -i)
 tabrepl: ; ($< -t)
@@ -438,13 +438,13 @@ stp.app test.app: $(appdir)/$(macpin).app
 	#banner ':-}' | open -a $$PWD/$^ -f
 	#-defaults delete $(template_bundle_id).$(macpin)
 	#(open $^) &
-	($(env) $^/Contents/MacOS/$(macpin) -i) #|| { echo $$?; [ -t 1 ] && stty sane; }
+	($(env) $^/Contents/MacOS/$(macpin) -i)
 # https://github.com/WebKit/webkit/blob/master/Tools/Scripts/webkitdirs.pm
 
 # debug: $(appdir)/test.app
 # http://stackoverflow.com/questions/24715891/access-a-swift-repl-in-cocoa-programs
 dbg.app: $(appdir)/$(macpin).app
-	lldb -f $^/Contents/MacOS/$(macpin) -- -i #|| { echo $$?; [ -t 1 ] && stty sane; }
+	lldb -f $^/Contents/MacOS/$(macpin) -- -i
 
 # make cross test.ios
 # .crash: https://developer.apple.com/library/ios/technotes/tn2151/_index.html
