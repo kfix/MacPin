@@ -43,9 +43,6 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 		WebViewUICallbacks.subscribe(webview)
 
 #if os(OSX)
-		WebViewNotificationCallbacks.subscribe(webview)
-		// sometimes the webview will go away on its own a minute after being closed, sometime it won't ...
-
 		representedObject = webview	// OSX omnibox/browser uses KVC to interrogate webview
 		view.addSubview(webview, positioned: .below, relativeTo: nil)
 		// must retain the empty parent view for the inspector to co-attach to alongside the webview

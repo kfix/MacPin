@@ -20,7 +20,7 @@ app.on("postedDesktopNotification", (note, tab) => {
 });
 
 app.on('handleClickedNotification', (note) => {
-	console.log("App signals a clicked notification: "+ JSON.stringify(note));
+	console.log("App signalled a clicked notification: "+ JSON.stringify(note));
 	return false;
 });
 

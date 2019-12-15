@@ -535,15 +535,8 @@ extension WebViewController: _WKDownloadDelegate {
    @objc func _webView(_ webView: WKWebView!, didUpdateHistoryTitle title: String!, for URL: URL!) { warn() }
 }
 
-@objc extension WebViewController { //WKUIDelegatePrivate .. but platform/Delagtes will declare the conformation
+@objc extension WebViewController { // WKUIDelegatePrivate .. but platform/Delagtes will declare the conformation
 	// https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKitCocoa/UIDelegate.mm
 	//@objc func _webView(_ webView: WKWebView!, getToolbarsAreVisibleWithCompletionHandler completionHandler: ((Bool) -> Void)!)
-
-	//func _webView(_ webView: WKWebView!, requestNotificationPermissionFor securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
-	func _webView(_ webView: WKWebView!, requestNotificationPermissionForSecurityOrigin securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
-		warn("Notification.requestPermission(...) <= \(webView.url?.absoluteString ?? "")")
-		//FIXME: prompt
-		decisionHandler(true) // Notification.permission == "default" => "granted"
-	}
 
 }

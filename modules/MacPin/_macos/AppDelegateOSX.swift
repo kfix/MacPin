@@ -467,11 +467,10 @@ extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 		if let info =  notification.userInfo, let type = info["type"] as? Int, let origin = info["origin"] as? String, let tabHash = info["tabHash"] as? UInt {
 
 			if let webview = browserController.tabs.filter({ UInt($0.hash) == tabHash }).first {
-				if let idstr = notification.identifier, let id = UInt64(idstr), let manager = WebViewNotificationCallbacks.getManager(webview) {
+				if let idstr = notification.identifier, let id = UInt64(idstr) {
+					WebNotifier.shared.clicked(webview: webview, id: id)
 					// let the webview know we sent it
 					warn("app notification is for tab: \(webview)")
-					WKNotificationManagerProviderDidClickNotification(manager, id)
-					// void return, so no confirmation that webview accepted/processed the click
 					browserController.tabSelected = webview
 					center.removeDeliveredNotification(notification)
 				}

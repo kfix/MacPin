@@ -213,14 +213,20 @@ extension WebViewController { // _WKInputDelegate
 
 @objc extension WebViewControllerOSX: WKUIDelegatePrivate {
 
-	/*
-	//override func _webView(_ webView: WKWebView!, requestNotificationPermissionForSecurityOrigin securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
-	@objc override func _webView(_ webView: WKWebView!, requestNotificationPermissionFor securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
-		warn()
-		//super._webView(webView, requestNotificationPermissionForSecurityOrigin: securityOrigin, decisionHandler: decisionHandler)
-		super._webView(webView, requestNotificationPermissionFor: securityOrigin, decisionHandler: decisionHandler)
+	@objc func _webView(_ webView: WKWebView!, requestNotificationPermissionFor securityOrigin: WKSecurityOrigin!, decisionHandler: ((Bool) -> Void)!) {
+		//warn(webView.url?.absoluteString ?? "")
+		warn("Notification.requestPermission(...) <= \(webView.url?.absoluteString ?? "")")
+
+		guard let mpwv = webView as? MPWebView else {
+			// not a MacPin webview
+			decisionHandler(false)
+			warn("not a MPWebView, web notifications not supported!")
+			return
+		}
+
+		WebNotifier.shared.subscribe(mpwv)
+		decisionHandler(true) // Notification.permission == "default" => "granted"
 	}
-	*/
 
 	//@available(OSX 10.13.4, *, iOS 11.3)
 	@objc func _webView(_ webView: WKWebView!, requestGeolocationPermissionForFrame frame: WKFrameInfo!, decisionHandler: ((Bool) -> Void)!) {
