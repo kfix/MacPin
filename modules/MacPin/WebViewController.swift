@@ -41,6 +41,7 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 		webview.configuration.processPool._setCanHandleHTTPSServerTrustEvaluation(true)
 
 		WebViewUICallbacks.subscribe(webview)
+		WebNotifier.shared.subscribe(webview, autoAllow: true)
 
 #if os(OSX)
 		representedObject = webview	// OSX omnibox/browser uses KVC to interrogate webview
@@ -68,6 +69,9 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 	@objc dynamic func dismiss() { warn("method not implemented by \(type(of: self))!") }
 	@objc dynamic func close() { warn("method not implemented by \(type(of: self))!") }
 
-	deinit { warn(description) }
+	deinit {
+		warn(description)
+		WebNotifier.shared.unsubscribe(webview)
+	}
 
 }

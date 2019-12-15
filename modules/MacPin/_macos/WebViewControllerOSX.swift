@@ -157,7 +157,6 @@ import WebKitPrivates
 		webview.inspectorAttachmentView = nil
 		unbind(NSBindingName.title)
 		Geolocator.shared.unsubscribeFromLocationEvents(webview: webview)
-		WebNotifier.shared.unsubscribe(webview)
 		// super.deinit is implicit here
 	}
 

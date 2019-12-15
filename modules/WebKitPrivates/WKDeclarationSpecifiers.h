@@ -1,4 +1,6 @@
-/* https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Shared/API/c/WKDeclarationSpecifiers.h
+/* 
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/c/WKDeclarationSpecifiers.h
+ *
  * Copyright (C) 2010, 2011 Apple Inc. All rights reserved.
  * Portions Copyright (c) 2010 Motorola Mobility, Inc.  All rights reserved.
  *
@@ -27,10 +29,20 @@
 #ifndef WKDeclarationSpecifiers_h
 #define WKDeclarationSpecifiers_h
 
+#ifndef __has_declspec_attribute
+#define __has_declspec_attribute(x) 0
+#endif
+
 #undef WK_EXPORT
 #if defined(WK_NO_EXPORT)
 #define WK_EXPORT
-#elif defined(__GNUC__) && !defined(__CC_ARM) && !defined(__ARMCC__)
+#elif defined(WIN32) || defined(_WIN32) || defined(__CC_ARM) || defined(__ARMCC__) || (__has_declspec_attribute(dllimport) && __has_declspec_attribute(dllexport))
+#if BUILDING_WebKit
+#define WK_EXPORT __declspec(dllexport)
+#else
+#define WK_EXPORT __declspec(dllimport)
+#endif /* BUILDING_WebKit */
+#elif defined(__GNUC__)
 #define WK_EXPORT __attribute__((visibility("default")))
 #else /* !defined(WK_NO_EXPORT) */
 #define WK_EXPORT
