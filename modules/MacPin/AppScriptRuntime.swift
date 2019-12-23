@@ -92,6 +92,7 @@ extension JSValue {
 	func changeAppIcon(_ iconpath: String)
 	@objc(postNotification:::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?, info: JSValue?)
 	func postHTML5Notification(_ object: [String:AnyObject])
+	func allowNotificationsFor(_ urlstr: String)
 	func openURL(_ urlstr: String, _ app: String?)
 	func doesAppExist(_ appstr: String) -> Bool
 
@@ -1011,10 +1012,10 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	// TOIMPL: https://electronjs.org/docs/api/notification extend a Notification() shim
 	@objc(postNotification:::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?, info: JSValue?) {
 
-	var infoDict: [String: Any] = [:]
-	if let object = info, object.isObject, let jsdict = object.toDictionary() as? [String: Any] {
-		infoDict = jsdict
-	}
+		var infoDict: [String: Any] = [:]
+		if let object = info, object.isObject, let jsdict = object.toDictionary() as? [String: Any] {
+			infoDict = jsdict
+		}
 
 #if os(OSX)
 		let note = NSUserNotification()
@@ -1107,6 +1108,10 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		}
 		UIApplication.sharedApplication().scheduleLocalNotification(note)
 #endif
+	}
+
+	func allowNotificationsFor(_ urlstr: String) {
+		WebNotifier.shared.authorize_origin(URL(string: urlstr))
 	}
 
 	func REPL() -> Prompter? {

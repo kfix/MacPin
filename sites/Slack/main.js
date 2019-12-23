@@ -6,6 +6,8 @@
 
 const {app, BrowserWindow, WebView} = require('@MacPin');
 
+app.allowNotificationsFor("https://app.slack.com");
+
 let slackTab, slack = {
 	url: 'https://slack.com/signin' // show workspace picker on open
 };

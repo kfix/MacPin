@@ -7,9 +7,7 @@ struct WebKitNotificationCallbacks {
 	// Requests that a notification be shown.
 	// https://www.w3.org/TR/notifications/#showing-a-notification
 	static let showCallback: WKNotificationProviderShowCallback = { page, notification, clientInfo in
-		weak var notifier = unsafeBitCast(clientInfo, to: WebNotifier.self)
-		guard notifier != nil else { warn("no WebNotifier provided to callback!"); return }
-		notifier?.showWebNotification(page!, notification!)
+		unsafeBitCast(clientInfo, to: WebNotifier.self).showWebNotification(page!, notification!)
 	}
 
 	// Requests that a notification that has already been shown be canceled.
@@ -35,9 +33,7 @@ struct WebKitNotificationCallbacks {
 	 // Checks the current level of permission.
 	static let permissionsCallback: WKNotificationProviderNotificationPermissionsCallback = { clientInfo -> Optional<OpaquePointer> /*WKDictionaryRef*/ in
 		warn("permissions checked")
-		weak var notifier = unsafeBitCast(clientInfo, to: WebNotifier.self)
-		guard notifier != nil else { warn("no WebNotifier provided to callback!"); return WKMutableDictionaryCreate(); }
-		return notifier?.permissions // send back a cached dict from the notifier
+		return unsafeBitCast(clientInfo, to: WebNotifier.self).permissions // send back a cached dict from the notifier
 	}
 
 	// Cancel all outstanding requests
@@ -163,20 +159,21 @@ class WebNotifier {
 	}
 
 	func authorize_origin(_ url: URL?, _ webview: MPWebView? = nil) {
-		if let url = url, (url.scheme == "http" || url.scheme == "https") {
+		if let url = url, let scheme = url.scheme, let host = url.host,
+			!host.isEmpty, (scheme == "http" || scheme == "https") {
 			// get origin of webview and add it to permissions
 			if let origin = WKSecurityOriginCreate(
 				// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/SecurityOrigin.cpp ::create
-				WKStringCreateWithUTF8CString(url.scheme),
-				WKStringCreateWithUTF8CString(url.host),
+				WKStringCreateWithUTF8CString(scheme),
+				WKStringCreateWithUTF8CString(host),
 				Int32(url.port ?? 0) // Cpp falsey
 				// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/SecurityOriginData.cpp
 			) {
-				/* -[__NSDictionaryM _apiObject]: unrecognized selector sent to instance 0x7f9baae9d750
+				/*
 				WKDictionarySetItem(permissions,
 					WKSecurityOriginCopyToString(origin),
 					UnsafeRawPointer(WKBooleanCreate(true)) // allowed
-				)
+				) // -[__NSDictionaryM _apiObject]: unrecognized selector sent to instance 0x7f9baae9d750
 				*/
 
 				if let webview = webview {
