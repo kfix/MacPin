@@ -1,5 +1,6 @@
 /*
- * https://github.com/WebKit/webkit/blob/d52551adb6f8bc05f01f4fd5a94197545498f6d6/Source/WebKit2/UIProcess/API/C/WKContextPrivate.h
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/C/WKContextPrivate.h
+ *
  * Copyright (C) 2010, 2012 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -59,15 +60,13 @@ WK_EXPORT void WKContextRegisterURLSchemeAsCachePartitioned(WKContextRef context
 
 WK_EXPORT void WKContextSetDomainRelaxationForbiddenForURLScheme(WKContextRef context, WKStringRef urlScheme);
 
-WK_EXPORT void WKContextSetCanHandleHTTPSServerTrustEvaluation(WKContextRef context, bool value);
+WK_EXPORT void WKContextSetCanHandleHTTPSServerTrustEvaluation(WKContextRef context, bool value) WK_C_API_DEPRECATED;
 
-WK_EXPORT void WKContextSetDiskCacheSpeculativeValidationEnabled(WKContextRef context, bool value);
+WK_EXPORT void WKContextSetDiskCacheSpeculativeValidationEnabled(WKContextRef context, bool value) WK_C_API_DEPRECATED;
 
 WK_EXPORT void WKContextSetIconDatabasePath(WKContextRef context, WKStringRef iconDatabasePath);
 
 WK_EXPORT void WKContextAllowSpecificHTTPSCertificateForHost(WKContextRef context, WKCertificateInfoRef certificate, WKStringRef host);
-
-WK_EXPORT void WKContextSetCookieStorageDirectory(WKContextRef context, WKStringRef cookieStorageDirectory);
 
 // FIXME: This is a workaround for testing purposes only and should be removed once a better
 // solution has been found for testing.
