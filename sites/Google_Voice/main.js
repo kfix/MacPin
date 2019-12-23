@@ -35,6 +35,21 @@ const voice = {
 // window.JsSip. window._gv
 // wss://web.voice.telephony.goog/websocket doesn't work because Goog dgaf about standards
 //   https://support.google.com/voice/thread/14998073?msgid=14998073
+//   https://bugs.webkit.org/show_bug.cgi?id=202095
+//
+//   erroring out at WebSocketChannel::fail
+//       https://github.com/WebKit/webkit/blob/d11a94abf8b5ee896f835de90b0c39187a9e2e9c/Source/WebCore/Modules/websockets/WebSocketChannel.cpp#L220
+//       "WebSocket connection to wss://web.voice.telephony.goog/websocket failed: HTTP/1.1 101" +
+//           https://github.com/WebKit/webkit/blob/d11a94abf8b5ee896f835de90b0c39187a9e2e9c/Source/WebCore/Modules/websockets/WebSocketChannel.cpp#L466
+//           WebSocketChannel::processBuffer() { m_handshake->readServerHandshake(m_buffer.data(), m_buffer.size()); ...  fail(m_handshake->failureReason()); }
+//              https://github.com/WebKit/webkit/blob/30863c5eaac7ab51e8f8ed0faaee1e36a7d94e06/Source/WebCore/Modules/websockets/WebSocketHandshake.cpp#L290
+//                 WebSocketHandshake::readServerHandshake  int lineLength = readStatusLine(header, len, statusCode, statusText);
+//                     https://github.com/WebKit/webkit/blob/30863c5eaac7ab51e8f8ed0faaee1e36a7d94e06/Source/WebCore/Modules/websockets/WebSocketHandshake.cpp#L428
+//                     https://webkit.googlesource.com/WebKit/+/140660dd99ec18e890f25bfe1d94c9a268b78264/Source/WebCore/Modules/websockets/WebSocketHandshake.cpp#405
+//                     https://trac.webkit.org/browser/webkit/trunk/Source/WebCore/Modules/websockets/WebSocketHandshake.cpp?rev=249013#L453
+//                         WebSocketHandshake::readStatusLine(
+//                             https://github.com/WebKit/webkit/blob/30863c5eaac7ab51e8f8ed0faaee1e36a7d94e06/Source/WebCore/Modules/websockets/WebSocketHandshake.cpp#L500
+//                                statusText = String(space2 + 1, end - space2 - 3); // Exclude "\r\n".
 //  voiceTab.evalJS(`JsSIP.debug.enable('JsSIP:*');`);
 
 // http://voice.google.com/messages
