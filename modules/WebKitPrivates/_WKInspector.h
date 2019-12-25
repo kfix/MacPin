@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKInspector.h
+ *
+ * Copyright (C) 2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,14 +25,39 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import <Foundation/Foundation.h>
 #import <WebKit/WKFoundation.h>
-#import "_WKInputDelegate.h"
 
-/**
- * We are transitioning _WKFormDelegate to _WKInputDelegate. This header is here temporarily for source compatibility and
- * should be removed when we are ready to make the switch.
- https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKFormInputSession.h
- */
+@class WKWebView;
+@class _WKFrameHandle;
 
-@protocol _WKFormDelegate <_WKInputDelegate>
+NS_ASSUME_NONNULL_BEGIN
+
+WK_CLASS_AVAILABLE(macos(10.14.4), ios(12.2))
+@interface _WKInspector : NSObject
+
+- (instancetype)init NS_UNAVAILABLE;
+
+@property (nonatomic, readonly) WKWebView *webView;
+@property (nonatomic, readonly) BOOL isConnected;
+@property (nonatomic, readonly) BOOL isVisible;
+@property (nonatomic, readonly) BOOL isFront;
+@property (nonatomic, readonly) BOOL isProfilingPage;
+@property (nonatomic, readonly) BOOL isElementSelectionActive;
+
+- (void)connect;
+- (void)show;
+- (void)hide;
+- (void)close;
+- (void)showConsole;
+- (void)showResources;
+- (void)showMainResourceForFrame:(_WKFrameHandle *)frame;
+- (void)attach;
+- (void)detach;
+- (void)togglePageProfiling;
+- (void)toggleElementSelection;
+- (void)printErrorToConsole:(NSString *)error;
+
 @end
+
+NS_ASSUME_NONNULL_END

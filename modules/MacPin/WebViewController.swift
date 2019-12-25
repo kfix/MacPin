@@ -25,7 +25,7 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 		self.webview = webview
 		super.init(nibName: nil, bundle: nil)
 		webview.navigationDelegate = self // allows/denies navigation actions: see WebViewDelegates
-		//webview._formDelegate = self //FIXME: ._inputDelegate = self
+		webview._inputDelegate = self
 		webview._findDelegate = self
 
 		if WebKit_version >= (603, 1, 17) {

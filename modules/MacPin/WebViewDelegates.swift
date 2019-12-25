@@ -466,7 +466,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 
 }
 
-extension WebViewController: _WKFormDelegate { } // form input hooks, implemented per-platform
+extension WebViewController: _WKInputDelegate { } // form input hooks, implemented per-platform
 extension WebViewController: _WKFindDelegate { } // text finder handling, implemented per-platform
 
 extension WebViewController: _WKDiagnosticLoggingDelegate {

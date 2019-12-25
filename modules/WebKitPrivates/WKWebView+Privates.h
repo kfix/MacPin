@@ -1,7 +1,7 @@
 @import WebKit;
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKWebViewPrivate.h
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/Cocoa/WebViewImpl.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/Settings.in
+// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/Settings.yaml
 
 #import "WebKitAvailability.h"
 #import "_WKLayoutMode.h"
@@ -51,10 +51,10 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @class _WKIconLoadingDelegate;
 @class _WKThumbnailView;
 @class _WKFrameHandle;
+@class _WKInspector;
 
-@protocol _WKFindDelegate;
 @protocol _WKDiagnosticLoggingDelegate;
-//@protocol _WKInputDelegate;
+@protocol _WKInputDelegate;
 @protocol WKHistoryDelegatePrivate;
 @protocol _WKIconLoadingDelegate;
 
@@ -97,10 +97,12 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @property (nonatomic, readonly) BOOL _shouldRequestCandidates WK_API_AVAILABLE(macosx(10.12.3));
 - (void)_insertText:(id)string replacementRange:(NSRange)replacementRange WK_API_AVAILABLE(macosx(10.12.3));
 - (NSRect)_candidateRect WK_API_AVAILABLE(macosx(10.13));
-@property (nonatomic, readwrite, setter=_setUseSystemAppearance:) BOOL _useSystemAppearance WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+@property (nonatomic, readwrite, setter=_setUseSystemAppearance:) BOOL _useSystemAppearance WK_API_AVAILABLE(macos(10.14));
+@property (nonatomic, readonly) NSMenu *_activeMenu WK_API_AVAILABLE(macos(WK_MAC_TBA));
 
 - (void)_setHeaderBannerHeight:(int)height WK_API_AVAILABLE(macosx(10.12.3));
 - (void)_setFooterBannerHeight:(int)height WK_API_AVAILABLE(macosx(10.12.3));
+- (void)_doAfterProcessingAllPendingMouseEvents:(dispatch_block_t)action WK_API_AVAILABLE(macos(10.14.4));
 
 // TODO: make Status Bar from NSTrackingArea's tooltips
 // https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/EventOverview/TrackingAreaObjects/TrackingAreaObjects.html#//apple_ref/doc/uid/10000060i-CH8-SW1
@@ -117,7 +119,6 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @property (nonatomic, setter=_setDrawsBackground:) BOOL _drawsBackground WK_API_AVAILABLE(macosx(10.12), ios(10.0));
 @property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground; // DEPRECATED!
 
-// https://bugs.webkit.org/show_bug.cgi?id=151276 ChangeLog-2015-11-21
 - (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo; // prints top frame
 - (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle WK_API_AVAILABLE(macosx(10.12), ios(10.0));
 
@@ -149,8 +150,6 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @property (nonatomic, readonly) NSString *_MIMEType;
 
 @property (nonatomic, weak, setter=_setDiagnosticLoggingDelegate:) id <_WKDiagnosticLoggingDelegate> _diagnosticLoggingDelegate WK_API_AVAILABLE(macosx(10.11), ios(9.0));
-//https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKFormDelegate.h
-//@property (nonatomic, weak, setter=_setFormDelegate:) id <_WKFormDelegate> _formDelegate;
 
 @property (nonatomic, weak, setter=_setFindDelegate:) id <_WKFindDelegate> _findDelegate;
 - (void)_findString:(NSString *)string options:(_WKFindOptions)options maxCount:(NSUInteger)maxCount;
@@ -170,6 +169,9 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @property (nonatomic, setter=_setThumbnailView:) _WKThumbnailView *_thumbnailView WK_API_AVAILABLE(macosx(10.13.4));
 @property (nonatomic, setter=_setIgnoresAllEvents:) BOOL _ignoresAllEvents WK_API_AVAILABLE(macosx(10.13.4));
 
+// Defaults to YES; if set to NO, WebKit will draw the grey wash and highlights itself.
+@property (nonatomic, setter=_setUsePlatformFindUI:) BOOL _usePlatformFindUI WK_API_AVAILABLE(macos(10.15));
+
 @property (nonatomic, setter=_setScrollPerformanceDataCollectionEnabled:) BOOL _scrollPerformanceDataCollectionEnabled WK_API_AVAILABLE(macosx(10.11), ios(9.0));
 @property (nonatomic, readonly) NSArray *_scrollPerformanceData WK_API_AVAILABLE(macosx(10.11), ios(9.0));
 
@@ -187,8 +189,9 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 
 @property (nonatomic, setter=_setMediaCaptureEnabled:) BOOL _mediaCaptureEnabled WK_API_AVAILABLE(macosx(10.13), ios(11.0));
 
-//@property (nonatomic, readonly) _WKInspector *_inspector WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
-@property (nonatomic, readonly) _WKFrameHandle *_mainFrame WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
+@property (nonatomic, readonly) BOOL _hasInspectorFrontend WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+@property (nonatomic, readonly) _WKInspector *_inspector WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+@property (nonatomic, readonly) _WKFrameHandle *_mainFrame WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
 
 @end
 
