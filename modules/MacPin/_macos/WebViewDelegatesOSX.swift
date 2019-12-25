@@ -317,7 +317,7 @@ extension WebViewController { // _WKInputDelegate
 		// Safari 9.1+, Chrome 51+, & Firefox 44+ do not allow JS to customize the msgTxt. Thanks scammers.
 		alert.icon = NSApplication.shared.applicationIconImage
 		displayAlert(alert) { (response: NSApplication.ModalResponse) -> Void in completionHandler(response == .alertFirstButtonReturn) }
- }
+	}
 
 	func _webView(_ webView: WKWebView, printFrame: WKFrameInfo) {
 		warn("JS: `window.print();`")
