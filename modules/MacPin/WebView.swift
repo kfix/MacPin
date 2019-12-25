@@ -329,7 +329,6 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		}
 		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
 #if os(OSX)
-		prefs.plugInsEnabled = true // NPAPI for Flash, Java, Hangouts
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
 		prefs._fullScreenEnabled = true
 
@@ -426,6 +425,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 				WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(https))
 			}
 		}
+
+		_useSystemAppearance = true
 
 #elseif os(iOS)
 		_applicationNameForUserAgent = "Version/10 Mobile/12F70 Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
@@ -927,9 +928,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	}
 
 	func console() {
-		guard let page = _page else { return }
-		let inspector = WKPageGetInspector(_page)
-		WKInspectorShowConsole(inspector) // ShowConsole, Hide, Close, IsAttatched, Attach, Detach
+		guard let inspector = _inspector else { return }
+		inspector.showConsole() // ShowConsole, Hide, Close, IsAttatched, Attach, Detach
 	}
 
 	func repaint() {

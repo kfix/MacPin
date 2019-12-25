@@ -147,7 +147,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Toggle Status Bar", #selector(WebViewControllerOSX.toggleStatusBar)))
 		tabMenu.submenu?.addItem(NSMenuItem.separator())
 		tabMenu.submenu?.addItem(MenuItem("Show JS Console", #selector(MPWebView.console), "c", [.option, .command]))
-		tabMenu.submenu?.addItem(MenuItem("Toggle Web Inspector", #selector(WebViewControllerOSX.showHideWebInspector(_:)), "i", [.option, .command]))
+		tabMenu.submenu?.addItem(MenuItem("Show Web Inspector", #selector(WebViewControllerOSX.showHideWebInspector(_:)), "i", [.option, .command]))
 		tabMenu.submenu?.addItem(MenuItem("Reload", #selector(MPWebView.reload(_:)), "r", [.command]))
 		tabMenu.submenu?.addItem(MenuItem("Uncache & Reload", #selector(MPWebView.reloadFromOrigin(_:)), "R", [.command, .shift]))
 		tabMenu.submenu?.addItem(MenuItem("Go Back", #selector(MPWebView.goBack(_:)), "[", [.command]))

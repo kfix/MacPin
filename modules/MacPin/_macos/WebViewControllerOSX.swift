@@ -323,33 +323,15 @@ extension WebViewControllerOSX { // AppGUI funcs
 	}
 */
 
-	// https://github.com/WebKit/webkit/commit/7142fb3b53b77c1f4881f2c7b5fa2a61794cc2e0#diff-da59bd1d4a25653a6963b1d22bbc088f
-	// https://github.com/WebKit/webkit/blob/07c00cf1cf8625bcd5abd80857c9bf98f9d2b9ab/Tools/TestWebKitAPI/Tests/WebKitCocoa/ProcessSwapOnNavigation.mm#L1102
 	@objc func showHideWebInspector(_ sender: AnyObject?) {
-		guard let page = webview._page else { return }
-		let inspectorRef = WKPageGetInspector(page)
-		if WKInspectorIsVisible(inspectorRef) {
-			DispatchQueue.main.async() { WKInspectorHide(inspectorRef) }
+		guard let inspector = webview._inspector else { return }
+		if inspector.isVisible {
+			DispatchQueue.main.async() { inspector.hide() }
 			webview.window?.makeFirstResponder(webview)
 		} else {
-			DispatchQueue.main.async() { WKInspectorShow(inspectorRef) }
+			DispatchQueue.main.async() { inspector.show() }
 		}
 	}
-/*
-	func validateMenuItem(menuItem: NSMenuItem) -> Bool {
-		warn(obj: menuItem)
-		switch menuItem.action {
-			// https://github.com/WebKit/webkit/blob/7142fb3b53b77c1f4881f2c7b5fa2a61794cc2e0/Tools/MiniBrowser/mac/WK2BrowserWindowController.m
-			case #selector(showHideWebInspector:):
-				menuItem.title = WKInspectorIsVisible(WKPageGetInspector(_webView._pageRefForTransitionToWKWebView)) ? "Close Web Inspector" : "Show Web Inspector"
-				fallthrough
-			default:
-				return true
-		}
-
-		return false
-	}
-*/
 
 	@objc func selectProxies() {
 		let alert = NSAlert()
@@ -370,6 +352,22 @@ extension WebViewControllerOSX { // AppGUI funcs
 				self.popup(self.webview.proxied_clone(input.stringValue, input.stringValue))
 			}
 		})
+	}
+}
+
+extension WebViewControllerOSX: NSMenuItemValidation {
+	func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+		warn(obj: menuItem)
+		switch menuItem.action {
+			case Selector("showHideWebInspector:"):
+		        guard let inspector = webview._inspector else { return false }
+				menuItem.title = (inspector.isVisible) ? "Hide Web Inspector" : "Show Web Inspector"
+				return true
+			default:
+				return true
+		}
+
+		return false
 	}
 }
 
