@@ -101,7 +101,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 		let appMenu = NSMenuItem()
 		appMenu.submenu = NSMenu()
-		appMenu.submenu?.addItem(MenuItem("About \(appname)", #selector(MacPinAppDelegateOSX.aboutPopup)))
+		appMenu.submenu?.addItem(MenuItem("About \(appname)", #selector(type(of: self).aboutPopup)))
 		appMenu.submenu?.addItem(MenuItem("Restart \(appname)", #selector(AppScriptRuntime.loadMainScript)))
 		appMenu.submenu?.addItem(NSMenuItem.separator())
 		appMenu.submenu?.addItem(MenuItem("Hide \(appname)", "hide:", "h", [.command]))
@@ -142,8 +142,9 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		tabMenu.submenu?.title = "Tab"
 		tabMenu.submenu?.addItem(MenuItem("Zoom In", #selector(WebViewControllerOSX.zoomIn), "+", [.command]))
 		tabMenu.submenu?.addItem(MenuItem("Zoom Out", #selector(WebViewControllerOSX.zoomOut), "-", [.command]))
-		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", #selector(WebViewControllerOSX.zoomText), nil, [.command]))
+		tabMenu.submenu?.addItem(MenuItem("Zoom Text Only", #selector(WebViewControllerOSX.zoomText)))
 		tabMenu.submenu?.addItem(MenuItem("Toggle Translucency", #selector(WebViewControllerOSX.toggleTransparency)))
+		tabMenu.submenu?.addItem(MenuItem("Toggle Appearance", #selector(WebViewControllerOSX.toggleAppearance)))
 		tabMenu.submenu?.addItem(MenuItem("Toggle Status Bar", #selector(WebViewControllerOSX.toggleStatusBar)))
 		tabMenu.submenu?.addItem(NSMenuItem.separator())
 		tabMenu.submenu?.addItem(MenuItem("Show JS Console", #selector(MPWebView.console), "c", [.option, .command]))
@@ -468,7 +469,7 @@ extension MacPinAppDelegateOSX: NSUserNotificationCenterDelegate {
 
 			if let webview = browserController.tabs.filter({ UInt($0.hash) == tabHash }).first {
 				if let idstr = notification.identifier, let id = UInt64(idstr) {
-					WebNotifier.shared.clicked(webview: webview, id: id)
+					webview.notifier?.clicked(id: id)
 					// let the webview know we sent it
 					warn("app notification is for tab: \(webview)")
 					browserController.tabSelected = webview

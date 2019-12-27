@@ -189,6 +189,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 	}
 
 	@objc func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }
+	@objc func toggleAppearance() { webview.useSystemAppearance = !webview.useSystemAppearance; }
 	@objc func toggleStatusBar() { showStatusBar = !showStatusBar }
 
 	@objc func zoomIn() { zoom(0.2) }
@@ -357,17 +358,25 @@ extension WebViewControllerOSX { // AppGUI funcs
 
 extension WebViewControllerOSX: NSMenuItemValidation {
 	func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-		warn(obj: menuItem)
 		switch menuItem.action {
-			case Selector("showHideWebInspector:"):
+			case #selector(type(of: self).showHideWebInspector):
 		        guard let inspector = webview._inspector else { return false }
-				menuItem.title = (inspector.isVisible) ? "Hide Web Inspector" : "Show Web Inspector"
-				return true
+				menuItem.title = (inspector.isVisible) ?
+					"Hide Web Inspector" : "Show Web Inspector"
+			case #selector(type(of: self).toggleAppearance):
+				menuItem.title = (webview.useSystemAppearance) ?
+					"Unfollow System Appearance" : "Follow System Appearance"
+			case #selector(type(of: self).toggleTransparency):
+				menuItem.title = (webview.transparent) ?
+					"Disable Translucency" : "Enable Translucency"
+			case #selector(type(of: self).toggleStatusBar):
+				menuItem.title = (showStatusBar) ?
+					"Hide Status Bar" : "Show Status Bar"
 			default:
-				return true
+				break
 		}
 
-		return false
+		return true
 	}
 }
 

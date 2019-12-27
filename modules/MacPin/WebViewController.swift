@@ -41,7 +41,6 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 		webview.configuration.processPool._setCanHandleHTTPSServerTrustEvaluation(true)
 
 		WebViewUICallbacks.subscribe(webview)
-		WebNotifier.shared.subscribe(webview, autoAllow: true)
 
 #if os(OSX)
 		representedObject = webview	// OSX omnibox/browser uses KVC to interrogate webview
@@ -71,7 +70,6 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 
 	deinit {
 		warn(description)
-		WebNotifier.shared.unsubscribe(webview)
 	}
 
 }

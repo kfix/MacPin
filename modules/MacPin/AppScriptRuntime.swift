@@ -92,7 +92,6 @@ extension JSValue {
 	func changeAppIcon(_ iconpath: String)
 	@objc(postNotification:::::) func postNotification(_ title: String?, subtitle: String?, msg: String?, id: String?, info: JSValue?)
 	func postHTML5Notification(_ object: [String:AnyObject])
-	func allowNotificationsFor(_ urlstr: String)
 	func openURL(_ urlstr: String, _ app: String?)
 	func doesAppExist(_ appstr: String) -> Bool
 
@@ -702,12 +701,20 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		nativeModules = [
 			// https://electronjs.org/docs/api/app
 			"app":				JSValue(object: self, in: context)
-			//,"app2":			self // crash bandicoots
+			//,"app2":			self // crash bandicoot (because of JSC GC?)s
 			// https://electronjs.org/docs/api/browser-window
 			,"BrowserWindow":	BrowserController.self.wrapSelf(context)
 			// https://electronjs.org/docs/api/browser-view
 			,"WebView":			JSValue(object: MPWebView.self, in: context)
 		]
+
+// don't do any context enrichments, the ESM-on-node spec (our inspiration)
+//   is still very bare
+// https://nodejs.org/api/esm.html#esm_no_code_require_code_code_exports_code_code_module_exports_code_code_filename_code_code_dirname_code
+// https://github.com/nodejs/modules
+// https://github.com/nodejs/node/pull/29866
+// https://nodejs.org/en/blog/release/v13.2.0/
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import.meta
 
 		context.globalObject.thisEval("""
 			let window = this; // https://github.com/nodejs/node/issues/1043
@@ -1111,7 +1118,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	func allowNotificationsFor(_ urlstr: String) {
-		WebNotifier.shared.authorize_origin(URL(string: urlstr))
+		/* WebNotifier.shared.authorize_origin(URL(string: urlstr)) */
 	}
 
 	func REPL() -> Prompter? {

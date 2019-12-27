@@ -224,7 +224,7 @@ extension WebViewController { // _WKInputDelegate
 			return
 		}
 
-		decisionHandler(WebNotifier.shared.requestPermission(mpwv))
+		decisionHandler(mpwv.notifier?.requestPermission() ?? false)
 	}
 
 	//@available(OSX 10.13.4, *, iOS 11.3)

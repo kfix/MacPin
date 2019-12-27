@@ -146,6 +146,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	var usesProxy = ""
 	var usesSproxy = ""
 
+	var notifier: WebNotifier? = nil
+
 	static var MatchedAddressOptions: [String:String] = [:] // cvar singleton
 
 	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
@@ -295,6 +297,11 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		}
 	}
 
+	var useSystemAppearance: Bool {
+		get { return _useSystemAppearance }
+		set(val) { _useSystemAppearance = val }
+	}
+
 #elseif os(iOS)
 	var transparent = false // no overlaying MacPin apps upon other apps in iOS, so make it a no-op
 	var allowsMagnification = true // not exposed on iOS WebKit, make it no-op
@@ -331,6 +338,10 @@ class MPWebView: WKWebView, WebViewScriptExports {
 #if os(OSX)
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
 		prefs._fullScreenEnabled = true
+
+		prefs._colorFilterEnabled = true // enables -apple-color-filter prop in css
+		prefs._punchOutWhiteBackgroundsInDarkMode = true
+		// allows white backgrounds (in all element types) to selectively be made transparent
 
 		// gate?
 		prefs._javaScriptCanAccessClipboard = true
@@ -432,6 +443,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		_applicationNameForUserAgent = "Version/10 Mobile/12F70 Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
 #endif
 		if let agent = agent { if !agent.isEmpty { _customUserAgent = agent } }
+
+		self.notifier = WebNotifier(self)
 	}
 
 	/*
@@ -462,7 +475,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	}
 
 	@nonobjc convenience required init(config: WKWebViewConfiguration?, agent: String?, proxy: String?, sproxy: String?, isolated: Bool?, privacy: Bool?, transparent: Bool?) {
-		self.init(config: config, agent: agent, proxy: proxy, sproxy: sproxy, isolated: isolated ?? false, privacy: privacy ?? false, transparent: transparent ?? false)
+		self.init(config: config, agent: agent, proxy: proxy, sproxy: sproxy, isolated: isolated ?? false, privacy: privacy ?? false, transparent: transparent ?? true)
 	}
 
 	@objc convenience required init?(options: [AnyHashable: Any]) {
@@ -473,7 +486,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		let privacy = options[WebViewInitProps.privacy] as? Bool ?? false
 		let proxy = options[WebViewInitProps.proxy] as? String ?? ""
 		let sproxy = options[WebViewInitProps.sproxy] as? String ?? ""
-		self.init(config: nil, agent: nil, proxy: proxy, sproxy: sproxy, isolated: isolated, privacy: privacy, transparent: false)
+		self.init(config: nil, agent: nil, proxy: proxy, sproxy: sproxy, isolated: isolated, privacy: privacy, transparent: true)
 
 		var url: URL? = nil
 
@@ -513,24 +526,23 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	}
 
 	@objc convenience required init(config: WKWebViewConfiguration?) {
-		self.init(config: config, agent: nil, proxy: nil, sproxy: nil, isolated: false, privacy: false, transparent: false)
+		self.init(config: config, agent: nil, proxy: nil, sproxy: nil, isolated: false, privacy: false, transparent: true)
 	}
 
 	@objc convenience required init(url: URL) {
-		//self.init(config: nil, agent: nil, isolated: False, privacy: False, transparent: False)
 		self.init(config: nil)
 		gotoURL(url)
 	}
 
 	convenience required init(config: WKWebViewConfiguration?, agent: String?) {
-		self.init(config: config, agent: agent, proxy: nil, sproxy: nil, isolated: false, privacy: false, transparent: false)
+		self.init(config: config, agent: agent, proxy: nil, sproxy: nil, isolated: false, privacy: false, transparent: true)
 	}
 
-	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = false) {
+	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = true) {
 		self.init(url: url as URL, agent: agent, isolated: isolated, privacy: privacy, transparent: transparent)
 	}
 
-	convenience required init(url: URL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = false) {
+	convenience required init(url: URL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = true) {
 		self.init(config: nil, agent: agent, proxy: nil, sproxy: nil, isolated: isolated, privacy: privacy, transparent: transparent)
 		warn("navigating to \(url)")
 		gotoURL(url)
@@ -543,6 +555,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	func toString() -> String { return "`\(title ?? String())` [\(urlstr)]" }
 
 	deinit {
+		self.notifier = nil
 		warn(description)
 	}
 

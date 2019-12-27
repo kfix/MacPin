@@ -38,6 +38,16 @@ WK_EXPORT WKTypeID WKGetTypeID(WKTypeRef type);
 WK_EXPORT WKTypeRef WKRetain(WKTypeRef type);
 WK_EXPORT void WKRelease(WKTypeRef type);
 
+/* https://lists.webkit.org/pipermail/webkit-help/2011-March/002000.html
+ >>  All WK*Ref types are ref-counted. WKRetain and WKRelease work on any WK*Ref type. WebKit2's C API is modeled after CoreFoundation. You can find more information (including information about memory management) here: 
+ https://developer.apple.com/library/archive/documentation/CoreFoundation/Conceptual/CFDesignConcepts/CFDesignConcepts.html#//apple_ref/doc/uid/10000122
+
+https://lists.webkit.org/pipermail/webkit-help/2010-April/000956.html
+ Uses of CF/JS/WKRetain and Release should follow the "Create Rule" - if you used a Create() function, you are the owner (by default) and will need to release it later.
+ https://developer.apple.com/library/archive/documentation/CoreFoundation/Conceptual/CFMemoryMgmt/Concepts/Ownership.html#//apple_ref/doc/uid/20001148-103029
+
+*/
+
 #ifdef __cplusplus
 }
 #endif

@@ -30,81 +30,50 @@ struct WebKitNotificationCallbacks {
 		warn("added") // happens when notificationPermission requests is authorized
 	}
 
-	 // Checks the current level of permission.
-	static let permissionsCallback: WKNotificationProviderNotificationPermissionsCallback = { clientInfo -> Optional<OpaquePointer> /*WKDictionaryRef*/ in
-		warn("permissions checked")
-		return unsafeBitCast(clientInfo, to: WebNotifier.self).permissions // send back a cached dict from the notifier
+	static let permissionsCallback: WKNotificationProviderNotificationPermissionsCallback = { clientInfo -> Optional<WKDictionaryRef> in
+
+		return unsafeBitCast(clientInfo, to: WebNotifier.self).notificationPermissions
 	}
 
 	// Cancel all outstanding requests
 	static let clearCallback: WKNotificationProviderClearNotificationsCallback = { notificationIDs, clientInfo in
 		warn("cleared")
-		// only happens for new about:blank tabs that are closed and deinit'd
 	}
 
 	static func makeProvider(_ webNotifier: WebNotifier) -> WKNotificationProviderV0 { return WKNotificationProviderV0(
 		base: WKNotificationProviderBase(version: 0, clientInfo: Unmanaged.passUnretained(webNotifier).toOpaque()), // +0
 		show: showCallback,
 		cancel: cancelCallback,
-		didDestroyNotification: nil, // destroyCallback,
+		didDestroyNotification: destroyCallback,
 		addNotificationManager: addCallback,
 		removeNotificationManager: removeCallback,
 		notificationPermissions: permissionsCallback,
 		clearNotifications: clearCallback
 	)}
-
-	static func getManager(_ client: MPWebView) -> WKNotificationManagerRef? {
-		if let context = client.context {
-			return WKContextGetNotificationManager(context)
-		}
-		return nil
-	}
-
-	static func subscribe(_ provider: inout WKNotificationProviderV0, webview: MPWebView) {
-		if let manager = getManager(webview) {
-			WKNotificationManagerSetProvider(manager, &provider.base)
-			warn("subscribed to Notification updates: \(webview)")
-		}
-	}
-
-	static func unsubscribe(_ webview: MPWebView) {
-		if let manager = getManager(webview) {
-			WKNotificationManagerSetProvider(manager, nil)
-			warn("unsubscribed from Notification updates: \(webview)")
-		}
-	}
 }
 
 class WebNotifier {
 	// https://github.com/WebKit/webkit/blob/master/Tools/WebKitTestRunner/WebNotificationProvider.cpp
 	// https://github.com/WebKit/webkit/blob/master/Tools/WebKitTestRunner/WebNotificationProvider.h
 
-	lazy var wk_provider: WKNotificationProviderV0 = {
-	    return WebKitNotificationCallbacks.makeProvider(self)
-	}()
+	weak var webview: MPWebView?
+	let manager: WKNotificationManagerRef
+	let notificationPermissions: WKMutableDictionaryRef
+	// have to cache perms for individual webviews, as multiple sites could request permissions at the same time as browser/app-scripts trying to modify them
 
-	let permissions = WKMutableDictionaryCreate() // Initial permissions are always empty.
-	//   BrowserController can add each tab's initial origin as True so user won't get repetitive prompts from app-sites
-
-	static let shared = WebNotifier()
-
-	var subscribers: [MPWebView] = []
-
-	func subscribe(_ webview: MPWebView, autoAllow: Bool = false) {
-		if autoAllow { authorize_origin(webview.url, webview) }
-		WebKitNotificationCallbacks.subscribe(&wk_provider, webview: webview)
-		subscribers.append(webview)
-	}
-
-	func unsubscribe(_ webview: MPWebView) {
-		WebKitNotificationCallbacks.unsubscribe(webview)
-		subscribers.removeAll(where: {$0 == webview})
+	required init(_ webview: MPWebView) {
+		self.webview = webview
+		self.notificationPermissions = OpaquePointer(WKRetain(UnsafeRawPointer(WKMutableDictionaryCreate()))!)
+		// must WKRetain to incr WK's refcount, balancing its release after the permissionsCallback fires
+		self.manager = WKContextGetNotificationManager(webview.context!)
+		var wk_provider = WebKitNotificationCallbacks.makeProvider(self)
+		WKNotificationManagerSetProvider(self.manager, &wk_provider.base)
 	}
 
 	deinit {
-		for webview in subscribers {
-			unsubscribe(webview)
-		}
+		WKNotificationManagerSetProvider(manager, nil)
+		WKRelease(UnsafeRawPointer(notificationPermissions))
+		warn("removed from Notification updates")
 	}
 
 	func showWebNotification(_ page: WKPageRef, _ notification: WKNotificationRef) {
@@ -139,27 +108,33 @@ class WebNotifier {
 
 		warn("\(title) - \(body) - \(iconurl) - \(origin)", function: "showCallback")
 
-		if let webview = subscribers.first(where: {$0._page == page}) {
+		if let webview = webview {
 			webview.showDesktopNotification(title: title, tag: tag, body: body, iconurl: iconurl, id: Int(idnum), type: type, origin: origin, lang: lang, dir: dir)
-			// let the webview know we sent it
-			WKNotificationManagerProviderDidShowNotification(WKContextGetNotificationManager(context), idnum)
 		}
 
+		// let the webview know we sent it
+		WKNotificationManagerProviderDidShowNotification(WKContextGetNotificationManager(context), idnum)
 	}
 
-	func clicked(webview: MPWebView, id: UInt64) {
-		WKNotificationManagerProviderDidClickNotification(WKContextGetNotificationManager(webview.context), id)
+	func clicked(id: UInt64) {
+		if let webview = webview, let context = webview.context {
+			WKNotificationManagerProviderDidClickNotification(WKContextGetNotificationManager(webview.context), id)
+		}
 		// void return, so no confirmation that webview accepted/processed the click
 	}
 
-	func requestPermission(_ webview: MPWebView) -> Bool {
-		// TODO: popover prompt
-		authorize_origin(webview.url, webview)
+	func requestPermission() -> Bool {
+		if let webview = webview, let context = webview.context {
+		// TODO: check cache, then popover prompt - if either true:
+			authorizeNotifications(fromOrigin: webview.url)
+			//   is a little late to do this, the prompt probably came because
+			//     the url wasn't previously authorized...
+		}
 		return true // Notification.permission == "default" => "granted"
 	}
 
-	func authorize_origin(_ url: URL?, _ webview: MPWebView? = nil) {
-		if let url = url, let scheme = url.scheme, let host = url.host,
+	func authorizeNotifications(fromOrigin: URL?) {
+		if let url = fromOrigin, let scheme = url.scheme, let host = url.host,
 			!host.isEmpty, (scheme == "http" || scheme == "https") {
 			// get origin of webview and add it to permissions
 			if let origin = WKSecurityOriginCreate(
@@ -169,20 +144,18 @@ class WebNotifier {
 				Int32(url.port ?? 0) // Cpp falsey
 				// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/SecurityOriginData.cpp
 			) {
-				/*
-				WKDictionarySetItem(permissions,
-					WKSecurityOriginCopyToString(origin),
-					UnsafeRawPointer(WKBooleanCreate(true)) // allowed
-				) // -[__NSDictionaryM _apiObject]: unrecognized selector sent to instance 0x7f9baae9d750
-				*/
 
-				if let webview = webview {
+				let allowed = WKBooleanCreate(true)
+
+				WKDictionarySetItem(
+					notificationPermissions,
+					WKSecurityOriginCopyToString(origin),
+					UnsafeRawPointer(allowed!)
+				)
+				// https://github.com/WebKit/webkit/blob/89c28d471fae35f1788a0f857067896a10af8974/Source/WebKit/UIProcess/Notifications/WebNotificationProvider.cpp#L105
+
+				if let webview = webview, let context = webview.context {
 					WKNotificationManagerProviderDidUpdateNotificationPolicy(WKContextGetNotificationManager(webview.context), origin, true)
-				} else {
-					for webview in subscribers {
-						// just spam everybody
-						WKNotificationManagerProviderDidUpdateNotificationPolicy(WKContextGetNotificationManager(webview.context), origin, true)
-					}
 				}
 
 				warn("\(url) authorized to make web notifications!")

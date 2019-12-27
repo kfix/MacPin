@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/c/WKMutableDictionary.h
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/c/WKDictionary.h
  *
  * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
@@ -25,29 +25,30 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WKMutableDictionary_h
-#define WKMutableDictionary_h
+#ifndef WKDictionary_h
+#define WKDictionary_h
 
 #include <WebKitPrivates/WKBase.h>
 
 #ifndef __cplusplus
-#include <stdbool.h>
+#include <stddef.h>
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-NS_ASSUME_NONNULL_BEGIN
+WK_EXPORT WKTypeID WKDictionaryGetTypeID(void);
 
-WK_EXPORT WKMutableDictionaryRef WKMutableDictionaryCreate();
+WK_EXPORT WKDictionaryRef WKDictionaryCreate(const WKStringRef* keys, const WKTypeRef* values, size_t numberOfValues);
 
-WK_EXPORT bool WKDictionarySetItem(WKMutableDictionaryRef dictionary, WKStringRef key, WKTypeRef item);
+WK_EXPORT WKTypeRef WKDictionaryGetItemForKey(WKDictionaryRef dictionary, WKStringRef key);
+WK_EXPORT size_t WKDictionaryGetSize(WKDictionaryRef dictionary);
 
-NS_ASSUME_NONNULL_END
+WK_EXPORT WKArrayRef WKDictionaryCopyKeys(WKDictionaryRef dictionary);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* WKMutableDictionary_h */
+#endif /* WKDictionary_h */

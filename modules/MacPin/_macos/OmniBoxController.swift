@@ -181,7 +181,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			return searchForKeywords(urlstr)
 		}){
 			if let wv = webview { // FIXME: Selector(gotoURL:) to nextResponder
-				WebNotifier.shared.authorize_origin(url, wv) // user typed this address in so they "trust" it to not be spammy?
+				wv.notifier?.authorizeNotifications(fromOrigin: url) // user typed this address in so they "trust" it to not be spammy?
 				view.window?.makeFirstResponder(wv) // no effect if this vc was brought up as a modal sheet
 				warn(url.description)
 				wv.gotoURL(url)
