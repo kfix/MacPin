@@ -50,21 +50,27 @@ extension JSValue {
 	@discardableResult
 	func thisEval(_ code: String, sourceURL: String? = nil) -> JSValue {
 		var excRef = JSValue().jsValueRef
+		let js_code = JSStringCreateWithCFString(code as CFString)
 		var source: JSStringRef? = nil
+		let retValue: JSValue
 		if let sourceURL = sourceURL { source = JSStringCreateWithCFString(sourceURL as CFString) }
 		if let jsval = JSEvaluateScript(
 			/*ctx:*/ context.jsGlobalContextRef,
-			/*script:*/ JSStringCreateWithCFString(code as CFString),
+			/*script:*/ js_code,
 			/*thisObject:*/ JSValueToObject(context.jsGlobalContextRef, self.jsValueRef, nil),
 			/*sourceURL:*/ source ?? nil, /*   this can be a module namespace identifier.... */
 			/*startingLineNumber:*/ 1,
 			/*exception:*/ &excRef
 		) {
-			return JSValue(jsValueRef: jsval, in: context)
+			retValue = JSValue(jsValueRef: jsval, in: context)
 		} else if let excValue = JSValue(jsValueRef: excRef, in: context), excValue.hasProperty("sourceURL") { // "message"
-			return excValue
+			retValue = excValue
+		} else {
+			retValue = JSValue(nullIn: context) // exception
 		}
-		return JSValue(nullIn: context) // exception
+		if source != nil { JSStringRelease(source) }
+		JSStringRelease(js_code)
+		return retValue
 	}
 
 }
@@ -125,6 +131,7 @@ struct AppScriptGlobals {
 	@discardableResult
 	static func loadCommonJSScript(urlstr: String, ctx: JSContextRef, cls: JSClassRef? = nil, mods: [String: AnyObject]? = nil, asMain: Bool = false) -> (JSScriptRef?, JSValueRef) {
 		// loosely impl node-ish require(scriptname, ...state) -> module.exports
+		let retVals: (JSScriptRef?, JSValueRef)
 		// http://www.commonjs.org/specs/modules/1.0/
 		// TODO: RequireJS mandates AMD define() http://requirejs.org/docs/commonjs.html
 
@@ -145,9 +152,10 @@ struct AppScriptGlobals {
 			//   maybe look for a custom macpin:// scheme? `macpin://natives`?
 			let exports = JSObjectMake(ctx, nil, nil)!
 			for (k, v) in mods {
+				let modname = JSStringCreateWithCFString(k as CFString)
 				if let jsv = v as? JSValue { // mod-obj is pre-bridged
 					//warn("export of `\(k)`, pre-bridged type!")
-					JSObjectSetProperty(ctx, exports, JSStringCreateWithCFString(k as CFString), jsv.jsValueRef, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+					JSObjectSetProperty(ctx, exports, modname, jsv.jsValueRef, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 				// TODO: check for simple-jack types havining dedicated JSValue(type:, in:)inits
 				} else if v is JSExport, let bridged = JSValue(object: v, in: JSContext.current()) { // JSContext(jsGlobalContextRef: ctx)) {
 					// AVAST: thar be crashes heere*. gARRRbage Collection run amuk!
@@ -158,14 +166,13 @@ struct AppScriptGlobals {
 					// Erp, thisObject is not the caller, its thisfunc.bind(thisFunc) ...
 
 					// BUG: doesn't seem to honor NS->Swift conversions for JSExported setters, props will get NSwhatever as inputs even if decl'd as swift-foundation types
-					JSObjectSetProperty(ctx, exports, JSStringCreateWithCFString(k as CFString), bridged.jsValueRef, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+					JSObjectSetProperty(ctx, exports, modname, bridged.jsValueRef, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 					//JSObjectSetProperty(ctx, exports, JSStringCreateWithCFString(k as CFString), owned.value.jsValueRef, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
-
 					JSGlobalContextRetain(ctx) // protecc plz, we now hold a swift instance
 				} else {
 					warn("skipped export of `\(k)`, un-bridgable type!")
 				}
-
+				JSStringRelease(modname)
 			}
 
 // *: Instanciating bridged-JSValues/Contexts from @conv(c) funcs causes ARC faults indeterminately down the line (when JSC VM GC's??):
@@ -214,11 +221,12 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 
 		let jsErrorMsg = JSStringCreateWithCFString("" as CFString)
 		var errorLine = Int32(0)
+		let code = JSStringCreateWithCFString(scriptTxt as CFString)
 		let script = JSScriptCreateFromString(
 			contextGroup,
 			jsurl, /* .sourceUrl, can also by module-namespace identifier */
 			/*startingLineNumber:*/ 1,
-			/*script:*/ JSStringCreateWithCFString(scriptTxt as CFString),
+			/*script:*/ code,
 			/*errorMessage*/ UnsafeMutablePointer(jsErrorMsg),
 			/*errorLine*/ &errorLine
 		)
@@ -286,17 +294,23 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 			let this = JSValueToObject(contxt, exports, nil)
 
 			if let ret = JSScriptEvaluate(contxt, script, this, &exception) {
-				return (script, JSObjectGetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString), nil))
+				retVals = (script, JSObjectGetProperty(contxt, module, JSStringCreateWithCFString("exports" as CFString), nil))
 			} else if !JSValueIsUndefined(contxt, exception) {
-				return (nil, exception!)
+				retVals = (nil, exception!)
+			} else { //?
+				retVals = (script, JSValueMakeNull(ctx)) // generates an exception if called via JS:require()
 			}
 		} else {
 			warn("bad syntax: \(scriptURL) @ line \(errorLine)", function: "loadCommonJSScript")
 			let errMessage = JSStringCopyCFString(kCFAllocatorDefault, jsErrorMsg) as String
 			warn(errMessage)
+			retVals = (script, JSValueMakeNull(ctx)) // generates an exception if called via JS:require()
 		} // or pop open the script source-code in a new tab and highlight the offender
 
-		return (script, JSValueMakeNull(ctx)) // generates an exception if called via JS:require()
+		JSStringRelease(code)
+		JSStringRelease(jsurl)
+		JSStringRelease(jsErrorMsg)
+		return retVals
 	}
 
 	static let cjsrequire: JSObjectCallAsFunctionCallback = { ctx, function, thisObject, argc, args, exception in
