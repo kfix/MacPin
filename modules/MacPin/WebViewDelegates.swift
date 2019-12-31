@@ -25,9 +25,7 @@ extension WKWebView {
 			clone = mpself.clone()
 		} else {
 			// create a new MPWebView sharing the same cookie/sesssion data and useragent
-			clone = MPWebView(config:
-				MPWebViewConfig([.configuration(configuration), .agent(self._customUserAgent) ])
-			)
+			clone = MPWebView(.configuration(configuration), .agent(self._customUserAgent))
 		}
 
 		if let url = url { clone.gotoURL(url) }

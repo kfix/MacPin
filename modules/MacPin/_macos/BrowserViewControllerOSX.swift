@@ -835,21 +835,17 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	@objc func editSiteApp() { NSWorkspace.shared.openFile(Bundle.main.resourcePath!) }
 
 	@objc func newTabPrompt() {
-		tabSelected = MPWebView(url: startPage)
+		tabSelected = MPWebView(.URL(startPage))
 		revealOmniBox()
 	}
 
 	@objc func newIsolatedTabPrompt() {
-		tabSelected = MPWebView(config:
-			MPWebViewConfig([.URL(startPage), .isolated(true)])
-		)
+		tabSelected = MPWebView(.URL(startPage), .isolated(true))
 		revealOmniBox()
 	}
 
 	@objc func newPrivateTabPrompt() {
-		tabSelected = MPWebView(config:
-			MPWebViewConfig([.URL(startPage), .isolated(true), .privacy(true)])
-		)
+		tabSelected = MPWebView(.URL(startPage), .isolated(true), .privacy(true))
 		revealOmniBox()
 	}
 

@@ -693,6 +693,10 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		// `var wv = new WebView("http://google.com"); console.log(wv.title); wv = null;` - defers
 	}
 
+	convenience init(_ options: MPWebViewConfigOptions...) {
+		self.init(config: MPWebViewConfig(Set<MPWebViewConfigOptions>(options)))
+	}
+
 	var config: MPWebViewConfig {
 		return MPWebViewConfig(
 			.agent(self._customUserAgent),
