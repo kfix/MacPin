@@ -241,7 +241,13 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 
 	browser.addShortcut('HTML5 features report', 'https://html5test.com/');
 	browser.addShortcut('HTML5 Geolocation test', 'https://lab.html5test.com/geolocation/');
-	browser.addShortcut('HTML5 Notification test', 'https://lab.html5test.com/notification/');
+	browser.addShortcut('HTML5 Notification test', {
+		url: 'https://lab.html5test.com/notification/',
+		authorizedOriginsForNotifications: [
+			'https://lab.html5test.com',
+			'https://lab.html5test.com:443'
+		]
+	});
 	browser.addShortcut('AppScript Notification test', ["notified title of current tab"], sendNoteFromTab);
 	browser.addShortcut('WebSocket test', 'https://www.websocket.org/echo.html');
 

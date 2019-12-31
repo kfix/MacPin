@@ -7,7 +7,11 @@
 const {app, BrowserWindow, WebView} = require('@MacPin');
 
 let slackTab, slack = {
-	url: 'https://slack.com/signin' // show workspace picker on open
+	url: 'https://slack.com/signin', // show workspace picker on open
+	authorizedOriginsForNotifications: [
+		'https://app.slack.com',
+		'https://app.slack.com:443'
+	]
 };
 slackTab = new WebView(slack); // get it started early
 
@@ -139,7 +143,7 @@ let toggleRedirection = function(tab, state) { alwaysAllowRedir = (state != null
 
 app.on('AppWillFinishLaunching', (AppUI) => {
 	//browser.unhideApp();
-	//$.browser.addShortcut('Slack', slack);
+	browser.addShortcut('Workspace Picker', slack);
 	// FIXME: use LocalStorage to save slackTab's team-domain after sign-in, and restore that on every start up
 	browser.addShortcut('Toggle redirection to external domains', [], toggleRedirection);
 	// FIXME add themes: https://gist.github.com/DrewML/0acd2e389492e7d9d6be63386d75dd99  DrewML/Theming-Slack-OSX.md

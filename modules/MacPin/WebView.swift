@@ -25,6 +25,7 @@ enum MPWebViewConfigOptions {
 
 		preinject([String]), postinject([String]),
 		style([String]), subscribeTo([String]),
+		authorizedOriginsForNotifications([String]),
 
 		handlers([String:[JSValue]]), styles([String:Any]),
 
@@ -70,6 +71,7 @@ extension MPWebViewConfigOptions: RawRepresentable, Hashable {
 				}
 			case let value as [String]:
 				switch rawValue {
+					case "authorizedOriginsForNotifications":   self = .authorizedOriginsForNotifications(value)
 					case "preinject":   self = .preinject(value)
 					case "postinject":  self = .postinject(value)
 					case "subscribeTo": self = .subscribeTo(value)
@@ -289,6 +291,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	var styles: [String] = [] //list of css-names already loaded
 	// cachedUserScripts: [UserScript] // are pushed/popped from the contentController by navigation delegates depending on URL being visited
 	var blockLists: [String] = []
+
+	var authorizedOriginsForNotifications: [String] = []
 
 	//let jsdelegate = AppScriptRuntime.shared.jsdelegate
 	// race condition? seems to hit a phantom JSContext/JSValue that doesn't represent the delegate!?
@@ -606,6 +610,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 					addHandlers(value)
 				case .subscribeTo(let value):
 					for handler in value { subscribeTo(handler) }
+				case .authorizedOriginsForNotifications(let value):
+					authorizedOriginsForNotifications = value
 				default:
 					warn("unhandled config-option: \(option)")
 			}
@@ -641,6 +647,10 @@ class MPWebView: WKWebView, WebViewScriptExports {
 #endif
 
 		self.notifier = WebNotifier(self)
+
+		for originStr in authorizedOriginsForNotifications {
+			self.notifier?.authorizeNotifications(fromOrigin: URL(string: originStr))
+		}
 
 		if let url = url { warn(); gotoURL(url) } // navigate last so all settings are in place beforehand
 	}
