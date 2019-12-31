@@ -111,6 +111,7 @@ extension JSValue {
 	func evalJXA(_ script: String)
 	func callJXALibrary(_ library: String, _ call: String, _ args: [AnyObject])
 	@objc(reload) func loadMainScript() -> Bool
+	func collectGarbage()
 #endif
 
 	@objc(eventCallbacks) var strEventCallbacks: [String: Array<JSValue>] { get } // app->js callbacks
@@ -1200,6 +1201,10 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			}
 		) //termiosREPL
 	} //REPL
+
+	func collectGarbage() {
+		JSGarbageCollect(context.jsGlobalContextRef)
+	}
 
 	func evalJXA(_ script: String) {
 		// FIXME: force a confirmation panel with printout of script and func+args to be called.....
