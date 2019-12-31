@@ -22,10 +22,12 @@ extension WKWebView {
 	func clone(_ url: URL? = nil) -> MPWebView {
 		let clone: MPWebView
 		if let mpself = self as? MPWebView {
-			clone = mpself.proxied_clone()
+			clone = mpself.clone()
 		} else {
 			// create a new MPWebView sharing the same cookie/sesssion data and useragent
-			clone = MPWebView(config: self.configuration, agent: self._customUserAgent)
+			clone = MPWebView(config:
+				MPWebViewConfig([.configuration(configuration), .agent(self._customUserAgent) ])
+			)
 		}
 
 		if let url = url { clone.gotoURL(url) }
@@ -114,7 +116,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 					let modkeys = navigationAction.modifierFlags
 					if modkeys.contains(.option) { NSWorkspace.shared.open(url) } //alt-click opens externally
 						else if modkeys.contains(.command) { popup(webView.clone(url)) } // cmd-click pops open a new tab
-						else if modkeys.contains(.shift) { popup(MPWebView(url: url as NSURL, agent: webView._customUserAgent)) } // shift-click pops open a new tab w/ new session state
+						else if modkeys.contains(.shift) { popup(webView.clone(url)) } // shift-click pops open a new tab w/ new session state
 						// FIXME: same keymods should work with Enter in omnibox controller
 						else if !browsingReactor.anyHandled(.decideNavigationForClickedURL, url.absoluteString as NSString, webView, targetIsMainFrame) { // allow override from JS
 							if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
@@ -390,7 +392,8 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 
 		warn("JS <\(srcurl?.absoluteString ?? "")>: `window.open('\(openurl?.absoluteString ?? "")', '\(tgt?.absoluteString ?? "")');`")
 		if browsingReactor.anyHandled(.decideWindowOpenForURL, openurl?.absoluteString ?? "", webView) { return nil }
-		let wv = MPWebView(config: configuration, agent: webView._customUserAgent)
+		let wv = webView.clone()
+
 #if os(OSX)
 		if (windowFeatures.allowsResizing ?? 0) == 1 {
 			if let window = view.window {

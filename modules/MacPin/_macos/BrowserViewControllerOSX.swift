@@ -835,18 +835,21 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	@objc func editSiteApp() { NSWorkspace.shared.openFile(Bundle.main.resourcePath!) }
 
 	@objc func newTabPrompt() {
-		//tabSelected = WebViewControllerOSX(url: startPage)
 		tabSelected = MPWebView(url: startPage)
 		revealOmniBox()
 	}
 
 	@objc func newIsolatedTabPrompt() {
-		tabSelected = MPWebView(url: startPage, agent: nil, isolated: true)
+		tabSelected = MPWebView(config:
+			MPWebViewConfig([.URL(startPage), .isolated(true)])
+		)
 		revealOmniBox()
 	}
 
 	@objc func newPrivateTabPrompt() {
-		tabSelected = MPWebView(url: startPage, agent: nil, isolated: true, privacy: true)
+		tabSelected = MPWebView(config:
+			MPWebViewConfig([.URL(startPage), .isolated(true), .privacy(true)])
+		)
 		revealOmniBox()
 	}
 
@@ -872,6 +875,19 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		// close currently selected tab
 		if selectedTabViewItemIndex == -1 { return } // no tabs? bupkiss!
 		removeChild(at: selectedTabViewItemIndex)
+	}
+
+	@objc func duplicateTab(_ tab: AnyObject?) {
+		switch (tab) {
+			case let wv as MPWebView:
+				tabSelected = wv.clone()
+				return
+			default:
+				// sender from a MenuItem?
+				if let wv = tabSelected as? MPWebView {
+					tabSelected = wv.clone()
+				}
+		}
 	}
 
 	@objc func revealOmniBox() {
@@ -1024,8 +1040,8 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			switch (shortcut.representedObject) {
 				case let urlstr as String: AppScriptRuntime.shared.emit(.launchURL, urlstr as NSString)
 				// FIXME: fire event in jsdelegate if string, only validated-and-bridged NSURLs should do launchURL
-				case let dict as [String:AnyObject]: tabSelected = MPWebView(options: dict) // FIXME: do a try here
-				case let dict as [WebViewInitProps:AnyObject]: tabSelected = MPWebView(options: dict) // FIXME: do a try here
+				case let dict as [String : AnyObject]:
+					tabSelected = MPWebView(config: MPWebViewConfig.fromDict(dict)) // FIXME: do a try here
 				case let jsobj as [String: JSValue]:
 					warn("\(jsobj)")
 				case let arr as [AnyObject?] where arr.count > 0 && arr.first is String?:

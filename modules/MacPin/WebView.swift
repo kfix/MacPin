@@ -15,62 +15,185 @@ extension WKWebView {
 	}
 }
 
-enum WebViewInitProps: String, CustomStringConvertible, CaseIterable {
-	var description: String { return "\(type(of: self)).\(self.rawValue)" }
+enum MPWebViewConfigOptions {
+	case
+		url(String), agent(String), agentApp(String),
+		icon(String), proxy(String), sproxy(String),
 
-	/* legacy MacPin event names */
-	case url, agent, agentApp, icon, proxy, sproxy, // String
-	transparent, isolated, privacy = "private", allowsMagnification, allowsRecording, // Bool
-	preinject, postinject, style, subscribeTo, // [String]
-	handlers, styles // {} ~> [String: [JSValue]]
+		transparent(Bool), isolated(Bool), privacy(Bool),
+		allowsMagnification(Bool), allowsRecording(Bool),
 
-	// eh? https://www.swiftbysundell.com/posts/enum-iterations-in-swift-42
-	static func fromJS(object: JSValue) -> [WebViewInitProps: Any] {
-		var props: [WebViewInitProps: Any] = [:]
-		for prop in WebViewInitProps.allCases {
-			if object.hasProperty(prop.rawValue) {
-				guard let jsval = object.forProperty(prop.rawValue) else { warn("no value for \(prop)!"); continue }
-				switch prop {
-					case .url, .agent, .agentApp, .icon, .proxy, .sproxy where jsval.isString:
-						props[prop] = jsval.toString()
-					case .transparent, .isolated, .privacy, .allowsMagnification, .allowsRecording where jsval.isBoolean:
-						props[prop] = jsval.toBool()
-					case .preinject, .postinject, .style, .subscribeTo where jsval.isArray:
-						props[prop] = jsval.toArray().flatMap { $0 as? String }
-					case .handlers, .styles where jsval.isObject:
-						// [prop] takes a Obj of Arrays (of Objs or Strings)
-						var newObjs: [String: [JSValue]] = [:]
-						//   we will double check all keys and filter valid ones into newObjs
-						let objNames = jsval.toDictionary().keys.flatMap({$0 as? String})
-						warn(objNames.description)
-						for name in objNames {
-							guard let obj = jsval.objectForKeyedSubscript(name) else { warn("no object given for \(name)!"); continue }
-								// if .style, can treat that as a request for a plain .css injection
-							if obj.isArray { // array of handler funcs (hopefully) was passed
-								guard let arr = obj.invokeMethod("slice", withArguments: [0]) else { continue }// dup the array so pop() won't mutate the original
-								// for handler in hval.toArray() { // -> Any .. not useful
-								guard let arrLen = arr.forProperty("length").toNumber() as? Int, arrLen > 0 else { continue }
-								for num in 1...arrLen { // C-Loop ftw
-									//guard let arrVal = obj.atIndex(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
-									//guard let arrVal = obj.objectAtIndexedSubscript(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
-									// JSC BUG: dict-of-array contained functions are `undefined` when pulled with atIndex/objAtIndexSub
-									guard let arrVal = obj.invokeMethod("pop", withArguments: []) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
+		preinject([String]), postinject([String]),
+		style([String]), subscribeTo([String]),
 
-									if prop == .handlers && !arrVal.isNull && !arrVal.isUndefined && arrVal.hasProperty("call") { // got a func
-										newObjs[name, default: []].append(arrVal)
-									}
-								}
-							} else if prop == .handlers && !obj.isNull && !obj.isUndefined && obj.hasProperty("call") { // a single handler func was passed
-								newObjs[name, default: []].append(obj)
+		handlers([String:[JSValue]]), styles([String:Any]),
+
+		configuration(WKWebViewConfiguration),
+		URL(URL)
+}
+
+extension MPWebViewConfigOptions: RawRepresentable, Hashable {
+	public typealias RawValue = String
+
+	public var rawValue: RawValue {
+		return Mirror(reflecting: self).children.first!.label!
+	}
+
+	init?(rawValue: RawValue) {
+		return nil
+	}
+
+	init?(rawValue: RawValue, value: Any) {
+		switch value {
+			case let value as Bool:
+				switch rawValue {
+					case "transparent":         self = .transparent(value)
+					case "isolated":            self = .isolated(value)
+					case "private", "privacy":  self = .privacy(value)
+					case "allowsMagnification": self = .allowsMagnification(value)
+					case "allowsRecording":     self = .allowsRecording(value)
+					default:
+						warn("unhandled boolean option: {\(rawValue): \(value)}")
+						return nil
+				}
+			case let value as String:
+				switch rawValue {
+					case "url":         self = .url(value)
+					case "agent":       self = .agent(value)
+					case "agentApp":    self = .agentApp(value)
+					case "icon":        self = .icon(value)
+					case "proxy":       self = .proxy(value)
+					case "sproxy":      self = .sproxy(value)
+					default:
+						warn("unhandled string option: {\(rawValue): \(value)}")
+						return nil
+				}
+			case let value as [String]:
+				switch rawValue {
+					case "preinject":   self = .preinject(value)
+					case "postinject":  self = .postinject(value)
+					case "subscribeTo": self = .subscribeTo(value)
+					case "style":       self = .style(value)
+					default:
+						warn("unhandled string-array option: {\(rawValue): \(value)}")
+						return nil
+				}
+			case let value as [String:[JSValue]]:
+				switch rawValue {
+					case "handlers":    self = .handlers(value)
+					default:
+						warn("unhandled hash-of-arrays option: {\(rawValue): \(value)}")
+						return nil
+				}
+			case let value as [String:Any]:
+				switch rawValue {
+					case "styles":      self = .styles(value)
+					default:
+						warn("unhandled hash option: {\(rawValue): \(value)}")
+						return nil
+				}
+			default: return nil
+		}
+	}
+
+	var caseName: String {
+		return Mirror(reflecting: self).children.first!.label!
+	}
+
+	var caseValue: Any? {
+		return Mirror(reflecting: self).children.first!.value
+	}
+
+	var description: String { return "<\(type(of: self)).\(self.rawValue)>(\(self.caseValue))" }
+}
+
+@objc class MPWebViewConfig: NSObject {
+	var options: Set<MPWebViewConfigOptions>
+
+	func set(_ propName: String, _ value: Any) -> MPWebViewConfigOptions? {
+		if let option = MPWebViewConfigOptions(rawValue: propName, value: value) {
+			options.insert(option)
+			return option
+		}
+		warn("unaccepted option! \(propName) -> \(value)")
+		return nil
+	}
+
+	func set(_ option: MPWebViewConfigOptions) -> Bool {
+		return options.insert(option).inserted
+	}
+
+	func reset(_ option: MPWebViewConfigOptions) {
+		options.update(with: option)
+	}
+
+	required init(_ options: Set<MPWebViewConfigOptions> = []) {
+		self.options = options
+	}
+
+	required init(_ options: MPWebViewConfigOptions...) {
+		self.options = Set<MPWebViewConfigOptions>(options)
+	}
+
+	static func fromJS(object: JSValue) -> Self {
+		var config = Self()
+		let objKeys = object.toDictionary().keys.flatMap({$0 as? String})
+		for key in objKeys {
+			guard let jsvalue = object.objectForKeyedSubscript(key) else { continue }
+			if let value = jsvalue.toString(), jsvalue.isString {
+				warn("\(key) => \(value)")
+				warn(config.set(key, value))
+			} else if jsvalue.isBoolean {
+				config.set(key, jsvalue.toBool())
+			} else if let value = jsvalue.toArray(), jsvalue.isArray {
+				config.set(key, value.flatMap { $0 as? String })
+			} else if jsvalue.isObject {
+				// [prop] takes a Obj of Arrays (of Objs or Strings)
+				var newObjs: [String: [JSValue]] = [:]
+				//   we will double check all keys and filter valid ones into newObjs
+				let objNames = jsvalue.toDictionary().keys.flatMap({$0 as? String})
+				warn(objNames.description)
+				for name in objNames {
+					guard let obj = jsvalue.objectForKeyedSubscript(name) else {
+						warn("no object given for config-option \(key)['\(name)']!")
+						// FIXME? if .style, could treat unvalued-key-name as a request for a plain .css injection
+						continue
+					}
+					if obj.isArray { // array of handler funcs (hopefully) was passed
+						guard let arr = obj.invokeMethod("slice", withArguments: [0]) else { continue }// dup the array so pop() won't mutate the original
+						// for handler in hval.toArray() { // -> Any .. not useful
+						guard let arrLen = arr.forProperty("length").toNumber() as? Int, arrLen > 0 else { continue }
+						for num in 1...arrLen { // C-Loop ftw
+							//guard let arrVal = obj.atIndex(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
+							//guard let arrVal = obj.objectAtIndexedSubscript(num) else { warn("cannot acquire \(num)th JSValue for \(name)"); continue }
+							// JSC BUG: dict-of-array contained functions are `undefined` when pulled with atIndex/objAtIndexSub
+							guard let arrVal = obj.invokeMethod("pop", withArguments: []) else {
+								warn("cannot acquire \(num)th JSValue for config-option \(key)['\(name)'")
+								continue
+							}
+							if key == "handlers" && !arrVal.isNull && !arrVal.isUndefined && arrVal.hasProperty("call") { // got a func
+								newObjs[name, default: []].append(arrVal)
+								// should use arrVal.toObjectOf(SomeMPClass)
 							}
 						}
-						props[prop] = newObjs
-					default:
-						warn("unhandled init prop: \(prop.rawValue)")
+					} else if key == "handlers" && !obj.isNull && !obj.isUndefined && obj.hasProperty("call") { // a single handler func was passed
+						newObjs[name, default: []].append(obj)
+					}
 				}
+				config.set(key, newObjs)
+			} else {
+				warn("BUG: did not handle config-option: \(key)")
 			}
 		}
-		return props
+		return config
+	}
+
+	static func fromDict(_ dict: [String: Any]) -> Self {
+		var config = Self()
+		for (key, value) in dict {
+			guard let option = config.set(key, value) else { continue }
+		}
+		return config
 	}
 }
 
@@ -313,10 +436,31 @@ class MPWebView: WKWebView, WebViewScriptExports {
 
 	let favicon: FavIcon = FavIcon()
 
-	@objc convenience init(config: WKWebViewConfiguration?, agent: String?, proxy: String?, sproxy: String?, isolated: Bool, privacy: Bool, transparent: Bool) {
+	@objc convenience required init(config: MPWebViewConfig) {
+		var configuration = WKWebViewConfiguration()
+		var needs_reconfiguration = true
+		var isolated = false
+		var privacy = false
+		var proxy = ""
+		var sproxy = ""
+		warn(config)
+
+		// some props must be set during init before all other props
+		for option in config.options {
+			switch option {
+				case .configuration(let value):
+					configuration = value
+					needs_reconfiguration = false
+				case .isolated(let value): isolated = value
+				case .privacy(let value): privacy = value
+				case .proxy(let value) where !value.isEmpty: proxy = value
+				case .sproxy(let value) where !value.isEmpty: sproxy = value
+				default: break
+			}
+		}
+
 		// init webview with custom config, needed for JS:window.open() which links new child Windows to parent Window
-		let configuration = config ?? WKWebViewConfiguration()
-		if config == nil {
+		if needs_reconfiguration {
 #if os(OSX)
 			if WebKit_version.major >= 602 { // Safari 10
 				//configuration._showsURLsInToolTips = true
@@ -386,11 +530,11 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		if #available(macOS 10.14.4, iOS 12.2, *) {
 			let dataStoreConf = privacy ? _WKWebsiteDataStoreConfiguration(nonPersistentConfiguration: ()) : _WKWebsiteDataStoreConfiguration()
 
-			if let proxy = proxy, !proxy.isEmpty, let proxyURL = URL(string: proxy) {
+			if let proxyURL = URL(string: proxy), !proxy.isEmpty {
 				dataStoreConf.httpProxy = proxyURL
 				warn("HTTP proxy: \(dataStoreConf.httpProxy?.absoluteString)")
 			}
-			if let sproxy = sproxy, !sproxy.isEmpty, let sproxyURL = URL(string: sproxy) {
+			if let sproxyURL = URL(string: sproxy), !sproxy.isEmpty {
 				dataStoreConf.httpsProxy = sproxyURL
 				warn("HTTPS proxy: \(dataStoreConf.httpsProxy?.absoluteString)")
 			}
@@ -405,14 +549,67 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		if isolated {
 			configuration.processPool = WKProcessPool() // not "private" but usually gets new session variables from server-side webapps
 		} else {
-			configuration.processPool = config?.processPool ?? (MPWebView.self.sharedWebProcessPool)!
+			configuration.processPool = configuration.processPool ?? (MPWebView.self.sharedWebProcessPool)!
 		}
 
-		self.init(frame: CGRect.zero, configuration: configuration) // should be good now?
-		isIsolated = isolated
-		isPrivate = privacy
-		usesProxy = proxy ?? ""
-		usesSproxy = sproxy ?? ""
+		self.init(frame: CGRect.zero, configuration: configuration) // This is the real init()
+		// its an ObjC++ ctor which is why we couldn't override its impl to do these defaultings
+
+		var url: URL? = nil
+
+		for option in config.options {
+			switch option {
+				case .configuration:
+					break // already captured pre-init
+				case .isolated:
+					self.isIsolated = isolated
+				case .privacy:
+					self.isPrivate = privacy
+				case .proxy:
+					self.usesProxy = proxy
+				case .sproxy:
+					self.usesSproxy = sproxy
+				case .URL(let urlObj):
+					url = urlObj
+				case .url(let urlstr) where !urlstr.isEmpty:
+					url = URL(string: urlstr)
+				case .agent(let agent) where !agent.isEmpty:
+					_customUserAgent = agent
+				case .agent: break // isEmpty
+				case .agentApp(let appName) where !appName.isEmpty:
+					_applicationNameForUserAgent = appName
+				//TODO: if v.startsWith('+='), then append to whatever self.userAgent & self.userAgentAppName return
+				// lots of JS libs pick from many expressions in the UA, but we may not always want to be hardcoding platform version numbers
+				// so a dynamic append feature on init is desirable
+				case .agentApp: break // isEmpty
+				case .icon(let icon) where !icon.isEmpty:
+					loadIcon(icon)
+				case .icon: break // isEmpty
+				case .allowsMagnification(let magnification):
+					allowsMagnification = magnification
+				case .allowsRecording(let recordable):
+					_mediaCaptureEnabled = recordable
+				case .transparent(let transparent):
+					if WebKit_version >= (602, 1, 11) {
+						_drawsBackground = !transparent
+					} else {
+						_drawsTransparentBackground = transparent
+					}
+				case .preinject(let value):
+					for script in value { preinject(script) }
+				case .postinject(let value):
+					for script in value { postinject(script) }
+				case .style(let value):
+					for css in value { style(css) }
+				case .handlers(let value):
+					// for handler in value { addHandler(handler) } //FIXME kill delegate.`handlerStr` indirect-str-refs
+					addHandlers(value)
+				case .subscribeTo(let value):
+					for handler in value { subscribeTo(handler) }
+				default:
+					warn("unhandled config-option: \(option)")
+			}
+		}
 
 #if SAFARIDBG
 		_allowsRemoteInspection = true // start webinspectord child
@@ -442,9 +639,10 @@ class MPWebView: WKWebView, WebViewScriptExports {
 #elseif os(iOS)
 		_applicationNameForUserAgent = "Version/10 Mobile/12F70 Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
 #endif
-		if let agent = agent { if !agent.isEmpty { _customUserAgent = agent } }
 
 		self.notifier = WebNotifier(self)
+
+		if let url = url { warn(); gotoURL(url) } // navigate last so all settings are in place beforehand
 	}
 
 	/*
@@ -465,8 +663,10 @@ class MPWebView: WKWebView, WebViewScriptExports {
 				self.init(url: URL(string: "about:blank")!)
 			}
 		} else if object.isObject { // new WebView({url: "http://webkit.org", transparent: true, ... });
-			var props = WebViewInitProps.fromJS(object: object)
-			self.init(options: props) // FIXME: needs to be @obj init'r
+			//let confObj = JSManagedValue(value: object)
+			let config = MPWebViewConfig.fromJS(object: object)
+			self.init(config: config) // BUG: using any nonobjc inits in the chain (from a JSContext instanciation) will cause SIGSEGV
+			//object.context.virtualMachine.addManagedReference(confObj, withOwner: self)
 		} else { // isUndefined, isNull
 			// returning nil will actually SIGSEGV
 			//warn(obj: object)
@@ -474,81 +674,41 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		}
 	}
 
-	@nonobjc convenience required init(config: WKWebViewConfiguration?, agent: String?, proxy: String?, sproxy: String?, isolated: Bool?, privacy: Bool?, transparent: Bool?) {
-		self.init(config: config, agent: agent, proxy: proxy, sproxy: sproxy, isolated: isolated ?? false, privacy: privacy ?? false, transparent: transparent ?? true)
-	}
-
-	@objc convenience required init?(options: [AnyHashable: Any]) {
-	// does objc support failable inits?
-
-		// some props must be set during init before all other props
-		let isolated = options[WebViewInitProps.isolated] as? Bool ?? false
-		let privacy = options[WebViewInitProps.privacy] as? Bool ?? false
-		let proxy = options[WebViewInitProps.proxy] as? String ?? ""
-		let sproxy = options[WebViewInitProps.sproxy] as? String ?? ""
-		self.init(config: nil, agent: nil, proxy: proxy, sproxy: sproxy, isolated: isolated, privacy: privacy, transparent: true)
-
-		var url: URL? = nil
-
-		for (key, value) in options {
-		    guard let prop = key.base as? WebViewInitProps else { continue } // https://bugs.swift.org/browse/SR-7049
-			switch value {
-				case let urlstr as String where prop == .url:
-					url = URL(string: urlstr)
-					if url == nil { return nil } // hard-fail for bad urls
-				case let agent as String where prop == .agent: _customUserAgent = agent
-				case let appName as String where prop == .agentApp: _applicationNameForUserAgent = appName
-				//TODO: if v.startsWith('+='), then append to whatever self.userAgent & self.userAgentAppName return
-				// lots of JS libs pick from many expressions in the UA, but we may not always want to be hardcoding platform version numbers
-				// so a dynamic append feature on init is desirable
-
-				case let icon as String where prop == .icon: loadIcon(icon)
-				case let magnification as Bool where prop == .allowsMagnification: allowsMagnification = magnification
-				case let recordable as Bool where prop == .allowsRecording: _mediaCaptureEnabled = recordable
-				case let transparent as Bool where prop == .transparent:
-					if WebKit_version >= (602, 1, 11) {
-						_drawsBackground = !transparent
-					} else {
-						_drawsTransparentBackground = transparent
-					}
-				case let value as [String] where prop == .preinject: for script in value { preinject(script) }
-				case let value as [String] where prop == .postinject: for script in value { postinject(script) }
-				case let value as [String] where prop == .style: for css in value { style(css) }
-				//case let value as [String] where key == .handlers: for handler in value { addHandler(handler) } //FIXME kill delegate.`handlerStr` indirect-str-refs
-				case let value as [String: [JSValue]] where prop == .handlers: addHandlers(value)
-				case let value as [String] where prop == .subscribeTo: for handler in value { subscribeTo(handler) }
-				case _ where prop == .isolated || prop == .privacy || prop == .proxy || prop == .sproxy: break // already handled
-				default: warn("unhandled param: `<\(type(of: key))>\(key): <\(type(of: value))>\(value)`")
-			}
-		}
-
-		if let url = url { gotoURL(url) }
-	}
-
-	@objc convenience required init(config: WKWebViewConfiguration?) {
-		self.init(config: config, agent: nil, proxy: nil, sproxy: nil, isolated: false, privacy: false, transparent: true)
+	@objc convenience required init(configuration: WKWebViewConfiguration) {
+		self.init(config: MPWebViewConfig([.configuration(configuration)]))
 	}
 
 	@objc convenience required init(url: URL) {
-		self.init(config: nil)
-		gotoURL(url)
+		self.init(config: MPWebViewConfig([.URL(url)]))
 	}
 
-	convenience required init(config: WKWebViewConfiguration?, agent: String?) {
-		self.init(config: config, agent: agent, proxy: nil, sproxy: nil, isolated: false, privacy: false, transparent: true)
+	@objc convenience required init(configuration: WKWebViewConfiguration, url: URL) {
+		self.init(config: MPWebViewConfig([.URL(url), .configuration(configuration)]))
 	}
 
-	convenience required init(url: NSURL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = true) {
-		self.init(url: url as URL, agent: agent, isolated: isolated, privacy: privacy, transparent: transparent)
+	@objc convenience required init() {
+		self.init(config: MPWebViewConfig())
+		// FIXME: deinit's need to be consistent! seems to be deferring onto JSC's GC schedule..
+		// `var wv = new WebView(); wv = null;` - defers
+		// `var wv = new WebView("http://google.com"); console.log(wv.title); wv = null;` - defers
 	}
 
-	convenience required init(url: URL, agent: String? = nil, isolated: Bool? = false, privacy: Bool? = false, transparent: Bool? = true) {
-		self.init(config: nil, agent: agent, proxy: nil, sproxy: nil, isolated: isolated, privacy: privacy, transparent: transparent)
-		warn("navigating to \(url)")
-		gotoURL(url)
+	var config: MPWebViewConfig {
+		return MPWebViewConfig(
+			.agent(self._customUserAgent),
+			.agentApp(self._applicationNameForUserAgent),
+			.allowsMagnification(self.allowsMagnification),
+			.allowsRecording(self._mediaCaptureEnabled),
+			.configuration(self.configuration),
+			.icon(self.favicon.url?.absoluteString ?? ""),
+			.proxy(self.usesProxy),
+			.sproxy(self.usesSproxy),
+			.isolated(self.isIsolated),
+			.privacy(self.isPrivate),
+			.transparent(self.transparent),
+			.url(self.url?.absoluteString ?? "")
+		)
 	}
-
-	//convenience required init(){ warn("no props init!"); self.init() }
 
 	override var description: String { return "<\(type(of: self))> `\(title ?? String())` [\(urlstr)]" }
 	func inspect() -> String { return "`\(title ?? String())` [\(urlstr)]" }
@@ -1001,12 +1161,17 @@ class MPWebView: WKWebView, WebViewScriptExports {
 
 	func proxied_clone(_ proxy: String? = nil, _ sproxy: String? = nil) -> MPWebView {
 		// create a new proxied MPWebView sharing the same URL, cookie/sesssion data, useragent
-		let clone = MPWebView(config: self.configuration, agent: self._customUserAgent,
-			proxy: proxy ?? self.usesProxy,
-			sproxy: sproxy ?? self.usesSproxy,
-			isolated: self.isIsolated, privacy: self.isPrivate, transparent: self.transparent)
-		if let url = url { clone.gotoURL(url) }
-		return clone
+		let config = self.config
+		warn(proxy)
+		config.reset(.proxy(proxy ?? ""))
+		warn(sproxy)
+		config.reset(.sproxy(sproxy ?? ""))
+		return Self(config: config)
+	}
+
+	func clone() -> MPWebView {
+		warn(self.config)
+		return Self(config: self.config)
 	}
 }
 

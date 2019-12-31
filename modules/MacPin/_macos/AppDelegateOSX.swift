@@ -175,6 +175,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		winMenu.submenu?.addItem(MenuItem("New Isolated Tab", #selector(BrowserViewControllerOSX.newIsolatedTabPrompt)))
 		winMenu.submenu?.addItem(MenuItem("New Private Tab", #selector(BrowserViewControllerOSX.newPrivateTabPrompt), "t", [.control, .command]))
 		winMenu.submenu?.addItem(MenuItem("Close Tab", #selector(BrowserViewControllerOSX.closeTab(_:)), "w", [.command]))
+		winMenu.submenu?.addItem(MenuItem("Duplicate Tab", #selector(BrowserViewControllerOSX.duplicateTab(_:))))
 		winMenu.submenu?.addItem(MenuItem("Show Next Tab", #selector(NSTabView.selectNextTabViewItem(_:)), String(format:"%c", NSTabCharacter), [.control]))
 		winMenu.submenu?.addItem(MenuItem("Show Previous Tab", #selector(NSTabView.selectPreviousTabViewItem(_:)), String(format:"%c", NSTabCharacter), [.control, .shift]))
 		if #available(macOS 10.13, iOS 10, *) {
@@ -266,7 +267,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 		if let default_html = Bundle.main.url(forResource: "default", withExtension: "html") {
 			warn("loading initial page from app bundle: \(default_html)")
-			browserController.tabSelected = MPWebView(url: default_html as NSURL)
+			browserController.tabSelected = MPWebView(url: default_html)
 		}
 
 		if let userNotification = notification.userInfo?["NSApplicationLaunchUserNotificationKey"] as? NSUserNotification {
@@ -420,7 +421,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 					return false
 				case "public.html":
 					warn(filename)
-					browserController.tabSelected = MPWebView(url: NSURL(string:"file://\(filename)")!)
+					browserController.tabSelected = MPWebView(url: URL(string:"file://\(filename)")!)
 					return true
 				case "com.netscape.javascript-source": //.js
 					warn(filename)
