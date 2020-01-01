@@ -1,0 +1,13 @@
+/* https://slack.engineering/building-dark-mode-on-desktop-811508b5d15f */
+
+/* the picker is still painfully bright so lets fix that */
+@media (prefers-color-scheme: dark) {
+	body {
+		background-color: #1a1d21 !important;
+		color: #f8f8f8 !important;
+	}
+	.btn_outline {
+		background-color: inherit !important;
+		color: inherit !important;
+	}
+}

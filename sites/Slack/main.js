@@ -11,7 +11,8 @@ let slackTab, slack = {
 	authorizedOriginsForNotifications: [
 		'https://app.slack.com',
 		'https://app.slack.com:443'
-	]
+	],
+	style: ['autodark']
 };
 slackTab = new WebView(slack); // get it started early
 
