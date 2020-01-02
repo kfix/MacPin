@@ -177,6 +177,7 @@ let launchRepl = () => {
 		transparent: true,
 		//url: 'file://'+ app.resourcePath + '/repl.html', // < doesn't work from spaces in names ...
 		url: app.resourceURL + '/repl.html',
+		caching: false,
 		handlers: {
 			'evalREPL': [evalRepl, true, "hello", 42],
 			'closeREPL': closeRepl,

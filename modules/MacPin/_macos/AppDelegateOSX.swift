@@ -154,6 +154,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		tabMenu.submenu?.addItem(MenuItem("Go Back", #selector(MPWebView.goBack(_:)), "[", [.command]))
 		tabMenu.submenu?.addItem(MenuItem("Go Forward", #selector(MPWebView.goForward(_:)), "]", [.command]))
 		tabMenu.submenu?.addItem(MenuItem("Stop Loading", #selector(MPWebView.stopLoading(_:)), ".", [.command]))
+		tabMenu.submenu?.addItem(MenuItem("Toggle Caching", #selector(WebViewControllerOSX.toggleCaching)))
 		tabMenu.submenu?.addItem(NSMenuItem.separator())
 		tabMenu.submenu?.addItem(MenuItem("Print Page...", #selector(MPWebView.printWebView), "p", [.command]))
 		tabMenu.submenu?.addItem(MenuItem("Save Web Archive...", #selector(MPWebView.saveWebArchive), "s", [.command, .shift]))

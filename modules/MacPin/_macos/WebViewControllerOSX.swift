@@ -188,8 +188,10 @@ extension WebViewControllerOSX { // AppGUI funcs
 		removeFromParent()
 	}
 
+	/* would be nice if named-selectors could auto-implement the toggling idiom */
 	@objc func toggleTransparency() { webview.transparent = !webview.transparent; viewDidAppear() }
 	@objc func toggleAppearance() { webview.useSystemAppearance = !webview.useSystemAppearance; }
+	@objc func toggleCaching() { webview.caching = !webview.caching; }
 	@objc func toggleStatusBar() { showStatusBar = !showStatusBar }
 
 	@objc func zoomIn() { zoom(0.2) }
@@ -372,6 +374,9 @@ extension WebViewControllerOSX: NSMenuItemValidation {
 			case #selector(type(of: self).toggleStatusBar):
 				menuItem.title = (showStatusBar) ?
 					"Hide Status Bar" : "Show Status Bar"
+			case #selector(type(of: self).toggleCaching):
+				menuItem.title = (webview.caching) ?
+					"Disable Caching" : "Enable Caching"
 			default:
 				break
 		}

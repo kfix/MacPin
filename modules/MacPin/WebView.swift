@@ -22,6 +22,7 @@ enum MPWebViewConfigOptions {
 
 		transparent(Bool), isolated(Bool), privacy(Bool),
 		allowsMagnification(Bool), allowsRecording(Bool),
+		caching(Bool),
 
 		preinject([String]), postinject([String]),
 		style([String]), subscribeTo([String]),
@@ -48,6 +49,7 @@ extension MPWebViewConfigOptions: RawRepresentable, Hashable {
 		switch value {
 			case let value as Bool:
 				switch rawValue {
+					case "caching":             self = .caching(value)
 					case "transparent":         self = .transparent(value)
 					case "isolated":            self = .isolated(value)
 					case "private", "privacy":  self = .privacy(value)
@@ -612,6 +614,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 					for handler in value { subscribeTo(handler) }
 				case .authorizedOriginsForNotifications(let value):
 					authorizedOriginsForNotifications = value
+				case .caching(let value):
+					self.caching = value
 				default:
 					warn("unhandled config-option: \(option)")
 			}
@@ -713,6 +717,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 			.agentApp(self._applicationNameForUserAgent),
 			.allowsMagnification(self.allowsMagnification),
 			.allowsRecording(self._mediaCaptureEnabled),
+			.caching(self.caching),
 			.configuration(self.configuration),
 			.icon(self.favicon.url?.absoluteString ?? ""),
 			.proxy(self.usesProxy),
