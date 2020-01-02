@@ -3,7 +3,7 @@ export
 #^ export all the variables
 builddir			?= build
 
-VERSION				:= 2019.9.0
+VERSION				:= 2020.1.0
 
 # 1 == link against STP.app's WebKit if its present
 STP 				?= 1
