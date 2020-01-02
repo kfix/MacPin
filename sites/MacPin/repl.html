@@ -44,7 +44,14 @@
 </head>
 <body>
 	<form id="repl" onsubmit="return false;" autocomplete="off">
-		<textarea id="output" placeholder="//output will appear here" readonly cols=80 rows=50 ></textarea>
+		<textarea id="output" placeholder="//output will appear here" readonly cols=80 rows=50 >
+/* Welcome to the MacPin REPL!
+ *
+ * You can enter JavaScript commands to inspect and control this browser and its tabs.
+ * Named references (ex: this, app, browser, browser.tabs) and function returns
+ * will be sent thru node.js' util.inspector to show you all their properties.
+ */
+</textarea>
 		<br />
 		<input id="command" type="search" placeholder="Enter command..." size=80 autofocus autosave="macpin.repl" required>
 		<!-- <input type="submit" value="Execute"> -->
