@@ -15,7 +15,6 @@
 	}
 	#output {
 		height: 98%;
-		color: lime;
 	}
 
 	-webkit-keyframes autofill {
@@ -34,6 +33,12 @@
 		background-image: none !important;
 		background: transparent !important;
 		background-color: inherit !important;
+	}
+
+	@media (prefers-dark-interface) {
+		#output {
+			color: lime;
+		}
 	}
 	</style>
 </head>

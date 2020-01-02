@@ -22,7 +22,7 @@ enum MPWebViewConfigOptions {
 
 		transparent(Bool), isolated(Bool), privacy(Bool),
 		allowsMagnification(Bool), allowsRecording(Bool),
-		caching(Bool),
+		caching(Bool), useSystemAppearance(Bool),
 
 		preinject([String]), postinject([String]),
 		style([String]), subscribeTo([String]),
@@ -55,6 +55,7 @@ extension MPWebViewConfigOptions: RawRepresentable, Hashable {
 					case "private", "privacy":  self = .privacy(value)
 					case "allowsMagnification": self = .allowsMagnification(value)
 					case "allowsRecording":     self = .allowsRecording(value)
+					case "useSystemAppearance": self = .useSystemAppearance(value)
 					default:
 						warn("unhandled boolean option: {\(rawValue): \(value)}")
 						return nil
@@ -225,6 +226,7 @@ extension MPWebViewConfigOptions: RawRepresentable, Hashable {
 	//var canGoForward: Bool { get }
 	//var hasOnlySecureContent: Bool { get }
 	// var userLabel // allow to be initiated with a trackable tag
+	var useSystemAppearance: Bool { get set }
 	var injected: [String] { get }
 	var styles: [String] { get }
 	var blockLists: [String] { get }
@@ -449,7 +451,6 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		var privacy = false
 		var proxy = ""
 		var sproxy = ""
-		warn(config)
 
 		// some props must be set during init before all other props
 		for option in config.options {
@@ -616,6 +617,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 					authorizedOriginsForNotifications = value
 				case .caching(let value):
 					self.caching = value
+				case .useSystemAppearance(let value):
+					self.useSystemAppearance = value
 				default:
 					warn("unhandled config-option: \(option)")
 			}
@@ -643,8 +646,6 @@ class MPWebView: WKWebView, WebViewScriptExports {
 				WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(https))
 			}
 		}
-
-		_useSystemAppearance = true
 
 #elseif os(iOS)
 		_applicationNameForUserAgent = "Version/10 Mobile/12F70 Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
@@ -725,6 +726,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 			.isolated(self.isIsolated),
 			.privacy(self.isPrivate),
 			.transparent(self.transparent),
+			.useSystemAppearance(self.useSystemAppearance),
 			.url(self.url?.absoluteString ?? "")
 		)
 	}

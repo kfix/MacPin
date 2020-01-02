@@ -15,6 +15,7 @@ let injectTab = require('app_injectTab.js');
 let enDarken = require('enDarken.js');
 
 var docTab = new WebView("file:///usr/share/doc/cups/index.html");
+docTab.useSystemAppearance = true;
 var gitTab = new WebView({url: 'https://github.com/kfix/MacPin'});
 //var gooTab = new WebView({url: "http://google.com"})
 
@@ -174,10 +175,11 @@ let launchRepl = () => {
 	var closeRepl = (tab, msg) => tab.close();
 
 	var cfgRepl = {
-		transparent: true,
+		transparent: false,
 		//url: 'file://'+ app.resourcePath + '/repl.html', // < doesn't work from spaces in names ...
 		url: app.resourceURL + '/repl.html',
 		caching: false,
+		useSystemAppearance: true,
 		handlers: {
 			'evalREPL': [evalRepl, true, "hello", 42],
 			'closeREPL': closeRepl,
