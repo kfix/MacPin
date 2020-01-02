@@ -23,6 +23,7 @@ enum MPWebViewConfigOptions {
 		transparent(Bool), isolated(Bool), privacy(Bool),
 		allowsMagnification(Bool), allowsRecording(Bool),
 		caching(Bool), useSystemAppearance(Bool),
+		inspectorVisible(Bool),
 
 		preinject([String]), postinject([String]),
 		style([String]), subscribeTo([String]),
@@ -51,6 +52,7 @@ extension MPWebViewConfigOptions: RawRepresentable, Hashable {
 				switch rawValue {
 					case "caching":             self = .caching(value)
 					case "transparent":         self = .transparent(value)
+					case "inspectorVisible":    self = .inspectorVisible(value)
 					case "isolated":            self = .isolated(value)
 					case "private", "privacy":  self = .privacy(value)
 					case "allowsMagnification": self = .allowsMagnification(value)
@@ -227,6 +229,7 @@ extension MPWebViewConfigOptions: RawRepresentable, Hashable {
 	//var hasOnlySecureContent: Bool { get }
 	// var userLabel // allow to be initiated with a trackable tag
 	var useSystemAppearance: Bool { get set }
+	var inspectorVisible: Bool { get set }
 	var injected: [String] { get }
 	var styles: [String] { get }
 	var blockLists: [String] { get }
@@ -359,7 +362,6 @@ class MPWebView: WKWebView, WebViewScriptExports {
 
 	}
 
-/*
 	var inspector: _WKInspector? {
 		get {
 			if WebKit_version >= (607, 1, 3) {
@@ -370,7 +372,18 @@ class MPWebView: WKWebView, WebViewScriptExports {
 			}
 		}
 	}
-*/
+
+	var inspectorVisible: Bool {
+		get { return inspector?.isVisible ?? false }
+		set {
+			guard let inspector = inspector else { return }
+			if (newValue && !inspector.isVisible) {
+				inspector.show()
+			} else if (!newValue && inspector.isVisible) {
+				inspector.hide()
+			}
+		}
+	}
 
 #if os(OSX)
 	var inspectorAttachmentView: NSView? {
@@ -562,12 +575,41 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		self.init(frame: CGRect.zero, configuration: configuration) // This is the real init()
 		// its an ObjC++ ctor which is why we couldn't override its impl to do these defaultings
 
+#if SAFARIDBG
+		_allowsRemoteInspection = true // start webinspectord child
+		// enables Safari.app->Develop-><computer name> remote debugging of JSCore and all webviews' JS threads
+		// http://stackoverflow.com/questions/11361822/debug-ios-67-mobile-safari-using-the-chrome-devtools
+#endif
+		//_editable = true // https://github.com/WebKit/webkit/tree/master/Tools/WebEditingTester
+		// 	add a toggle: https://github.com/WebKit/webkit/commit/d3a81d4cdbdf947d484987578b21fc0d1f42be5e
+
+		allowsBackForwardNavigationGestures = true
+		allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
+#if os(OSX)
+		allowsMagnification = true
+		_applicationNameForUserAgent = "Version/\(Safari_version) Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
+
+		if let context = context {
+			"http".withCString { http in
+				WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(http)) // FIXME: makeInsecure() toggle!
+			}
+			"https".withCString { https in
+				WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(https))
+			}
+		}
+
+#elseif os(iOS)
+		_applicationNameForUserAgent = "Version/10 Mobile/12F70 Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
+#endif
+
 		var url: URL? = nil
 
 		for option in config.options {
 			switch option {
 				case .configuration:
 					break // already captured pre-init
+				case .inspectorVisible:
+					break // handled after navigation
 				case .isolated:
 					self.isIsolated = isolated
 				case .privacy:
@@ -624,40 +666,24 @@ class MPWebView: WKWebView, WebViewScriptExports {
 			}
 		}
 
-#if SAFARIDBG
-		_allowsRemoteInspection = true // start webinspectord child
-		// enables Safari.app->Develop-><computer name> remote debugging of JSCore and all webviews' JS threads
-		// http://stackoverflow.com/questions/11361822/debug-ios-67-mobile-safari-using-the-chrome-devtools
-#endif
-		//_editable = true // https://github.com/WebKit/webkit/tree/master/Tools/WebEditingTester
-		// 	add a toggle: https://github.com/WebKit/webkit/commit/d3a81d4cdbdf947d484987578b21fc0d1f42be5e
-
-		allowsBackForwardNavigationGestures = true
-		allowsLinkPreview = true // enable Force Touch peeking (when not captured by JS/DOM)
-#if os(OSX)
-		allowsMagnification = true
-		_applicationNameForUserAgent = "Version/\(Safari_version) Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
-
-		if let context = context {
-			"http".withCString { http in
-				WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(http)) // FIXME: makeInsecure() toggle!
-			}
-			"https".withCString { https in
-				WKContextRegisterURLSchemeAsBypassingContentSecurityPolicy(context, WKStringCreateWithUTF8CString(https))
-			}
-		}
-
-#elseif os(iOS)
-		_applicationNameForUserAgent = "Version/10 Mobile/12F70 Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
-#endif
-
 		self.notifier = WebNotifier(self)
 
 		for originStr in authorizedOriginsForNotifications {
 			self.notifier?.authorizeNotifications(fromOrigin: URL(string: originStr))
 		}
 
-		if let url = url { warn(); gotoURL(url) } // navigate last so all settings are in place beforehand
+		if let url = url {
+			gotoURL(url)
+
+			// some options require a page to be loading (even a lowly about:blank)
+			for option in config.options {
+				switch option {
+					case .inspectorVisible(let value):
+						self.inspectorVisible = value
+					default: break
+				}
+			}
+		}
 	}
 
 	/*
@@ -723,6 +749,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 			.icon(self.favicon.url?.absoluteString ?? ""),
 			.proxy(self.usesProxy),
 			.sproxy(self.usesSproxy),
+			.inspectorVisible(self.inspectorVisible),
 			.isolated(self.isIsolated),
 			.privacy(self.isPrivate),
 			.transparent(self.transparent),

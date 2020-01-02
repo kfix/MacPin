@@ -14,9 +14,13 @@ const {app, BrowserWindow, WebView} = require('@MacPin');
 let injectTab = require('app_injectTab.js');
 let enDarken = require('enDarken.js');
 
-var docTab = new WebView("file:///usr/share/doc/cups/index.html");
-docTab.useSystemAppearance = true;
-var gitTab = new WebView({url: 'https://github.com/kfix/MacPin'});
+var docTab = new WebView({
+	caching: false,
+	url: "file:///usr/share/doc/cups/index.html",
+	useSystemAppearance: true,
+	inspectorVisible: true
+});
+var gitTab = new WebView('https://github.com/kfix/MacPin');
 //var gooTab = new WebView({url: "http://google.com"})
 
 let browser = new BrowserWindow();

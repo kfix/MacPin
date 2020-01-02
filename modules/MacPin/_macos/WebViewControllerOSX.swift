@@ -193,6 +193,12 @@ extension WebViewControllerOSX { // AppGUI funcs
 	@objc func toggleAppearance() { webview.useSystemAppearance = !webview.useSystemAppearance; }
 	@objc func toggleCaching() { webview.caching = !webview.caching; }
 	@objc func toggleStatusBar() { showStatusBar = !showStatusBar }
+	@objc func toggleWebInspector() {
+		webview.inspectorVisible = !webview.inspectorVisible
+		if webview.inspectorVisible {
+			webview.window?.makeFirstResponder(webview)
+		}
+	}
 
 	@objc func zoomIn() { zoom(0.2) }
 	@objc func zoomOut() { zoom(-0.2) }
@@ -326,16 +332,6 @@ extension WebViewControllerOSX { // AppGUI funcs
 	}
 */
 
-	@objc func showHideWebInspector(_ sender: AnyObject?) {
-		guard let inspector = webview._inspector else { return }
-		if inspector.isVisible {
-			DispatchQueue.main.async() { inspector.hide() }
-			webview.window?.makeFirstResponder(webview)
-		} else {
-			DispatchQueue.main.async() { inspector.show() }
-		}
-	}
-
 	@objc func selectProxies() {
 		let alert = NSAlert()
 		alert.messageText = "Set HTTP(s) proxy for the clone"
@@ -361,7 +357,7 @@ extension WebViewControllerOSX { // AppGUI funcs
 extension WebViewControllerOSX: NSMenuItemValidation {
 	func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
 		switch menuItem.action {
-			case #selector(type(of: self).showHideWebInspector):
+			case #selector(type(of: self).toggleWebInspector):
 		        guard let inspector = webview._inspector else { return false }
 				menuItem.title = (inspector.isVisible) ?
 					"Hide Web Inspector" : "Show Web Inspector"
