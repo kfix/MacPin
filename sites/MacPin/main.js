@@ -157,8 +157,9 @@ let img2data = function(tab) {
 let testAS = function(tab) { app.callJXALibrary('test', 'doTest', Array.prototype.slice.call(arguments)); };
 
 let replTab;
+let playgroundTab;
 // var-decl needed to retain the tab, which is "dropped" & deinit()d in a proxied-push() if not bound to a persistent scope
-let launchRepl = () => {
+let launchRepl = (playground) => {
 	var evalRepl = (tab, msg) => {
 		var command = msg;
 		var result, exception;
@@ -169,11 +170,27 @@ let launchRepl = () => {
 			result = e; // printToREPL will make a line pointer object
 			try { console.log(e); } catch(e) { }
 		}
-		var ret = app.eventCallbacks['printToREPL'][0](result, false); // expr, colorize
-		//try { console.log(ret); } catch(e) { }
-		let exfil = `returnREPL('${escape(ret)}', ${(exception) ? `'${escape(exception)}'` : 'null'});`;
-		//console.log(exfil); // use base64 instead of urlencode??
-		tab.evalJS(exfil);
+
+		//
+		if (playground) {
+			let options = { // https://github.com/cronvel/string-kit#inspect-options--variable-
+				useInspect: true, depth: 5, outputMaxLength: 5000,
+				noFunc: false, noDescriptor: true, noType: true,
+				noArrayProperty: false,
+				enumOnly: false, proto: true, funcDetails: false
+			}
+			//protoBlackList
+			//propertyBlackList
+			var ret = app.eventCallbacks['printToHTMLREPL'][0](options, result); //  options, expr
+			//try { console.log(ret); } catch(e) { }
+			let exfil_html = `returnHTMLREPL('${escape(ret)}', ${(exception) ? `'${escape(exception)}'` : 'null'});`;
+			tab.evalJS(exfil_html);
+		} else {
+			var ret = app.eventCallbacks['printToREPL'][0](result, false); // expr, colorize
+			//try { console.log(ret); } catch(e) { }
+			let exfil = `returnREPL('${escape(ret)}', ${(exception) ? `'${escape(exception)}'` : 'null'});`;
+			tab.evalJS(exfil);
+		}
 	};
 
 	var closeRepl = (tab, msg) => tab.close();
@@ -192,17 +209,23 @@ let launchRepl = () => {
 		}
 	};
 
-    try {
-	  replTab = new WebView(cfgRepl);
-	  console.log(`selecting ${replTab.url}`);
-	  browser.tabSelected = replTab;
+	var cfgPlayground = Object.assign({}, cfgRepl, {url: `${app.resourceURL}/playground.html`});
+
+	try {
+		if (playground) {
+			browser.tabSelected = playgroundTab = new WebView(cfgPlayground);
+			return playgroundTab;
+		} else {
+			browser.tabSelected = replTab = new WebView(cfgRepl);
+			return replTab;
+		}
 	} catch (e) {
-      if (e instanceof TypeError) {
-         console.error("could not load WebView!", cfgRepl);
-      } else {
-        throw e;
-      }
-    }
+		if (e instanceof TypeError) {
+			console.error("could not load WebView!");
+		} else {
+			throw e;
+		}
+	}
 
 	// https://github.com/remy/jsconsole is much prettier than my repl.html ...
 	//    https://github.com/remy/jsconsole/blob/master/public/inject.html
@@ -295,7 +318,8 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 
 	//browser.addShortcut('MacPin/app.js debugging REPL', cfgRepl);
 	//  WebView.init ends up with WebViewInitProps.handlers: <__NSFrozenDictionaryM>
-	browser.addShortcut('MacPin/app.js debugging REPL', [], launchRepl);
+	browser.addShortcut('MacPin REPL shell', [false], launchRepl);
+	browser.addShortcut('MacPin Playground', [true], launchRepl);
 
 	if (app.platform === "OSX") app.changeAppIcon('icon.png');
 	//browser.tabSelected = new $.WebView({url: 'http://github.com/kfix/MacPin'});
@@ -304,15 +328,15 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	console.log(app.browserController);
 
 	// lets flex tab management flows a bit
-	launchRepl(); // late-create a WebView and select it
+	let repl = launchRepl(false); // late-create a WebView and select it
 
 	// shuffle the _tabs using the tabs Proxy
 	browser.tabs.push(gitTab);
 	browser.tabs.push(docTab);
 	browser.tabs.reverse(); // selection will change to the pushed tab that was flipped #0
 
-	console.log(`reselecting ${replTab.url}`);
-	browser.tabSelected = replTab;
+	console.log(`reselecting ${repl.url}`);
+	browser.tabSelected = repl;
 });
 
 app.on('AppFinishedLaunching', (launchURLs) => {
@@ -322,8 +346,9 @@ app.on('AppFinishedLaunching', (launchURLs) => {
 
 // replTab needs this
 if (!('printToREPL' in app.eventCallbacks)) {
-	let {repl} = require('app_repl.js');
+	let {repl, htmlrepl} = require('app_repl.js');
 	app.on('printToREPL', repl);
+	app.on('printToHTMLREPL', htmlrepl);
 }
 
 app.on('AppShouldTerminate', (app) => {

@@ -1,21 +1,19 @@
 <html>
 <head>
-	<title>MacPin REPL: app.js</title>
+	<title>MacPin Playground</title>
 	<style>
 	:root {
 		overflow: hidden;
 	}
 
-	#output, #command {
-		font-family: Monaco;
-		font-size: 9pt;
+	#outframe, #command {
 		box-sizing: border-box;
-		width: 100%;
 		background-color: inherit;
 		border-style: none;
+		width: 100%;
 	}
-	#output {
-		height: 98%;
+	#outframe {
+		height: 95%;
 	}
 
 	-webkit-keyframes autofill {
@@ -36,46 +34,41 @@
 		background-color: inherit !important;
 	}
 
-	@media (prefers-dark-interface) {
-		#output {
-			color: lime;
-		}
-	}
 	</style>
 </head>
 <body>
+	<div id="outdiv">
+		<iframe id="outframe" src="playgroundFrame.html"></iframe>
+	</div>
 	<form id="repl" onsubmit="return false;" autocomplete="off">
-		<textarea id="output" placeholder="//output will appear here" readonly cols=80 rows=50 >
-/* Welcome to the MacPin REPL!
- *
- * You can enter JavaScript commands to inspect and control this browser and its tabs.
- * Named references (ex: this, app, browser, browser.tabs) and function returns
- * will be sent thru node.js' util.inspector to show you all their properties.
- */
-</textarea>
-		<br />
 		<input id="command" type="search"
 			placeholder="Enter command..." size=80 autofocus
 			autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-			autosave="macpin.repl" required
+			autosave="macpin.playground" required
 		/>
-		<!-- <input type="submit" value="Execute"> -->
 	</form>
 	<script>
-		var outbox = document.getElementById('output');
+		var outdiv = document.getElementById('outdiv');
 		var cmdbox = document.getElementById('command');
+
+		function outdoc() {
+			var outframe = document.getElementById('outframe');
+			var doc = outframe.contentWindow.document;
+			return doc;
+		}
 		function evalREPL(e) {
 			var command = cmdbox.value;
 			command = command.replace(/[\u2018\u2019\u201A]/g, "\'"); // fix smart single quotes and apostrophe
 			command = command.replace(/[\u201C\u201D\u201E]/g, "\""); // fix smart double quotes
-			outbox.value += '>> ' + command + '\n';
+			outdoc().body.innerHTML += `<pre>>> ${command}</pre><br />`;
 			webkit.messageHandlers.evalREPL.postMessage(command);
 		}
-		function returnREPL(result, exception) {
-			//outbox.value += e.detail.result;
-			//result = JSON.parse(result);
-			outbox.value += `${unescape(exception ? exception : result)}\n`;
-			outbox.scrollTop = outbox.scrollHeight; //autoscroll to bottom
+		function returnHTMLREPL(result, exception) {
+			var html = `${unescape(exception ? exception : result)}<br />`;
+			//outdoc().write(html);
+			outdoc().body.innerHTML += html;
+			outdoc().scrollingElement.scrollTop =
+				outdoc().scrollingElement.scrollHeight; //autoscroll to bottom
 		}
 		document.addEventListener('submit', evalREPL, true);
 	</script>

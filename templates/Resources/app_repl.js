@@ -16,7 +16,8 @@
 // https://github.com/substack/object-inspect/blob/master/index.js
 //
 // https://github.com/deecewan/browser-util-inspect/blob/master/index.js
-let inspect = require('browser-util-inspect.js');
+let bu_inspect = require('browser-util-inspect.js');
+let {inspect} = require('string-kit-inspect.js');
 //
 // https://github.com/Automattic/util-inspect
 
@@ -141,7 +142,7 @@ let printToREPL = function (result, colorize) {
 		return v;
 	}
 
-	let description = inspect(result, {showHidden: true, colors: colorize});
+	let description = bu_inspect(result, {showHidden: true, colors: colorize});
 	if (description) description = description.replace(/\\t/g, "\t").replace(/\\n/g, "\n")
 	var rtype = vtype(result);
 	if (rtype == 'Function') description = REPLdump(result);
@@ -151,11 +152,17 @@ let printToREPL = function (result, colorize) {
 	return ret;
 };
 
+let printToHTMLREPL = function (options={}, result) {
+	return inspect({style: "html", ...options}, result);
+}
+
 if (typeof module === "object") { // loaded as a require()
 	module.exports['repl'] = printToREPL;
+	module.exports['htmlrepl'] = printToHTMLREPL;
 } else { // loaded as an app script (global include)
 	const {app} = require("@MacPin");
 	app.on('printToREPL', printToREPL);
+	app.on('printToHTMLREPL', printToHTMLREPL);
 }
 
 })((typeof module === "object") ? module : false); //-ES6 IIFE

@@ -1331,6 +1331,7 @@ enum AppScriptReactions: CustomStringConvertible {
 
 	case launchURL(url: URL)
 	case printToREPL(result: Any)
+	case printToHTMLREPL(result: Any)
 }
 
 enum AppScriptEvent: String, CustomStringConvertible, CaseIterable {
@@ -1344,6 +1345,7 @@ enum AppScriptEvent: String, CustomStringConvertible, CaseIterable {
 		AppWillFinishLaunching, // AppUI
 		AppFinishedLaunching, // url...
 		printToREPL, // result
+		printToHTMLREPL, // result
 		tabTransparencyToggled, // transparent, tab
 		AppShouldTerminate, // AppUI
 		handleUserInputtedInvalidURL, // urlstr, tab
