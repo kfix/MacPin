@@ -30,7 +30,7 @@ They are dependent on the core MacPin.app (4.5MB) to be registered on the system
 
 Custom URL schemes can also be registered to launch a MacPin App from any other app on your Mac.  
 
-Building `esm` branch requires macOS 10.14 "Mojave" with Xcode 11 installed OR Xcode 10.4 + Safari 13.
+Building `swift5.1` branch requires macOS 10.14 "Mojave" with Xcode 11.
 
 All other branches are obsolete & archived for users locked on older macOS (hardware),  
 but they will recieve no updates.  
