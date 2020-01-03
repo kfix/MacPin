@@ -429,7 +429,7 @@ uninstall: $(wildcard $(appnames:%=$(installdir)/%))
 
 stp test: $(appdir)/$(macpin).app
 	#-defaults delete $(macpin)
-	($(env) $</Contents/MacOS/$(macpin) -i http://browsingtest.appspot.com)
+	($(env) $</Contents/MacOS/$(macpin) -i)
 
 apirepl: ; ($< -i)
 tabrepl: ; ($< -t)
