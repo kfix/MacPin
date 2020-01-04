@@ -144,12 +144,21 @@ struct AppScriptGlobals {
 		// http://www.commonjs.org/specs/modules/1.0/
 		// TODO: RequireJS mandates AMD define() http://requirejs.org/docs/commonjs.html
 
-		// actually importing things from npm would require a lot of node shims
-		// https://github.com/swittk/Node-JS-for-JavascriptCore/blob/master/Node/JSNodeEventEmitter.m
-		// https://github.com/nodejs/node-v0.x-archive/issues/5132#issuecomment-15432598 CommonJS is ded
-		// https://github.com/node-app/Nodelike/blob/master/Nodelike/NLContext.m
-		// https://github.com/node-app/Nodelike/blob/master/Nodelike/NLFS.m
-		// https://github.com/node-app/Nodelike/blob/master/Nodelike/NLHTTPParser.m
+		// Note that importing unmodified packages from npm would require a lot of node shims
+		//   https://github.com/swittk/Node-JS-for-JavascriptCore/blob/master/Node/JSNodeEventEmitter.m
+		//   https://github.com/nodejs/node-v0.x-archive/issues/5132#issuecomment-15432598 CommonJS is ded
+		//   https://github.com/node-app/Nodelike/blob/master/Nodelike/NLContext.m
+		//   https://github.com/node-app/Nodelike/blob/master/Nodelike/NLFS.m
+		//   https://github.com/node-app/Nodelike/blob/master/Nodelike/NLHTTPParser.m
+		// might be best to bundle in node-jsc.dylib if we really want to load npm packages
+		//   https://bugs.webkit.org/show_bug.cgi?id=189947
+		//   https://github.com/mceSystems/node-jsc
+		//		our AppSandbox definitions should be tuned to prevent _bad things_ by the node-contexts
+		//       ! full fs access
+		//       ! full remote net access
+		//       + local unpriv port binds (node is gr8 for hosting webapps)
+		//   this is basically what electron does: https://github.com/electron/node
+		//   with an embedded node-jsc, we could bundle an Iodide.app ....
 
 		// TODO: caching, loop-prevention
 		// Ejecta ships a JS wrapper as require() to manage its module-space:
@@ -737,14 +746,6 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			,"WebView":			JSValue(object: MPWebView.self, in: context)
 		]
 
-// don't do any context enrichments, the ESM-on-node spec (our inspiration)
-//   is still very bare
-// https://nodejs.org/api/esm.html#esm_no_code_require_code_code_exports_code_code_module_exports_code_code_filename_code_code_dirname_code
-// https://github.com/nodejs/modules
-// https://github.com/nodejs/node/pull/29866
-// https://nodejs.org/en/blog/release/v13.2.0/
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import.meta
-
 		context.globalObject.thisEval("""
 			let window = this; // https://github.com/nodejs/node/issues/1043
 			let global = this; // https://github.com/browserify/insert-module-globals/pull/48#issuecomment-186291413
@@ -801,10 +802,11 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 			guard JavaScriptCore_version >= (608, 1, 8) else { return false }
 			/*
-				node docs say to impl import.meta: https://nodejs.org/api/esm.html#esm_import_meta
+				https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import.meta
+				node docs also say they impl'd import.meta: https://nodejs.org/api/esm.html#esm_import_meta
 					The import.meta metaproperty is an Object that contains the following property:
 						url <string> The absolute file: URL of the module.
-				despite their admonition, should add some legacy back too:
+				despite their admonition, should add some njs legacy back too:
 					const __filename = fileURLToPath(import.meta.url);
 					const __dirname = dirname(__filename);
 			*/
