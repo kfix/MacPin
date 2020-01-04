@@ -395,17 +395,17 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	func presentBrowser() -> WindowController {
 		warn()
 		NSApp.reply(toApplicationShouldTerminate: false) // cancel any termination in progress
+
 		if tabs.count < 1 { newTabPrompt() } //don't allow a tabless state
-		if let win = self.windowController.window {
+		// FIXME: why not allow this? - async imports in main.js script may be taking some time
+		//    safari's no/new-tab view isn't a webview either
+
+		if let win = self.windowController.window ?? makeWindow().window {
 			win.makeKeyAndOrderFront(self)
 			if self.selectedTabViewItemIndex > -1 {
 				let vc = children[selectedTabViewItemIndex]
 				self.prepareTab(vc) // retroactively prep current Tab (JS may have made some headlessly)
 			}
-		} else {
-			warn("window is gone, need to re-init windowController!")
-			windowController = makeWindow()
-			return presentBrowser()
 		}
 
 		return windowController
