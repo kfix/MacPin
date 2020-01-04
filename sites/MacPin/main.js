@@ -182,6 +182,7 @@ let launchRepl = (playground) => {
 			//protoBlackList
 			//propertyBlackList
 			var ret = app.eventCallbacks['printToHTMLREPL'][0](options, result); //  options, expr
+			//   https://github.com/observablehq/inspector
 			//try { console.log(ret); } catch(e) { }
 			let exfil_html = `returnHTMLREPL('${escape(ret)}', ${(exception) ? `'${escape(exception)}'` : 'null'});`;
 			tab.evalJS(exfil_html);
@@ -280,7 +281,7 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	});
 	browser.addShortcut('AppScript Notification test', ["notified title of current tab"], sendNoteFromTab);
 	browser.addShortcut('WebSocket test', 'https://www.websocket.org/echo.html');
-
+	browser.addShortcut('Service Worker test', 'https://mdn.github.io/sw-test');
 	// http://user-agents.me
 	browser.addShortcut('Show current User-Agent', [], getAgent);
 	browser.addShortcut('Examine WebKit User-Agent', 'http://browserspy.dk/webkit.php');

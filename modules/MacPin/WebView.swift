@@ -989,8 +989,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	//webview._getMainResourceDataWithCompletionHandler() { (data: Data?, err: Error?) -> Void in }
 	//webview._getContentsAsStringWithCompletionHandler() { (str: String?, err: Error?) -> Void in }
 	//webview._getApplicationManifestWithCompletionHandler() { (manifest: _WKApplicationManifest?) -> Void in }
-	// 605.2.8 == 11.1 for PWA support
-	// no webworkers in wkwebview: https://webkit.org/blog/8090/workers-at-your-service/
+	// 605.2.8 == safari 11.1 for PWA manifest support
+	//    no Service Worker API for wkwebviews yet: https://webkit.org/blog/8090/workers-at-your-service/
 
 #if os(OSX)
 	@objc func reloadWithoutContentBlockers() {
