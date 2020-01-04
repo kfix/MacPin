@@ -17,6 +17,8 @@ import JavaScriptCorePrivates // https://github.com/WebKit/webkit/tree/master/So
 import WebKitPrivates
 import UserNotificationPrivates
 
+typealias PromiseThen = @convention(block) (JSValue) -> Void
+
 func getResourceURL(_ urlstr: String, function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) -> URL? {
 	guard let fileURL = Bundle.main.url(forResource: urlstr, withExtension: nil) ??
 	URL(string: urlstr)?.standardizedFileURL, fileURL.isFileURL else {
@@ -92,6 +94,9 @@ extension JSValue {
 	var platform: String { get }
 	var platformVersion: String { get }
 	var libraries: [String: Any] { get }
+
+	// note that JSExported functions may _not_ use `throw`: http://openradar.appspot.com/48767173
+
 	func registerURLScheme(_ scheme: String)
 	//func registerMIMEType(scheme: String)
 	func registerUTI(_ scheme: String)
@@ -126,6 +131,9 @@ struct AppScriptGlobals {
 	//  https://karhm.com/JavaScriptCore_C_API/
 	/// https://forums.swift.org/t/what-is-the-plan-for-objc-on-non-darwin-platforms/12971
 	//	https://github.com/tris-foundation/javascript/blob/master/Sources/
+
+	// another way to do this, using JSContext.setObject w/ @convention(block)'d closures
+	//    https://www.innoq.com/en/blog/ios-javascriptcore-polyfills/
 
 	static let modSpace = "_nativeModules"
 
@@ -554,6 +562,12 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	static let mainScriptFile = "main" // => site/main.js
 	static let shared = AppScriptRuntime() //global: AppScriptRuntime.legacyGlobal) // create & export the singleton
 
+	enum ScriptStates {
+		case Unloaded, Promised, Evaluated, Errored
+	}
+
+	var scriptState: ScriptStates = .Unloaded
+
 	var contextGroup = JSContextGroupCreate()
 	var context: JSContext
 	var jsdelegate: JSValue
@@ -704,7 +718,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		super.init() // all undef'd props assigned, now we can be an NSObject
 		context.name = "\(self.name) \(self.description)"
 
-		if #available(OSX 10.15, *, iOS 13) {
+		if #available(macOS 10.14.5, *, iOS 13) {
 			if JavaScriptCore_version >= (608, 1, 8) {
 				context.moduleLoaderDelegate = self // `import`
 			}
@@ -739,6 +753,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	override var description: String { return "<\(type(of: self))> [\(appPath)]" }
 
+	// run app.js under v1 MacPin appscript namespace ($.*)
 	@objc func loadSiteApp() -> Bool {
 		let app = (Bundle.main.object(forInfoDictionaryKey:"MacPin-AppScriptName") as? String) ?? AppScriptRuntime.legacyAppFile
 
@@ -751,56 +766,112 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		} else {
 			exports.setObject(self, forKeyedSubscript: AppScriptRuntime.legacyAppGlobal as NSString) // because legacy
 			// https://bugs.swift.org/browse/SR-6476 can't do appExport = self
+			// http://rbereski.info/2015/05/15/java-script-core/
 		}
 
 		if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
-			// use OLD
 			if let jsval = loadAppScript(app_js.description) {
 				if jsval.isObject {
 					// use legacy API convention
 					warn("\(app_js) loaded as AppScriptGlobals.shared.jsdelegate")
 					jsdelegate = jsval
+					scriptState = .Evaluated
 					return true
 				}
+				warn("failed to execute app.js!")
+				scriptState = .Errored
 			}
 		}
 
+		warn("failed to load app.js!")
 		return false
 	}
 
+	// run main.js under v2 MacPin appscript namespace (* = require(@MacPin))
 	@objc func loadMainScript() -> Bool {
-		let jsval: JSValue
-		let script: JSScriptRef? // JSScript will be getting a high-level wrapping soon
+		var jsval: JSValue
 
 		let app = (Bundle.main.object(forInfoDictionaryKey:"MacPin-MainScriptName") as? String) ?? AppScriptRuntime.mainScriptFile
+		// allows packager to override the script's basename away from .mainScriptFile("app")
 
 		let local_app_js = URL(fileURLWithPath: "\(self.localResourcePath)/\(self.basename)/\(AppScriptRuntime.mainScriptFile).js")
 
+		if #available(macOS 10.14.5, *, iOS 13), false {
+			// false-blocking since we don't have import.meta injections implemented for JSContext yet.
+
+			guard JavaScriptCore_version >= (608, 1, 8) else { return false }
+			/*
+				node docs say to impl import.meta: https://nodejs.org/api/esm.html#esm_import_meta
+					The import.meta metaproperty is an Object that contains the following property:
+						url <string> The absolute file: URL of the module.
+				despite their admonition, should add some legacy back too:
+					const __filename = fileURLToPath(import.meta.url);
+					const __dirname = dirname(__filename);
+			*/
+
+			if (try? local_app_js.checkResourceIsReachable()) ?? false { // try overridden name
+				(_, jsval) = importJSScript(local_app_js.absoluteString, asMain: true, asModule: true)
+			} else if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
+				(_, jsval) = importJSScript(app_js.absoluteString, asMain: true, asModule: true)
+			} else {
+				warn("failed to load main.js!")
+				return false
+			}
+
+			guard jsval.isObject, !jsval.hasProperty("exception") else {
+				// TODO: dump exception
+				scriptState = .Errored
+				warn("failed to import(main.js)!")
+				return false
+			}
+
+			scriptState = .Promised //jsval should be a Promise object (asModule:true)
+
+			jsval.invokeMethod("then", withArguments: [
+				{ module in
+					warn("import(main.js) resolved!")
+					self.scriptState = .Evaluated
+					//  asMain:true should have put all module state into main scope,
+					//   don't need to destructure module's exports explicitly here
+				} as PromiseThen,
+				{ error in
+					warn(error)
+					warn("import(main.js) failed to resolve!")
+					self.scriptState = .Errored
+				} as PromiseThen
+			])
+
+			return true
+			// AppDelegate will have to keep checking for !Promised to be set
+			//   by our PromiseThen....
+		}
+
 		if (try? local_app_js.checkResourceIsReachable()) ?? false {
-			(script, jsval) = importCommonJSScript(local_app_js.absoluteString, asMain: true)
-			//(script, jsval) = importJSScript(local_app_js.absoluteString, asMain: true)
+			(_, jsval) = importCommonJSScript(local_app_js.absoluteString, asMain: true)
 		} else if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
-			(script, jsval) = importCommonJSScript(app_js.absoluteString, asMain: true)
-			//(script, jsval) = importJSScript(app_js.absoluteString, asMain: true)
+			(_, jsval) = importCommonJSScript(app_js.absoluteString, asMain: true)
 		} else {
+			warn("failed to load main.js!")
 			return false
 		}
 
-		// check for error
-		if jsval.isObject && !jsval.hasProperty("exception") {
-			jsdelegate = JSValue(nullIn: self.context)
-			return true
+		guard jsval.isObject, !jsval.hasProperty("exception") else {
+			// TODO: dump exception
+			scriptState = .Errored
+			warn("failed to execute main.js!")
+			return false
 		}
 
-		// dump exception
-		return false
+		jsdelegate = JSValue(nullIn: self.context)
+		warn("main.js executed!")
+		scriptState = .Evaluated
+		return true
 	}
 
 	@discardableResult
-	@available(OSX 10.15, *, iOS 13) // ensures we only weakly link to JSC::JSScript symbols
+	@available(macOS 10.14.5, *, iOS 13) // ensures we only weakly link to JSC::JSScript symbols
 	func loadAppJSScript(_ urlstr: String) -> JSValue? {
 		let jsval: JSValue
-		let script: JSScript?
 
 		guard let sourceURL = getResourceURL(urlstr) else {
 			warn("\(urlstr): could not be found", function: "loadAppJSScript")
@@ -808,7 +879,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		}
 
 		if (try? sourceURL.checkResourceIsReachable()) ?? false {
-			(script, jsval) = importJSScript(sourceURL.absoluteString, asMain: true)
+			(_, jsval) = importJSScript(sourceURL.absoluteString, asMain: true, asModule: true)
 		} else {
 			return nil
 		}
@@ -893,7 +964,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	@discardableResult
-	@available(OSX 10.15, *, iOS 13) // ensures we only weakly link to JSC::JSScript symbols
+	@available(macOS 10.14.5, *, iOS 13) // ensures we only weakly link to JSC::JSScript symbols
 	@nonobjc func importJSScript(_ urlstr: String, asMain: Bool = false, asModule: Bool = false) -> (JSScript?, JSValue) {
 /*
 		if JavaScriptCore_version >= (608, 3, 10) {
@@ -919,6 +990,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 		guard let script = try? JSScript(
 			of: (asModule) ? .module : .program,
+			// .module returns a Promise, just like a dynamic `import('./foo.js')`
+			//    it also enables the import keyword within the script
+			// dynamic `import()` is available for any kind of JSScript/JSContext
 			withSource: source,
 			andSourceURL: sourceURL,
 			andBytecodeCache: nil,
@@ -935,6 +1009,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		}
 
 		warn("loaded \(urlstr) script - main-scope:\(asMain) - module:\(asModule)")
+		// if asModule, should have another defer:false option so we can return the Promised value?
 		return ( script, value )
 	}
 
@@ -1303,19 +1378,6 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	var messageHandlers: [String: [JSValue]] = [:]
 }
 
-/*
-@available(OSX 10.15, *, iOS 13)
-@objc extension AppScriptRuntime: JSModuleLoaderDelegate {
-
-	@available(OSX 10.15, *, iOS 13)
-	@objc func context(_ context: JSContext!, fetchModuleForIdentifier identifier: JSValue!, withResolveHandler resolve: JSValue!, andRejectHandler reject: JSValue!) {
-	// JSScript v1 https://github.com/WebKit/webkit/commit/16bf7415addce141c0c5bfe91d53d8bea3929fa9
-	// JSScript v2 https://github.com/WebKit/webkit/commit/105499e40a416befe631f0897c5d8047db195fff
-	// https://trac.webkit.org/changeset/247403/webkit
-	}
-}
-*/
-
 enum AppScriptReactions: CustomStringConvertible {
 	var description: String { return "\(type(of: self)).\(self)" }
 	// TODO: how to describe allowed arguments?
@@ -1371,8 +1433,11 @@ enum AppScriptEvent: String, CustomStringConvertible, CaseIterable {
 @objc extension AppScriptRuntime: JSModuleLoaderDelegate {
 	// TODO: support file://**.mjs imports
 	func context(_ context: JSContext!, fetchModuleForIdentifier identifier: JSValue!, withResolveHandler resolve: JSValue!, andRejectHandler reject: JSValue!) {
-		warn()
+		warn(identifier)
 		// https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/tests/testapi.mm JSContextFetchDelegate
+		// JSScript v1 https://github.com/WebKit/webkit/commit/16bf7415addce141c0c5bfe91d53d8bea3929fa9
+		// JSScript v2 https://github.com/WebKit/webkit/commit/105499e40a416befe631f0897c5d8047db195fff
+		// https://trac.webkit.org/changeset/247403/webkit
 	}
 
 	func willEvaluateModule(_ url: NSURL) { warn(url); }

@@ -228,6 +228,12 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 			AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
 		}
 
+		while (AppScriptRuntime.shared.scriptState == .Promised) {
+			usleep(100000) // 100ms
+			// need to wait for an async-imported main script to resolve
+			//   its app.on(.AppWillFinishLaunching) callback may replace the browserController
+		}
+
 		AppScriptRuntime.shared.emit(.AppWillFinishLaunching, self) // allow JS to replace our browserController
 		self.shortcutsMenu.submenu = self.browserController.shortcutsMenu // update the menu from browserController
 		self.shortcutsMenu.submenu?.title = "Shortcuts" // FIXME: allow JS to customize title?
