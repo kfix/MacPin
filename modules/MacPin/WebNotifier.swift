@@ -31,8 +31,10 @@ struct WebKitNotificationCallbacks {
 	}
 
 	static let permissionsCallback: WKNotificationProviderNotificationPermissionsCallback = { clientInfo -> Optional<WKDictionaryRef> in
-
-		return unsafeBitCast(clientInfo, to: WebNotifier.self).notificationPermissions
+		return OpaquePointer(WKRetain(UnsafeRawPointer(
+			// must WKRetain to incr WK's refcount, balancing the release it does after this callback
+			unsafeBitCast(clientInfo, to: WebNotifier.self).notificationPermissions
+		))!)
 	}
 
 	// Cancel all outstanding requests
@@ -63,8 +65,7 @@ class WebNotifier {
 
 	required init(_ webview: MPWebView) {
 		self.webview = webview
-		self.notificationPermissions = OpaquePointer(WKRetain(UnsafeRawPointer(WKMutableDictionaryCreate()))!)
-		// must WKRetain to incr WK's refcount, balancing its release after the permissionsCallback fires
+		self.notificationPermissions = WKMutableDictionaryCreate()
 		self.manager = WKContextGetNotificationManager(webview.context!)
 		var wk_provider = WebKitNotificationCallbacks.makeProvider(self)
 		WKNotificationManagerSetProvider(self.manager, &wk_provider.base)

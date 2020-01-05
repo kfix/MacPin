@@ -1,17 +1,15 @@
-//https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKView.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/WKViewPrivate.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKViewInternal.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKView.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKViewPrivate.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/mac/WKViewInternal.h
+// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/mac/WKView.mm
 
 @import WebKit;
 #import "WKBase.h"
 
-//https://github.com/WebKit/webkit/blob/master/Source/WebKit2/Shared/API/c/WKBase.h
-//typedef const struct OpaqueWKFrame* WKFrameRef; //no Cocoa bridge for this at all, expecting `WKFrame`
-
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
 @interface WKView : UIView {
 #else
+WK_CLASS_DEPRECATED_WITH_REPLACEMENT("WKWebView", macos(10.10, 10.14.4), ios(8.0, 12.2))
 @interface WKView : NSView <NSTextInputClient> {
 #endif
 }

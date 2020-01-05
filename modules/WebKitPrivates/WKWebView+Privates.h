@@ -67,7 +67,6 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
 //@property (nonatomic, readonly) _WKWebViewPrintFormatter *_webViewPrintFormatter;
 //@property (nonatomic, getter=_allowsLinkPreview, setter=_setAllowsLinkPreview:) BOOL _allowsLinkPreview
-@property (nonatomic, setter=_setBackgroundExtendsBeyondPage:) BOOL _backgroundExtendsBeyondPage;
 - (UIView *)_viewForFindUI;
 @property (nonatomic, readonly) CGFloat _viewportMetaTagWidth; // negative if tag undefined
 @property (nonatomic, readonly) _WKWebViewPrintFormatter *_webViewPrintFormatter;
@@ -75,9 +74,6 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @property (readonly) NSColor *_pageExtendedBackgroundColor;
 @property (nonatomic, setter=_setTopContentInset:) CGFloat _topContentInset;
 @property (nonatomic, setter=_setAutomaticallyAdjustsContentInsets:) BOOL _automaticallyAdjustsContentInsets;
-
-// https://bugs.webkit.org/show_bug.cgi?id=177022
-@property (nonatomic, readonly) WKPageRef _pageRefForTransitionToWKWebView WK_API_AVAILABLE(macos(10.13.4));
 
 - (void)_setFrame:(NSRect)rect andScrollBy:(NSSize)offset WK_API_AVAILABLE(macosx(10.13.4));
 
@@ -112,6 +108,46 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 
 @property (nonatomic, setter=_setLayoutMode:) _WKLayoutMode _layoutMode;
 @property (nonatomic, setter=_setViewScale:) CGFloat _viewScale;
+
+@property (nonatomic, setter=_setMinimumEffectiveDeviceWidth:) CGFloat _minimumEffectiveDeviceWidth WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+
+@property (nonatomic, setter=_setBackgroundExtendsBeyondPage:) BOOL _backgroundExtendsBeyondPage WK_API_AVAILABLE(macos(10.13.4), ios(8.0));
+
+- (_WKAttachment *)_insertAttachmentWithFilename:(NSString *)filename contentType:(NSString *)contentType data:(NSData *)data options:(_WKAttachmentDisplayOptions *)options completion:(void(^)(BOOL success))completionHandler WK_API_DEPRECATED_WITH_REPLACEMENT("-_insertAttachmentWithFileWrapper:contentType:options:completion:", macos(10.13.4, 10.14.4), ios(11.3, 12.2));
+- (_WKAttachment *)_insertAttachmentWithFileWrapper:(NSFileWrapper *)fileWrapper contentType:(NSString *)contentType options:(_WKAttachmentDisplayOptions *)options completion:(void(^)(BOOL success))completionHandler WK_API_DEPRECATED_WITH_REPLACEMENT("-_insertAttachmentWithFileWrapper:contentType:completion:", macos(10.14.4, 10.14.4), ios(12.2, 12.2));
+- (_WKAttachment *)_insertAttachmentWithFileWrapper:(NSFileWrapper *)fileWrapper contentType:(NSString *)contentType completion:(void(^)(BOOL success))completionHandler WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (_WKAttachment *)_attachmentForIdentifier:(NSString *)identifier WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+
+- (void)_simulateDeviceOrientationChangeWithAlpha:(double)alpha beta:(double)beta gamma:(double)gamma WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+
++ (BOOL)_handlesSafeBrowsing WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
++ (NSURL *)_confirmMalwareSentinel WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
++ (NSURL *)_visitUnsafeWebsiteSentinel WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (void)_showSafeBrowsingWarningWithTitle:(NSString *)title warning:(NSString *)warning details:(NSAttributedString *)details completionHandler:(void(^)(BOOL))completionHandler WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (void)_showSafeBrowsingWarningWithURL:(NSURL *)url title:(NSString *)title warning:(NSString *)warning details:(NSAttributedString *)details completionHandler:(void(^)(BOOL))completionHandler WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+
+- (void)_isJITEnabled:(void(^)(BOOL))completionHandler WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (void)_removeDataDetectedLinks:(dispatch_block_t)completion WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+
+- (IBAction)_alignCenter:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_alignJustified:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_alignLeft:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_alignRight:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_indent:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_outdent:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_toggleStrikeThrough:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_insertOrderedList:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_insertUnorderedList:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_insertNestedOrderedList:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_insertNestedUnorderedList:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_increaseListLevel:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_decreaseListLevel:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_changeListType:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_pasteAsQuotation:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_pasteAndMatchStyle:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (IBAction)_takeFindStringFromSelection:(id)sender WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+
+ @property (class, nonatomic, copy, setter=_setStringForFind:) NSString *_stringForFind WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
 
 // hard-renamed to ^background in 11/2015. only pre-macOS with no STP will respond to ^transparentBackground.
 // https://github.com/WebKit/webkit/commit/6cbd5051e809407615b2fd903dacc8c14bbd69eb =>
@@ -189,10 +225,37 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 
 @property (nonatomic, setter=_setMediaCaptureEnabled:) BOOL _mediaCaptureEnabled WK_API_AVAILABLE(macosx(10.13), ios(11.0));
 
+#if !TARGET_OS_IPHONE
+#else
 @property (nonatomic, readonly) BOOL _hasInspectorFrontend WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
 @property (nonatomic, readonly) _WKInspector *_inspector WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
 @property (nonatomic, readonly) _WKFrameHandle *_mainFrame WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+- (void)_dismissContentRelativeChildWindows WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_setFrame:(NSRect)rect andScrollBy:(NSSize)offset WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_beginDeferringViewInWindowChanges WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_endDeferringViewInWindowChanges WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_endDeferringViewInWindowChangesSync WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_gestureEventWasNotHandledByWebCore:(NSEvent *)event WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_setCustomSwipeViews:(NSArray *)customSwipeViews WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_setCustomSwipeViewsTopContentInset:(float)topContentInset WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (NSView *)_fullScreenPlaceholderView WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (NSWindow *)_fullScreenWindow WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_disableFrameSizeUpdates WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_enableFrameSizeUpdates WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_prepareForImmediateActionAnimation WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_cancelImmediateActionAnimation WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_completeImmediateActionAnimation WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (BOOL)_canChangeFrameLayout:(_WKFrameHandle *)frameHandle WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (BOOL)_tryToSwipeWithEvent:(NSEvent *)event ignoringPinnedState:(BOOL)ignoringPinnedState WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+- (void)_setDidMoveSwipeSnapshotCallback:(void(^)(CGRect))callback WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+@property (nonatomic, setter=_setTotalHeightOfBanners:) CGFloat _totalHeightOfBanners WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+@property (nonatomic, copy, setter=_setUnderlayColor:) NSColor *_underlayColor;
+@property (nonatomic, readwrite, setter=_setIgnoresNonWheelEvents:) BOOL _ignoresNonWheelEvents WK_API_AVAILABLE(macosx(WK_MAC_TBA));
+@property (nonatomic, readonly) WKPageRef _pageRefForTransitionToWKWebView WK_API_AVAILABLE(macos(10.13.4));
+@property (nonatomic, readonly) BOOL _hasActiveVideoForControlsManager WK_API_AVAILABLE(macosx(10.12));
+#endif
 
+@property (nonatomic, readonly) NSView *_safeBrowsingWarning WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
 @end
 
 // https://github.com/WebKit/webkit/commit/1e291e88d96caa8e5421f81bd570e90b1af02ff4
@@ -210,13 +273,3 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 - (void)selectFindMatch:(id <NSTextFinderAsynchronousDocumentFindMatch>)findMatch completionHandler:(void (^)(void))completionHandler;
 @end
 #endif
-
-// CPU limit!!
-// https://github.com/WebKit/webkit/commit/7cb2c970ac18d8ea58d95236ef6897feb7f7fb01#diff-8e23aa6fa7b7953093696656facbb583
-
-// [WKWebView _pageRefForTransitionToWKWebView]
-// https://github.com/WebKit/webkit/commit/77f18c8949dad58b43e81f35d1b861a0f28a0efa#diff-8e23aa6fa7b7953093696656facbb583
-
-// moar from WebViewImpl !!
-// https://github.com/WebKit/webkit/commit/cfe92b4e265636c1396c7c7ed188cc51b78582ca#diff-8e23aa6fa7b7953093696656facbb583
-// https://github.com/WebKit/webkit/commit/dcb4f6fd0815005282c92da91b5f26b12083821d#diff-8e23aa6fa7b7953093696656facbb583
