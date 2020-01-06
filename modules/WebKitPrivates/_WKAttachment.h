@@ -27,6 +27,7 @@
 
 #pragma once
 
+#import "WebKitAvailability.h"
 #import <WebKit/WKFoundation.h>
 
 NS_ASSUME_NONNULL_BEGIN

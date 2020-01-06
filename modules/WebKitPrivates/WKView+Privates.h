@@ -18,23 +18,23 @@ WK_CLASS_DEPRECATED_WITH_REPLACEMENT("WKWebView", macos(10.10, 10.14.4), ios(8.0
 @end
 
 @interface WKView (Private)
-@property (readonly) WKPageRef pageRef;
-@property (readwrite) CGFloat minimumLayoutWidth;
-@property (readwrite) CGFloat minimumWidthForAutoLayout;
-//@property (readwrite) NSSize minimumSizeForAutoLayout;
+@property (readwrite) NSSize minimumSizeForAutoLayout;
 @property (readwrite) BOOL shouldClipToVisibleRect;
 @property (readwrite) BOOL shouldExpandToViewHeightForAutoLayout;
 
-@property (nonatomic) CGSize minimumLayoutSizeOverride;
+@property (nonatomic, setter=_setViewScale:) CGFloat _viewScale;
 
-//@property (readonly) NSColor *_pageExtendedBackgroundColor;
-//@property (copy, nonatomic) NSColor *underlayColor;
+@property (nonatomic, setter=_setOverrideDeviceScaleFactor:) CGFloat _overrideDeviceScaleFactor WK_API_AVAILABLE(macos(10.11));
+
+@property (nonatomic, setter=_setAutomaticallyAdjustsContentInsets:) BOOL _automaticallyAdjustsContentInsets;
+
+@property (readonly) NSColor *_pageExtendedBackgroundColor;
+@property (copy, nonatomic) NSColor *underlayColor;
+
+@property (nonatomic, setter=_setBackgroundColor:) NSColor *_backgroundColor WK_API_AVAILABLE(macos(10.14));
 
 // https://github.com/WebKit/webkit/commit/eea322e40e200c93030702aa0a6524d249e9795f
 @property (strong, nonatomic, setter=_setInspectorAttachmentView:) NSView *_inspectorAttachmentView WK_API_AVAILABLE(macos(10.11));
-
-// https://github.com/WebKit/webkit/commit/75af252811a234a2cf2642bde59307630c622e2a
-@property (nonatomic, setter=_setThumbnailView:) _WKThumbnailView *_thumbnailView;
 
 - (void)updateLayer;
 

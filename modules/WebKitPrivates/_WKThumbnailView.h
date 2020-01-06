@@ -1,5 +1,6 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKThumbnailView.h
 /*
+ * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKThumbnailView.h
+ *
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,19 +32,26 @@
 #import <AppKit/AppKit.h>
 
 @class WKView;
+@class WKWebView;
 
-WK_CLASS_AVAILABLE(10_10, 8_0)
+WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
 @interface _WKThumbnailView : NSView
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (instancetype)initWithFrame:(NSRect)frame fromWKView:(WKView *)wkView;
+#pragma clang diagnostic pop
 - (instancetype)initWithFrame:(NSRect)frame fromWKWebView:(WKWebView *)webView;
 
 @property (nonatomic) CGFloat scale;
 @property (nonatomic, readonly) CGSize snapshotSize;
+@property (nonatomic) CGSize maximumSnapshotSize;
 @property (nonatomic) BOOL exclusivelyUsesSnapshot;
 
-// This should be removed when all clients go away; it is always YES now.
-@property (nonatomic) BOOL usesSnapshot;
+// Defaults to NO.
+@property (nonatomic) BOOL shouldKeepSnapshotWhenRemovedFromSuperview;
+
+@property (strong, nonatomic) NSColor *overrideBackgroundColor;
 
 - (void)requestSnapshot;
 
