@@ -253,7 +253,7 @@ extension OmniBoxController: NSTextFieldDelegate { //NSControl
 			case "noop:":
 				if let event = Application.shared.currentEvent, event.modifierFlags.contains(.command) {
 					guard let url = validateURL(control.stringValue) else { return false }
-					popup(webview?.clone(url)) // cmd-enter pops open a new tab
+					popup(webview?.wkclone(.URL(url))) // cmd-enter pops open a new tab
 				}
 				fallthrough
 			//case "insertLineBreak:":

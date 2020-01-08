@@ -13,6 +13,14 @@ extension WKWebView {
 		get { return url?.absoluteString ?? "" }
 		set { /* not-impl*/  }
 	}
+
+	func wkclone() -> MPWebView {
+		return (self as! MPWebView).clone()
+	}
+
+	func wkclone(_ options: MPWebViewConfigOptions...) -> MPWebView {
+		return (self as! MPWebView).clone(options)
+	}
 }
 
 enum MPWebViewConfigOptions {
@@ -130,8 +138,24 @@ extension MPWebViewConfigOptions: RawRepresentable, Hashable {
 		return options.insert(option).inserted
 	}
 
+	func set(_ options: MPWebViewConfigOptions...) -> Bool {
+		return options.allSatisfy({ self.options.insert($0).inserted })
+	}
+
+	func set(_ options: [MPWebViewConfigOptions]) -> Bool {
+		return options.allSatisfy({ self.options.insert($0).inserted })
+	}
+
 	func reset(_ option: MPWebViewConfigOptions) {
 		options.update(with: option)
+	}
+
+    func reset(_ options: MPWebViewConfigOptions...) {
+		options.forEach({ self.options.update(with: $0) })
+	}
+
+    func reset(_ options: [MPWebViewConfigOptions]) {
+		options.forEach({ self.options.update(with: $0) })
 	}
 
 	required init(_ options: Set<MPWebViewConfigOptions> = []) {
@@ -1218,8 +1242,24 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	}
 
 	func clone() -> MPWebView {
-		warn(self.config)
+		warn(self.config) // FIXME needs rich description()
 		return Self(config: self.config)
+	}
+	
+	func clone(_ options: MPWebViewConfigOptions...) -> MPWebView {
+		warn(self.config) // FIXME needs rich description()
+		let newConfig = self.config
+		newConfig.reset(options)
+		warn(newConfig) // FIXME needs rich description()
+		return Self(config: newConfig)
+	}
+
+	func clone(_ options: [MPWebViewConfigOptions]) -> MPWebView {
+		warn(self.config) // FIXME needs rich description()
+		let newConfig = self.config
+		newConfig.reset(options)
+		warn(newConfig) // FIXME needs rich description()
+		return Self(config: newConfig)
 	}
 }
 

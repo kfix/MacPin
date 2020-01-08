@@ -18,21 +18,6 @@ import WebKit
 import WebKitPrivates
 import UTIKit
 
-extension WKWebView {
-	func clone(_ url: URL? = nil) -> MPWebView {
-		let clone: MPWebView
-		if let mpself = self as? MPWebView {
-			clone = mpself.clone()
-		} else {
-			// create a new MPWebView sharing the same cookie/sesssion data and useragent
-			clone = MPWebView(.configuration(configuration), .agent(self._customUserAgent))
-		}
-
-		if let url = url { clone.gotoURL(url) }
-		return clone
-	}
-}
-
 extension AppScriptRuntime: WKScriptMessageHandler {
 
 	// TODO proper main<->renderer IPC needed .... https://electronjs.org/docs/api/ipc-main
@@ -113,19 +98,19 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 					let mousebtn = navigationAction.buttonNumber
 					let modkeys = navigationAction.modifierFlags
 					if modkeys.contains(.option) { NSWorkspace.shared.open(url) } //alt-click opens externally
-						else if modkeys.contains(.command) { popup(webView.clone(url)) } // cmd-click pops open a new tab
-						else if modkeys.contains(.shift) { popup(webView.clone(url)) } // shift-click pops open a new tab w/ new session state
+						else if modkeys.contains(.command) { popup(webView.wkclone(.URL(url))) } // cmd-click pops open a new tab
+						else if modkeys.contains(.shift) { popup(webView.wkclone(.URL(url))) } // shift-click pops open a new tab w/ new session state
 						// FIXME: same keymods should work with Enter in omnibox controller
 						else if !browsingReactor.anyHandled(.decideNavigationForClickedURL, url.absoluteString as NSString, webView, targetIsMainFrame) { // allow override from JS
 							if navigationAction.targetFrame != nil && mousebtn == 1 { fallthrough } // left-click on in_frame target link
-							popup(webView.clone(url)).focus() // clicked out-of-frame target link
+							popup(webView.wkclone(.URL(url))).focus() // clicked out-of-frame target link
 							// auto-focusing on these is standard safari behavior
 						}
 #elseif os(iOS)
 					// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/ios/WKActionSheetAssistant.mm
 					if !browsingReactor.anyHandled(.decideNavigationForClickedURL, url.absoluteString as NSString, webView, targetIsMainFrame) { // allow override from JS
 						if navigationAction.targetFrame != nil { fallthrough } // tapped in_frame target link
-						popup(webView.clone(url)).focus() // out of frame target link
+						popup(webView.wkclone(.URL(url))).focus() // out of frame target link
 					}
 #endif
 					warn("-> .Cancel -- user clicked <a href=\(url) target!=_self> or middle-clicked: opening externally")
@@ -390,7 +375,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 
 		warn("JS <\(srcurl?.absoluteString ?? "")>: `window.open('\(openurl?.absoluteString ?? "")', '\(tgt?.absoluteString ?? "")');`")
 		if browsingReactor.anyHandled(.decideWindowOpenForURL, openurl?.absoluteString ?? "", webView) { return nil }
-		let wv = webView.clone()
+		let wv = webView.wkclone(.configuration(configuration))
 
 #if os(OSX)
 		if (windowFeatures.allowsResizing ?? 0) == 1 {
