@@ -74,12 +74,12 @@ extension WebViewControllerOSX {
 	@objc func webView(_ webView: WKWebView, didReceiveAuthenticationChallenge challenge: URLAuthenticationChallenge,
 		completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
 
-		if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
+		if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust || challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodClientCertificate {
 			if let scheme = challenge.protectionSpace.`protocol` {
 				warn("(\(challenge.protectionSpace.authenticationMethod)) \(scheme)://\(challenge.protectionSpace.host):\(challenge.protectionSpace.port) [\(webView.urlstr)]")
 			}
 
-			if #available(OSX 10.12, iOS 10, *) {
+			if #available(macOS 10.12, iOS 10, *) {
 				// https://developer.apple.com/documentation/foundation/urlsession/authchallengedisposition/performdefaulthandling
 				completionHandler(.performDefaultHandling, nil)
 			} else {
@@ -92,6 +92,7 @@ extension WebViewControllerOSX {
 
 			return
 		}
+
 		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.urlstr)]")
 
 		let alert = NSAlert()
