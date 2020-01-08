@@ -48,6 +48,10 @@ app.on('receivedRedirectionToURL', (url, tab) => {
 		case "http":
 		case "https":
 			if (alwaysAllowRedir) break; //user override
+			if (host.endsWith(".slack.com") ||
+				host.endsWith(".okta.com") ||
+				host.endsWith(".duosecurity.com")
+				) break; // SSO venders
 			if (tab.allowAnyRedir || unescape(unescape(url)).match("//accounts.google.com/")) {
 				// match(".slack.com/sso/saml/start?redir=") || slack.com/checkcookie
 				// we might be redirected to an external domain for a SSO-integrated Google Apps login
@@ -66,8 +70,9 @@ app.on('receivedRedirectionToURL', (url, tab) => {
 		case "about":
 		case "file":
 		default:
-			return false; // tell webkit that we did not handle this
+			break;
 	}
+	return false; // tell webkit that we did not handle this
 });
 
 let clicker = (url, tab, mainFrame) => {
