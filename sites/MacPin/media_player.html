@@ -9,7 +9,7 @@
             function start() {
             	var params = new URLSearchParams(window.location.search);
                 video = document.getElementById('video');
-                video.src = params.get('src');
+                video.src = decodeURIComponent(params.get('src'));
             }
         </script>
     </head>

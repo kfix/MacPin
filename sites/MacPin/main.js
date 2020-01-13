@@ -126,7 +126,7 @@ app.on('decideNavigationForMIME', (mime, url, webview) => {
 		case 'application/x-mpegurl':
 		case 'application/vnd.apple.mpegurl':
 			// FIXME: ensure url is for main frame
-			webview.loadURL('file://' + app.resourcePath + '/media_player.html?src=' + url); // FIXME: urldecode(url)
+			webview.loadURL('file://' + app.resourcePath + '/media_player.html?src=' + encodeURIComponent(url)); // FIXME: urldecode(url)
 			return true;
 		default:
 			break;
