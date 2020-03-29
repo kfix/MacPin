@@ -68,8 +68,6 @@ WK_EXPORT bool WKPageBackgroundExtendsBeyondPage(WKPageRef);
 
 // https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/C/WKPagePrivate.h
 WK_EXPORT void WKPageLoadURLWithShouldOpenExternalURLsPolicy(WKPageRef page, WKURLRef url, bool shouldOpenExternalURLs);
-WK_EXPORT bool WKPageGetResourceCachingDisabled(WKPageRef page);
-WK_EXPORT void WKPageSetResourceCachingDisabled(WKPageRef page, bool disabled);
 WK_EXPORT bool WKPageGetAddsVisitedLinks(WKPageRef page);
 WK_EXPORT void WKPageSetAddsVisitedLinks(WKPageRef page, bool visitedLinks);
 

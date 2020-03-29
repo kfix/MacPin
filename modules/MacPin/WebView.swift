@@ -437,8 +437,20 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	}
 
 	var caching: Bool {
-		get { return !WKPageGetResourceCachingDisabled(_pageRefForTransitionToWKWebView) }
-		set { WKPageSetResourceCachingDisabled(_pageRefForTransitionToWKWebView, !newValue) }
+		get {
+			if #available(macOS 10.13.4, *) {
+				return configuration.preferences._usesPageCache
+			} else {
+				return true
+			}
+		}
+		set {
+			if #available(macOS 10.13.4, *) {
+				configuration.preferences._usesPageCache = newValue
+				// is a reload() is required to take effect for subsequent naviagtions?
+			}
+		}
+
 	}
 
 	var transparent: Bool {
@@ -482,6 +494,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	let favicon: FavIcon = FavIcon()
 
 	@objc convenience required init(config: MPWebViewConfig) {
+		var caching = true
 		var configuration = WKWebViewConfiguration()
 		var needs_reconfiguration = true
 		var isolated = false
@@ -492,6 +505,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		// some props must be set during init before all other props
 		for option in config.options {
 			switch option {
+				case .caching(let value): caching = value
 				case .configuration(let value):
 					configuration = value
 					needs_reconfiguration = false
@@ -551,6 +565,11 @@ class MPWebView: WKWebView, WebViewScriptExports {
 			warn("WebRTC not available for WebKit: \(WebKit_version)")
 		}
 #endif
+
+		if !caching, #available(macOS 10.13.4, *) {
+			prefs._usesPageCache = false
+		}
+
 		if privacy {
 			//prevent HTML5 application cache and asset/page caching by WebKit, MacPin never saves any history itself
 			prefs._storageBlockingPolicy = .blockAll
@@ -630,6 +649,8 @@ class MPWebView: WKWebView, WebViewScriptExports {
 
 		for option in config.options {
 			switch option {
+				case .caching:
+					break // already captured pre-init
 				case .configuration:
 					break // already captured pre-init
 				case .inspectorVisible:
@@ -681,8 +702,6 @@ class MPWebView: WKWebView, WebViewScriptExports {
 					for handler in value { subscribeTo(handler) }
 				case .authorizedOriginsForNotifications(let value):
 					authorizedOriginsForNotifications = value
-				case .caching(let value):
-					self.caching = value
 				case .useSystemAppearance(let value):
 					self.useSystemAppearance = value
 				default:
