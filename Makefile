@@ -76,8 +76,12 @@ endif
 
 # create this file if you want to test dev-signed iOS apps on your own devices
 -include apple_dev_id.mk
-appsig				?= -
-# ^ ad-hoc, not so great
+#appsig				?= -
+# OSX 10.15.4 seems to not run unnotarized ad-hoc-signed builds anymore
+#   many CVEs https://support.apple.com/en-us/HT211100
+#   https://developer.apple.com/news/?id=12232019a
+#   https://gist.github.com/dpid/270bdb6c1011fe07211edf431b2d0fe4
+
 #appsig_macos			:= Mac Developer
 appsig_ios			:= iPhone Developer
 # open Xcode -> Preferences -> Accounts -> +Add: Apple ID -> Manage Certificates -> +Add: iOS Development
@@ -161,8 +165,7 @@ swiftsupport :=
 endif
 
 zip test apirepl tabrepl wknightly stp $(gen_apps): $(lexecs) $(swiftsupport)
-doc test apirepl tabrepl test.app test.ios dbg dbg.app stp stp.app test_% $(appnames:%=test_%): debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG
-#-D WK2LOG
+doc test apirepl tabrepl test.app test.ios dbg dbg.app stp stp.app test_% $(appnames:%=test_%): debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
 
 # older OSX/macOS with backported Safari.app have vendored WK/JSC frameworks
 env += DYLD_PRINT_LIBRARIES=1
@@ -311,7 +314,7 @@ $(outdir)/Frameworks/%.framework: $(outdir)/obj/lib%.dylib $(outdir)/Frameworks/
 	$(patsubst %,cp -RL % $@/Versions/A/$*,$(filter %.dylib,$^))
 	$(patsubst %,cp -RL % $@/Versions/A/$*.dSYM,$(filter %.dSYM,$^))
 	# need a Resources/Info-macos.plist & version.plist
-	-[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
+	-[ ! -n "$(codesign)" ] || codesign --verbose=4 --sign '$(appsig)' --timestamp --options runtime --force --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
 
 #build the app bundle
 $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(outdir)/lexec/$(macpin)
@@ -325,7 +328,7 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	[ ! -d $@/Contents/Resources/Library ] || ln -sfh Resources/Library $@/Contents/Library
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist >/dev/null
 	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
-	[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
+	[ ! -n "$(codesign)" ] || codesign --verbose=4 --sign '$(appsig)' --timestamp --options runtime --force --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
 	-codesign --display -r- --verbose=4 --deep --entitlements :- $@
 	-spctl -vvvv --assess --type execute $@ # App Store-ability
 	-asctl container acl list -file $@
@@ -501,6 +504,9 @@ $(ZIP): .zipignore
 	zip -9 -r $@ extras/*.workflow --exclude @extras/.zipignore
 	cd $(appdir) && zip -g -ws -r $@ *.app --exclude @$(realpath $+)
 # zip can't do head-to-tail cross-file dedup ... so astoundingly poor non-compression of all the duplicate SwiftSupport/*s
+
+# xcrun altool --notarize-app --primary-bundle-id {APP_BUNDLE_ID} -u {APPLE_ID} -f YOUR_APP.zip  -p "@keychain:Application Loader: {APPLE_ID}"
+# xcrun stapler staple YOUR_APP.zip
 
 txz: $(TXZ)
 $(TXZ): .zipignore
