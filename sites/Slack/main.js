@@ -117,6 +117,10 @@ let clicker = (url, tab, mainFrame) => {
 			) {
 				app.openURL(url);
 				return true;
+			} else if (tab.url.endsWith("/slack.com/signin")) {
+				console.log(`${url} clicked from the profile picker, absorbing popup`);
+				tab.loadURL(url);
+				return true;
 			}
 		default:
 			break;
@@ -142,6 +146,24 @@ app.on('launchURL', (url) => {
 		default:
 			browser.tabSelected = new WebView({url: url});
 	}
+});
+
+app.on('decideWindowOpenForURL', function(url, tab) {
+	console.log(`${tab.url} => window.open(${url})`);
+	return false; // proceed to .didWindowOpenForURL
+});
+
+app.on('didWindowOpenForURL', function(url, newTab, tab) {
+	if (url.length > 0 && newTab)
+		console.log(`window.open(${url})`);
+
+	if (tab==slackTab) {
+		newTab.loadURL(url);
+		browser.tabSelected = newTab; // take focus
+		return true; // macpin will return the newTab to tab's JS
+	}
+
+	return false; // macpin will popup(newTab, url) and return newTab to tab's JS
 });
 
 var alwaysAllowRedir = false;
