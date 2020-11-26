@@ -1301,6 +1301,7 @@ extension MPWebView { // NSTextFinderClient
     }
 
 	// https://developer.apple.com/documentation/appkit/nstextfinderclient/1526989-scrollrangetovisible
+	@available(macOS 10.15, *)
 	@objc override func scrollRangeToVisible(_ range: NSRange) {
 		warn(obj: range)
 
