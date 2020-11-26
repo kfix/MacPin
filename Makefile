@@ -168,7 +168,7 @@ zip test apirepl tabrepl wknightly stp $(gen_apps): $(lexecs) $(swiftsupport)
 doc test apirepl tabrepl test.app test.ios dbg dbg.app stp stp.app test_% $(appnames:%=test_%): debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
 
 # older OSX/macOS with backported Safari.app have vendored WK/JSC frameworks
-env += DYLD_PRINT_LIBRARIES=1
+env += DYLD_PRINT_LIBRARIES_POST_LAUNCH=1
 
 linkopts_exec 			:= -Xlinker -dyld_env -Xlinker DYLD_VERSIONED_FRAMEWORK_PATH="$(rpath)"
 
