@@ -1,6 +1,6 @@
 /*
  *
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/Cocoa/WKReloadFrameErrorRecoveryAttempter.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/Cocoa/WKReloadFrameErrorRecoveryAttempter.h
  *
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
@@ -28,8 +28,8 @@
 
 #import <WebKit/WKFoundation.h>
 #import <wtf/Forward.h>
-// https://github.com/WebKit/webkit/blob/master/Source/WTF/wtf/Forward.h
-// https://github.com/WebKit/webkit/blob/master/Source/WTF/wtf/text/CString.h
+// https://github.com/WebKit/webkit/blob/main/Source/WTF/wtf/Forward.h
+// https://github.com/WebKit/webkit/blob/main/Source/WTF/wtf/text/CString.h
 
 @class WKWebView;
 @class _WKFrameHandle;

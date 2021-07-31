@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/Cocoa/WKObject.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/Shared/Cocoa/WKObject.h
  *
  * Copyright (C) 2013 Apple Inc. All rights reserved.
  *

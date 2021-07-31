@@ -1,6 +1,6 @@
 #if __MAC_OS_X_VERSION_MAX_ALLOWED < 101200
 // 10.12+ SDKs already ship this header, so don't redefine unless building with an old one
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKOpenPanelParameters.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/WKOpenPanelParameters.h
 
 /*
  * Copyright (C) 2016 Apple Inc. All rights reserved.

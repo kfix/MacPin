@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/C/WKWebsiteDataStoreRef.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/C/WKWebsiteDataStoreRef.h
  *
  * Copyright (C) 2015 Apple Inc. All rights reserved.
  *

@@ -1,6 +1,6 @@
 /*
  *
- *  https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKErrorRecoveryAttempting.h
+ *  https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/_WKErrorRecoveryAttempting.h
  *
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *

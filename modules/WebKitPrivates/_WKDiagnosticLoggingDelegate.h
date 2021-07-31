@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKDiagnosticLoggingDelegate.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/_WKDiagnosticLoggingDelegate.h
  *
  * Copyright (C) 2015 Apple Inc. All rights reserved.
  *

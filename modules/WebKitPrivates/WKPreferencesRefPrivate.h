@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/C/WKPreferencesRefPrivate.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/C/WKPreferencesRefPrivate.h
  *
  * Copyright (C) 2010-2016 Apple Inc. All rights reserved.
  *

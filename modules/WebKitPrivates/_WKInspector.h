@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKInspector.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/_WKInspector.h
  *
  * Copyright (C) 2018 Apple Inc. All rights reserved.
  *

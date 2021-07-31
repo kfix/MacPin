@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/Cocoa/WKBrowsingContextHandle.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/Shared/API/Cocoa/WKBrowsingContextHandle.h
  *
  * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
@@ -27,6 +27,6 @@
 
 #import <WebKit/WKFoundation.h>
 
-WK_CLASS_AVAILABLE(10_10, 8_0)
+WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
 @interface WKBrowsingContextHandle : NSObject <NSSecureCoding>
 @end

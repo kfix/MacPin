@@ -1,4 +1,4 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/C/WKPage.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/C/WKPage.h
 #import <WebKitPrivates/WKBase.h>
 #import "WKInspector.h"
 #import "WKPageUIClient.h"
@@ -66,12 +66,12 @@ WK_EXPORT void WKPageSetEnableHorizontalRubberBanding(WKPageRef, bool enableHori
 WK_EXPORT void WKPageSetBackgroundExtendsBeyondPage(WKPageRef, bool backgroundExtendsBeyondPage);
 WK_EXPORT bool WKPageBackgroundExtendsBeyondPage(WKPageRef);
 
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/C/WKPagePrivate.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/C/WKPagePrivate.h
 WK_EXPORT void WKPageLoadURLWithShouldOpenExternalURLsPolicy(WKPageRef page, WKURLRef url, bool shouldOpenExternalURLs);
 WK_EXPORT bool WKPageGetAddsVisitedLinks(WKPageRef page);
 WK_EXPORT void WKPageSetAddsVisitedLinks(WKPageRef page, bool visitedLinks);
 
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/C/mac/WKPagePrivateMac.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/C/mac/WKPagePrivateMac.h
 WK_EXPORT bool WKPageIsURLKnownHSTSHost(WKPageRef page, WKURLRef url);
 #if !TARGET_OS_IPHONE
 WK_EXPORT bool WKPageIsPlayingVideoInEnhancedFullscreen(WKPageRef page);

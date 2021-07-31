@@ -1,5 +1,5 @@
 /* 
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/c/WKDeclarationSpecifiers.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/Shared/API/c/WKDeclarationSpecifiers.h
  *
  * Copyright (C) 2010, 2011 Apple Inc. All rights reserved.
  * Portions Copyright (c) 2010 Motorola Mobility, Inc.  All rights reserved.

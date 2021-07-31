@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/C/WKGeolocationManager.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/C/WKGeolocationManager.h
  *
  * Copyright (C) 2011, 2012, 2013 Apple Inc. All rights reserved.
  *

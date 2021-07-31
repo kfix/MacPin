@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKThumbnailView.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/_WKThumbnailView.h
  *
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *

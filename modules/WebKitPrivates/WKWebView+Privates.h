@@ -1,7 +1,7 @@
 @import WebKit;
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKWebViewPrivate.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/Cocoa/WebViewImpl.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebCore/page/Settings.yaml
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/WKWebViewPrivate.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/Cocoa/WebViewImpl.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebCore/page/Settings.yaml
 
 #import "WebKitAvailability.h"
 #import "_WKLayoutMode.h"

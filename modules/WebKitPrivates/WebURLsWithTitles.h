@@ -1,12 +1,12 @@
 #if TARGET_OS_OSX
 
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/mac/PasteboardTypes.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebKitLegacy/mac/Misc/WebNSPasteboardExtras.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/Shared/mac/PasteboardTypes.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKitLegacy/mac/Misc/WebNSPasteboardExtras.h
 extern NSString *WebURLPboardType;
 extern NSString *WebURLNamePboardType;
 extern NSString *WebArchivePboardType;
 
-// https://github.com/WebKit/webkit/blob/master/Source/WebKitLegacy/mac/History/WebURLsWithTitles.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKitLegacy/mac/History/WebURLsWithTitles.h
 /*
  * Copyright (C) 2005 Apple Inc.  All rights reserved.
  *

@@ -1,6 +1,6 @@
 /*
  *
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKHistoryDelegatePrivate.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/WKHistoryDelegatePrivate.h
  *
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *

@@ -1,5 +1,5 @@
 @import WebKit;
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKProcessPoolPrivate.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/WKProcessPoolPrivate.h
 
 @class _WKProcessPoolConfiguration;
 @protocol _WKDownloadDelegate;
@@ -24,7 +24,7 @@
 //- (void)_setObjectsForBundleParametersWithDictionary:(NSDictionary *)dictionary WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 
 @property (nonatomic, weak, setter=_setDownloadDelegate:) id <_WKDownloadDelegate> _downloadDelegate;
-// https://github.com/WebKit/webkit/blob/master/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
+// https://github.com/WebKit/webkit/blob/main/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
 // https://github.com/WebKit/webkit/search?q=_downloadDelegate&type=Code
 
 //@property (nonatomic, weak, setter=_setAutomationDelegate:) id <_WKAutomationDelegate> _automationDelegate WK_API_AVAILABLE(macosx(10.12), ios(10.0));

@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKIconLoadingDelegate.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/_WKIconLoadingDelegate.h
  *
  * Copyright (C) 2016 Apple Inc. All rights reserved.
  *

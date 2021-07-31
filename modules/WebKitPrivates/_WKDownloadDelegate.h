@@ -1,4 +1,4 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKDownloadDelegate.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit2/UIProcess/API/Cocoa/_WKDownloadDelegate.h
 @import WebKit;
 /*
  * Copyright (C) 2014 Apple Inc. All rights reserved.

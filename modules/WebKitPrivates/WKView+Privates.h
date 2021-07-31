@@ -1,7 +1,7 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKView.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/WKViewPrivate.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/mac/WKViewInternal.h
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/mac/WKView.mm
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/WKView.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/WKViewPrivate.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/mac/WKViewInternal.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/mac/WKView.mm
 
 @import WebKit;
 #import "WKBase.h"

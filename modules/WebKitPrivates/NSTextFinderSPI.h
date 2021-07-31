@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebCore/PAL/pal/spi/mac/NSTextFinderSPI.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebCore/PAL/pal/spi/mac/NSTextFinderSPI.h
  *
  * Copyright (C) 2015 Apple Inc.  All rights reserved.
  *

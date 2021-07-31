@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/Cocoa/_WKHitTestResult.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/Shared/API/Cocoa/_WKHitTestResult.h
  *
  * Copyright (C) 2015 Apple Inc. All rights reserved.
  *

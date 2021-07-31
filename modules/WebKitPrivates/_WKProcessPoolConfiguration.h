@@ -1,4 +1,4 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKProcessPoolConfiguration.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/_WKProcessPoolConfiguration.h
 @import WebKit;
 
 /*

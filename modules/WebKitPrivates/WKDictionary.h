@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/c/WKDictionary.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/Shared/API/c/WKDictionary.h
  *
  * Copyright (C) 2010 Apple Inc. All rights reserved.
  *

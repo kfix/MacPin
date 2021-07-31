@@ -1,5 +1,5 @@
 /*
-	* https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKUserStyleSheet.h
+	* https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/_WKUserStyleSheet.h
  *
  * Copyright (C) 2015 Apple Inc. All rights reserved.
  *

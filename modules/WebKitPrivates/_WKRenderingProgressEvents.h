@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/Cocoa/_WKRenderingProgressEvents.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/Shared/API/Cocoa/_WKRenderingProgressEvents.h
  *
  * Copyright (C) 2014 Apple Inc. All rights reserved.
  *

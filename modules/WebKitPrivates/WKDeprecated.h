@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/Shared/API/c/WKDeprecated.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/Shared/API/c/WKDeprecated.h
  *
  * Copyright (C) 2018 Apple Inc. All rights reserved.
  *

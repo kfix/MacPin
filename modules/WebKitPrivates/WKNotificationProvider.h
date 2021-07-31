@@ -1,5 +1,5 @@
 /*
- * https://github.com/webkit/webkit/blob/master/Source/WebKit/UIProcess/API/C/WKNotificationProvider.h
+ * https://github.com/webkit/webkit/blob/main/Source/WebKit/UIProcess/API/C/WKNotificationProvider.h
  *
  * Copyright (C) 2011 Apple Inc. All rights reserved.
  *

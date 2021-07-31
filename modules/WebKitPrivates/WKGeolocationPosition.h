@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/C/WKGeolocationPosition.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/C/WKGeolocationPosition.h
  *
  * Copyright (C) 2011 Apple Inc. All rights reserved.
  *

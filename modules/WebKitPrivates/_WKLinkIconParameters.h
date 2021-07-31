@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKLinkIconParameters.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/_WKLinkIconParameters.h
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

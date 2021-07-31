@@ -1,4 +1,4 @@
-// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/Cocoa/_WKDownload.h
+// https://github.com/WebKit/webkit/blob/main/Source/WebKit2/UIProcess/API/Cocoa/_WKDownload.h
 @import WebKit;
 /*
  * Copyright (C) 2014 Apple Inc. All rights reserved.
@@ -27,7 +27,7 @@
 
 @class WKWebView;
 
-WK_CLASS_AVAILABLE(10_10, 8_0)
+WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
 @interface _WKDownload : NSObject
 
 - (void)cancel;

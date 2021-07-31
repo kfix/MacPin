@@ -1,5 +1,5 @@
 /*
- * https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.h
+ * https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.h
  *
  * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
