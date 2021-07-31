@@ -25,7 +25,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-//#import "WKError.h"
 #import <WebKit/WKError.h>
 // /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Versions/A/Headers/WKError.h
 // https://opensource.apple.com/source/WebKit2/WebKit2-7604.5.6/UIProcess/API/Cocoa/WKError.h.auto.html
@@ -34,6 +33,7 @@ WK_EXTERN NSString * const _WKLegacyErrorDomain WK_API_AVAILABLE(macosx(10.11), 
 
 typedef NS_ENUM(NSInteger, _WKLegacyErrorCode) {
     _WKErrorCodeFrameLoadInterruptedByPolicyChange WK_API_AVAILABLE(macosx(10.11), ios(9.0)) = 102,
+    _WKErrorCodeFrameLoadBlockedByRestrictions WK_API_AVAILABLE(macos(10.15), ios(13.0)) = 106,
     _WKLegacyErrorPlugInWillHandleLoad = 204,
 } WK_API_AVAILABLE(macosx(10.11), ios(8.3));
 
