@@ -27,9 +27,9 @@
 #ifndef WKData_h
 #define WKData_h
 
-#include "WKBase.h"
+#import "WKBase.h"
 
-#include <stddef.h>
+#import <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {

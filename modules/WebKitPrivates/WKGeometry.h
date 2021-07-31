@@ -27,7 +27,7 @@
 #ifndef WKGeometry_h
 #define WKGeometry_h
 
-#include "WKBase.h"
+#import "WKBase.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -27,11 +27,11 @@
 #ifndef WKString_h
 #define WKString_h
 
-#include "WKBase.h"
-#include <stddef.h>
+#import "WKBase.h"
+#import <stddef.h>
 
 #ifndef __cplusplus
-#include <stdbool.h>
+#import <stdbool.h>
 #endif
 
 #ifdef __cplusplus

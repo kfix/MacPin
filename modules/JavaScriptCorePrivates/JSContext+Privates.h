@@ -1,5 +1,5 @@
 @import JavaScriptCore;
-#include "WebKitAvailability.h"
+#import "WebKitAvailability.h"
 
 /*
  * from https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSContextPrivate.h
@@ -33,7 +33,7 @@
 
 #if JSC_OBJC_API_ENABLED
 
-#include <JavaScriptCorePrivates/JSScript.h>
+#import <JavaScriptCorePrivates/JSScript.h>
 
 @protocol JSModuleLoaderDelegate <NSObject>
 

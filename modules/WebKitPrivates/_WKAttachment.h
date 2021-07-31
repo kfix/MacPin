@@ -25,8 +25,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
 #import "WebKitAvailability.h"
 #import <WebKit/WKFoundation.h>
 

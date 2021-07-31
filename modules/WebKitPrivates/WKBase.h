@@ -30,18 +30,18 @@
 #ifndef WKBase_h
 #define WKBase_h
 
-#include <WebKitPrivates/WKDeclarationSpecifiers.h>
-#include <stdint.h>
-#include <stdbool.h>
+#import <WebKitPrivates/WKDeclarationSpecifiers.h>
+#import <stdint.h>
+#import <stdbool.h>
 
 #if defined(BUILDING_GTK__)
-#include <WebKit/WKBaseGtk.h>
+#import <WebKit/WKBaseGtk.h>
 #elif defined(BUILDING_WPE__)
-#include <WebKit/WKBaseWPE.h>
+#import <WebKit/WKBaseWPE.h>
 #elif defined(__APPLE__)
-#include <WebKitPrivates/WKBaseMac.h>
+#import <WebKitPrivates/WKBaseMac.h>
 #elif defined(_WIN32)
-#include <WebKit/WKBaseWin.h>
+#import <WebKit/WKBaseWin.h>
 #endif
 
 /* WebKit2 shared types */

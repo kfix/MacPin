@@ -28,8 +28,8 @@
 #ifndef WKWebsiteDataStoreRef_h
 #define WKWebsiteDataStoreRef_h
 
-#include "WKBase.h"
-#include "WKDeprecated.h"
+#import "WKBase.h"
+#import "WKDeprecated.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -27,7 +27,7 @@
 #define WKNativeEvent_h
 
 #ifdef __APPLE__
-#include <TargetConditionals.h>
+#import <TargetConditionals.h>
 #endif
 
 #ifdef __cplusplus

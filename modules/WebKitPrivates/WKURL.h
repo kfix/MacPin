@@ -27,7 +27,7 @@
 #ifndef WKURL_h
 #define WKURL_h
 
-#include "WKBase.h"
+#import "WKBase.h"
 
 #ifdef __cplusplus
 extern "C" {

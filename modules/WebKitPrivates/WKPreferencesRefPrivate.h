@@ -28,7 +28,7 @@
 #ifndef WKPreferencesPrivate_h
 #define WKPreferencesPrivate_h
 
-#include <WebKitPrivates/WKBase.h>
+#import <WebKitPrivates/WKBase.h>
 
 #ifdef __cplusplus
 extern "C" {

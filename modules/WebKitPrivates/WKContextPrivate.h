@@ -28,8 +28,8 @@
 #ifndef WKContextPrivate_h
 #define WKContextPrivate_h
 
-#include "WKBase.h"
-#include "WKContext.h"
+#import "WKBase.h"
+#import "WKContext.h"
 
 #ifdef __cplusplus
 extern "C" {

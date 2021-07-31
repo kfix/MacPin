@@ -32,9 +32,9 @@
 // https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/postprocess-headers.sh
 
 // http://clang.llvm.org/docs/AttributeReference.html#availability
-#include <Availability.h>
-#include <AvailabilityMacros.h>
-#include <CoreFoundation/CoreFoundation.h>
+#import <Availability.h>
+#import <AvailabilityMacros.h>
+#import <CoreFoundation/CoreFoundation.h>
 
 // Use zero since it will be less than any possible version number.
 #define JSC_MAC_VERSION_TBA 0

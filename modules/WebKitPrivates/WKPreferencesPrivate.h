@@ -25,7 +25,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <WebKitPrivates/WKPreferencesRefPrivate.h>
+#import <WebKitPrivates/WKPreferencesRefPrivate.h>
 
 #ifdef __OBJC__
 

@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include <WebKitPrivates/WKBase.h>
-#include <WebKitPrivates/WKEvent.h>
-#include <WebKitPrivates/WKGeometry.h>
-#include <WebKitPrivates/WKNativeEvent.h>
+#import <WebKitPrivates/WKBase.h>
+#import <WebKitPrivates/WKEvent.h>
+#import <WebKitPrivates/WKGeometry.h>
+#import <WebKitPrivates/WKNativeEvent.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -28,7 +28,7 @@
 #ifndef WKWebsiteDataStoreConfigurationRef_h
 #define WKWebsiteDataStoreConfigurationRef_h
 
-#include "WKBase.h"
+#import "WKBase.h"
 
 #ifdef __cplusplus
 extern "C" {

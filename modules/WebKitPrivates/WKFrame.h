@@ -27,10 +27,10 @@
 #ifndef WKFrame_h
 #define WKFrame_h
 
-#include "WKBase.h"
+#import "WKBase.h"
 
 #ifndef __cplusplus
-#include <stdbool.h>
+#import <stdbool.h>
 #endif
 
 #ifdef __cplusplus

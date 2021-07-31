@@ -26,7 +26,7 @@
 #ifndef WKNotification_h
 #define WKNotification_h
 
-#include <WebKitPrivates/WKBase.h>
+#import <WebKitPrivates/WKBase.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -28,7 +28,7 @@
 #ifndef WKGeolocationManager_h
 #define WKGeolocationManager_h
 
-#include "WKBase.h"
+#import "WKBase.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -28,13 +28,13 @@
 #ifndef JSRemoteInspector_h
 #define JSRemoteInspector_h
 
-#include <JavaScriptCore/JSBase.h>
-#include <JavaScriptCorePrivates/WebKitAvailability.h>
+#import <JavaScriptCore/JSBase.h>
+#import <JavaScriptCorePrivates/WebKitAvailability.h>
 
 #if defined(WIN32) || defined(_WIN32)
 typedef int JSProcessID;
 #else
-#include <unistd.h>
+#import <unistd.h>
 typedef pid_t JSProcessID;
 #endif
 

@@ -28,7 +28,7 @@
 #define WKBaseMac_h
 
 #ifndef WKBase_h
-#error "Please #include \"WKBase.h\" instead of this file directly."
+#error "Please #import \"WKBase.h\" instead of this file directly."
 #endif
 
 typedef const struct OpaqueWKObjCTypeWrapper* WKObjCTypeWrapperRef;

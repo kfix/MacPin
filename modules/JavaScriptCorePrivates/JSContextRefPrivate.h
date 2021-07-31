@@ -28,12 +28,12 @@
 #ifndef JSContextRefPrivate_h
 #define JSContextRefPrivate_h
 
-#include <JavaScriptCore/JSObjectRef.h>
-#include <JavaScriptCore/JSValueRef.h>
-#include <JavaScriptCorePrivates/WebKitAvailability.h>
+#import <JavaScriptCore/JSObjectRef.h>
+#import <JavaScriptCore/JSValueRef.h>
+#import <JavaScriptCorePrivates/WebKitAvailability.h>
 
 #ifndef __cplusplus
-#include <stdbool.h>
+#import <stdbool.h>
 #endif
 
 #ifdef __cplusplus

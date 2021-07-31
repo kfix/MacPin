@@ -26,7 +26,7 @@
 #ifndef WKEvent_h
 #define WKEvent_h
 
-#include "WKBase.h"
+#import "WKBase.h"
 
 #ifdef __cplusplus
 extern "C" {

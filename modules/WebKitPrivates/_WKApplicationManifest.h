@@ -23,8 +23,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
 #import <WebKit/WKFoundation.h>
 
 #import <Foundation/Foundation.h>

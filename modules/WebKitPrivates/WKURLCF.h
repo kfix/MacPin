@@ -27,8 +27,8 @@
 #ifndef WKURLCF_h
 #define WKURLCF_h
 
-#include <CoreFoundation/CoreFoundation.h>
-#include "WKBase.h"
+#import <CoreFoundation/CoreFoundation.h>
+#import "WKBase.h"
 
 #ifdef __cplusplus
 extern "C" {

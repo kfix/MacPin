@@ -27,7 +27,7 @@
 #ifndef WKErrorRef_h
 #define WKErrorRef_h
 
-#include "WKBase.h"
+#import "WKBase.h"
 
 #ifdef __cplusplus
 extern "C" {

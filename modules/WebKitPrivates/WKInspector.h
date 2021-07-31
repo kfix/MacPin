@@ -28,10 +28,10 @@
 #ifndef WKInspector_h
 #define WKInspector_h
 
-#include "WKBase.h"
+#import "WKBase.h"
 
 #ifndef __cplusplus
-#include <stdbool.h>
+#import <stdbool.h>
 #endif
 
 #ifdef __cplusplus

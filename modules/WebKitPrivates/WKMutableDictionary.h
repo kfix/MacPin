@@ -28,10 +28,10 @@
 #ifndef WKMutableDictionary_h
 #define WKMutableDictionary_h
 
-#include <WebKitPrivates/WKBase.h>
+#import <WebKitPrivates/WKBase.h>
 
 #ifndef __cplusplus
-#include <stdbool.h>
+#import <stdbool.h>
 #endif
 
 #ifdef __cplusplus
