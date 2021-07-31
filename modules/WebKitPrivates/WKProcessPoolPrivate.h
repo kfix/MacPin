@@ -27,7 +27,7 @@
 // https://github.com/WebKit/webkit/blob/main/Tools/TestWebKitAPI/Tests/WebKit2Cocoa/Download.mm
 // https://github.com/WebKit/webkit/search?q=_downloadDelegate&type=Code
 
-//@property (nonatomic, weak, setter=_setAutomationDelegate:) id <_WKAutomationDelegate> _automationDelegate WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+//@property (nonatomic, weak, setter=_setAutomationDelegate:) id <_WKAutomationDelegate> _automationDelegate WK_API_AVAILABLE(macos(10.12), ios(10.0));
 
 // tells where in the local filesystem any particular URL's cache file ("~/Library/WebKit/WebsiteData") is saved
 + (NSURL *)_websiteDataURLForContainerWithURL:(NSURL *)containerURL;
@@ -36,12 +36,12 @@
 //- (void)_setAutomationSession:(_WKAutomationSession *)automationSession WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 
 // Test only. Returns web processes running web pages (does not include web processes running service workers)
-- (size_t)_webPageContentProcessCount WK_API_AVAILABLE(macosx(10.13.4), ios(11.3));
+- (size_t)_webPageContentProcessCount WK_API_AVAILABLE(macos(10.13.4), ios(11.3));
 
 //- (void)_warmInitialProcess WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 
-- (void)_preconnectToServer:(NSURL *)serverURL WK_API_AVAILABLE(macosx(10.13.4), ios(11.3));
+- (void)_preconnectToServer:(NSURL *)serverURL WK_API_AVAILABLE(macos(10.13.4), ios(11.3));
 
-@property (nonatomic, getter=_isCookieStoragePartitioningEnabled, setter=_setCookieStoragePartitioningEnabled:) BOOL _cookieStoragePartitioningEnabled WK_API_AVAILABLE(macosx(10.12.3), ios(10.3));
-@property (nonatomic, getter=_isStorageAccessAPIEnabled, setter=_setStorageAccessAPIEnabled:) BOOL _storageAccessAPIEnabled WK_API_AVAILABLE(macosx(10.13.4), ios(11.3));
+@property (nonatomic, getter=_isCookieStoragePartitioningEnabled, setter=_setCookieStoragePartitioningEnabled:) BOOL _cookieStoragePartitioningEnabled WK_API_AVAILABLE(macos(10.12.3), ios(10.3));
+@property (nonatomic, getter=_isStorageAccessAPIEnabled, setter=_setStorageAccessAPIEnabled:) BOOL _storageAccessAPIEnabled WK_API_AVAILABLE(macos(10.13.4), ios(11.3));
 @end

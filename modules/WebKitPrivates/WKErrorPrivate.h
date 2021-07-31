@@ -29,26 +29,26 @@
 // /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Versions/A/Headers/WKError.h
 // https://opensource.apple.com/source/WebKit2/WebKit2-7604.5.6/UIProcess/API/Cocoa/WKError.h.auto.html
 
-WK_EXTERN NSString * const _WKLegacyErrorDomain WK_API_AVAILABLE(macosx(10.11), ios(8.3));
+WK_EXTERN NSString * const _WKLegacyErrorDomain WK_API_AVAILABLE(macos(10.11), ios(8.3));
 
 typedef NS_ENUM(NSInteger, _WKLegacyErrorCode) {
-    _WKErrorCodeFrameLoadInterruptedByPolicyChange WK_API_AVAILABLE(macosx(10.11), ios(9.0)) = 102,
+    _WKErrorCodeFrameLoadInterruptedByPolicyChange WK_API_AVAILABLE(macos(10.11), ios(9.0)) = 102,
     _WKErrorCodeFrameLoadBlockedByRestrictions WK_API_AVAILABLE(macos(10.15), ios(13.0)) = 106,
     _WKLegacyErrorPlugInWillHandleLoad = 204,
-} WK_API_AVAILABLE(macosx(10.11), ios(8.3));
+} WK_API_AVAILABLE(macos(10.11), ios(8.3));
 
 /*! @constant _WKJavaScriptExceptionMessageErrorKey Key in userInfo representing
  the exception message (as an NSString) for WKErrorJavaScriptExceptionOccurred errors. */
-WK_EXTERN NSString * const _WKJavaScriptExceptionMessageErrorKey WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+WK_EXTERN NSString * const _WKJavaScriptExceptionMessageErrorKey WK_API_AVAILABLE(macos(10.12), ios(10.0));
 
 /*! @constant _WKJavaScriptExceptionLineNumberErrorKey Key in userInfo representing
  the exception line number (as an NSNumber) for WKErrorJavaScriptExceptionOccurred errors. */
-WK_EXTERN NSString * const _WKJavaScriptExceptionLineNumberErrorKey WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+WK_EXTERN NSString * const _WKJavaScriptExceptionLineNumberErrorKey WK_API_AVAILABLE(macos(10.12), ios(10.0));
 
 /*! @constant _WKJavaScriptExceptionColumnNumberErrorKey Key in userInfo representing
  the exception column number (as an NSNumber) for WKErrorJavaScriptExceptionOccurred errors. */
-WK_EXTERN NSString * const _WKJavaScriptExceptionColumnNumberErrorKey WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+WK_EXTERN NSString * const _WKJavaScriptExceptionColumnNumberErrorKey WK_API_AVAILABLE(macos(10.12), ios(10.0));
 
 /*! @constant _WKJavaScriptExceptionSourceURLErrorKey Key in userInfo representing
  the exception source URL (as an NSURL) for WKErrorJavaScriptExceptionOccurred errors. */
-WK_EXTERN NSString * const _WKJavaScriptExceptionSourceURLErrorKey WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+WK_EXTERN NSString * const _WKJavaScriptExceptionSourceURLErrorKey WK_API_AVAILABLE(macos(10.12), ios(10.0));

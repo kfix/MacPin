@@ -32,7 +32,7 @@
 //you're the weakest link... goodbye!
 // `nm build//macosx-x86_64-apple-macosx10.11/exec/MacPin | grep _OBJC_CLASS_\$__WK` still sez its there
 
-WK_CLASS_AVAILABLE(macosx(10.12))
+WK_CLASS_AVAILABLE(macos(10.12))
 __attribute__((weak_import))
 @interface _WKHitTestResult : NSObject <NSCopying>
 

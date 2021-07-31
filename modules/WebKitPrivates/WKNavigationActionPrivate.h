@@ -40,18 +40,18 @@ typedef NS_ENUM(NSInteger, WKSyntheticClickType) {
 @property (nonatomic, readonly) NSURL *_originalURL;
 @property (nonatomic, readonly, getter=_isUserInitiated) BOOL _userInitiated;
 @property (nonatomic, readonly) BOOL _canHandleRequest;
-@property (nonatomic, readonly) BOOL _shouldOpenExternalSchemes WK_API_AVAILABLE(macosx(10.11), ios(9.0));
-@property (nonatomic, readonly) BOOL _shouldOpenAppLinks WK_API_AVAILABLE(macosx(10.11), ios(9.0));
+@property (nonatomic, readonly) BOOL _shouldOpenExternalSchemes WK_API_AVAILABLE(macos(10.11), ios(9.0));
+@property (nonatomic, readonly) BOOL _shouldOpenAppLinks WK_API_AVAILABLE(macos(10.11), ios(9.0));
 
-@property (nonatomic, readonly) BOOL _shouldOpenExternalURLs WK_API_DEPRECATED("use _shouldOpenExternalSchemes and _shouldOpenAppLinks", macosx(10.11, 10.11), ios(9.0, 9.0));
+@property (nonatomic, readonly) BOOL _shouldOpenExternalURLs WK_API_DEPRECATED("use _shouldOpenExternalSchemes and _shouldOpenAppLinks", macos(10.11, 10.11), ios(9.0, 9.0));
 
-//@property (nonatomic, readonly) _WKUserInitiatedAction *_userInitiatedAction WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+//@property (nonatomic, readonly) _WKUserInitiatedAction *_userInitiatedAction WK_API_AVAILABLE(macos(10.12), ios(10.0));
 
 #if TARGET_OS_IPHONE
 @property (nonatomic, readonly) WKSyntheticClickType _syntheticClickType WK_API_AVAILABLE(ios(10.0));
 @property (nonatomic, readonly) CGPoint _clickLocationInRootViewCoordinates WK_API_AVAILABLE(ios(11.0));
 #endif
 
-@property (nonatomic, readonly) BOOL _isRedirect WK_API_AVAILABLE(macosx(10.13), ios(11.0));
+@property (nonatomic, readonly) BOOL _isRedirect WK_API_AVAILABLE(macos(10.13), ios(11.0));
 
 @end

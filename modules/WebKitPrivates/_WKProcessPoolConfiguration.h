@@ -31,37 +31,37 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-WK_CLASS_AVAILABLE(macosx(10.10), ios(8.0))
+WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
 @interface _WKProcessPoolConfiguration : NSObject <NSCopying>
 
 @property (nonatomic, copy) NSURL *injectedBundleURL;
 @property (nonatomic) NSUInteger maximumProcessCount;
 
-@property (nonatomic) BOOL ignoreSynchronousMessagingTimeoutsForTesting WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+@property (nonatomic) BOOL ignoreSynchronousMessagingTimeoutsForTesting WK_API_AVAILABLE(macos(10.12), ios(10.0));
 
-@property (nonatomic, copy) NSArray<NSURL *> *additionalReadAccessAllowedURLs WK_API_AVAILABLE(macosx(10.13), ios(11.0));
+@property (nonatomic, copy) NSArray<NSURL *> *additionalReadAccessAllowedURLs WK_API_AVAILABLE(macos(10.13), ios(11.0));
 
 // Network Process properties
 // FIXME: These should be be per-session/data store when we support multiple non-persistent sessions/data stores.
 
-@property (nonatomic) NSInteger diskCacheSizeOverride WK_API_AVAILABLE(macosx(10.11), ios(9.0));
+@property (nonatomic) NSInteger diskCacheSizeOverride WK_API_AVAILABLE(macos(10.11), ios(9.0));
 @property (nonatomic, copy) NSArray *cachePartitionedURLSchemes;
-@property (nonatomic, copy) NSArray<NSString *> *alwaysRevalidatedURLSchemes WK_API_AVAILABLE(macosx(10.12), ios(10.0));
+@property (nonatomic, copy) NSArray<NSString *> *alwaysRevalidatedURLSchemes WK_API_AVAILABLE(macos(10.12), ios(10.0));
 @property (nonatomic) BOOL diskCacheSpeculativeValidationEnabled WK_API_DEPRECATED_WITH_REPLACEMENT("_WKWebsiteDataStoreConfiguration.networkCacheSpeculativeValidationEnabled", macos(10.12, WK_MAC_TBA), ios(10.0, WK_IOS_TBA));
-@property (nonatomic, nullable, copy) NSString *sourceApplicationBundleIdentifier WK_API_AVAILABLE(macosx(10.12.3), ios(10.3));
-@property (nonatomic, nullable, copy) NSString *sourceApplicationSecondaryIdentifier WK_API_AVAILABLE(macosx(10.12.3), ios(10.3));
-@property (nonatomic) BOOL allowsCellularAccess WK_API_DEPRECATED_WITH_REPLACEMENT("WKWebsiteDataStore._allowsCellularAccess", macosx(10.13, 10.13.4), ios(11.0, 11.3));
-@property (nonatomic) BOOL shouldCaptureAudioInUIProcess WK_API_AVAILABLE(macosx(10.13), ios(11.0));
+@property (nonatomic, nullable, copy) NSString *sourceApplicationBundleIdentifier WK_API_AVAILABLE(macos(10.12.3), ios(10.3));
+@property (nonatomic, nullable, copy) NSString *sourceApplicationSecondaryIdentifier WK_API_AVAILABLE(macos(10.12.3), ios(10.3));
+@property (nonatomic) BOOL allowsCellularAccess WK_API_DEPRECATED_WITH_REPLACEMENT("WKWebsiteDataStore._allowsCellularAccess", macos(10.13, 10.13.4), ios(11.0, 11.3));
+@property (nonatomic) BOOL shouldCaptureAudioInUIProcess WK_API_AVAILABLE(macos(10.13), ios(11.0));
 #if TARGET_OS_IPHONE
 @property (nonatomic, nullable, copy) NSString *CTDataConnectionServiceType WK_API_AVAILABLE(ios(10.3));
 @property (nonatomic) BOOL alwaysRunsAtBackgroundPriority WK_API_AVAILABLE(ios(10.3));
 @property (nonatomic) BOOL shouldTakeUIBackgroundAssertion WK_API_AVAILABLE(ios(11.0));
 #endif
-@property (nonatomic) pid_t presentingApplicationPID WK_API_AVAILABLE(macosx(10.13), ios(11.0));
-@property (nonatomic) BOOL processSwapsOnNavigation WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
-@property (nonatomic) BOOL alwaysKeepAndReuseSwappedProcesses WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
-@property (nonatomic) BOOL processSwapsOnWindowOpenWithOpener WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
-@property (nonatomic) BOOL trackNetworkActivity WK_API_AVAILABLE(macosx(WK_MAC_TBA), ios(WK_IOS_TBA));
+@property (nonatomic) pid_t presentingApplicationPID WK_API_AVAILABLE(macos(10.13), ios(11.0));
+@property (nonatomic) BOOL processSwapsOnNavigation WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+@property (nonatomic) BOOL alwaysKeepAndReuseSwappedProcesses WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+@property (nonatomic) BOOL processSwapsOnWindowOpenWithOpener WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+@property (nonatomic) BOOL trackNetworkActivity WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
 
 @end
 
