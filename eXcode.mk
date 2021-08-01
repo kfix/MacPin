@@ -32,7 +32,7 @@ archs_iphoneos		?= armv7 arm64
 arch				?= $(shell uname -m)
 
 target_ver_macos	?= 10.11
-target_macos		?= apple-macosx$(target_ver_macos)
+target_macos		?= apple-macos$(target_ver_macos)
 target_ver_ios		?= 9.1
 target_ios			?= apple-ios$(target_ver_ios)
 target				?= $(target_macos)
@@ -155,25 +155,27 @@ xcs					?= xcode-select
 swiftver			?= 3
 nextswiftver		?= 4
 swifttoolchain		?= XcodeDefault
+swifttoolchaindir   ?= /Applications/Xcode.app/Contents/Developer/Toolchains
 # Xcode.app/Contents/Developer/Toolchains/*.xctoolchain/ToolchainInfo.plist << TC ids in there
+swifttoolchainid 	?= com.apple.dt.toolchain.$(swifttoolchain)
 
-sdkpath				:= $(shell $(xcrun) --show-sdk-path --sdk $(sdk))
+sdkpath				?= $(shell $(xcrun) --show-sdk-path --sdk $(sdk))
 # https://github.com/apple/swift/blob/master/include/swift/Option/Options.td
 # https://github.com/apple/swift/blob/master/include/swift/Option/FrontendOptions.td
 # https://github.com/apple/swift/blob/master/docs/Diagnostics.md
 # https://www.bignerdranch.com/blog/build-log-groveling-for-fun-and-profit-manual-swift-continued/
 swflags				:= $(SWFTFLAGS) $(SWCCFLAGS:%=-Xcc %) -swift-version $(swiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
 swmigflags			:= $(SWFTFLAGS) $(SWCCFLAGS:%=-Xcc %) -swift-version $(nextswiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
-swiftc				:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swiftc $(swflags)
-swift-update		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swift-update $(swflags)
+swiftc				:= $(xcrun) --toolchain $(swifttoolchainid) -sdk $(sdk) swiftc $(swflags)
+swift-update		:= $(xcrun) --toolchain $(swifttoolchainid) -sdk $(sdk) swift-update $(swflags)
 # https://github.com/apple/swift/tree/master/lib/Migrator
-swift-migrate		:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swiftc -update-code $(swmigflags)
+swift-migrate		:= $(xcrun) --toolchain $(swifttoolchaind) -sdk $(sdk) swiftc -update-code $(swmigflags)
 clang				:= $(xcrun) -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platform)) $(verbose)
 clangpp				:= $(xcrun) -sdk $(sdk) clang++ -fmodules -fcxx-modules -std=c++11 -stdlib=libc++ -target $(arch)-$(target_$(platform)) $(verbose)
 #-fobj-arc
 #-fobjc-call-cxx-cdtors
 # https://github.com/apple/swift/blob/master/tools/swift-stdlib-tool/swift-stdlib-tool.mm
-swift-stdlibtool	:= $(xcrun) --toolchain com.apple.dt.toolchain.$(swifttoolchain) -sdk $(sdk) swift-stdlib-tool --platform $(sdk)
+swift-stdlibtool	:= $(xcrun) --toolchain $(swifttoolchainid) -sdk $(sdk) swift-stdlib-tool --platform $(sdk)
 
 
 libdirs				:= -L $(outdir)/Frameworks -L $(outdir)/obj

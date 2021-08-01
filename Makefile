@@ -22,18 +22,40 @@ archs_macosx		?= x86_64
 archs_iphonesimulator	?= x86_64
 
 archs_iphoneos		?= arm64
-target_ver_macos	?= 10.13
+target_ver_macos	?= 10.15
 target_ver_ios		?= 9
 
-xcode				?= /Applications/Xcode.app
-swifttoolchain		?= XcodeDefault
+#xcode				?= /Applications/Xcode.app
+# install past release to support older versions:
+# https://developer.apple.com/support/xcode/
+#DEVELOPER_DIR := /Applications/Xcode.app
+#export DEVELOPER_DIR
+#swifttoolchain		?= XcodeDefault
 swiftver			?= 5
 nextswiftver		?= 5
 
+#swifttoolchain		:= swift-5.1.3-RELEASE
+# swift-5.2.5-RELEASE.xctoolchain
+#swifttoolchaindir   := /Library/Developer/Toolchains
+# $ /usr/libexec/PlistBuddy -c "Print CFBundleIdentifier:" /Library/Developer/Toolchains/swift-4.0-RELEASE.xctoolchain/Info.plist
+swifttoolchainid	:= org.swift.51320191213a
+#swifttoolchainid	:= org.swift.525202008051a
+#SWIFT_VERSION		:= 5.2
+#export SWIFT_VERSION
+
+TOOLCHAINS := $(swifttoolchainid)
+export TOOLCHAIN
 ifneq ($(xcode),)
 xcrun				?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcrun
 xcs					?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcode-select
 endif
+#sdkpath				:= /Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk
+
+# /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -showsdks
+# https://github.com/phracker/MacOSX-SDKs
+sdk				:= macosx10.15
+#SDKROOT				:= /Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk
+#export SDKROOT
 
 macpin				:= MacPin
 macpin_sites		?= sites
@@ -272,10 +294,12 @@ ifeq ($(platform),macos)
 %.scpt: %.jxa
 	osacompile -l JavaScript -o "$@" "$<"
 
+#--platform $(sdk)\ 
 $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/Assets.car: $(xcassets)/%.xcassets
 	@install -d $(dir $@)
 	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
-		--platform $(sdk) --minimum-deployment-target 10.12 --target-device mac \
+	    --platform macosx \
+		--minimum-deployment-target 10.12 --target-device mac \
 		--compress-pngs --compile $(dir $@) $(realpath $(filter %.xcassets, $^)) >/dev/null
 	test -f $@ || { echo "error: $@ was not created by actool!" && cat $@.plist && exit 1; }
 	# | grep '/* com.apple.actool.compilation-results */\n\w+ Icon.icns'
