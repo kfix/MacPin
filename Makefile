@@ -38,8 +38,8 @@ nextswiftver		?= 5
 # swift-5.2.5-RELEASE.xctoolchain
 #swifttoolchaindir   := /Library/Developer/Toolchains
 # $ /usr/libexec/PlistBuddy -c "Print CFBundleIdentifier:" /Library/Developer/Toolchains/swift-4.0-RELEASE.xctoolchain/Info.plist
-swifttoolchainid	:= org.swift.51320191213a
-#swifttoolchainid	:= org.swift.525202008051a
+#swifttoolchainid	:= org.swift.51320191213a
+swifttoolchainid	:= org.swift.525202008051a
 #SWIFT_VERSION		:= 5.2
 #export SWIFT_VERSION
 
