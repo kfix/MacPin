@@ -25,7 +25,7 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
- */
+*/
 
 #import <Availability.h>
 // /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h
@@ -43,6 +43,8 @@
 #endif
 
 #ifndef WK_FRAMEWORK_HEADER_POSTPROCESSING_ENABLED
+// https://github.com/WebKit/WebKit/blob/main/Source/WebKit/mac/postprocess-framework-headers.sh
+// https://github.com/WebKit/WebKit/blob/main/Source/WebKit/Scripts/postprocess-header-rule
 
 // http://clang.llvm.org/docs/AttributeReference.html#availability
 #define WK_API_AVAILABLE(...)
