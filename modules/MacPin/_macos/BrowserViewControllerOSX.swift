@@ -1021,7 +1021,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 			case let dict as [String: AnyObject]:
 				mi = MenuItem(title, "gotoShortcut:", target: self, represents: NSDictionary(dictionary: dict, copyItems: true))
 			case let arr as [AnyObject]:
-				guard let cb = cb, let narr: [AnyObject] = [cb] + arr else { warn("no callback func provided for array!"); fallthrough }
+				guard let cb = cb, let narr: [AnyObject] = Optional([cb] + arr) else { warn("no callback func provided for array!"); fallthrough }
 				mi = MenuItem(title, "gotoShortcut:", target: self, represents: narr)
 			default:
 				warn("invalid shortcut object type!")
