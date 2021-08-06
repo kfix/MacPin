@@ -1,9 +1,13 @@
 module WebKitPrivates {
-	umbrella "./"
-	exclude header "WKReloadFrameErrorRecoveryAttempter.h"
-
+	requires objc
 	link framework "WebKit"
 	use "WebKit"
+
+	// https://clang.llvm.org/docs/Modules.html#umbrella-directory-declaration
+	umbrella "./"
+
+	// requires c-plus-plus and WTF headers
+	exclude header "WKReloadFrameErrorRecoveryAttempter.h"
 
 	//export *
 	//explicit module * { export * }
