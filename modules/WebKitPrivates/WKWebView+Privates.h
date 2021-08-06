@@ -8,6 +8,7 @@
 #import "_WKFindOptions.h"
 #import "_WKInputDelegate.h"
 #import "_WKAttachment.h"
+#import "NSTextFinderSPI.h"
 
 typedef NS_ENUM(NSInteger, _WKPaginationMode) {
     _WKPaginationModeUnpaginated,
@@ -44,9 +45,6 @@ typedef NS_OPTIONS(NSInteger, _WKMediaMutedState) {
 @protocol _WKInputDelegate;
 @protocol WKHistoryDelegatePrivate;
 @protocol _WKIconLoadingDelegate;
-
-@protocol NSTextFinderAsynchronousDocumentFindMatch;
-typedef NS_ENUM(NSUInteger, NSTextFinderAsynchronousDocumentFindOptions);
 
 @interface WKWebView (Privates)
 

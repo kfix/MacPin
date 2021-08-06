@@ -25,6 +25,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import <Foundation/Foundation.h>
+@class NSView;
+
 #if TARGET_OS_OSX
 typedef enum : NSUInteger {
     NSTextFinderAsynchronousDocumentFindOptionsBackwards = 1 << 0,
