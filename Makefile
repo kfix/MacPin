@@ -46,7 +46,7 @@ appnames			= $(patsubst $(macpin_sites)/%,%.app,$(wildcard $(macpin_sites)/*))
 
 usage help:
 	@printf '\nusage:\tmake (V=1) <target>\n\ntargets:\n%s'
-	@printf '\t%s\n' reinstall uninstall test test.app stpdoc sites/*
+	@printf '\t%s\n' allapps reinstall uninstall test test.app stpdoc sites/*
 
 include eXcode.mk
 mk := $(firstword $(MAKEFILE_LIST))
