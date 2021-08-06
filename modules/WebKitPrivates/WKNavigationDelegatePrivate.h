@@ -24,10 +24,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import "./WebKitAvailability.h"
 #import <WebKit/WKNavigationDelegate.h>
 
 #import <WebKit/WKFrameInfo.h>
-#import "WKWebView+Privates.h"
 #import "_WKRenderingProgressEvents.h"
 #import "_WKSameDocumentNavigationType.h"
 

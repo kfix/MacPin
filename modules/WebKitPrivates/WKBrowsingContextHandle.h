@@ -25,7 +25,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WKFoundation.h>
+#import "./WebKitAvailability.h"
 
 WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
 @interface WKBrowsingContextHandle : NSObject <NSSecureCoding, NSCopying>

@@ -41,6 +41,7 @@ typedef NS_ENUM(NSUInteger, _WKDragLiftDelay) {
 @class _WKVisitedLinkProvider;
 @class _WKVisitedLinkStore;
 @class _WKWebsiteDataStore;
+@class _WKApplicationManifest;
 
 @interface WKWebViewConfiguration (WKPrivate)
 
