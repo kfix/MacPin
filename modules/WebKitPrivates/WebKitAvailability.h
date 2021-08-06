@@ -1,5 +1,7 @@
 /*
  * https://github.com/WebKit/webkit/blob/main/Source/WebKit/Shared/API/Cocoa/WKFoundation.h
+ * /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Versions/A/Headers/WKFoundation.h.tmp
+ * /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Versions/A/Headers/WKFoundation.h
  *
  * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
@@ -25,13 +27,14 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __WebKitFoundationP__
-#define __WebKitFoundationP__
-
 #import <Availability.h>
-// /usr/include/AvailabilityInternal.h
-// /usr/include/Availability.h
+// /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h
+// Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityInternal.h
 #import <TargetConditionals.h>
+// /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/TargetConditionals.h
+
+#import <Foundation/Foundation.h>
+// for NS_ASSUME_NONNULL_*
 
 #ifdef __cplusplus
 #define WK_EXTERN extern "C" __attribute__((visibility ("default")))
@@ -48,76 +51,4 @@
 #define WK_API_DEPRECATED_WITH_REPLACEMENT(_replacement, ...) __attribute__((deprecated("use " #_replacement)))
 #define WK_CLASS_DEPRECATED_WITH_REPLACEMENT(_replacement, ...) __attribute__((visibility("default"))) __attribute__((deprecated("use " #_replacement)))
 
-#if __has_feature(objc_generics) && (!defined(__MAC_OS_X_VERSION_MAX_ALLOWED) || __MAC_OS_X_VERSION_MAX_ALLOWED >= 101100)
-
-#define WK_ARRAY(_objectType) NSArray<_objectType>
-#define WK_DICTIONARY(_keyType, _valueType) NSDictionary<_keyType, _valueType>
-#define WK_SET(_objectType) NSSet<_objectType>
-
-#else
-
-#define WK_ARRAY(...) NSArray
-#define WK_DICTIONARY(...) NSDictionary
-#define WK_SET(...) NSSet
-
 #endif
-
-#ifndef __NSi_8_3
-#define __NSi_8_3 introduced=8.3
-#endif
-
-#ifdef __OBJC__
-#import <Foundation/Foundation.h>
-
-#ifdef NS_DESIGNATED_INITIALIZER
-#define WK_DESIGNATED_INITIALIZER NS_DESIGNATED_INITIALIZER
-#else
-#define WK_DESIGNATED_INITIALIZER
-#endif
-
-#ifdef NS_UNAVAILABLE
-#define WK_UNAVAILABLE NS_UNAVAILABLE
-#else
-#define WK_UNAVAILABLE
-#endif
-
-#if __has_feature(assume_nonnull)
-
-#ifdef NS_ASSUME_NONNULL_BEGIN
-#define WK_ASSUME_NONNULL_BEGIN NS_ASSUME_NONNULL_BEGIN
-#else
-#define WK_ASSUME_NONNULL_BEGIN _Pragma("clang assume_nonnull begin")
-#endif
-
-#ifdef NS_ASSUME_NONNULL_END
-#define WK_ASSUME_NONNULL_END NS_ASSUME_NONNULL_END
-#else
-#define WK_ASSUME_NONNULL_END _Pragma("clang assume_nonnull end")
-#endif
-
-#define WK_NULLABLE nullable
-#define WK_NULL_UNSPECIFIED null_unspecified
-#define WK_NULLABLE_SPECIFIER __nullable
-#define WK_NULLABLE_PROPERTY nullable,
-
-#else
-
-#define WK_ASSUME_NONNULL_BEGIN
-#define WK_ASSUME_NONNULL_END
-
-#define WK_NULLABLE
-#define WK_NULL_UNSPECIFIED
-#define WK_NULLABLE_SPECIFIER
-#define WK_NULLABLE_PROPERTY
-
-#endif
-
-#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED < 101000
-typedef NSUInteger NSEventModifierFlags;
-#endif
-
-#endif
-
-#endif
-
-#endif /* __WebKitFoundationP__ */
