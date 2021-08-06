@@ -24,15 +24,17 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WKUIDelegate.h>
-#import <WebKit/WKSecurityOrigin.h>
+#import "./WebKitAvailability.h"
 #import <WebKitPrivates/_WKActivatedElementInfo.h>
 #import <WebKitPrivates/_WKHitTestResult.h>
+
+@protocol WKUIDelegate;
 
 @class NSData;
 @class UIScrollView;
 @class UIViewController;
 @class WKFrameInfo;
+@class WKSecurityOrigin;
 @class _WKContextMenuElementInfo;
 @class _WKActivatedElementInfo;
 @class _WKElementAction;
@@ -72,6 +74,20 @@ typedef NS_OPTIONS(NSUInteger, _WKAutoplayEventFlags) {
     _WKAutoplayEventFlagsHasAudio = 1 << 0,
 } WK_API_AVAILABLE(macos(10.13.4));
 #endif
+
+typedef NS_OPTIONS(NSInteger, _WKMediaCaptureState) {
+    _WKMediaCaptureStateNone = 0,
+    _WKMediaCaptureStateActiveMicrophone = 1 << 0,
+    _WKMediaCaptureStateActiveCamera = 1 << 1,
+    _WKMediaCaptureStateMutedMicrophone = 1 << 2,
+    _WKMediaCaptureStateMutedCamera = 1 << 3,
+} WK_API_AVAILABLE(macos(10.13), ios(11.0));
+
+typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
+    _WKCaptureDeviceMicrophone = 1 << 0,
+    _WKCaptureDeviceCamera = 1 << 1,
+    _WKCaptureDeviceDisplay = 1 << 2,
+} WK_API_AVAILABLE(macos(10.13), ios(11.0));
 
 @protocol WKUIDelegatePrivate <WKUIDelegate>
 

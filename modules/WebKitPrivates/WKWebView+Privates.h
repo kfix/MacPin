@@ -1,12 +1,13 @@
-@import WebKit;
 // https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/Cocoa/WKWebViewPrivate.h
 // https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/Cocoa/WebViewImpl.h
 // https://github.com/WebKit/webkit/blob/main/Source/WebCore/page/Settings.yaml
 
-#import "WebKitAvailability.h"
+#import "./WebKitAvailability.h"
 #import "_WKLayoutMode.h"
+#import "_WKFindDelegate.h"
 #import "_WKFindOptions.h"
 #import "_WKInputDelegate.h"
+#import "_WKAttachment.h"
 
 typedef NS_ENUM(NSInteger, _WKPaginationMode) {
     _WKPaginationModeUnpaginated,
@@ -25,24 +26,10 @@ typedef NS_ENUM(NSInteger, _WKImmediateActionType) {
     _WKImmediateActionTelLink
 } WK_API_AVAILABLE(macos(10.12));
 
-typedef NS_OPTIONS(NSInteger, _WKMediaCaptureState) {
-    _WKMediaCaptureStateNone = 0,
-    _WKMediaCaptureStateActiveMicrophone = 1 << 0,
-    _WKMediaCaptureStateActiveCamera = 1 << 1,
-    _WKMediaCaptureStateMutedMicrophone = 1 << 2,
-    _WKMediaCaptureStateMutedCamera = 1 << 3,
-} WK_API_AVAILABLE(macos(10.13), ios(11.0));
-
 typedef NS_OPTIONS(NSInteger, _WKMediaMutedState) {
     _WKMediaNoneMuted = 0,
     _WKMediaAudioMuted = 1 << 0,
     _WKMediaCaptureDevicesMuted = 1 << 1,
-} WK_API_AVAILABLE(macos(10.13), ios(11.0));
-
-typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
-    _WKCaptureDeviceMicrophone = 1 << 0,
-    _WKCaptureDeviceCamera = 1 << 1,
-    _WKCaptureDeviceDisplay = 1 << 2,
 } WK_API_AVAILABLE(macos(10.13), ios(11.0));
 
 #import "WKBrowsingContextHandle.h"
@@ -57,6 +44,9 @@ typedef NS_OPTIONS(NSUInteger, _WKCaptureDevices) {
 @protocol _WKInputDelegate;
 @protocol WKHistoryDelegatePrivate;
 @protocol _WKIconLoadingDelegate;
+
+@protocol NSTextFinderAsynchronousDocumentFindMatch;
+typedef NS_ENUM(NSUInteger, NSTextFinderAsynchronousDocumentFindOptions);
 
 @interface WKWebView (Privates)
 
