@@ -9,10 +9,6 @@ module WebKitPrivates {
 	// requires c-plus-plus and WTF headers
 	exclude header "WKReloadFrameErrorRecoveryAttempter.h"
 
-	// swift5.4's llvm not preprocessing these very well
-	exclude header "WKWebView+Privates.h"
-	exclude header "WKUIDelegatePrivate.h"
-
 	//export *
 	//explicit module * { export * }
 
