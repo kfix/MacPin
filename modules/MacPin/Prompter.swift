@@ -1,7 +1,5 @@
-#if arch(x86_64) || arch(i386)
-import Prompt // https://github.com/neilpa/swift-libedit
-// https://github.com/onevcat/Rainbow
-#endif
+import Dispatch
+import Linenoise
 
 class Prompter {
 	var running = false
@@ -35,26 +33,31 @@ class Prompter {
 	#if arch(x86_64) || arch(i386)
 		var final: (()->Void)? = nil
 		let prompter = DispatchWorkItem {
-			var prompt = Prompt(argv0: CommandLine.unsafeArgv[0], prompt: "% ")
-			while (true) {
-			    if let line = prompt?.gets() { // R: blocks here until Enter pressed
+
+			var done = false
+			let prompt = "<\(CommandLine.arguments[0])> % "
+			let ln = LineNoise()
+
+			while (!done) {
+				do {
+					let line = try ln.getLine(prompt: prompt) // R: blocks here until Enter pressed
 					if !line.hasPrefix("\n") {
 						//print("| ") // result prefix
-
+						print() //newline
 						DispatchQueue.main.sync {
 							// JS can mutate native UI objects that are not BG-thread-safe
 							eval?(line) // E:, P:
 						}
-
-						//println() //newline
 					}
-			    } else { // stdin closed or EOF'd
+				} catch LinenoiseError.EOF {
+					// stdin closed, CTRL-C'd or EOF'd
 					if abort == nil { print("\(ps1): got EOF from stdin, stopping \(ps2)") }
-					break
+					done = true
+				} catch {
+					print(error)
 				}
 				// L: command dispatched, restart loop
 			}
-			prompt = nil // deinit to reset TTY
 		}
 
 		var inst = Prompter(prompter)
