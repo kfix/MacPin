@@ -50,6 +50,6 @@ import AppKit
 
 #if os(OSX)
 typealias BrowserController = BrowserViewControllerOSX
-#elseif(iOS)
+#elseif os(iOS)
 typealias BrowserController = MobileBrowserViewController
 #endif
