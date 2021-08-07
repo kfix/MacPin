@@ -13,7 +13,7 @@ import WebKit
 		super.viewDidLoad()
 		//view.wantsLayer = true //use CALayer to coalesce views
 		//^ default=true:  https://github.com/WebKit/webkit/blob/master/Source/WebKit2/UIProcess/API/mac/WKView.mm#L3641
-		view.autoresizingMask = [.FlexibleHeight , .FlexibleWidth]
+		view.autoresizingMask = [.flexibleHeight , .flexibleWidth]
 	}
 
 	override func viewWillAppear(_ animated: Bool) { // window popping up with this tab already selected & showing
@@ -22,7 +22,7 @@ import WebKit
 
 	//override func removeFromParentViewController() { super.removeFromParentViewController() }
 
-	deinit { warn("\(self.dynamicType)") }
+	deinit { warn("\(type(of: self))") }
 
 	//override func closeTab() { dismissViewControllerAnimated(true, completion: nil); super() }
 
@@ -41,20 +41,21 @@ extension WebViewControllerIOS { // AppGUI funcs
 	@objc func shareButtonClicked(_ sender: AnyObject?) {
 		warn()
 		// http://nshipster.com/uiactivityviewcontroller/
-		if let url = webview.URL, title = webview.title {
+		if let url = webview.url, let title = webview.title {
 			let activityViewController = UIActivityViewController(activityItems: [title, url], applicationActivities: nil)
-			presentViewController(activityViewController, animated: true, completion: nil)
+			present(activityViewController, animated: true, completion: nil)
 		}
 	}
 
-	func askToOpenURL(_ url: NSURL) {
-		if UIApplication.sharedApplication().canOpenURL(url) {
-			let alerter = UIAlertController(title: "Open non-browser URL", message: url.description, preferredStyle: .ActionSheet)
-			let OK = UIAlertAction(title: "OK", style: .Default) { (_) in UIApplication.sharedApplication().openURL(url) }
+	func askToOpenURL(_ url: URL?)  /* -> Bool */ { //uti: UTIType? = nil
+		guard let url = url else { return }
+		if UIApplication.shared.canOpenURL(url) {
+			let alerter = UIAlertController(title: "Open non-browser URL", message: url.absoluteString, preferredStyle: .actionSheet)
+			let OK = UIAlertAction(title: "OK", style: .default) { (_) in UIApplication.shared.openURL(url) }
 			alerter.addAction(OK)
-			let Cancel = UIAlertAction(title: "Cancel", style: .Cancel) { (_) in }
+			let Cancel = UIAlertAction(title: "Cancel", style: .cancel) { (_) in }
 			alerter.addAction(Cancel)
-			presentViewController(alerter, animated: true, completion: nil)
+			present(alerter, animated: true, completion: nil)
 		} else {
 			// FIXME: complain
 		}

@@ -7,37 +7,37 @@ import WebKit
 extension WebViewControllerIOS {
 
 	func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
-		let alerter = UIAlertController(title: webView.title, message: message, preferredStyle: .Alert) //.ActionSheet
-		let OK = UIAlertAction(title: "OK", style: .Default) { (action) in completionHandler() }
+		let alerter = UIAlertController(title: webView.title, message: message, preferredStyle: .alert) //.ActionSheet
+		let OK = UIAlertAction(title: "OK", style: .default) { (action) in completionHandler() }
 		alerter.addAction(OK)
-		self.presentViewController(alerter, animated: true, completion: nil)
+		self.present(alerter, animated: true, completion: nil)
 	}
 
 	func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
-		let alerter = UIAlertController(title: webView.title, message: message, preferredStyle: .Alert) //.ActionSheet
-		let OK = UIAlertAction(title: "OK", style: .Default) { (action) in completionHandler(true) }
+		let alerter = UIAlertController(title: webView.title, message: message, preferredStyle: .alert) //.ActionSheet
+		let OK = UIAlertAction(title: "OK", style: .default) { (action) in completionHandler(true) }
 		alerter.addAction(OK)
-		let Cancel = UIAlertAction(title: "Cancel", style: .Cancel) { (action) in completionHandler(false) }
+		let Cancel = UIAlertAction(title: "Cancel", style: .cancel) { (action) in completionHandler(false) }
 		alerter.addAction(Cancel)
-		self.presentViewController(alerter, animated: true, completion: nil)
+		self.present(alerter, animated: true, completion: nil)
 	}
 
-	func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String!) -> Void) {
-		let alerter = UIAlertController(title: webView.title, message: prompt, preferredStyle: .Alert)
+	func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String) -> Void) {
+		let alerter = UIAlertController(title: webView.title, message: prompt, preferredStyle: .alert)
 
 		//var promptTF: UITextField?
-		alerter.addTextFieldWithConfigurationHandler { (tf) in tf.placeholder = defaultText ?? "" } //; promptTF = tf; }
+		alerter.addTextField { (tf) in tf.placeholder = defaultText ?? "" } //; promptTF = tf; }
 
-		let Submit = UIAlertAction(title: "Submit", style: .Default) { [unowned alerter] (_) in
-			if let tf = alerter.textFields?.first { completionHandler(tf.text) }
+		let Submit = UIAlertAction(title: "Submit", style: .default) { [unowned alerter] (_) in
+			if let tf = alerter.textFields?.first { completionHandler(tf.text ?? "") }
 			//completionHandler(promptTF?.text ?? "") //doesn't retain?
 		}
 		alerter.addAction(Submit)
 
-		let Cancel = UIAlertAction(title: "Cancel", style: .Cancel) { (_) in completionHandler("") }
+		let Cancel = UIAlertAction(title: "Cancel", style: .cancel) { (_) in completionHandler("") }
 		alerter.addAction(Cancel)
 
-		self.presentViewController(alerter, animated: true, completion: nil)
+		self.present(alerter, animated: true, completion: nil)
 	}
 
 
@@ -50,46 +50,47 @@ extension WebViewControllerIOS {
 
 extension WebViewControllerIOS {
 
-	func webView(_ webView: WKWebView, didReceiveAuthenticationChallenge challenge: NSURLAuthenticationChallenge,
-		completionHandler: (NSURLSessionAuthChallengeDisposition, NSURLCredential!) -> Void) {
+	func webView(_ webView: WKWebView, didReceiveAuthenticationChallenge challenge: URLAuthenticationChallenge,
+		completionHandler: (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
 
 		if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
-			completionHandler(.PerformDefaultHandling, nil)
+			completionHandler(.performDefaultHandling, nil)
 			return
 		}
-		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.URL ?? String())]")
+		warn("(\(challenge.protectionSpace.authenticationMethod)) [\(webView.url?.absoluteString ?? String())]")
 
-		let alerter = UIAlertController(title: webView.title, message: "auth challenge", preferredStyle: .Alert)
+		let alerter = UIAlertController(title: webView.title, message: "auth challenge", preferredStyle: .alert)
 
-		alerter.addTextFieldWithConfigurationHandler { (tf) in
+		alerter.addTextField { (tf) in
 			tf.placeholder = "Login"
 	 		if let cred = challenge.proposedCredential, let user = cred.user { tf.placeholder = user }
 		}
 
-		alerter.addTextFieldWithConfigurationHandler { (tf) in
+		alerter.addTextField { (tf) in
 			tf.placeholder = "Password"
 	 		if let cred = challenge.proposedCredential, let passwd = cred.password { tf.placeholder = passwd }
-			tf.secureTextEntry = true
+			tf.isSecureTextEntry = true
 		}
 
-		let Login = UIAlertAction(title: "Login", style: .Default) { [unowned alerter] (_) in
-			if let user = alerter.textFields?.first, pass = alerter.textFields?[1] {
-				completionHandler(.UseCredential, NSURLCredential(
+		let Login = UIAlertAction(title: "Login", style: .default) { [unowned alerter] (_) in
+			if let user = alerter.textFields?.first, let pass = alerter.textFields?[1] {
+				completionHandler(.useCredential, URLCredential(
 					user: user.text ?? "",
 					password: pass.text ?? "",
-					persistence: .Permanent
+					persistence: .permanent
 				))
 			}
 		}
 		alerter.addAction(Login)
 
-		let Cancel = UIAlertAction(title: "Cancel", style: .Cancel) { (_) in
+		let Cancel = UIAlertAction(title: "Cancel", style: .cancel) { (_) in
 			// need to cancel request, else user can get locked into a modal prompt loop
-			completionHandler(.PerformDefaultHandling, nil)
+			completionHandler(.performDefaultHandling, nil)
+			//
 			webView.stopLoading()
 		}
 		alerter.addAction(Cancel)
 
-		self.presentViewController(alerter, animated: true, completion: nil)
+		self.present(alerter, animated: true, completion: nil)
 	}
 }
