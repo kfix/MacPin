@@ -18,7 +18,7 @@ func displayError(_ error: NSError, _ vc: UIViewController? = nil) {
 	}
 }
 
-func askToOpenURL(_ url: NSURL?) {
+func askToOpenURL(_ url: URL?) {
 	if let url = url, UIApplication.shared.canOpenURL(url as URL) {
 		//if {
 		//	// macpin is already the registered handler for this (probably custom) url scheme, so just open it

@@ -68,7 +68,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 			// or just call a JS delegate to do that?
 		}
 #if os(iOS)
-		UIApplication.sharedApplication().networkActivityIndicatorVisible = true // use webview._networkRequestsInProgress ??
+		UIApplication.shared.isNetworkActivityIndicatorVisible = true // use webview._networkRequestsInProgress ??
 #endif
 	}
 
@@ -83,7 +83,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 				case "http": fallthrough
 				case "https": break
 				default: //weird protocols, or app launches like itmss:
-					askToOpenURL(url)
+					askToOpenURL(url as URL)
 					decisionHandler(.cancel)
 			}
 
@@ -339,7 +339,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 			}
 		}
 #if os(iOS)
-		UIApplication.sharedApplication().networkActivityIndicatorVisible = false
+		UIApplication.shared.isNetworkActivityIndicatorVisible = false
 #endif
     }
 
@@ -354,7 +354,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 		//let url = webView.URL ?? NSURL(string:"")!
 		//warn("\"\(title)\" [\(url)]")
 #if os(iOS)
-		UIApplication.sharedApplication().networkActivityIndicatorVisible = false
+		UIApplication.shared.isNetworkActivityIndicatorVisible = false
 #endif
 	}
 

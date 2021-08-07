@@ -58,7 +58,7 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 		super.viewDidLoad()
 	}
 
-	@objc func askToOpenCurrentURL() { askToOpenURL(webview.url as NSURL?) }
+	@objc func askToOpenCurrentURL() { askToOpenURL(webview.url as URL?) }
 
 	// sugar for delgates' opening a new tab in parent browser VC
 	func popup(_ webview: MPWebView) -> WebViewController {
