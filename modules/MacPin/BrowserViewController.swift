@@ -1,5 +1,7 @@
 import JavaScriptCore
+#if os(OSX)
 import AppKit
+#endif
 
 // https://electronjs.org/docs/api/browser-window
 @objc protocol BrowserViewControllerJS: JSExport { // '$.browser' in app.js
@@ -29,7 +31,9 @@ import AppKit
 	// https://github.com/electron/electron/blob/master/docs/api/menu.md#notes-on-macos-application-menu
 	func addShortcut(_ title: String, _ obj: AnyObject?, _ cb: JSValue?)
 
+#if os(OSX)
 	func presentBrowser() -> WindowController
+#endif
 }
 
 @objc protocol BrowserViewController: BrowserViewControllerJS {
@@ -47,5 +51,5 @@ import AppKit
 #if os(OSX)
 typealias BrowserController = BrowserViewControllerOSX
 #elseif(iOS)
-typealias BrowserController = BrowserViewControllerIOS
+typealias BrowserController = MobileBrowserViewController
 #endif
