@@ -595,7 +595,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	var name: String { return NSRunningApplication.current.localizedName ?? String() }
 	let platform = "OSX"
 #elseif os(iOS)
-	var name: String { return Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String }
+	var name: String { return Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? String() }
 	let platform = "iOS"
 #endif
 
@@ -1028,7 +1028,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	// https://www.hackingwithswift.com/example-code/system/how-to-check-whether-your-other-apps-are-installed
 	// https://medium.com/@guanshanliu/lsapplicationqueriesschemes-4f5fa9c7d240
 		if let appurl = NSURL(string: "\(appstr)://") { // installed bundleids are usually (automatically?) usable as URL schemes in iOS
-			if UIApplication.sharedApplication().canOpenURL(appurl) { return true }
+			if UIApplication.shared.canOpenURL(appurl as URL) { return true }
 		}
 #endif
 		return false
@@ -1049,7 +1049,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #elseif os(iOS)
 			// iOS doesn't allow directly launching apps, must use custom-scheme URLs and X-Callback-URL
 			//  unless jailbroken http://stackoverflow.com/a/6821516/3878712
-			if let urlp = NSURLComponents(URL: url, resolvingAgainstBaseURL: true) {
+			if let urlp = NSURLComponents(url: url as URL, resolvingAgainstBaseURL: true) {
 				if let appid = appid { urlp.scheme = appid } // assume bundle ID is a working scheme
 				UIApplication.shared.openURL(urlp.url!)
 			}
@@ -1136,9 +1136,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 		note.alertTitle = title ?? ""
 		note.alertAction = "Open"
 		note.alertBody = "\(subtitle ?? String()) \(msg ?? String())"
-		note.fireDate = NSDate()
+		note.fireDate = Date()
 		if let id = id { note.userInfo = [ "identifier" : id ] }
-		UIApplication.sharedApplication().scheduleLocalNotification(note)
+		UIApplication.shared.scheduleLocalNotification(note)
 #endif
 		//map passed-in blocks to notification responses?
 		// http://thecodeninja.tumblr.com/post/90742435155/notifications-in-ios-8-part-2-using-swift-what
@@ -1195,7 +1195,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 #elseif os(iOS)
 		let note = UILocalNotification()
 		note.alertAction = "Open"
-		note.fireDate = NSDate()
+		note.fireDate = Date()
 		for (key, value) in object {
 			switch value {
 				case let title as String where key == "title": note.alertTitle = title
@@ -1205,7 +1205,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 				default: warn("unhandled param: `\(key): \(value)`")
 			}
 		}
-		UIApplication.sharedApplication().scheduleLocalNotification(note)
+		UIApplication.shared.scheduleLocalNotification(note)
 #endif
 	}
 
