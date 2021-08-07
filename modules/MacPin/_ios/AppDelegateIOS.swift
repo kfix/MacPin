@@ -4,41 +4,28 @@ import WebKitPrivates
 import Darwin
 
 //UIApplicationMain
-class MacPinAppDelegateIOS: NSObject, MacPinAppDelegate {
-	var browserController = MobileBrowserViewController() //frame: UIScreen.mainScreen().applicationFrame)
+public class MacPinAppDelegateIOS: NSObject, MacPinAppDelegate {
+	var browserController: BrowserViewController = MobileBrowserViewController() //frame: UIScreen.mainScreen().applicationFrame)
+	let window = UIWindow(frame: UIScreen.main.bounds) // total pixels w/ rotation
 
-	static func WebProcessConfiguration() -> _WKProcessPoolConfiguration {
-		let config = _WKProcessPoolConfiguration()
-		//config.injectedBundleURL = NSbundle.mainBundle().URLForAuxillaryExecutable("contentfilter.wkbundle")
-		// https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundle.cpp
-		return config
-	}
-	//let webProcessPool = WKProcessPool() // all wkwebviews should share this
-	let webProcessPool = WKProcessPool()._initWithConfiguration(MacPinAppDelegateIOS.WebProcessConfiguration()) // all wkwebviews should share this
-}
-
-extension MacPinAppDelegateIOS: ApplicationDelegate { //UIResponder
-	func application(_ application: UIApplication, openURL url: NSURL, sourceApplication: String?, annotation: AnyObject) -> Bool {
+	func application(_ application: UIApplication, openURL url: URL, sourceApplication: String?, annotation: AnyObject) -> Bool {
 		warn("`\(url)` -> AppScriptRuntime.shared.jsdelegate.launchURL()")
-		AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(url.description, forKeyedSubscript: "launchedWithURL")
-		AppScriptRuntime.shared.jsdelegate.tryFunc("launchURL", url.description)
+		AppScriptRuntime.shared.emit(.launchURL, url.absoluteString ?? "")
 		return true //FIXME
 	}
 
-	func application(_ application: UIApplication, willFinishLaunchingWithOptions launchOptions: [AnyHashable: Any]?) -> Bool { // state not restored, UI not presented
-		application.registerUserNotificationSettings(UIUserNotificationSettings(forTypes: [UIUserNotificationType.Sound, UIUserNotificationType.Alert, UIUserNotificationType.Badge], categories: nil))
+	public func application(_ application: UIApplication, willFinishLaunchingWithOptions launchOptions: [AnyHashable: Any]?) -> Bool { // state not restored, UI not presented
+		application.registerUserNotificationSettings(UIUserNotificationSettings(types: [UIUserNotificationType.sound, UIUserNotificationType.alert, UIUserNotificationType.badge], categories: nil))
 
 		return true //FIXME
 	}
 
-	func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable: Any]?) -> Bool { //state restored, but UI not presented yet
+	public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable: Any]?) -> Bool { //state restored, but UI not presented yet
 		// launchOptions: http://nshipster.com/launch-options/
-
-		window = Window(frame: UIScreen.mainScreen().bounds) // total pixels w/ rotation
-		UIApplication.sharedApplication().statusBarStyle = .LightContent
-		window?.backgroundColor = UIColor.whiteColor() // visible behind status bar area when unobscured by page content
-		window?.rootViewController = browserController //adds the browserView to window.subviews
-		window?.makeKeyAndVisible() // presentation is deferred until after didFinishLaunching
+		UIApplication.shared.statusBarStyle = .lightContent
+		window.backgroundColor = UIColor.white // visible behind status bar area when unobscured by page content
+		window.rootViewController = browserController as! UIViewController //adds the browserView to window.subviews
+		window.makeKeyAndVisible() // presentation is deferred until after didFinishLaunching
 
 		// airplay to an external screen on a mac or appletv
 		//	https://developer.apple.com/library/ios/documentation/WindowsViews/Conceptual/WindowAndScreenGuide/UsingExternalDisplay/UsingExternalDisplay.html#//apple_ref/doc/uid/TP40012555-CH3-SW1
@@ -53,7 +40,7 @@ extension MacPinAppDelegateIOS: ApplicationDelegate { //UIResponder
 							browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
 							break
 						}
-						if let tabnum = Int(CommandLine.arguments[idx + 1]) where browserController.tabs.count >= tabnum { // next argv should be tab number
+						if let tabnum = Int(CommandLine.arguments[idx + 1]), browserController.tabs.count >= tabnum { // next argv should be tab number
 							browserController.tabs[tabnum].REPL() // open a JS Console on the requested tab number
 						} else {
 							browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
@@ -71,10 +58,10 @@ extension MacPinAppDelegateIOS: ApplicationDelegate { //UIResponder
 		return true //FIXME
   }
 
-	func applicationDidBecomeActive(_ application: UIApplication) { // UI presented
+	public func applicationDidBecomeActive(_ application: UIApplication) { // UI presented
 		//if application?.orderedDocuments?.count < 1 { showApplication(self) }
 
-		browserController.view.frame = UIScreen.mainScreen().bounds
+		browserController.view.frame = UIScreen.main.bounds
 
 		if !AppScriptRuntime.shared.context.objectForKeyedSubscript("$").objectForKeyedSubscript("browser").isObject { //first run, not an app restore
 			AppScriptRuntime.shared.context.objectForKeyedSubscript("$").setObject(browserController, forKeyedSubscript: "browser")
@@ -108,19 +95,25 @@ extension MacPinAppDelegateIOS: ApplicationDelegate { //UIResponder
 	}
 	*/
 
-	func applicationWillTerminate(_ application: UIApplication) { NSUserDefaults.standardUserDefaults().synchronize() }
+	public func applicationWillTerminate(_ application: UIApplication) { UserDefaults.standard.synchronize() }
 
-	func application(_ application: UIApplication, shouldSaveApplicationState coder: NSCoder) -> Bool { return false }
-	func application(_ application: UIApplication, shouldRestoreApplicationState coder: NSCoder) -> Bool { return false }
+	public func application(_ application: UIApplication, shouldSaveApplicationState coder: NSCoder) -> Bool { return false }
+	public func application(_ application: UIApplication, shouldRestoreApplicationState coder: NSCoder) -> Bool { return false }
 
 	//func applicationDidReceiveMemoryWarning(application: UIApplication) { close all hung tabs! }
 
-	func application(_ application: UIApplication, didReceiveLocalNotification notification: UILocalNotification) {
+	public func application(_ application: UIApplication, didReceive notification: UILocalNotification) {
 		warn("user clicked notification")
 
-		if AppScriptRuntime.shared.jsdelegate.tryFunc("handleClickedNotification", notification.alertTitle ?? "", notification.alertAction ?? "", notification.alertBody ?? "") {
-			warn("handleClickedNotification fired!")
+		// FIXME should be passing a [:]
+		if AppScriptRuntime.shared.anyHandled(.handleClickedNotification, [
+			"title":	(notification.alertTitle ?? "") as NSString,
+			"subtitle":	(notification.alertAction ?? "") as NSString,
+			"body":		(notification.alertBody ?? "") as NSString,
+		]) {
+				warn("handleClickedNotification fired!")
 		}
+
 	}
 	//alerts do not display when app is already frontmost, cannot override this like on OSX
 }
