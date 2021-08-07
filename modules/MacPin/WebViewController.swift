@@ -20,7 +20,10 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 	// this lets the controller know whether it should perform "reasonable browser-like actions" or to defer to the Reactor's business logic.
 
 	required init?(coder: NSCoder) { self.webview = MPWebView(); super.init(coder: coder); } // required by NSCoding protocol
+
+#if os(OSX)
 	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { self.webview = MPWebView(); super.init(nibName:nil, bundle:nil) } //calls loadView
+#endif
 	required init(webview: MPWebView) {
 		self.webview = webview
 		super.init(nibName: nil, bundle: nil)
@@ -55,7 +58,7 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 		super.viewDidLoad()
 	}
 
-	@objc func askToOpenCurrentURL() { askToOpenURL(webview.url) }
+	@objc func askToOpenCurrentURL() { askToOpenURL(webview.url as NSURL?) }
 
 	// sugar for delgates' opening a new tab in parent browser VC
 	func popup(_ webview: MPWebView) -> WebViewController {
