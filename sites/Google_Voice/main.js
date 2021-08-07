@@ -30,15 +30,15 @@ const allo = { url: "https://g.co/alloforweb", agent: mozariUA };
 
 const voice = {
 	url: "https://voice.google.com",
-	agent: mozariUA
+	//agent: mozariUA
 };
 // window.JsSip. window._gv
 // wss://web.voice.telephony.goog/websocket doesn't work because Goog dgaf about standards
 //   https://support.google.com/voice/thread/14998073?msgid=14998073
 //   https://bugs.webkit.org/show_bug.cgi?id=202095
 //
-//   July 2020 Pandemic update!
-//       I get one-way audio (browser Mic is muted) when using firefox UA. Safari UA still denied by google.
+//   July 2021 update!
+//       I get two-way audio when using ether firefox "mozari" UA or standard Safari UA in macOS11.5 "big sur".
 //       It appears they learned how to send a proper status line for their websockets:
 //       $ curl -si 'https://web.voice.telephony.goog/websocket' -H 'Host: web.voice.telephony.goog' -H 'Upgrade: websocket' -H 'Connection: Upgrade' -H "Sec-WebSocket-Key: $(openssl rand -base64 16)" -H 'Origin: https://voice.google.com' -H 'Sec-WebSocket-Protocol: sip' -H 'Sec-WebSocket-Version: 13' | head -n1
 //         > HTTP/1.1 101 Switching Protocols
