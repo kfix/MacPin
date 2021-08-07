@@ -6,14 +6,14 @@ import WebKit
 
 extension WebViewControllerIOS {
 
-	func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: () -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
 		let alerter = UIAlertController(title: webView.title, message: message, preferredStyle: .alert) //.ActionSheet
 		let OK = UIAlertAction(title: "OK", style: .default) { (action) in completionHandler() }
 		alerter.addAction(OK)
 		self.present(alerter, animated: true, completion: nil)
 	}
 
-	func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: (Bool) -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
 		let alerter = UIAlertController(title: webView.title, message: message, preferredStyle: .alert) //.ActionSheet
 		let OK = UIAlertAction(title: "OK", style: .default) { (action) in completionHandler(true) }
 		alerter.addAction(OK)
@@ -22,7 +22,7 @@ extension WebViewControllerIOS {
 		self.present(alerter, animated: true, completion: nil)
 	}
 
-	func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: (String) -> Void) {
+	func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String) -> Void) {
 		let alerter = UIAlertController(title: webView.title, message: prompt, preferredStyle: .alert)
 
 		//var promptTF: UITextField?
@@ -51,7 +51,7 @@ extension WebViewControllerIOS {
 extension WebViewControllerIOS {
 
 	func webView(_ webView: WKWebView, didReceiveAuthenticationChallenge challenge: URLAuthenticationChallenge,
-		completionHandler: (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+		completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
 
 		if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
 			completionHandler(.performDefaultHandling, nil)
