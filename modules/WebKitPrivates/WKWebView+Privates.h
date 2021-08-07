@@ -40,6 +40,7 @@ typedef NS_OPTIONS(NSInteger, _WKMediaMutedState) {
 @class _WKThumbnailView;
 @class _WKFrameHandle;
 @class _WKInspector;
+@class _WKWebViewPrintFormatter;
 
 @protocol _WKDiagnosticLoggingDelegate;
 @protocol _WKInputDelegate;
@@ -53,7 +54,6 @@ typedef NS_OPTIONS(NSInteger, _WKMediaMutedState) {
 - (WKPageRef)_pageForTesting;
 
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
-//@property (nonatomic, readonly) _WKWebViewPrintFormatter *_webViewPrintFormatter;
 //@property (nonatomic, getter=_allowsLinkPreview, setter=_setAllowsLinkPreview:) BOOL _allowsLinkPreview
 - (UIView *)_viewForFindUI;
 @property (nonatomic, readonly) CGFloat _viewportMetaTagWidth; // negative if tag undefined
@@ -142,9 +142,6 @@ typedef NS_OPTIONS(NSInteger, _WKMediaMutedState) {
 // https://trac.webkit.org/browser/webkit/tags/Safari-602.1.11/Source/WebKit2/ChangeLog
 @property (nonatomic, setter=_setDrawsBackground:) BOOL _drawsBackground WK_API_AVAILABLE(macos(10.12), ios(10.0));
 @property (nonatomic, setter=_setDrawsTransparentBackground:) BOOL _drawsTransparentBackground; // DEPRECATED!
-
-- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo; // prints top frame
-- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle WK_API_AVAILABLE(macos(10.12), ios(10.0));
 
 -(void)_close;
 
@@ -239,6 +236,8 @@ typedef NS_OPTIONS(NSInteger, _WKMediaMutedState) {
 @property (nonatomic, copy, setter=_setUnderlayColor:) NSColor *_underlayColor;
 @property (nonatomic, readwrite, setter=_setIgnoresNonWheelEvents:) BOOL _ignoresNonWheelEvents WK_API_AVAILABLE(macos(WK_MAC_TBA));
 @property (nonatomic, readonly) WKPageRef _pageRefForTransitionToWKWebView WK_API_AVAILABLE(macos(10.13.4));
+- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo; // prints top frame
+- (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle WK_API_AVAILABLE(macos(10.12));
 #endif
 
 @property (nonatomic, readonly) NSView *_safeBrowsingWarning WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
