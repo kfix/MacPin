@@ -29,6 +29,7 @@ extension UIView {
 
 @objc class MobileBrowserViewController: UIViewController, BrowserViewController {
 	//var frame: CGRect = UIScreen.main.applicationFrame
+	var tabViewItems: [WebViewControllerIOS] = []
 
 	convenience required init?(object: JSValue) {
 		self.init()
@@ -94,7 +95,9 @@ extension UIView {
 	}
 
 	var defaultUserAgent: String? = nil
-	var transparent: Bool = false {	didSet { warn()	} }
+	var transparent: Bool = false { didSet { warn() } }
+	var isFullscreen: Bool = true { didSet { warn() } }
+	var isToolbarShown: Bool = true { didSet { warn() } }
 
 	// all scrolling webtabs will hew to this box
 	var contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
@@ -312,7 +315,48 @@ extension UIView {
 }
 
 extension MobileBrowserViewController {
-	var tabs: [MPWebView] { return children.filter({ $0 is WebViewControllerIOS }).map({ ($0 as! WebViewControllerIOS).webview }) }
+	var tabs: [MPWebView] {
+		get {
+			return self.tabViewItems.flatMap({ $0 as? WebViewControllerIOS }).flatMap({ $0.webview })
+			// returns mutable *copy* array, which is why JS .push() doesn't invoke the setter below: https://developer.apple.com/documentation/javascriptcore/jsvalue
+			// > NSArray objects or Swift arrays become JavaScript arrays and vice versa, with elements recursively copied and converted.
+			//  https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSValue.mm
+			// FIXME: need to have a stashed list of tabs that is mutable
+		}
+		set {
+			let newWebs: [MPWebView] = (newValue as! Array<Any>).flatMap({ $0 as? MPWebView })
+				// upsert existing tabs as needed with new webviews
+				for (idx, webview) in newWebs.enumerated() {
+					warn("setting #\(idx)")
+					if idx >= self.children.endIndex {
+						// insert
+						let nwvc = WebViewControllerIOS(webview: webview)
+						self.addChild(nwvc)
+						self.tabViewItems.append(nwvc)
+					} else if let ro = self.children[idx].view as? MPWebView, ro == webview {
+						warn("no-op at #\(idx)")
+					} else {
+						// update
+						let nwvc = WebViewControllerIOS(webview: webview)
+						self.addChild(nwvc)
+						self.tabViewItems.insert(nwvc, at: idx+1) //push
+						self.tabViewItems.remove(at: idx) //pop
+						// NSTVI will automatically set selectedTabViewItemIndex=idx+1
+					}
+				}
+				// then do a delete pass of excess tabs
+				if self.children.count > newWebs.count {
+					for (idx, wvc) in self.tabViewItems[newWebs.endIndex ..< self.tabViewItems.endIndex].enumerated() {
+						// delete
+						let shifted = idx + newWebs.endIndex
+						self.tabViewItems.remove(at: shifted)
+						wvc.removeFromParent()
+					}
+				}
+			// assuming tabs was set thru JS, lets trigger a garbage collect so we don't have lingering WebViews
+			JSGarbageCollect(AppScriptRuntime.shared.context.jsGlobalContextRef)
+		}
+	}
 
 	var selectedViewControllerIndex: Int {
 		get {
@@ -355,9 +399,10 @@ extension MobileBrowserViewController {
 	func newIsolatedTabPrompt() {}
 	func newPrivateTabPrompt() {}
 
+	@objc func close() { /* NOTIMPL*/ } // close all tabs
 	@objc func pushTab(_ webview: AnyObject) { if let webview = webview as? MPWebView { addChild(WebViewControllerIOS(webview: webview)) } }
 
-	func addShortcut(_ title: String, _ obj: AnyObject?) {} // FIXME: populate bottom section of tabList with App shortcuts
+	func addShortcut(_ title: String, _ obj: AnyObject?, _ cb: JSValue?) {} // FIXME: populate bottom section of tabList with App shortcuts
 	// + Force Touch AppIcon menu?
 
 	func focusOnBrowser() {}
@@ -379,6 +424,8 @@ extension MobileBrowserViewController {
 		}
 	}
 
+	@objc func closeTab(_ tab: AnyObject?) { /* NOTIMPL */ }
+
 	static func exportSelf(_ mountObj: JSValue, _ name: String = "Browser") {
 		// get ObjC-bridged wrapping of Self
 		let wrapper = MobileBrowserViewController.self.wrapSelf(mountObj.context, name)
@@ -390,6 +437,8 @@ extension MobileBrowserViewController {
 		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes#Sub_classing_with_extends
 		return JSValue(undefinedIn: context)
 	}
+	func extend(_ mountObj: JSValue) { /* NOTIMPL */ }
+	func unextend(_ mountObj: JSValue) { /* NOTIMPL */ }
 }
 
 extension MobileBrowserViewController: UISearchBarDelegate {
