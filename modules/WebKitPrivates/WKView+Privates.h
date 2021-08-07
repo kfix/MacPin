@@ -18,6 +18,8 @@ WK_CLASS_DEPRECATED_WITH_REPLACEMENT("WKWebView", macos(10.10, 10.14.4), ios(8.0
 @end
 
 @interface WKView (Private)
+@property (readonly) WKPageRef pageRef;
+
 #if !TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR
 @property (readwrite) NSSize minimumSizeForAutoLayout;
 @property (readwrite) BOOL shouldClipToVisibleRect;

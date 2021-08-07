@@ -374,6 +374,24 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		}
 	}
 
+#if os(OSX)
+	var caching: Bool {
+		get {
+			if #available(macOS 10.13.4, *) {
+				return configuration.preferences._usesPageCache
+			} else {
+				return true
+			}
+		}
+		set {
+			if #available(macOS 10.13.4, *) {
+				configuration.preferences._usesPageCache = newValue
+				// is a reload() is required to take effect for subsequent naviagtions?
+			}
+		}
+
+	}
+
 	var _page: WKPageRef? {
 		get {
 			if WebKit_version >= (605, 1, 7) {
@@ -409,7 +427,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		}
 	}
 
-#if os(OSX)
+
 	var inspectorAttachmentView: NSView? {
 		// when inspector is open, subviews.first is actually the inspector (WKWebInspectorWKWebView), not the WKView
 		// tabitem.view.subviews = [ WKWebInspectorView, WKView, ... ]
@@ -434,23 +452,6 @@ class MPWebView: WKWebView, WebViewScriptExports {
 				}
 			}
 		}
-	}
-
-	var caching: Bool {
-		get {
-			if #available(macOS 10.13.4, *) {
-				return configuration.preferences._usesPageCache
-			} else {
-				return true
-			}
-		}
-		set {
-			if #available(macOS 10.13.4, *) {
-				configuration.preferences._usesPageCache = newValue
-				// is a reload() is required to take effect for subsequent naviagtions?
-			}
-		}
-
 	}
 
 	var transparent: Bool {
@@ -483,6 +484,30 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	}
 
 #elseif os(iOS)
+	var useSystemAppearance: Bool {
+		get { return true }
+		set(val) { }
+	}
+	func console() { }
+	func repaint() { }
+
+	var caching: Bool {
+		get { return true }
+		set(val) { }
+	}
+
+	var inspectorVisible: Bool {
+		get { return false }
+		set(val) { }
+	}
+
+	var _page: WKPageRef? {
+		get {
+			guard let topFrame = subviews.first as? WKView else { return nil }
+			return topFrame.pageRef
+		}
+	}
+
 	var transparent = false // no overlaying MacPin apps upon other apps in iOS, so make it a no-op
 	var allowsMagnification = true // not exposed on iOS WebKit, make it no-op
 #endif
@@ -564,11 +589,11 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		} else {
 			warn("WebRTC not available for WebKit: \(WebKit_version)")
 		}
-#endif
 
 		if !caching, #available(macOS 10.13.4, *) {
 			prefs._usesPageCache = false
 		}
+#endif
 
 		if privacy {
 			//prevent HTML5 application cache and asset/page caching by WebKit, MacPin never saves any history itself
@@ -721,8 +746,10 @@ class MPWebView: WKWebView, WebViewScriptExports {
 			// some options require a page to be loading (even a lowly about:blank)
 			for option in config.options {
 				switch option {
+#if os(OSX)
 					case .inspectorVisible(let value):
 						self.inspectorVisible = value
+#endif
 					default: break
 				}
 			}
@@ -1242,7 +1269,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 #endif
 	}
 
-#if	DEBUG
+#if DEBUG && os(OSX)
 	@objc override func _gestureEventWasNotHandled(byWebCore event: NSEvent!) {
 		// https://github.com/WebKit/webkit/commit/10f11d2d8227a7665c410c642ebb6cb9d482bfa8 r191299 10/19/2015
 		warn(event.debugDescription)
@@ -1264,7 +1291,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		warn(self.config) // FIXME needs rich description()
 		return Self(config: self.config)
 	}
-	
+
 	func clone(_ options: MPWebViewConfigOptions...) -> MPWebView {
 		warn(self.config) // FIXME needs rich description()
 		let newConfig = self.config
@@ -1282,6 +1309,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	}
 }
 
+#if os(OSX)
 extension MPWebView { // NSTextFinderClient
 
 	// https://github.com/WebKit/webkit/blob/master/Source/WebKit/UIProcess/mac/WKTextFinderClient.mm#L39
@@ -1292,11 +1320,8 @@ extension MPWebView { // NSTextFinderClient
 
 		guard let rect = findMatch.textRects.first as? NSRect else { return }
 		let scrollBox = CGSize(width: 0, height: rect.origin.y)
-#if os(OSX)
 		warn(obj: scrollBox)
 		//_setFrame(frame, andScrollBy: scrollBox) // WebKit availability?
-#endif
-
 		//scrollRangeToVisible(range)
     }
 
@@ -1322,3 +1347,4 @@ extension MPWebView { // NSTextFinderClient
 	}
 
 }
+#endif
