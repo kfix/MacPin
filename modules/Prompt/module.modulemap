@@ -1,7 +1,0 @@
-module Prompt {
-	requires x86
-	umbrella header "Prompt.h"
-    link "edit"
-	link "Prompt"
-	export *
-}

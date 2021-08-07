@@ -127,13 +127,6 @@ endif
 endif
 endif
 
-ifeq (,$(filter $(arch),$(archs_macosx)))
-# only intel platforms have libedit so only those execs can have terminal CLIs
-$(lexecs): $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics))
-$(info $(filter-out $(outdir)/obj/libPrompt.a %/libPrompt.a %/libPrompt.o %/libPrompt.dylib, $(statics)))
-else
-endif
-
 # use static libs, not dylibs to build all executable modules
 #$(execs): $(statics)
 
@@ -485,8 +478,6 @@ wkdoc:
 # need to gen static html with https://github.com/realm/jazzy
 doc stpdoc: $(lexecs) $(objs)
 	{ for i in $(build_mods) WebKit WebKitPrivates JavaScriptCore; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -swift-version $(swiftver) -suppress-warnings -Xfrontend -color-diagnostics -deprecated-integrated-repl; done ;} | { [ -t 1 ] && less || cat; }
-	#xcrun swift-ide-test -print-module -source-filename /dev/null -print-regular-comments -module-to-print Prompt
-	#xcrun swift-ide-test -sdk "$(sdkpath)" -source-filename=. -print-module -module-to-print="Prompt" -synthesize-sugar-on-types -module-print-submodules -print-implicit-attrs
 
 swiftrepl:
 	# sudo /usr/sbin/DevToolsSecurity --enable
