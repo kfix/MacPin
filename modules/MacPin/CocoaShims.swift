@@ -20,8 +20,6 @@ import AppKit
 
 public typealias View = NSView
 public typealias ViewController = NSViewController
-public typealias Image = NSImage
-public typealias Window = NSWindow
 public typealias Application = NSApplication
 public typealias ApplicationDelegate = NSApplicationDelegate
 public typealias MacPinAppDelegatePlatform = MacPinAppDelegateOSX
@@ -35,13 +33,6 @@ import UIKit
 
 public typealias View = UIView
 public typealias ViewController = UIViewController
-
-public typealias Image = UIImage
-
-class Window: UIWindow {
-	func setFrame() { } // UIWindows are always size of UIScreen. They only handle focus and z-depth (level)
-}
-
 public typealias Application = UIApplication
 public typealias ApplicationDelegate = UIApplicationDelegate
 public typealias MacPinAppDelegatePlatform = MacPinAppDelegateIOS
