@@ -25,7 +25,7 @@ let NSImageNameApplicationIcon = "icon"
 		}
 	}
 #else
-	@objc dynamic unowned var icon = UIImage(named: "AppIcon60x60")!
+	@objc dynamic unowned var icon = UIImage(ciImage: CIImage.empty())
 #endif
 
 	weak var data: NSData? = nil {
