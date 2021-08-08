@@ -1,5 +1,6 @@
 import Dispatch
 import Linenoise
+import Foundation
 
 class Prompter {
 	var running = false
@@ -36,25 +37,26 @@ class Prompter {
 
 			var done = false
 			let prompt = "<\(CommandLine.arguments[0])> % "
-			let ln = LineNoise()
+			let ln = LineNoise(outputFile: FileHandle.standardError.fileDescriptor)
 
 			while (!done) {
 				do {
 					let line = try ln.getLine(prompt: prompt) // R: blocks here until Enter pressed
 					if !line.hasPrefix("\n") {
 						//print("| ") // result prefix
-						print() //newline
+						ln.addHistory(line)
+						g_stdErr.write("\n")
 						DispatchQueue.main.sync {
 							// JS can mutate native UI objects that are not BG-thread-safe
 							eval?(line) // E:, P:
 						}
 					}
-				} catch LinenoiseError.EOF {
+				} catch LinenoiseError.EOF, LinenoiseError.CTRL_C {
 					// stdin closed, CTRL-C'd or EOF'd
-					if abort == nil { print("\(ps1): got EOF from stdin, stopping \(ps2)") }
+					if abort == nil { g_stdErr.write("\(ps1): got closed from stdin, stopping \(ps2)") }
 					done = true
 				} catch {
-					print(error)
+					g_stdErr.write(error.localizedDescription + "\n")
 				}
 				// L: command dispatched, restart loop
 			}
