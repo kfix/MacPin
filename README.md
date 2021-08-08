@@ -136,13 +136,9 @@ open hybrid/SomeWebApp.com.app
 ```
 
 #### iOS
-~~Basic support has landed for generating iOS apps.~~  
-the iOS port has not been migrated to swift4 yet.   
-I keep it in the tree because there should be no blocking issues to bring it back up to parity with macOS.  
-iOS 10 has some PWA support now and macOS 10.15 will ship with UIKit-on-Mac (aka Project Catalyst aka Marzipan)
-which should accelerate the compile->test dev-cycle and provide a native macOS app.
+Basic support exists for generating iOS apps, but its even moreso a Work In Progress (to teach me about the `UI*` classes)
 
-Anyhow, its kinda pointless for most of `sites/*` since native apps exist for all of them.  
+its kinda pointless for most of `sites/*` since native apps exist for all of them.  
 But maybe you want to quickly package a React.js application for offline mobile use...  
 
 #### can i haz LinPin? WinPin?
