@@ -503,8 +503,10 @@ class MPWebView: WKWebView, WebViewScriptExports {
 
 	var _page: WKPageRef? {
 		get {
-			guard let topFrame = subviews.first as? WKView else { return nil }
-			return topFrame.pageRef
+			return _pageForTesting()
+			// not linking...
+			// guard let topFrame = subviews.first as? WKView else { return nil }
+			// return topFrame.pageRef
 		}
 	}
 
@@ -1225,7 +1227,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 
 	func repaint() {
 		guard let page = _page else { return }
-		WKPageForceRepaint(_page, nil, {error, void in warn()} as WKPageForceRepaintFunction )
+		WKPageForceRepaint(page, nil, {error, void in warn()} as WKPageForceRepaintFunction )
 		needsDisplay = true // queue the whole frame for rerendering
 	}
 
