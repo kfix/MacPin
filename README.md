@@ -5,10 +5,8 @@ MacPin creates pseudo-browsers managed with internal JavaScripts.
 ![screenie](/dock_screenshot.png?raw=true "screen shot")  
 </center>
 
-the GitHub released apps are runnable under macOS 10.14.
-
-While less featureful than Electron (no Node and Chromium here),   
-they are [slim and fast like MacGap](https://discuss.atom.io/t/app-too-big/28845), thanks to use of macOS-shipped components.  
+While less featureful than Electron-based apps (no Node and Chromium here),   
+they are slimmer due to nearly-exclusive use of OS-shipped components.  
 
 ```
 $ du -hs build/macosx-x86_64-apple-macosx10.13/apps/{Slack,MacPin}.app/
@@ -30,7 +28,7 @@ They are dependent on the core MacPin.app (4.5MB) to be registered on the system
 
 Custom URL schemes can also be registered to launch a MacPin App from any other app on your Mac.  
 
-Building `swift5.1` branch requires macOS 10.14 "Mojave" with Xcode 11.
+Building `main` branch requires macOS 11 "Big Sur" with Xcode 12.
 
 All other branches are obsolete & archived for users locked on older macOS (hardware),  
 but they will recieve no updates.  
@@ -105,7 +103,7 @@ app.on('AppFinishedLaunching', function() {
 Its written in Swift using WKWebView and NSTabViewController with a fully programmatic NIB-less UI layout.  
 The AppScriptRuntime is purely based on JavaScriptCore's C and ObjC APIs.
 MacPin's UI ClassTypes are bridged to ObjC by SwiftCore and once more into Javascript space using the JSWrapperMap facility in the Apple JSC.  
-You need [Xcode 10](https://developer.apple.com/xcode/) installed on macOS 12.13+ to get the Swift compiler and Cocoa headers.  
+You need [Xcode 12](https://developer.apple.com/xcode/) installed on macOS 11+ to get the Swift compiler and Cocoa headers.  
 `make` & `$EDITOR` are your hammer and chisel.  
 
 ```
