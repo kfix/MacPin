@@ -168,8 +168,8 @@ swflags				:= $(SWFTFLAGS) $(SWCCFLAGS:%=-Xcc %) -swift-version $(swiftver) -tar
 swmigflags			:= $(SWFTFLAGS) $(SWCCFLAGS:%=-Xcc %) -swift-version $(nextswiftver) -target $(arch)-$(target_$(platform)) -Xfrontend -color-diagnostics $(verbose)
 swiftc				:= $(xcrun) --toolchain $(swifttoolchainid) -sdk $(sdk) swiftc $(swflags)
 swift-update		:= $(xcrun) --toolchain $(swifttoolchainid) -sdk $(sdk) swift-update $(swflags)
-# https://github.com/apple/swift/tree/master/lib/Migrator
-swift-migrate		:= $(xcrun) --toolchain $(swifttoolchaind) -sdk $(sdk) swiftc -update-code $(swmigflags)
+# https://github.com/apple/swift/tree/main/lib/Migrator
+swift-migrate		:= $(xcrun) --toolchain $(swifttoolchainid) -sdk $(sdk) swiftc -update-code $(swmigflags)
 clang				:= $(xcrun) -sdk $(sdk) clang -fmodules -target $(arch)-$(target_$(platform)) $(verbose)
 clangpp				:= $(xcrun) -sdk $(sdk) clang++ -fmodules -fcxx-modules -std=c++11 -stdlib=libc++ -target $(arch)-$(target_$(platform)) $(verbose)
 #-fobj-arc
@@ -225,6 +225,8 @@ $(outdir)/lexec/%: modules/%/_$(platform)/main.swift | $(outdir)/lexec
 		-Xlinker -rpath -Xlinker /usr/lib/swift \
 		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
 		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
+		-Xlinker -rpath -Xlinker @loader_path/SwiftSupport \
+		-Xlinker -rpath -Xlinker @loader_path/Frameworks \
 		$(linkopts_exec) \
 		-module-name $*.MainExec \
 		-emit-executable -o $@ \

@@ -23,7 +23,7 @@ archs_iphonesimulator	?= x86_64
 
 archs_iphoneos		?= arm64
 target_ver_macos	?= 10.15
-target_ver_ios		?= 9
+target_ver_ios		?= 12.4
 
 xcode				?= /Applications/Xcode.app
 swiftver			?= 5
@@ -247,7 +247,7 @@ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en
 
 # https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/SystemExtensionKeys.html#//apple_ref/doc/uid/TP40014212-SW17
 $(appdir)/%/Contents/PlugIns/ActionExtension.appex/Contents/Info.plist $(appdir)/%.appex/Info.plist: templates/appex/$(platform)/Info.plist
-		$(gen_plist_template)
+	$(gen_plist_template)
 
 # https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html
 $(outdir)/%.entitlements.plist: templates/$(platform)/entitlements.plist
@@ -356,17 +356,25 @@ $(appdir)/%.app/LaunchScreen.nib: templates/$(platform)/LaunchScreen.xib
 	@install -d $(dir $@)
 	ibtool --compile $@ $<
 
-$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.plist $(appdir)/%.app/Info.plist templates/$(platform)/LaunchScreen.xib $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Assets.car templates/Resources templates/Resources/* $(appdir)/%.app/en.lproj/InfoPlist.strings
-	@install -d $@ $@/Frameworks
-	@install -d $@ $@/SwiftSupport
-	$(patsubst %,cp % $@/$*;,$(filter $(outdir)/exec/%,$^))
+$(outdir)/Frameworks/%.framework: $(outdir)/obj/lib%.dylib
+	@rm -fv $@/Versions/Current $@/Resources $@/Frameworks %@/$*
+	@install -dv $@/Versions/A
+	@ln -sf A $@/Versions/Current
+	@ln -sf Versions/Current/$* $@/$*
+	@ln -sf Versions/Current/Resources $@/Resources
+	@ln -sf Versions/Current/Frameworks $@/Frameworks
+	$(patsubst %,cp -RL % $@/Versions/A/$*,$(filter %.dylib,$^))
+	$(patsubst %,cp -RL % $@/Versions/A/$*.dSYM,$(filter %.dSYM,$^))
+	# need a Resources/Info-macos.plist & version.plist
+	-[ ! -n "$(codesign)" ] || codesign --verbose=4 --sign '$(appsig)' --timestamp --options runtime --force --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
+
+#$(appdir)/%.app: $(outdir)/lexec/$(macpin) $(jumbolib) $(appdir)/%.app/Assets.car $(appdir)/%.app/Info.plist
+$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.plist $(appdir)/%.app/Info.plist templates/$(platform)/LaunchScreen.xib $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Assets.car templates/Resources templates/Resources/* $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/lexec/$(macpin) $(jumbolib)
+	install -d $@ $@/Frameworks
+	$(patsubst %,COMMAND_MODE=legacy cp -f % $@/$*;,$(filter $(outdir)/lexec/%,$^))
+	$(patsubst %,cp -R % $@/,$(filter %.framework,$^))
 	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/$*.dSYM;,$(filter $(outdir)/exec/%.dSYM,$^))
-	install_name_tool -rpath @loader_path/../Frameworks @loader_path/Frameworks $@/$*
-	install_name_tool -rpath @loader_path/../SwiftSupport @loader_path/SwiftSupport $@/$*
-	[ ! -n "$(wildcard $(outdir)/Frameworks/*.dylib)" ] || cp -a $(outdir)/Frameworks $@/
-	[ ! -n "$(wildcard $(outdir)/SwiftSupport/*.dylib)" ] || cp -a $(outdir)/SwiftSupport $@/
 	rsync -av --exclude='Library/' $(macpin_sites)/$*/ $@
-	#[ ! -n "$(codesign)" ] || codesign --verbose=4 -s '$(appsig)' -f --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@ $@/SwiftSupport/*.dylib
 	#-codesign --display -r- --verbose=4 --deep --entitlements :- $@
 	-codesign --display $@
 	#-spctl -vvvv --raw --assess --type execute $@
@@ -546,11 +554,14 @@ stp_symbols:
 	symbols "$(stpframes)/JavaScriptCore.framework/Versions/Current/JavaScriptCore" | less
 	symbols "$(stpframes)/Safari.framework/Versions/Current/Safari" | less
 
+sim_symbols:
+	symbols /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS.simruntime/Contents/Resources/RuntimeRoot/System/Library/Frameworks/WebKit.framework/WebKit | less
+
 stp_jsc:
 	JSC_useDollarVM=1 JSC_reportCompileTimes=true JSC_logHeapStatisticsAtExit=true \
 	$(env) "$(stpframes)/JavaScriptCore.framework/Resources/jsc" -i
 
-$(V).SILENT: # enjoy the silence
+#$(V).SILENT: # enjoy the silence
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/SwiftSupport $(outdir)/Frameworks/%.framework $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist $(outdir)/Frameworks/%.framework/Versions/A/Frameworks
 .PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% submake_% statics dynamics stp_symbols stp_jsc
 .SUFFIXES:
