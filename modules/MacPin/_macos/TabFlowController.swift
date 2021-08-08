@@ -29,7 +29,10 @@ typealias CollectionViewItem = UICollectionViewCell
 
 class TabGridIcon: NSCollectionViewItem {
 	required init?(coder: NSCoder) { super.init(coder: coder) } // conform to NSCoding
+
+#if os(OSX)
 	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
+#endif
 	//override func loadView() { view = urlbox } // NIBless
 
 	override var isSelected: Bool {
