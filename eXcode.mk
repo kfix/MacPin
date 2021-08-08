@@ -225,8 +225,6 @@ $(outdir)/lexec/%: modules/%/_$(platform)/main.swift | $(outdir)/lexec
 		-Xlinker -rpath -Xlinker /usr/lib/swift \
 		-Xlinker -rpath -Xlinker @loader_path/../SwiftSupport \
 		-Xlinker -rpath -Xlinker @loader_path/../Frameworks \
-		-Xlinker -rpath -Xlinker @loader_path/SwiftSupport \
-		-Xlinker -rpath -Xlinker @loader_path/Frameworks \
 		$(linkopts_exec) \
 		-module-name $*.MainExec \
 		-emit-executable -o $@ \
@@ -266,7 +264,7 @@ $(outdir)/obj/%.o $(outdir)/obj/%.d $(outdir)/%.swiftmodule $(outdir)/%.swiftdoc
  		-module-name $* -emit-module-path $(outdir)/$*.swiftmodule \
 		-emit-dependencies \
 		-emit-object -o $@ \
-		$(filter %.swift,$^) $(extrainputs)
+		$(filter-out %/main.swift,$(filter %.swift,$^)) $(extrainputs)
 
 $(outdir)/obj/lib%.dylib: modules/%/*.m | $(outdir)/obj
 	$(clang) -ObjC -Wl,-dylib -Wl,-install_name,@rpath/lib$*.dylib $(os_frameworks) $(frameworks) $(incdirs) $(libdirs) $(linklibs) -o $@ $(filter %.m,$^)

@@ -130,6 +130,7 @@ endif
 # use static libs, not dylibs to build all executable modules
 #$(execs): $(statics)
 
+ifeq ($(platform),macos)
 # make a jumbo framework and its stub launcher
 #
 #jumbolib := $(firstword $(filter %/lib$(macpin).dylib, $(dynamics)))
@@ -144,6 +145,15 @@ jumbody := $(firstword $(filter %/lib$(macpin).dylib, $(dynamics)))
 $(jumbody): $(jumbodeps) $(jsclib)
 $(jumbolib): $(jumbody)
 $(lexecs): $(jumbolib)
+linkopts_exec 			:= -Xlinker -dyld_env -Xlinker DYLD_VERSIONED_FRAMEWORK_PATH="$(rpath)"
+else
+# make a jumbo static
+jumbolib := $(filter %/lib$(macpin).a, $(statics))
+jumbodeps := $(filter-out $(jumbolib), $(statics)) $(jumbodeps)
+$(jumbolib): $(jumbodeps)
+linkopts_exec			:= $(jumbolib)
+$(lexecs): $(jumbolib)
+endif
 
 #$(lexecs): linklibs := -l$(macpin)
 $(info Jumbo-execs: $(lexecs))
@@ -165,8 +175,6 @@ doc test apirepl tabrepl test.app test.ios dbg dbg.app stp stp.app test_% $(appn
 
 # older OSX/macOS with backported Safari.app have vendored WK/JSC frameworks
 env += DYLD_PRINT_LIBRARIES_POST_LAUNCH=1
-
-linkopts_exec 			:= -Xlinker -dyld_env -Xlinker DYLD_VERSIONED_FRAMEWORK_PATH="$(rpath)"
 
 webkitdir				?= /System/Library/Frameworks/WebKit.framework
 jscdir					?= /System/Library/Frameworks/JavaScriptCore.framework
@@ -304,7 +312,7 @@ $(outdir)/Frameworks/%.framework/Versions/A/Frameworks:
 
 $(outdir)/Frameworks/%.framework: $(outdir)/obj/lib%.dylib $(outdir)/Frameworks/%.framework/Versions/A/Frameworks $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist 
 	@install -dv $@
-	@rm -fv $@/Versions/Current $@/Resources $@/Frameworks %@/$*
+	@rm -rfv $@/Versions/Current $@/Resources $@/Frameworks %@/$*
 	@ln -sf A $@/Versions/Current
 	@ln -sf Versions/Current/$* $@/$*
 	@ln -sf Versions/Current/Resources $@/Resources
@@ -356,23 +364,9 @@ $(appdir)/%.app/LaunchScreen.nib: templates/$(platform)/LaunchScreen.xib
 	@install -d $(dir $@)
 	ibtool --compile $@ $<
 
-$(outdir)/Frameworks/%.framework: $(outdir)/obj/lib%.dylib
-	@rm -fv $@/Versions/Current $@/Resources $@/Frameworks %@/$*
-	@install -dv $@/Versions/A
-	@ln -sf A $@/Versions/Current
-	@ln -sf Versions/Current/$* $@/$*
-	@ln -sf Versions/Current/Resources $@/Resources
-	@ln -sf Versions/Current/Frameworks $@/Frameworks
-	$(patsubst %,cp -RL % $@/Versions/A/$*,$(filter %.dylib,$^))
-	$(patsubst %,cp -RL % $@/Versions/A/$*.dSYM,$(filter %.dSYM,$^))
-	# need a Resources/Info-macos.plist & version.plist
-	-[ ! -n "$(codesign)" ] || codesign --verbose=4 --sign '$(appsig)' --timestamp --options runtime --force --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
-
-#$(appdir)/%.app: $(outdir)/lexec/$(macpin) $(jumbolib) $(appdir)/%.app/Assets.car $(appdir)/%.app/Info.plist
-$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.plist $(appdir)/%.app/Info.plist templates/$(platform)/LaunchScreen.xib $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Assets.car templates/Resources templates/Resources/* $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/lexec/$(macpin) $(jumbolib)
-	install -d $@ $@/Frameworks
+$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.plist $(appdir)/%.app/Info.plist templates/$(platform)/LaunchScreen.xib $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Assets.car templates/Resources templates/Resources/* $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/lexec/$(macpin)
+	install -d $@
 	$(patsubst %,COMMAND_MODE=legacy cp -f % $@/$*;,$(filter $(outdir)/lexec/%,$^))
-	$(patsubst %,cp -R % $@/,$(filter %.framework,$^))
 	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/$*.dSYM;,$(filter $(outdir)/exec/%.dSYM,$^))
 	rsync -av --exclude='Library/' $(macpin_sites)/$*/ $@
 	#-codesign --display -r- --verbose=4 --deep --entitlements :- $@
@@ -381,6 +375,12 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.
 	#-asctl container acl list -file $@
 	@touch $@
 endif
+
+# the main macpin app contains the core framework
+$(appdir)/%.app/Frameworks: $(jumbolib)
+	rm -rfv $@
+	@install -dv $@
+	$(patsubst %,cp -R % $@/,$(filter %.framework,$^))
 
 # https://developer.apple.com/library/content/documentation/NetworkingInternetWeb/Conceptual/SafariAppExtension_PG/index.html#//apple_ref/doc/uid/TP40017319
 # http://www.appcoda.com/ios-8-action-extensions-tutorial/
@@ -561,7 +561,7 @@ stp_jsc:
 	JSC_useDollarVM=1 JSC_reportCompileTimes=true JSC_logHeapStatisticsAtExit=true \
 	$(env) "$(stpframes)/JavaScriptCore.framework/Resources/jsc" -i
 
-#$(V).SILENT: # enjoy the silence
+$(V).SILENT: # enjoy the silence
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/SwiftSupport $(outdir)/Frameworks/%.framework $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist $(outdir)/Frameworks/%.framework/Versions/A/Frameworks
 .PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% submake_% statics dynamics stp_symbols stp_jsc
 .SUFFIXES:
