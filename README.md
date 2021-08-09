@@ -28,7 +28,7 @@ They are dependent on the core MacPin.app (4.5MB) to be registered on the system
 
 Custom URL schemes can also be registered to launch a MacPin App from any other app on your Mac.  
 
-Building `main` branch requires macOS 11 "Big Sur" with Xcode 12.
+Building `main` branch requires macOS 10.15 "Catalina" with Xcode 11.
 
 All other branches are obsolete & archived for users locked on older macOS (hardware),  
 but they will recieve no updates.  
