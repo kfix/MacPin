@@ -51,8 +51,12 @@ class Prompter {
 							eval?(line) // E:, P:
 						}
 					}
-				} catch LinenoiseError.EOF, LinenoiseError.CTRL_C {
-					// stdin closed, CTRL-C'd or EOF'd
+				} catch LinenoiseError.EOF {
+					// stdin closed or EOF'd
+					if abort == nil { g_stdErr.write("\(ps1): got closed from stdin, stopping \(ps2)") }
+					done = true
+				} catch LinenoiseError.CTRL_C {
+					// stdin CTRL-C'd
 					if abort == nil { g_stdErr.write("\(ps1): got closed from stdin, stopping \(ps2)") }
 					done = true
 				} catch {
