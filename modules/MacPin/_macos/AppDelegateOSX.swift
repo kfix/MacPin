@@ -283,9 +283,10 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 
 		let launched = CommandLine.arguments.dropFirst().first?.hasPrefix("-psn_0_") ?? false // Process Serial Number from LaunchServices open()
 		warn(CommandLine.arguments.description)
+		let interactive = (isatty(1) == 1)
 		for (idx, arg) in CommandLine.arguments.dropFirst().enumerated() {
 			switch (arg) {
-				case "-i" where isatty(1) == 1:
+				case "-i" where interactive:
 
 					//open a JS console on the terminal, if present
 					if AppScriptRuntime.shared.eventCallbacks[.printToREPL, default: []].isEmpty {
@@ -298,7 +299,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 					}
 					prompter = AppScriptRuntime.shared.REPL()
 
-				// case "-s" where isatty(1) == 1:
+				// case "-s" where interactive:
 					// would like to natively implement a simple remote console for webkit-using osx apps, Valence only targets IOS-usbmuxd based stuff.
 					// https://www.webkit.org/blog/1875/announcing-remote-debugging-protocol-v1-0/
 					// https://bugs.webkit.org/show_bug.cgi?id=124613
@@ -312,7 +313,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 					//    webkit/Source/JavaScriptCore/inspector/remote/socket/RemoteInspectorServer.cpp
 					//    webkit/Source/JavaScriptCore/inspector/remote/socket/RemoteInspectorSocketEndpoint.cpp
 
-				case "-t" where isatty(1) == 1:
+				case "-t" where interactive:
 					if idx + 1 >= CommandLine.arguments.count { // no arg after this one
 						prompter = browserController.tabs.first?.REPL() //open a JS console for the first tab WebView on the terminal, if present
 						break
