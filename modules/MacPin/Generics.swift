@@ -60,12 +60,12 @@ func warn(_ msg: String = String(), function: StaticString = #function, file: St
 	var out = ""
 	// [min:sec.ms] <codeloc> [fn] message
 	if #available(OSX 10.12, iOS 10, *) {
-		out = "\r[\(DateInterval(start: startTime, end: Date()).duration.stopwatch())] <\(file):\(line):\(column)> [\(function)] \(msg)"
+		out = "[\(DateInterval(start: startTime, end: Date()).duration.stopwatch())] <\(file):\(line):\(column)> [\(function)] \(msg)"
 	} else {
-		out = "\r[\((startTime.timeIntervalSinceNow.stopwatch(invert: true)))] <\(file):\(line):\(column)> [\(function)] \(msg)"
+		out = "[\((startTime.timeIntervalSinceNow.stopwatch(invert: true)))] <\(file):\(line):\(column)> [\(function)] \(msg)"
 	}
 
-	g_stdErr.write(out + "\n") // NSOutputStream.write is resilient to closed files, unlike NSFileHandle.write
+	g_stdErr.write("\r\(out)\n") // NSOutputStream.write is resilient to closed files, unlike NSFileHandle.write
 
 #if WARN2NSLOG
 	NSLog(out)
