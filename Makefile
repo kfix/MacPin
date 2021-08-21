@@ -182,8 +182,10 @@ safaridir				?= /Applications/Safari.app
 
 safariver				:= $(shell defaults read "$(safaridir)/Contents/Info" CFBundleShortVersionString)
 webkitver				:= $(shell defaults read "$(webkitdir)/Resources/Info" CFBundleVersion)
+xcodever				:= $(shell defaults read "$(xcode)/Contents/Info" CFBundleShortVersionString)
 $(info $(safaridir) => $(safariver))
 $(info $(webkitdir) => $(webkitver))
+$(info $(xcode) => $(xcodever))
 
 test apirepl tabrepl test.app dbg dbg.app test.ios stp stp.app: | $(lexecs:%=%.dSYM)
 
