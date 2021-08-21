@@ -63,7 +63,11 @@ internal struct Terminal {
             raw.c_lflag &= ~UInt32(ECHO | ICANON | IEXTEN | ISIG)
         #else
             raw.c_iflag &= ~UInt(BRKINT | ICRNL | INPCK | ISTRIP | IXON)
-            raw.c_oflag &= ~UInt(OPOST)
+            /*
+               raw.c_oflag &= ~UInt(OPOST)
+               MP: commented out because we want post-processed output from the TTY so that ONLCR works
+            */
+            raw.c_oflag |= UInt(ONLCR) // MP: translate newline to carriage-return+newline ( this is default - but making it explicit )
             raw.c_cflag |= UInt(CS8)
             raw.c_lflag &= ~UInt(ECHO | ICANON | IEXTEN | ISIG)
         #endif
