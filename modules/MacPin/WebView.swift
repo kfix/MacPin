@@ -711,11 +711,13 @@ class MPWebView: WKWebView, WebViewScriptExports {
 				case .allowsRecording(let recordable):
 					_mediaCaptureEnabled = recordable
 				case .transparent(let transparent):
+#if os(OSX)
 					if WebKit_version >= (602, 1, 11) {
 						_drawsBackground = !transparent
 					} else {
 						_drawsTransparentBackground = transparent
 					}
+#endif
 				case .preinject(let value):
 					for script in value { preinject(script) }
 				case .postinject(let value):
