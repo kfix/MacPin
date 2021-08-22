@@ -337,6 +337,10 @@ extension MobileBrowserViewController {
 						warn("no-op at #\(idx)")
 					} else {
 						// update
+						continue // crashes on tabs.reverse
+	/*
+	 * 2021-08-22 12:14:19.797 MacPin[12584:109696] *** Terminating app due to uncaught exception 'UIViewControllerHierarchyInconsistency', reason: 'A view can only be associated with at most one view controller at a time! View <MPWebView> `` [file:///usr/share/doc/cups/index.html] is associated with <MacPin.WebViewControllerIOS: 0x7f82ff5197f0>. Clear this association before associating this view with <MacPin.WebViewControllerIOS: 0x7f83010180b0>.'
+	 */
 						let nwvc = WebViewControllerIOS(webview: webview)
 						self.addChild(nwvc)
 						self.tabViewItems.insert(nwvc, at: idx+1) //push
@@ -355,6 +359,8 @@ extension MobileBrowserViewController {
 				}
 			// assuming tabs was set thru JS, lets trigger a garbage collect so we don't have lingering WebViews
 			JSGarbageCollect(AppScriptRuntime.shared.context.jsGlobalContextRef)
+
+			tabList.reloadData()
 		}
 	}
 
@@ -380,6 +386,12 @@ extension MobileBrowserViewController {
 						addChild(vc)
 						selectedViewController = vc
 					}
+					if let wvc = vc as? WebViewControllerIOS {
+						if !self.tabViewItems.contains(where: { $0 === wvc  }) {
+							self.tabViewItems.append(wvc)
+							tabList.reloadData()
+						}
+					}
 					//warn("\n\(_printHierarchy() as! String)")
 				case let wv as MPWebView: // convert to VC ref and reassign
 					self.tabSelected = children.filter({ ($0 as? WebViewControllerIOS)?.webview === wv }).first as? WebViewControllerIOS ?? WebViewControllerIOS(webview: wv)
@@ -400,7 +412,6 @@ extension MobileBrowserViewController {
 	func newPrivateTabPrompt() {}
 
 	@objc func close() { /* NOTIMPL*/ } // close all tabs
-	@objc func pushTab(_ webview: AnyObject) { if let webview = webview as? MPWebView { addChild(WebViewControllerIOS(webview: webview)) } }
 
 	func addShortcut(_ title: String, _ obj: AnyObject?, _ cb: JSValue?) {} // FIXME: populate bottom section of tabList with App shortcuts
 	// + Force Touch AppIcon menu?
@@ -409,8 +420,8 @@ extension MobileBrowserViewController {
 	func unhideApp() {}
 	func bounceDock() {}
 
-	func switchToPreviousTab() { selectedViewControllerIndex -= 1 }
-	func switchToNextTab() { selectedViewControllerIndex += 1 }
+	@objc func switchToPreviousTab() { selectedViewControllerIndex -= 1 }
+	@objc func switchToNextTab() { selectedViewControllerIndex += 1 }
 	@objc func closeCurrentTab() {
 		if let vc = selectedViewController {
 			let idx = selectedViewControllerIndex
@@ -420,25 +431,48 @@ extension MobileBrowserViewController {
 			if idx == selectedViewControllerIndex { newTabPrompt() }
 			if idx == selectedViewControllerIndex { warn("something's wrong!"); return }
 			vc.removeFromParent()
+			self.tabViewItems.remove(at: idx)
 			tabList.reloadData()
 		}
 	}
 
-	@objc func closeTab(_ tab: AnyObject?) { /* NOTIMPL */ }
+	@objc func closeTab(_ tab: AnyObject?) {
+		switch (tab) {
+			case let vc as UIViewController:
+				return
+			case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
+				return
+			//case let js as JSValue: guard let wv = js.toObjectOfClass(MPWebView.self) { self.tabSelected = wv } //custom bridging coercion
+			default:
+				// sender from a MenuItem?
+				break
+		}
+	}
 
+	func extend(_ mountObj: JSValue) {
+		let browser = JSValue(object: self, in: mountObj.context)!
+		// mixin some helper code to smooth out some rough edges & wrinkles in the JSExported API
+		browser.thisEval(g_tabsHelperJS)
+		mountObj.setValue(browser, forProperty: "browser")
+	}
 	static func exportSelf(_ mountObj: JSValue, _ name: String = "Browser") {
 		// get ObjC-bridged wrapping of Self
 		let wrapper = MobileBrowserViewController.self.wrapSelf(mountObj.context, name)
 		mountObj.setObject(wrapper, forKeyedSubscript: name as NSString)
 	}
-
 	static func wrapSelf(_ context: JSContext, _ name: String = "Browser") -> JSValue {
 		// make MacPin.BrowserWindow() constructable with a wrapping ES6 class
 		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes#Sub_classing_with_extends
-		return JSValue(undefinedIn: context)
+		let bridgedClass = JSValue(object: MobileBrowserViewController.self, in: context) // ObjC-bridged Self
+		guard let wrapper = bridgedClass?.thisEval(g_browserHelperJS(name)), !wrapper.isUndefined else {
+			return JSValue(undefinedIn: context)
+		}
+		return wrapper // returns a JSValue that we can mount elsewhere
 	}
-	func extend(_ mountObj: JSValue) { /* NOTIMPL */ }
-	func unextend(_ mountObj: JSValue) { /* NOTIMPL */ }
+	func unextend(_ mountObj: JSValue) {
+		let browser = JSValue(nullIn: mountObj.context)
+		mountObj.setValue(browser, forProperty: "browser")
+	}
 }
 
 extension MobileBrowserViewController: UISearchBarDelegate {
