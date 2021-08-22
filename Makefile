@@ -371,6 +371,7 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.
 	$(patsubst %,COMMAND_MODE=legacy cp -f % $@/$*;,$(filter $(outdir)/lexec/%,$^))
 	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/$*.dSYM;,$(filter $(outdir)/exec/%.dSYM,$^))
 	rsync -av --exclude='Library/' $(macpin_sites)/$*/ $@
+	COMMAND_MODE=legacy cp -fRL templates/Resources/* $@/
 	#-codesign --display -r- --verbose=4 --deep --entitlements :- $@
 	-codesign --display $@
 	#-spctl -vvvv --raw --assess --type execute $@
