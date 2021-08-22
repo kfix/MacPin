@@ -18,7 +18,18 @@ public class MacPinAppDelegateIOS: NSObject, MacPinAppDelegate {
 	public func application(_ application: UIApplication, willFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool { // state not restored, UI not presented
 		application.registerUserNotificationSettings(UIUserNotificationSettings(types: [UIUserNotificationType.sound, UIUserNotificationType.alert, UIUserNotificationType.badge], categories: nil))
 
-		return true //FIXME
+		if !AppScriptRuntime.shared.loadMainScript() { // load main.js, if present
+			self.browserController.extend(AppScriptRuntime.shared.exports) // expose our default browser instance early on, because legacy
+			BrowserController.self.exportSelf(AppScriptRuntime.shared.context.globalObject) // & the type for self-setup
+			AppScriptRuntime.shared.exports.setObject(MPWebView.self, forKeyedSubscript: "WebView" as NSString) // because legacy
+			AppScriptRuntime.shared.exports.setObject("", forKeyedSubscript: "launchedWithURL" as NSString)
+			AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
+			AppScriptRuntime.shared.emit(.AppFinishedLaunching)
+		}
+
+		AppScriptRuntime.shared.emit(.AppWillFinishLaunching, self) // allow JS to replace our browserController
+		AppScriptRuntime.shared.context.evaluateScript("eval = null;") // security thru obscurity
+		return true
 	}
 
 	public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool { //state restored, but UI not presented yet
@@ -77,15 +88,6 @@ public class MacPinAppDelegateIOS: NSObject, MacPinAppDelegate {
 		//if application?.orderedDocuments?.count < 1 { showApplication(self) }
 
 		browserController.view.frame = UIScreen.main.bounds
-		if !AppScriptRuntime.shared.loadMainScript() { // load main.js, if present
-			self.browserController.extend(AppScriptRuntime.shared.exports) // expose our default browser instance early on, because legacy
-			BrowserController.self.exportSelf(AppScriptRuntime.shared.context.globalObject) // & the type for self-setup
-			AppScriptRuntime.shared.exports.setObject(MPWebView.self, forKeyedSubscript: "WebView" as NSString) // because legacy
-			AppScriptRuntime.shared.exports.setObject("", forKeyedSubscript: "launchedWithURL" as NSString)
-			AppScriptRuntime.shared.loadSiteApp() // load app.js, if present
-			AppScriptRuntime.shared.emit(.AppFinishedLaunching)
-		}
-
 		if browserController.tabs.count < 1 { browserController.newTabPrompt() } //don't allow a tabless state
 	}
 
