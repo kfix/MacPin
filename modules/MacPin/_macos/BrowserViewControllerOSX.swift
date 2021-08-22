@@ -372,10 +372,6 @@ extension TabViewController: NSViewControllerPresentationAnimator {
 #endif
 
 class BrowserViewControllerOSX: TabViewController, BrowserViewController {
-
-	@objc dynamic var tabsArray = [WebViewController]()
-	//var tabsController = NSArrayController()
-
 	lazy var windowController: WindowController = { return makeWindow() }()
 
 	func makeWindow() -> WindowController {
@@ -465,45 +461,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	func extend(_ mountObj: JSValue) {
 		let browser = JSValue(object: self, in: mountObj.context)!
 		// mixin some helper code to smooth out some rough edges & wrinkles in the JSExported API
-		// this.tabs: Proxy wrapper actively assigns `fn()`s results back to their originating
-			// properties so JSC<=>ObjC bridging can forward the changes to native classes' properties
-		let helpers = """
-			Object.defineProperty(this, 'tabs', {
-				get: function () {
-					let backer = "_tabs"; // the ObjC bridged native property's exported name
-					return new Proxy(this[backer], {
-						parent: this,
-						getMutator: function (source, fn) {
-							return new Proxy(source[fn], {
-								apply: function(target, thisArg, args) {
-									let mutant = source.slice(); // needs to be a copy
-									let ret = mutant[fn].apply(mutant, args); // mutate the copy
-									Reflect.set(thisArg, backer, mutant); // replace the source
-									mutant = null; // allow GC on our copied refs
-									return ret;
-								}
-							});
-						},
-						get: function(target, property, receiver) {
-							if (property == "inspect") return () => target;
-
-							// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/prototype#Mutator_methods
-							if (["copyWithin", "fill", "pop", "push", "reverse", "shift", "sort", "splice", "unshift"].includes(property))
-								return this.getMutator(target, property).bind(this.parent);
-
-							return Reflect.get(...arguments); // passthru
-						}
-						/*
-						set: function(target, property, value, receiver) {
-							console.log(`Set [${property}] to ${value.inspect()}`);
-							return Reflect.set(...arguments); // passthru
-						}
-						*/
-					});
-				}
-			});
-		"""
-		browser.thisEval(helpers)
+		browser.thisEval(g_tabsHelperJS)
 			//^ JSObjectGetProxyTarget() https://github.com/WebKit/webkit/commit/546af2a36fededa1263a5ea0a40bc4b2362a3651
 		mountObj.setValue(browser, forProperty: "browser")
 	}
@@ -519,56 +477,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes#Sub_classing_with_extends
 
 		let bridgedClass = JSValue(object: BrowserViewControllerOSX.self, in: context) // ObjC-bridged Self
-		guard let wrapper = bridgedClass?.thisEval("""
-			(class \(name) extends this {
-
-				constructor(name) {
-					//console.log(`constructing [${new.target}]!`)
-					super()
-					Object.setPrototypeOf(this, \(name).prototype) // WTF do I have to do this, Mr. Extends?
-					//this.extend(this) // mixin .tabs
-				}
-				static doHicky(txt) { console.log(`doHicky: ${txt}`); }
-				foo(txt) { console.log(`foo: ${txt}`); }
-				//inspect(depth, options) { return this.__proto__; }
-				//static get [Symbol.species]() { return this; }
-				//get [Symbol.toStringTag]() { return "\(name)"; }
-				//[util.inspect.custom](depth, options) {}
-
-				get tabs() {
-					let backerKey = "_tabs"; // the ObjC bridged native property's exported name
-					return new Proxy(this[backerKey], {backerKey, instance: this, ...{ // ES7 obj-spread-merge FTW
-						getMutator: function (source, fn) {
-							return new Proxy(source[fn], {backerKey: this.backerKey, ...{
-								apply: function(target, thisArg, args) {
-									let mutant = source.slice(); // needs to be a copy
-									let ret = mutant[fn].apply(mutant, args); // mutate the copy
-									Reflect.set(thisArg, this.backerKey, mutant); // replace the source
-									mutant = null; // allow GC on our copied refs
-									return ret;
-								}
-							}});
-						},
-						get: function(target, property, receiver) {
-							if (property == "inspect") return () => target;
-
-							// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/prototype#Mutator_methods
-							if (["copyWithin", "fill", "pop", "push", "reverse", "shift", "sort", "splice", "unshift"].includes(property))
-								return this.getMutator(target, property).bind(this.instance);
-
-							return Reflect.get(...arguments); // passthru
-						}
-						/*
-						set: function(target, property, value, receiver) {
-							console.log(`Set [${property}] to ${value.inspect()}`);
-							return Reflect.set(...arguments); // passthru
-						}
-						*/
-					}}); // Proxy({handler})
-				} // get tabs
-
-			})
-		"""), !wrapper.isUndefined else {
+		guard let wrapper = bridgedClass?.thisEval(g_browserHelperJS(name)), !wrapper.isUndefined else {
 			return JSValue(undefinedIn: context)
 		}
 
@@ -613,7 +522,6 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 
 	var tabs: [MPWebView] {
 		get {
-			//return children.flatMap({ $0 as? WebViewControllerOSX }).flatMap({ $0.webview }) // xc10
 			return children.flatMap({ $0 as? WebViewControllerOSX }).flatMap({ $0.webview })
 			// returns mutable *copy* array, which is why JS .push() doesn't invoke the setter below: https://developer.apple.com/documentation/javascriptcore/jsvalue
 			// > NSArray objects or Swift arrays become JavaScript arrays and vice versa, with elements recursively copied and converted.
@@ -642,10 +550,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 					} else {
 						// update
 						let nwvc = WebViewControllerOSX(webview: webview)
-						//self.insertChild(nwvc, at: idx+1) //xc10
 						self.insertChild(nwvc, at: idx+1) //push
-
-						//self.removeChild(at: idx) //xc10
 						self.removeChild(at: idx) //pop
 						// NSTVI will automatically set selectedTabViewItemIndex=idx+1
 					}
@@ -656,7 +561,6 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 					for (idx, _) in self.tabViewItems[newWebs.endIndex ..< self.tabViewItems.endIndex].enumerated() {
 						// delete
 						let shifted = idx + newWebs.endIndex
-						//self.removeChild(at: shifted) //xc10
 						self.removeChild(at: shifted)
 					}
 				}

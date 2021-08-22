@@ -47,6 +47,97 @@ import AppKit
 	static func exportSelf(_ mountObj: JSValue, _ name: String)
 }
 
+// this.tabs: Proxy wrapper actively assigns `fn()`s results back to their originating
+	// properties so JSC<=>ObjC bridging can forward the changes to native classes' properties
+let g_tabsHelperJS = """
+	Object.defineProperty(this, 'tabs', {
+		get: function () {
+			let backer = "_tabs"; // the ObjC bridged native property's exported name
+			return new Proxy(this[backer], {
+				parent: this,
+				getMutator: function (source, fn) {
+					return new Proxy(source[fn], {
+						apply: function(target, thisArg, args) {
+							let mutant = source.slice(); // needs to be a copy
+							let ret = mutant[fn].apply(mutant, args); // mutate the copy
+							Reflect.set(thisArg, backer, mutant); // replace the source
+							mutant = null; // allow GC on our copied refs
+							return ret;
+						}
+					});
+				},
+				get: function(target, property, receiver) {
+					if (property == "inspect") return () => target;
+
+					// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/prototype#Mutator_methods
+					if (["copyWithin", "fill", "pop", "push", "reverse", "shift", "sort", "splice", "unshift"].includes(property))
+						return this.getMutator(target, property).bind(this.parent);
+
+					return Reflect.get(...arguments); // passthru
+				}
+				/*
+				set: function(target, property, value, receiver) {
+					console.log(`Set [${property}] to ${value.inspect()}`);
+					return Reflect.set(...arguments); // passthru
+				}
+				*/
+			});
+		}
+	});
+"""
+
+func g_browserHelperJS(_ className: String) -> String {
+	return """
+		(class \(className) extends this {
+
+			constructor(name) {
+				//console.log(`constructing [${new.target}]!`)
+				super()
+				Object.setPrototypeOf(this, \(className).prototype) // WTF do I have to do this, Mr. Extends?
+				//this.extend(this) // mixin .tabs
+			}
+			static doHicky(txt) { console.log(`doHicky: ${txt}`); }
+			foo(txt) { console.log(`foo: ${txt}`); }
+			//inspect(depth, options) { return this.__proto__; }
+			//static get [Symbol.species]() { return this; }
+			//get [Symbol.toStringTag]() { return "\(className)"; }
+			//[util.inspect.custom](depth, options) {}
+
+			get tabs() {
+				let backerKey = "_tabs"; // the ObjC bridged native property's exported name
+				return new Proxy(this[backerKey], {backerKey, instance: this, ...{ // ES7 obj-spread-merge FTW
+					getMutator: function (source, fn) {
+						return new Proxy(source[fn], {backerKey: this.backerKey, ...{
+							apply: function(target, thisArg, args) {
+								let mutant = source.slice(); // needs to be a copy
+								let ret = mutant[fn].apply(mutant, args); // mutate the copy
+								Reflect.set(thisArg, this.backerKey, mutant); // replace the source
+								mutant = null; // allow GC on our copied refs
+								return ret;
+							}
+						}});
+					},
+					get: function(target, property, receiver) {
+						if (property == "inspect") return () => target;
+
+						// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/prototype#Mutator_methods
+						if (["copyWithin", "fill", "pop", "push", "reverse", "shift", "sort", "splice", "unshift"].includes(property))
+							return this.getMutator(target, property).bind(this.instance);
+
+						return Reflect.get(...arguments); // passthru
+					}
+					/*
+					set: function(target, property, value, receiver) {
+						console.log(`Set [${property}] to ${value.inspect()}`);
+						return Reflect.set(...arguments); // passthru
+					}
+					*/
+				}}); // Proxy({handler})
+			} // get tabs
+
+		})
+	"""
+}
 
 #if os(OSX)
 typealias BrowserController = BrowserViewControllerOSX
