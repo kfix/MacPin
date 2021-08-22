@@ -471,9 +471,8 @@ test.ios: $(appdir)/$(macpin).app
 	@xcrun simctl list | grep $(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)
 	# pre-A7 devices (ipad mini 2, ipad air, iphone 5s) cannot run x86_64 builds
 	# if app closes without showing launch screen, try changing the simulated device to A7 or later
-	-xcrun simctl install booted $<; xcrun simctl launch booted $(template_bundle_id).$(macpin) true
-	-tail -n100 ~/Library/Logs/CoreSimulator/$(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)/system.log
-	-@for i in ~/Library/Logs/DiagnosticReports/$(macpin)_$(shell date +%Y-%m-%d-%H%M)*_$(shell scutil --get LocalHostName).crash; do [ -f $$i ] && cat $$i && echo $$i; break; done
+	xcrun simctl install booted $<
+	xcrun simctl launch --console-pty --terminate-running-process booted $(template_bundle_id).$(macpin) -i
 else ifeq ($(sdk),iphoneos)
 test.ios: $(appdir)/$(macpin).app /usr/local/bin/ios-deploy
 	ios-deploy -d -b $<
@@ -481,6 +480,11 @@ else
 test.ios: ;
 # make only=sim test.ios
 endif
+
+iossim.dump:
+	#-tail -n100 ~/Library/Logs/CoreSimulator/$(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)/system.log
+	#-@for i in ~/Library/Logs/DiagnosticReports/$(macpin)_$(shell date +%Y-%m-%d-%H%M)*_$(shell scutil --get LocalHostName).crash; do [ -f $$i ] && cat $$i && echo $$i; break; done
+	xcrun simctl diagnose -l
 
 wkdoc:
 	{ for i in WebKitPrivates; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -swift-version $(swiftver) -suppress-warnings -Xfrontend -color-diagnostics -deprecated-integrated-repl; done ;} | { [ -t 1 ] && less || cat; }
