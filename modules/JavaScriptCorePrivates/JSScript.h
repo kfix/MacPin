@@ -40,7 +40,7 @@ typedef NS_ENUM(NSInteger, JSScriptType) {
     kJSScriptTypeModule,
 };
 
-
+__attribute__((weak_import))
 JSC_CLASS_AVAILABLE(macos(10.15), ios(13.0))
 @interface JSScript : NSObject
 
