@@ -400,7 +400,6 @@ $(appdir)/%/PlugIns/AppProxy.appex: $(appdir)/%/PlugIns/AppProxy.appex/Info.plis
 ifeq ($(sdk),iphonesimulator)
 install:
 	open -a "/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app"
-	xcrun simctl getenv booted foobar || sleep 5
 	@xcrun simctl list | grep $(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)
 	# pre-A7 devices (ipad mini 2, ipad air, iphone 5s) cannot run x86_64 builds
 	# if app closes without showing launch screen, try changing the simulated device to A7 or later
