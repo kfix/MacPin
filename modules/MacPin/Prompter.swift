@@ -31,7 +31,6 @@ class Prompter {
 
 	// TODO: exposing a websocketREPL would also be neat: https://github.com/siuying/IGJavaScriptConsole https://github.com/zwopple/PocketSocket
 	class func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2: StaticString = #function, abort:(()->(()->Void)?)? = nil) -> Prompter? {
-	#if arch(x86_64) || arch(i386)
 		var final: (()->Void)? = nil
 		let prompter = DispatchWorkItem {
 
@@ -71,9 +70,5 @@ class Prompter {
 			inst.aborter = DispatchWorkItem { final() }
 		}
 		return inst
-	#else
-		print("TTY Prompter() not available on this device.")
-		return nil
-	#endif
 	}
 }
