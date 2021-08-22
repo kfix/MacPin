@@ -33,11 +33,13 @@ class Prompter {
 	class func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2: StaticString = #function, abort:(()->(()->Void)?)? = nil) -> Prompter {
 		var final: (()->Void)? = nil
 		let prompter = DispatchWorkItem {
-
+			let ln = LineNoise(outputFile: STDERR_FILENO)
+			if ln.mode != .supportedTTY {
+				warn("linenoise did not detect a TTY-as-stdin, Prompter disabled.")
+				return
+			}
 			var done = false
 			let prompt = "<\(CommandLine.arguments[0])> % "
-			let ln = LineNoise(outputFile: FileHandle.standardError.fileDescriptor)
-
 			while (!done) {
 				do {
 					let line = try ln.getLine(prompt: prompt) // R: blocks here until Enter pressed
