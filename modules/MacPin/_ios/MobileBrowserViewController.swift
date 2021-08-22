@@ -273,7 +273,7 @@ extension UIView {
 	}
 
     // class let willChangeStatusBarFrameNotification: NSNotification.Name (deprecated...)
-	func appWillChangeStatusBarFrameNotification(_ notification: NSNotification) {
+	@objc func appWillChangeStatusBarFrameNotification(_ notification: NSNotification) {
 		if let status = notification.userInfo?[UIApplication.statusBarFrameUserInfoKey] as? NSValue {
 			let statusRect = status.cgRectValue
 			warn("\(statusRect.size.height)") // FIXME: this is off-phase if app started in landscape mode on iPhone
@@ -411,7 +411,7 @@ extension MobileBrowserViewController {
 
 	func switchToPreviousTab() { selectedViewControllerIndex -= 1 }
 	func switchToNextTab() { selectedViewControllerIndex += 1 }
-	func closeCurrentTab() {
+	@objc func closeCurrentTab() {
 		if let vc = selectedViewController {
 			let idx = selectedViewControllerIndex
 			//if children.count > 2 { newTabPrompt() }
@@ -522,7 +522,7 @@ extension MobileBrowserViewController: UITableViewDataSource, UITableViewDelegat
 		tabList.removeFromSuperview()
     }
 
-	func toggleTabList() {
+	@objc func toggleTabList() {
 		if let sv = tabList.superview, sv == tabView {
 			tabList.removeFromSuperview()
 		} else {
