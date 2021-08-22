@@ -30,7 +30,7 @@ class Prompter {
 	}
 
 	// TODO: exposing a websocketREPL would also be neat: https://github.com/siuying/IGJavaScriptConsole https://github.com/zwopple/PocketSocket
-	class func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2: StaticString = #function, abort:(()->(()->Void)?)? = nil) -> Prompter? {
+	class func termiosREPL(_ eval:((String)->Void)? = nil, ps1: StaticString = #file, ps2: StaticString = #function, abort:(()->(()->Void)?)? = nil) -> Prompter {
 		var final: (()->Void)? = nil
 		let prompter = DispatchWorkItem {
 
@@ -60,6 +60,7 @@ class Prompter {
 					done = true
 				} catch {
 					g_stdErr.write(error.localizedDescription + "\n")
+					done = true // best to just stop
 				}
 				// L: command dispatched, restart loop
 			}
