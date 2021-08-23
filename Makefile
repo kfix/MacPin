@@ -467,12 +467,11 @@ ifeq ($(sdk),iphonesimulator)
 test.ios: $(appdir)/$(macpin).app
 	plutil -convert binary1 $</Info.plist
 	open -a "/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app"
-	xcrun simctl getenv booted foobar || sleep 5
 	@xcrun simctl list | grep $(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)
 	# pre-A7 devices (ipad mini 2, ipad air, iphone 5s) cannot run x86_64 builds
 	# if app closes without showing launch screen, try changing the simulated device to A7 or later
 	xcrun simctl install booted $<
-	xcrun simctl launch --console-pty --terminate-running-process booted $(template_bundle_id).$(macpin) -i
+	xcrun simctl launch --console-pty booted $(template_bundle_id).$(macpin) -i
 else ifeq ($(sdk),iphoneos)
 test.ios: $(appdir)/$(macpin).app /usr/local/bin/ios-deploy
 	ios-deploy -d -b $<
