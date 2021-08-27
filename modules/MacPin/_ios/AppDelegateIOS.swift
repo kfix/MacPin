@@ -112,7 +112,10 @@ public class MacPinAppDelegateIOS: NSObject, MacPinAppDelegate {
 	}
 	*/
 
-	public func applicationWillTerminate(_ application: UIApplication) { UserDefaults.standard.synchronize() }
+	public func applicationWillTerminate(_ application: UIApplication) {
+		AppScriptRuntime.shared.emit(.AppShouldTerminate, self) // allow JS to clean up its refs
+	    UserDefaults.standard.synchronize()
+	}
 
 	public func application(_ application: UIApplication, shouldSaveApplicationState coder: NSCoder) -> Bool { return false }
 	public func application(_ application: UIApplication, shouldRestoreApplicationState coder: NSCoder) -> Bool { return false }
