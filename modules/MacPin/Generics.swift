@@ -53,22 +53,22 @@ class StandardErrorOutputStream {
 
 let g_stdErr = StandardErrorOutputStream()
 
-func warn(_ msg: String = String(), function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
+func warn(msg: String = String(), function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
 	// https://forums.swift.org/t/supplement-file-line-and-function-with-context/9505/2
 	// https://github.com/swisspol/XLFacility ?
 
-	var out = ""
+	let pfx: String
 	// [min:sec.ms] <codeloc> [fn] message
 	if #available(OSX 10.12, iOS 10, *) {
-		out = "[\(DateInterval(start: startTime, end: Date()).duration.stopwatch())] <\(file):\(line):\(column)> [\(function)] \(msg)"
+		pfx = "[\(DateInterval(start: startTime, end: Date()).duration.stopwatch())] <\(file):\(line):\(column)> [\(function)] "
 	} else {
-		out = "[\((startTime.timeIntervalSinceNow.stopwatch(invert: true)))] <\(file):\(line):\(column)> [\(function)] \(msg)"
+		pfx = "[\((startTime.timeIntervalSinceNow.stopwatch(invert: true)))] <\(file):\(line):\(column)> [\(function)] "
 	}
 
-	g_stdErr.write("\r\(out)\n") // NSOutputStream.write is resilient to closed files, unlike NSFileHandle.write
+	g_stdErr.write("\r" + pfx + msg + "\n") // NSOutputStream.write is resilient to closed files, unlike NSFileHandle.write
 
 #if WARN2NSLOG
-	NSLog(out)
+	NSLog(pfx + msg)
 #endif
 	// https://developer.apple.com/library/mac/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/LoggingErrorsAndWarnings.html
 #if ASL
@@ -81,10 +81,14 @@ func warn(_ msg: String = String(), function: StaticString = #function, file: St
 #endif
 }
 
+func warn(_ item: CustomStringConvertible, function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
+    warn(msg: String(describing: item), function: function, file: file, line: line, column: column)
+}
+
 func warn(_ items: Any..., function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
 	var out = ""
 	debugPrint(items, separator: " ", terminator: "", to: &out)
-	warn(out, function: function, file: file, line: line, column: column)
+	warn(msg: out, function: function, file: file, line: line, column: column)
 }
 
 func warn(obj: Any?, function: StaticString = #function, file: StaticString = #file, line: UInt = #line, column: UInt = #column) {
@@ -92,7 +96,7 @@ func warn(obj: Any?, function: StaticString = #function, file: StaticString = #f
 	var out = ""
 	guard let obj = obj else { warn("nil"); return } //force unwrap obj
 	dump(obj, to: &out, name: nil, indent: 0, maxDepth: Int.max, maxItems: Int.max) // a nil further down the tree will cause a seg!
-	warn(out, function: function, file: file, line: line, column: column)
+	warn(msg: out, function: function, file: file, line: line, column: column)
 }
 
 /*
