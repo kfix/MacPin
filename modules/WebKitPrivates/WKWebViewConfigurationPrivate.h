@@ -27,7 +27,7 @@
 
 #import <WebKit/WKWebViewConfiguration.h>
 
-#import <WebKitPrivates/WKBase.h>
+#import "WKBase.h"
 
 #if TARGET_OS_IPHONE
 typedef NS_ENUM(NSUInteger, _WKDragLiftDelay) {

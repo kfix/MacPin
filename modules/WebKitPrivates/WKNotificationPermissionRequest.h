@@ -26,7 +26,7 @@
 #ifndef WKNotificationPermissionRequest_h
 #define WKNotificationPermissionRequest_h
 
-#import <WebKitPrivates/WKBase.h>
+#import "WKBase.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -28,7 +28,7 @@
 #ifndef WKDictionary_h
 #define WKDictionary_h
 
-#import <WebKitPrivates/WKBase.h>
+#import "WKBase.h"
 
 #ifndef __cplusplus
 #import <stddef.h>

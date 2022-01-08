@@ -28,7 +28,7 @@
 #ifndef WKMutableDictionary_h
 #define WKMutableDictionary_h
 
-#import <WebKitPrivates/WKBase.h>
+#import "WKBase.h"
 
 #ifndef __cplusplus
 #import <stdbool.h>

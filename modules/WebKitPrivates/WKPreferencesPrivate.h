@@ -26,7 +26,7 @@
  */
 
 #import <WebKit/WKPreferences.h>
-#import <WebKitPrivates/WKPreferencesRefPrivate.h>
+#import "WKPreferencesRefPrivate.h"
 
 typedef NS_ENUM(NSInteger, _WKStorageBlockingPolicy) {
     _WKStorageBlockingPolicyAllowAll,
