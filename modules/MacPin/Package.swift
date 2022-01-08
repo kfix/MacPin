@@ -44,12 +44,12 @@ let package = Package(
             swiftSettings: [
                 .unsafeFlags([
                     "-suppress-warnings",
-                    //"-DSAFARIDBG",
-                    //"-DDEBUG",
-                    //"-DDBGMENU",
-                    //"-DAPP2JSLOG",
-                    //"-DWK2LOG",
                 ]),
+                //.define("SAFARIDBG"),
+                //.define("DEBUG"),
+                //.define("DBGMENU"),
+                //.define("APP2JSLOG"),
+                //.define("WK2LOG"),
             ]
         ),
         // somehow have a target that makes libMacPin.dylib into a .framework
