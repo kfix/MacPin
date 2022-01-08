@@ -33,7 +33,7 @@
 
 #if JSC_OBJC_API_ENABLED
 
-#import <JavaScriptCorePrivates/JSScript.h>
+#import "JSScript.h"
 
 @protocol JSModuleLoaderDelegate <NSObject>
 

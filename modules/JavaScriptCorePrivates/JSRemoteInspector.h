@@ -29,7 +29,7 @@
 #define JSRemoteInspector_h
 
 #import <JavaScriptCore/JSBase.h>
-#import <JavaScriptCorePrivates/WebKitAvailability.h>
+#import "WebKitAvailability.h"
 
 #if defined(WIN32) || defined(_WIN32)
 typedef int JSProcessID;
