@@ -19,7 +19,7 @@ let package = Package(
         .target(
             name: "Linenoise",
             dependencies: [],
-            path: "./",
-            exclude: ["_ios", "_macos"]),
+            path: "./"
+        )
     ]
 )

@@ -19,7 +19,7 @@ let package = Package(
         .target(
             name: "UTIKit",
             dependencies: [],
-            path: "./",
-            exclude: ["_ios", "_macos"]),
+            path: "./"
+        )
     ]
 )
