@@ -13,31 +13,6 @@ STP 				?= 1
 # 1 == link against Safari.app's WebKit if its present
 SF					?= 1
 
-SWFTFLAGS			?= -suppress-warnings
-SWCCFLAGS			?= -Wno-unreachable-code
-
-# scan modules/ and define cross: target and vars: outdir, platform, arch, sdk, target, objs, execs, statics, incdirs, libdirs, linklibs, frameworks
-archs_macosx		?= x86_64
-# ^ supporting Yosemite+ only, so don't bother with 32-bit builds
-archs_iphonesimulator	?= x86_64
-
-archs_iphoneos		?= arm64
-target_ver_macos	?= 10.15
-target_ver_ios		?= 12.4
-
-xcode				?= /Applications/Xcode.app
-swiftver			?= 5
-nextswiftver		?= 5
-
-ifneq ($(xcode),)
-xcrun				?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcrun
-xcs					?= env DEVELOPER_DIR=$(xcode)/Contents/Developer xcode-select
-endif
-
-# xcrun xcodebuild -showsdks
-# https://github.com/phracker/MacOSX-SDKs
-sdk					:= macosx10.15
-
 macpin				:= MacPin
 macpin_sites		?= sites
 installdir			:= ~/Applications/MacPin.localized
@@ -48,12 +23,15 @@ usage help:
 	@printf '\nusage:\tmake (V=1) <target>\n\ntargets:\n%s'
 	@printf '\t%s\n' allapps reinstall uninstall test test.app stpdoc sites/*
 
-include eXcode.mk
+#include eXcode.mk
 mk := $(firstword $(MAKEFILE_LIST))
 $(info )
 $(info [$(mk)])
 $(info )
-
+platform := macos
+outdir := $(builddir)/swiftpm-$(platform)
+mp_build := $(shell cd modules/$(macpin); swift build --show-bin-path)
+$(info $(platform) => $(mp_build))
 
 appdir				:= $(outdir)/apps
 
@@ -92,86 +70,25 @@ appsig_ios			:= iPhone Developer
 mobileprov_team_id	?=
 # https://developer.apple.com/account/#/membership/ "Team ID"
 
-ifeq ($(SF),1)
-ifeq ($(target_ver_macos),10.13)
-sfframes				:= $(lastword $(wildcard /System/Library/Frameworks /System/Library/StagedFrameworks/Safari))
-endif
-ifneq ($(sfframes),)
-rpath					:= $(sfframes)
-webkitdir				:= $(sfframes)/WebKit.framework
-jsclib					:= $(outdir)/obj/libJavaScriptCorePrivates.dylib
-jscdir					?= $(sfframes)/JavaScriptCore.framework
-env += DYLD_VERSIONED_FRAMEWORK_PATH="$(sfframes)"
-$(jsclib):
-	mkdir -p $(dir $@)
-ifneq ($(sfframes),)
-	ln -sfv $(jscdir)/JavaScriptCore $@
-endif
-endif
-endif
-
-ifeq ($(STP),1)
-ifeq ($(target_ver_macos),10.15)
-stpdir					:= /Applications/Safari\ Technology\ Preview.app
-stpframes				:= $(wildcard $(stpdir)/Contents/Frameworks)
-ifneq ($(stpframes),)
-webkitdir				:= $(stpframes)/WebKit.framework
-safaridir				:= $(wildcard $(stpdir))
-
-# FIXME: only release builds should have STP burned into the RPATH
-#rpath					+= :$(stpframes)
-
-# man dyld
-env += DYLD_VERSIONED_FRAMEWORK_PATH="$(stpframes)"
-endif
-endif
-endif
-
-# use static libs, not dylibs to build all executable modules
-#$(execs): $(statics)
-
 ifeq ($(platform),macos)
 # make a jumbo framework and its stub launcher
-#
+
 #jumbolib := $(firstword $(filter %/lib$(macpin).dylib, $(dynamics)))
 jumbolib := $(outdir)/Frameworks/$(macpin).framework
 # need SharedFramework https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Tasks/InstallingFrameworks.html
-jumbodeps := $(filter-out %/lib$(macpin).a, $(statics)) $(jumbodeps)
-$(jumbolib): linklibs := $(patsubst lib%.a,-l%, $(notdir $(jumbodeps))) $(patsubst lib%.dylib,-l%, $(notdir $(jsclib)))
-#jumbodeps := $(filter-out %/$(macpin).o, $(objs))
-#$(jumbolib): linklibs := $(patsubst %, -Xlinker -l%, $(notdir $(jumbodeps)))
-#$(jumbolib): extrainputs := $(jumbodeps)
-jumbody := $(firstword $(filter %/lib$(macpin).dylib, $(dynamics)))
-$(jumbody): $(jumbodeps) $(jsclib)
-$(jumbolib): $(jumbody)
-$(lexecs): $(jumbolib)
-linkopts_exec 			:= -Xlinker -dyld_env -Xlinker DYLD_VERSIONED_FRAMEWORK_PATH="$(rpath)"
-else
-# make a jumbo static
-jumbolib := $(filter %/lib$(macpin).a, $(statics))
-jumbodeps := $(filter-out $(jumbolib), $(statics)) $(jumbodeps)
-$(jumbolib): $(jumbodeps)
-linkopts_exec			:= $(jumbolib)
-$(lexecs): $(jumbolib)
-endif
+jumbody := $(mp_build)/libMacPin.dylib
+lexecs := $(mp_build)/MacPinApp_osx
 
-#$(lexecs): linklibs := -l$(macpin)
-$(info Jumbo-execs: $(lexecs))
-$(info Jumbo-deps: $(jumbodeps))
-$(info Jumbo-lib: $(jumbolib))
+# XXX: swiftpm does the building now
+$(jumbody) $(lexecs): modules/$(macpin)/*.swift modules/$(macpin)/_$(platform)/*.swift
+	cd modules/$(macpin) && swift build
+endif
 
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
 allapps install: $(gen_apps)
 
-ifeq ($(platform)$(osswiftlibdir),macos)
-# need to vendor SwiftSupport from the SDK, because this host OS doesn't come with them
-swiftsupport := $(outdir)/SwiftSupport
-else
-swiftsupport :=
-endif
-
-zip test apirepl tabrepl wknightly stp $(gen_apps): $(lexecs) $(swiftsupport)
-doc test apirepl tabrepl test.app test.ios dbg dbg.app stp stp.app test_% $(appnames:%=test_%): debug := -g -D SAFARIDBG -D DEBUG -D DBGMENU -D APP2JSLOG -D WK2LOG
+#zip test apirepl tabrepl wknightly stp $(gen_apps): $(lexecs)
+#doc test apirepl tabrepl test.app test.ios test_% $(appnames:%=test_%):
 
 # older OSX/macOS with backported Safari.app have vendored WK/JSC frameworks
 env += DYLD_PRINT_LIBRARIES_POST_LAUNCH=1
@@ -187,7 +104,8 @@ $(info $(safaridir) => $(safariver))
 $(info $(webkitdir) => $(webkitver))
 $(info $(xcode) => $(xcodever))
 
-test apirepl tabrepl test.app dbg dbg.app test.ios stp stp.app: | $(lexecs:%=%.dSYM)
+# XXX: don't have split-symbols from swiftpm yet
+# test apirepl tabrepl test.app test.ios stp stp.app: | $(lexecs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))
 codesign :=
@@ -307,12 +225,9 @@ $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist: template
 # https://www.bignerdranch.com/blog/it-looks-like-you-are-trying-to-use-a-framework/
 $(outdir)/Frameworks/%.framework/Versions/A/Frameworks:
 	@install -d $@
-	# if SwiftSupport is needed, the rpath of the Frameworks/*.dylib should point to it and stdlib tool will find it
-	[ ! -z "$(codesign)" ] || $(swift-stdlibtool) --copy --verbose --scan-folder $(outdir)/Frameworks --destination $@
-	[ ! -n "$(codesign)" ] || $(swift-stdlibtool) --copy --verbose --sign $(appsig) --scan-folder $(outdir)/Frameworks --destination $@
 	@touch $@
 
-$(outdir)/Frameworks/%.framework: $(outdir)/obj/lib%.dylib $(outdir)/Frameworks/%.framework/Versions/A/Frameworks $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist 
+$(outdir)/Frameworks/%.framework: $(jumbody) $(outdir)/Frameworks/%.framework/Versions/A/Frameworks $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist 
 	@install -dv $@
 	@rm -rfv $@/Versions/Current $@/Resources $@/Frameworks %@/$*
 	@ln -sf A $@/Versions/Current
@@ -325,9 +240,9 @@ $(outdir)/Frameworks/%.framework: $(outdir)/obj/lib%.dylib $(outdir)/Frameworks/
 	-[ ! -n "$(codesign)" ] || codesign --verbose=4 --sign '$(appsig)' --timestamp --options runtime --force --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
 
 #build the app bundle
-$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(outdir)/lexec/$(macpin)
+$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/Info.plist $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns templates/Resources/ $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(lexecs)
 	@install -d $@ $@/Contents/MacOS $@/Contents/Resources
-	$(patsubst %,COMMAND_MODE=legacy cp -f % $@/Contents/MacOS/$*;,$(filter $(outdir)/lexec/%,$^))
+	COMMAND_MODE=legacy cp -f $(lexecs) $@/Contents/MacOS/$*
 	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/Contents/MacOS/$*.dSYM,$(filter $(outdir)/exec/%.dSYM,$^))
 	COMMAND_MODE=legacy cp -fRL templates/Resources $@/Contents
 	#git ls-files -zc $(bundle_untracked) $(macpin_sites)/$* | xargs -0 -J % install -DT % $@/Contents/Resources/
@@ -421,7 +336,7 @@ clean: unregister
 	-rm -rf $(outdir) $(xcassets)
 
 binclean:
-	rm -f $(lexecs) $(objs) $(statics) $(dynamics) $(outdir)/obj/*.o
+	rm -rf modules/MacPin/.build
 	rm -rf $(outdir)/SwiftSupport $(outdir)/Frameworks
 
 cached:
