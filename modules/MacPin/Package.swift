@@ -40,7 +40,17 @@ let package = Package(
                 "UTIKit",
             ],
             path: "./",
-            exclude: excludeds
+            exclude: excludeds,
+            swiftSettings: [
+                .unsafeFlags([
+                    "-suppress-warnings",
+                    //"-DSAFARIDBG",
+                    //"-DDEBUG",
+                    //"-DDBGMENU",
+                    //"-DAPP2JSLOG",
+                    //"-DWK2LOG",
+                ]),
+            ]
         ),
         // somehow have a target that makes libMacPin.dylib into a .framework
         .executableTarget(
