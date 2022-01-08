@@ -12,7 +12,7 @@ excludeds.append("_macos")
 #endif
 
 let package = Package(
-	name: "MacPin",
+    name: "MacPin",
     //platforms: [.iOS(.v13),.macOS(.v10_15)],
     // whines about a lot of unguarded calls to 10.15.4 apis
     platforms: [.iOS(.v13),.macOS(.v11)],
@@ -21,12 +21,12 @@ let package = Package(
         .executable(name: "MacPinApp_static", targets: ["MacPinApp_static"]),
     ],
     dependencies: [
-		.package(path: "../WebKitPrivates"),
-		.package(path: "../ViewPrivates"),
-		.package(path: "../UserNotificationPrivates"),
-		.package(path: "../JavaScriptCorePrivates"),
-		.package(path: "../Linenoise"),
-		.package(path: "../UTIKit"),
+        .package(path: "../WebKitPrivates"),
+        .package(path: "../ViewPrivates"),
+        .package(path: "../UserNotificationPrivates"),
+        .package(path: "../JavaScriptCorePrivates"),
+        .package(path: "../Linenoise"),
+        .package(path: "../UTIKit"),
     ],
     targets: [
         .target(
