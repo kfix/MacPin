@@ -25,7 +25,7 @@ usage help:
 
 platform := macos
 outdir := $(builddir)/swiftpm-$(platform)
-mp_build := $(shell cd modules/$(macpin); swift build --show-bin-path)
+mp_build := $(shell cd modules/$(macpin); swift build -c release --show-bin-path)
 $(info $(platform) => $(mp_build))
 
 appdir				:= $(outdir)/apps
@@ -75,8 +75,9 @@ jumbody := $(mp_build)/libMacPin.dylib
 lexecs := $(mp_build)/MacPinApp_osx
 
 # XXX: swiftpm does the building now
-$(jumbody) $(lexecs): modules/$(macpin)/*.swift modules/$(macpin)/_$(platform)/*.swift
-	cd modules/$(macpin) && swift build
+$(jumbody) $(jumbody).dSYM $(lexecs) $(lexecs).dSYM: modules/$(macpin)/*.swift modules/$(macpin)/_$(platform)/*.swift
+	cd modules/$(macpin) && \
+		swift build -c release
 endif
 
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
@@ -99,8 +100,7 @@ $(info $(safaridir) => $(safariver))
 $(info $(webkitdir) => $(webkitver))
 $(info $(xcode) => $(xcodever))
 
-# XXX: don't have split-symbols from swiftpm yet
-# test apirepl tabrepl test.app test.ios stp stp.app: | $(lexecs:%=%.dSYM)
+test apirepl tabrepl test.app test.ios: | $(lexecs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))
 codesign :=
@@ -222,15 +222,15 @@ $(outdir)/Frameworks/%.framework/Versions/A/Frameworks:
 	@install -d $@
 	@touch $@
 
-$(outdir)/Frameworks/%.framework: $(jumbody) $(outdir)/Frameworks/%.framework/Versions/A/Frameworks $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist 
+$(outdir)/Frameworks/%.framework: $(jumbody) $(jumbody).dSYM $(outdir)/Frameworks/%.framework/Versions/A/Frameworks $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist
 	@install -dv $@
 	@rm -rfv $@/Versions/Current $@/Resources $@/Frameworks %@/$*
 	@ln -sf A $@/Versions/Current
 	@ln -sf Versions/Current/$* $@/$*
 	@ln -sf Versions/Current/Resources $@/Resources
 	@ln -sf Versions/Current/Frameworks $@/Frameworks
-	$(patsubst %,cp -RL % $@/Versions/A/$*,$(filter %.dylib,$^))
-	$(patsubst %,cp -RL % $@/Versions/A/$*.dSYM,$(filter %.dSYM,$^))
+	@cp -RL $(jumbody) $@/Versions/A/$*
+	@cp -RL $(jumbody).dSYM $@/Versions/A/$*.dSYM
 	# need a Resources/Info-macos.plist & version.plist
 	-[ ! -n "$(codesign)" ] || codesign --verbose=4 --sign '$(appsig)' --timestamp --options runtime --force --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
 
