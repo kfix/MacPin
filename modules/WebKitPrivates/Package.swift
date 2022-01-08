@@ -2,5 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "WebKitPrivates"
+    name: "WebKitPrivates",
+    products: [
+        .library(name: "WebKitPrivates", targets: ["WebKitPrivates"]),
+    ],
+    targets: [
+        .systemLibrary(
+            name: "WebKitPrivates",
+            path: "./" // where the modulemap lives
+        )
+    ]
 )
