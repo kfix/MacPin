@@ -21,13 +21,8 @@ appnames			= $(patsubst $(macpin_sites)/%,%.app,$(wildcard $(macpin_sites)/*))
 
 usage help:
 	@printf '\nusage:\tmake (V=1) <target>\n\ntargets:\n%s'
-	@printf '\t%s\n' allapps reinstall uninstall test test.app stpdoc sites/*
+	@printf '\t%s\n' allapps reinstall uninstall test test.app sites/*
 
-#include eXcode.mk
-mk := $(firstword $(MAKEFILE_LIST))
-$(info )
-$(info [$(mk)])
-$(info )
 platform := macos
 outdir := $(builddir)/swiftpm-$(platform)
 mp_build := $(shell cd modules/$(macpin); swift build --show-bin-path)
@@ -400,17 +395,6 @@ iossim.dump:
 	#-@for i in ~/Library/Logs/DiagnosticReports/$(macpin)_$(shell date +%Y-%m-%d-%H%M)*_$(shell scutil --get LocalHostName).crash; do [ -f $$i ] && cat $$i && echo $$i; break; done
 	xcrun simctl diagnose -l
 
-wkdoc:
-	{ for i in WebKitPrivates; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -swift-version $(swiftver) -suppress-warnings -Xfrontend -color-diagnostics -deprecated-integrated-repl; done ;} | { [ -t 1 ] && less || cat; }
-
-# need to gen static html with https://github.com/realm/jazzy
-doc stpdoc: $(lexecs) $(objs)
-	{ for i in $(build_mods) WebKit WebKitPrivates JavaScriptCore; do echo ":print_module $$i" | $(env) xcrun swift $(swift) $(debug) $(incdirs) -swift-version $(swiftver) -suppress-warnings -Xfrontend -color-diagnostics -deprecated-integrated-repl; done ;} | { [ -t 1 ] && less || cat; }
-
-swiftrepl:
-	# sudo /usr/sbin/DevToolsSecurity --enable
-	xcrun swift $(incdirs) $(libdirs) $(linklibs) $(frameworks) -deprecated-integrated-repl
-
 #.safariextz: http://developer.streak.com/2013/01/how-to-build-safari-extension-using.html
 
 #playground:
@@ -483,5 +467,5 @@ stp_jsc:
 
 $(V).SILENT: # enjoy the silence
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/SwiftSupport $(outdir)/Frameworks/%.framework $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist $(outdir)/Frameworks/%.framework/Versions/A/Frameworks
-.PHONY: clean install reset uninstall reinstall test test.app test.ios stp stp.app apirepl tabrepl allapps tag release doc stpdoc swiftrepl %.app zip $(ZIP) upload sites/% modules/% submake_% statics dynamics stp_symbols stp_jsc
+.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release  %.app zip $(ZIP) upload sites/% modules/% submake_% stp_symbols stp_jsc
 .SUFFIXES:
