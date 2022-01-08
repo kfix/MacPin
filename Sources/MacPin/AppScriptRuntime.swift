@@ -799,6 +799,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 		if #available(macOS 10.14.5, *, iOS 13), false {
 			// false-blocking since we don't have import.meta injections implemented for JSContext yet.
+			// is still letting iOS (sim) 12.4 thru!!
 
 			guard JavaScriptCore_version >= (608, 1, 8) else { return false }
 			/*
@@ -814,7 +815,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			if (try? local_app_js.checkResourceIsReachable()) ?? false { // try overridden name
 				(_, jsval) = importJSScript(local_app_js.absoluteString, asMain: true, asModule: true)
 			} else if let app_js = Bundle.main.url(forResource: app, withExtension: "js") {
+			    warn("loading esm")
 				(_, jsval) = importJSScript(app_js.absoluteString, asMain: true, asModule: true)
+				// never gets returned to here?!!
 			} else {
 				warn("failed to load main.js!")
 				return false
@@ -872,6 +875,7 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 	@discardableResult
 	@available(macOS 10.14.5, *, iOS 13) // ensures we only weakly link to JSC::JSScript symbols
+	// this is still throwing in the 12.4 simulator ...
 	func loadAppJSScript(_ urlstr: String) -> JSValue? {
 		let jsval: JSValue
 
@@ -1012,7 +1016,9 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 
 		warn("loaded \(urlstr) script - main-scope:\(asMain) - module:\(asModule)")
 		// if asModule, should have another defer:false option so we can return the Promised value?
-		return ( script, value )
+		// asModule:true doesn't seem to finish the return ....
+		//return ( script, value )
+			return (script, JSValue(nullIn: self.context) )
 	}
 
 	func resetStates() {
