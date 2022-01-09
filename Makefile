@@ -82,8 +82,8 @@ endif
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
 allapps install: $(gen_apps)
 
-test apirepl tabrepl test.app test.ios test_% $(appnames:%=test_%):
-test apirepl tabrepl test.app test.ios: | $(lexecs:%=%.dSYM)
+zip test apirepl tabrepl $(gen_apps): $(lexecs)
+zip test apirepl tabrepl test.app test.ios: | $(lexecs:%=%.dSYM)
 
 # older OSX/macOS with backported Safari.app have vendored WK/JSC frameworks
 env += DYLD_PRINT_LIBRARIES_POST_LAUNCH=1
