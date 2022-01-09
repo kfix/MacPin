@@ -28,7 +28,7 @@
 #ifndef WKSecurityOriginRef_h
 #define WKSecurityOriginRef_h
 
-#import <WebKitPrivates/WKBase.h>
+#import "WKBase.h"
 
 #ifdef __cplusplus
 extern "C" {

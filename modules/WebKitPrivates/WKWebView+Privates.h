@@ -240,6 +240,13 @@ typedef NS_OPTIONS(NSInteger, _WKMediaMutedState) {
 - (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle WK_API_AVAILABLE(macos(10.12));
 #endif
 
+// not really declared but _seems to work_ (lots of magic)
+// https://github.com/WebKit/WebKit/commit/192986a334eea1f7194f8a1d336547422c83d08f
+// https://github.com/WebKit/WebKit/commit/4eb014db577c56d4184fdbba7c2f4816e6de5fcf
+// https://github.com/llvm/llvm-project/commit/d4e1ba3fa9dfec2613bdcc7db0b58dea490c56b1
+// https://reviews.llvm.org/D69991
+//@property (nonatomic, readonly) WKPageRef *_page __attribute__((objc_direct)) WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+
 @property (nonatomic, readonly) NSView *_safeBrowsingWarning WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
 @end
 

@@ -25,8 +25,8 @@
  */
 
 #import "./WebKitAvailability.h"
-#import <WebKitPrivates/_WKActivatedElementInfo.h>
-#import <WebKitPrivates/_WKHitTestResult.h>
+#import "_WKActivatedElementInfo.h"
+#import "_WKHitTestResult.h"
 
 @protocol WKUIDelegate;
 

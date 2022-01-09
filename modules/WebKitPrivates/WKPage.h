@@ -1,5 +1,5 @@
 // https://github.com/WebKit/webkit/blob/main/Source/WebKit/UIProcess/API/C/WKPage.h
-#import <WebKitPrivates/WKBase.h>
+#import "WKBase.h"
 #import "WKInspector.h"
 #import "WKPageUIClient.h"
 

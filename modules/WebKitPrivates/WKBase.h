@@ -30,7 +30,7 @@
 #ifndef WKBase_h
 #define WKBase_h
 
-#import <WebKitPrivates/WKDeclarationSpecifiers.h>
+#import "WKDeclarationSpecifiers.h"
 #import <stdint.h>
 #import <stdbool.h>
 
@@ -39,7 +39,7 @@
 #elif defined(BUILDING_WPE__)
 #import <WebKit/WKBaseWPE.h>
 #elif defined(__APPLE__)
-#import <WebKitPrivates/WKBaseMac.h>
+#import "WKBaseMac.h"
 #elif defined(_WIN32)
 #import <WebKit/WKBaseWin.h>
 #endif

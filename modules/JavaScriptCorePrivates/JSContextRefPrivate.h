@@ -30,7 +30,7 @@
 
 #import <JavaScriptCore/JSObjectRef.h>
 #import <JavaScriptCore/JSValueRef.h>
-#import <JavaScriptCorePrivates/WebKitAvailability.h>
+#import "WebKitAvailability.h"
 
 #ifndef __cplusplus
 #import <stdbool.h>
