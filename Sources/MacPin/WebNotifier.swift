@@ -71,10 +71,15 @@ class WebNotifier {
 		WKNotificationManagerSetProvider(self.manager, &wk_provider.base)
 	}
 
+	func unmanage() {
+		warn("removing from Notification updates")
+		WKNotificationManagerSetProvider(manager, nil)
+	}
+
 	deinit {
+		warn("deinit")
 		WKNotificationManagerSetProvider(manager, nil)
 		WKRelease(UnsafeRawPointer(notificationPermissions))
-		warn("removed from Notification updates")
 	}
 
 	func showWebNotification(_ page: WKPageRef, _ notification: WKNotificationRef) {

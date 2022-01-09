@@ -256,7 +256,9 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		    prompter = nil // deinit prompter to cleanup the TTY
 		}
 */
-
+///////////////////////////////////////////////////////////////////////////////////////////
+// "The Eskimo!" says this junk isn't worth using: https://developer.apple.com/forums/thread/678125
+///////////////////////////////////////////////////////////////////////////////////////////
 /*
         NSSetUncaughtExceptionHandler { (exception) in
             let source:String = exception.callStackSymbols[4]

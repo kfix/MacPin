@@ -21,36 +21,32 @@ Uses swift 5 & WKWebView.
 
 Apps present within a semi-featured Browser UI, having just an ["OmniBox"](https://www.chromium.org/user-experience/omnibox) and tab buttons.  
 
-MacPin-built apps are normal .app bundles that show in the Dock (or Springboard on iOS), tabbing App Switcher, & Launchpad.  
+MacPin-built apps are normal .app bundles that show in the Dock, App Switcher, & Launchpad.  
 
 They are dependent on the core MacPin.app (4.5MB) to be registered on the system, since it contains the MacPin.framework.  
-* future work could create an easy-button "exporter" to vendor the framework
 
 Custom URL schemes can also be registered to launch a MacPin App from any other app on your Mac.  
-
-Building `main` branch requires macOS 10.15 "Catalina" with Xcode 11.
-
-All other branches are obsolete & archived for users locked on older macOS (hardware),  
-but they will recieve no updates.  
 
 ## Included Apps in the [Release](https://github.com/kfix/MacPin/releases)
 
 ### Gooblers
 * [Google Drive.app](https://drive.google.com)
 * [Google Photos.app](https://photos.google.com)
-* [Hangouts.app](https://plus.google.com/hangouts): SMS/IM/Video chat client for the desktop
-* [Google Voice.app](https://voice.google.com): SMS client for the desktop
-  * calling is broken because Google is [loose with web standards](https://support.google.com/voice/thread/14998073?msgid=14998073).
+* [Google Chat.app](https://chat.google.com)
+* [Google Voice.app](https://voice.google.com)
+* [Google Maps.app](https://www.google.com/maps)
 
-### FaceHoles
-* [Facebook.app](https://m.facebook.com/home.php): Mobilized for efficiency
+### MetaVerses
+* [Facebook.app](https://m.facebook.com/home.php) (mobile version!)
 * [Messenger.app](https://www.messenger.com/hangouts)
 * [WhatsApp.app](https://web.whatsapp.com)
 
 ### et cetera
-* [Slack.app](https://signin.slack.com): A hackable runtime for Slack (your co-workers will be thrilled)
-* [Trello.app](http://trello.com): Mind-mapper and project planner
-* [DevDocs.app](http://devdocs.io): Code documentaion browser for most front-end frameworks
+* [Twitter.app](https://mobile.twitter.com) (mobile version!)
+* [Slack.app](https://slack.com)
+* [Trello.app](http://trello.com)
+* [DevDocs.app](https://devdocs.io)
+* [Stack Overflow.app](https://stackoverflow.com) (mobile version!)
 
 ## Creating an App
 Some call these Apps [Site-specific Browsers](https://en.wikipedia.org/wiki/Site-specific_browser).  
@@ -79,7 +75,7 @@ Work is ongoing to make editing and creating app scripts easier, without requiri
 ## App porting issues
 
 * DRM: Many sites (Spotify, Netflix) are using Chrome/FF only DRMs (Widevine) but Apple-built WebKit only supports FairPlay DRM.
-* WebRTC: WebKit is compatible with [H264 & VP8 codecs](https://webkit.org/blog/8672/on-the-road-to-webrtc-1-0-including-vp8/), but Google Chrome is pushing hardware-unaccelerated VP9 on all fronts (incl. general <video>).
+* WebRTC: WebKit is compatible with [H264 & VP8 codecs](https://webkit.org/blog/8672/on-the-road-to-webrtc-1-0-including-vp8/), but Google Chrome is pushing hardware-unaccelerated VP9 on all fronts (incl. general `<video>`).
 
 ### sample main.js
 ```
@@ -100,23 +96,35 @@ app.on('AppFinishedLaunching', function() {
 ```
 
 ## Hacking MacPin
-Its written in Swift using WKWebView and NSTabViewController with a fully programmatic NIB-less UI layout.  
-The AppScriptRuntime is purely based on JavaScriptCore's C and ObjC APIs.
-MacPin's UI ClassTypes are bridged to ObjC by SwiftCore and once more into Javascript space using the JSWrapperMap facility in the Apple JSC.  
-You need [Xcode 12](https://developer.apple.com/xcode/) installed on macOS 11+ to get the Swift compiler and Cocoa headers.  
-`make` & `$EDITOR` are your hammer and chisel.  
+Building `main` branch requires macOS 11 "Big Sur" with Xcode 12.
+* The built apps *should* be compatible Catalina/10.15 but there is a bug atm preventing compiling down that far.
 
+All other branches are obsolete & archived for users locked on older macOS (hardware),  
+but they will recieve no updates.  
+
+The UI is fully-programmatic (no NIBs or storyboard) using NSTabViewController APIs to containing tab's WKWebViews.   
+The AppScriptRuntime that evalutuates `main.js` scripts is cobbled together from JavaScriptCore's C and ObjC APIs.  
+
+MacPin's UI ClassTypes are bridged to ObjC by SwiftCore and once more into Javascript space using the JSWrapperMap facility in the Apple JSC.  
+
+Swift Package Manager and GNU Make are the actual builders of the project, Xcode and `xxcodebuild` are not used or supported.  
+
+### basic workflow
 ```
-vim modules/MacPin/*.swift
+vim Sources/MacPin/*.swift
 vim sites/MacPin/main.js
 make test.app
 # CTRL-D when finished debugging ...
 ```
+
+### JavaScript environment
 The JavaScript API for `*.app/main.js` vaguely mimics Electron's `main.js`.  
 If you want to play with it, run any MacPin app with the `-i` argument in Terminal to get a JS console (or `make repl`).  
 
-Debug builds (`make test|test.app|repl`) can also be remotely inspected from Safari->Develop-><ComputerName>
+~~Debug builds (`make test|test.app|apirepl`) can also be remotely inspected from Safari->Develop-><ComputerName>~~
+* Remote Inspection appears broken ATM
 
+### TODOs
 Some things I just haven't had need to write, but wouldn't mind having:
 
 * Global history
@@ -125,42 +133,9 @@ Some things I just haven't had need to write, but wouldn't mind having:
   * maybe using JavaScript-for-Automation (JXA)?
 * ReactNative, Vue/Weex, or NativeScript bindings in main.js for custom Browser UIs
 
-#### use MacPin to make hybrid apps from existing projects
-```
-cd ~/src/SomeWebApp
-test -d browser/SomeWebApp.com &&
-  make -C ~/src/MacPin macpin_sites=$PWD/browser appdir=$PWD/hybrid xcassetdir=$PWD/hybrid $PWD/hybrid/SomeWebApp.com.app
-open hybrid/SomeWebApp.com.app
-```
-
-#### iOS
-Basic support exists for generating iOS apps, but its even moreso a Work In Progress (to teach me about the `UI*` classes)
-
-its kinda pointless for most of `sites/*` since native apps exist for all of them.  
-But maybe you want to quickly package a React.js application for offline mobile use...  
-
-#### can i haz LinPin? WinPin?
-Ok! A stubby port running `/Lin/main.swift + AppScriptRuntime()` using a ["JSConly"](https://bugs.webkit.org/show_bug.cgi?id=154512) [build](http://constellation.github.io/blog/2016/05/02/how-to-build-javascriptcore-on-your-machine/) of JavaScriptCore  
-would be a good proof of concept for new MacPin platforms to spawn from.  
-
-[(lol, y u no like V8 google?)](https://lists.webkit.org/pipermail/webkit-dev/2018-June/030045.html)
-
-Swift runs on Lin/Win now and so do platform-ports of JavaScriptCore and WebKit, although without supported/prebuilt libs.  
-
-However, ObjC bindings for both Swift and the WebKit frameworks are not enabled (or possible?) outside of macOS.  
-So some additional pure-Swift bindings to the WebKit C/++ APIs will be needed before implementing symmetric platform-classes  
-And a some refactoring in `AppScriptRuntime.swift` to totally strip it of ObjC...  
-
-Also NSWindow & NSTabViewController aren't cross-platform but could be straightforwardly implement equivalent UIs from MFC or GTK.  
-Swift bindings to those toolkits would also be needed.  
-
-tvPin? No [WKWebView on tvOS](https://github.com/lionheart/openradar-mirror/issues/6085) *[officially](https://github.com/jvanakker/tvOSBrowser/master/_Project)*   
-
 ## Other WebKit browsers:
 
 * [Electrino](https://github.com/pojala/Electrino): inspiration for the revamp of MacPin's `main.js`
 * [Firefox for iOS](https://github.com/mozilla/firefox-ios/): another Swift-based browser for iOS.
 * [Chrome for iOS](https://chromium.googlesource.com/chromium/src/+/master/docs/ios/build_instructions.md)[*](https://chromium.googlesource.com/chromium/src.git/+/master/ios/chrome/app/main_application_delegate.mm)
-* [go-webkit2](https://github.com/sourcegraph/go-webkit2)
-* [Puny Browser](https://github.com/ahungry/puny-browser)
 * [yue](https://github.com/yue/yue-sample-apps/tree/master/browser) on [Mac](https://github.com/yue/yue/blob/master/nativeui/mac/browser_mac.mm) & [Linux](https://github.com/yue/yue/blob/master/nativeui/gtk/browser_gtk.cc)
