@@ -19,7 +19,8 @@ archs_iphonesimulator	?= $(archs_macosx)
 archs_iphoneos		?= arm64
 arch				?= $(shell uname -m)
 
-target_ver_macos	?= 10.15
+target_ver_macos	?= 10.15.04
+# can we get the running version, if not pre-set?
 target_macos		?= apple-macosx$(target_ver_macos)
 target_ver_ios		?= 12.0
 target_ios			?= apple-ios$(target_ver_ios)
@@ -78,4 +79,7 @@ $(info [$(eXcode)] compiling against $(sdkpath))
 $(info [$(eXcode)] swift libraries: $(swiftlibdir) $(swiftstaticdir))
 ########################
 
-swiftbuild			:= swift build -c release
+swiftbuild			:= swift build --configuration release \
+	--build-path $(outdir)/swiftpm \
+	-Xswiftc "-sdk" -Xswiftc $(sdkpath) \
+	-Xswiftc "-target" -Xswiftc $(arch)-$(target_$(platform))

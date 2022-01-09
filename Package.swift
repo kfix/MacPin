@@ -1,12 +1,10 @@
 // swift-tools-version:5.4
 import PackageDescription
 
-var excludeds = [] as [String]
-#if os(macOS)
-excludeds.append("_ios")
-#elseif os(iOS)
-excludeds.append("_macos")
-#endif
+var mp = "MacPinOSX"
+// FIXME: need a way to define IOS so we can change the Sources
+//   #if os() doesn't really work as its just matching the host runtime 
+//mp = "MacPinIOS"
 
 let package = Package(
     name: "MacPin",
@@ -16,6 +14,7 @@ let package = Package(
     products: [
         .library(name: "MacPin", type: .dynamic, targets: ["MacPin"]),
         .executable(name: "MacPin_static", targets: ["MacPin_static"]),
+        .executable(name: "MacPin_stub", targets: ["MacPin_stub"]),
     ],
     dependencies: [
         .package(path: "modules/WebKitPrivates"),
@@ -26,8 +25,7 @@ let package = Package(
         .package(path: "modules/UTIKit"),
     ],
     targets: [
-        .target(
-            name: "MacPin",
+        .target(name: "MacPin",
             dependencies: [
                 "WebKitPrivates",
                 "JavaScriptCorePrivates",
@@ -36,22 +34,16 @@ let package = Package(
                 "Linenoise",
                 "UTIKit",
             ],
-            exclude: excludeds,
-            swiftSettings: [
-                .unsafeFlags([
-                    "-suppress-warnings",
-                ]),
-                //.define("SAFARIDBG"),
-                //.define("DEBUG"),
-                //.define("DBGMENU"),
-                //.define("APP2JSLOG"),
-                //.define("WK2LOG"),
+            path: "Sources/\(mp)",
+            exclude: [
+                "Package.swift"
             ]
         ),
-        // somehow have a target that makes libMacPin.dylib into a .framework
         .executableTarget(
             name: "MacPin_static",
-            dependencies: ["MacPin"]
+            dependencies: [
+                .target(name: "MacPin")
+            ]
         ),
         .executableTarget(
             name: "MacPin_stub",
@@ -60,12 +52,5 @@ let package = Package(
                 .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@loader_path:@loader_path/../Frameworks"])
             ]
         ),
-
     ]
 )
-
-#if os(macOS)
-package.products.append(
-    .executable(name: "MacPin_stub", targets: ["MacPin_stub"])
-)
-#endif

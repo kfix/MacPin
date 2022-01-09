@@ -3,7 +3,7 @@ export
 #^ export all the variables
 builddir			?= build
 
-VERSION				:= 2021.0.0
+VERSION				:= 2022.0.0
 
 # 1 == link against STP.app's WebKit if its present
 STP 				?= 1
@@ -27,9 +27,9 @@ include eXcode.mk
 mk := $(firstword $(MAKEFILE_LIST))
 $(info )
 $(info [$(mk)])
-$(info )
-mp_build := $(shell $(swiftbuild) --show-bin-path)
-$(info $(platform) => $(mp_build))
+$(info SPM options: $(swiftbuild))
+spm_build := $(shell $(swiftbuild) --show-bin-path)
+$(info $(platform) => $(spm_build))
 
 appdir				:= $(outdir)/apps
 
@@ -70,16 +70,21 @@ mobileprov_team_id	?=
 
 ifeq ($(platform),macos)
 # make a jumbo framework and its stub launcher
-
-#jumbolib := $(firstword $(filter %/lib$(macpin).dylib, $(dynamics)))
+# XXX: maybe we can create .xcframeworks ?
 jumbolib := $(outdir)/Frameworks/$(macpin).framework
 # need SharedFramework https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Tasks/InstallingFrameworks.html
-jumbody := $(mp_build)/libMacPin.dylib
-lexecs := $(mp_build)/MacPin_stub
+jumbody := $(spm_build)/libMacPin.dylib
+lexecs := $(spm_build)/MacPin_stub
 
 # XXX: swiftpm does the building now
-$(jumbody) $(jumbody).dSYM $(lexecs) $(lexecs).dSYM: Sources/$(macpin)/*.swift Sources/$(macpin)/_$(platform)/*.swift modules/*/Package.swift
-	$(swiftbuild)
+$(jumbody) $(jumbody).dSYM $(lexecs) $(lexecs).dSYM: Sources/MacPin/*.swift Sources/MacPinOSX/*.swift Package.swift
+	@$(swiftbuild) --product MacPin
+	@$(swiftbuild) --product MacPin_stub
+else
+# other platforms don't use the dynamiclib+stubexe
+lexecs := $(spm_build)/MacPin_static
+$(lexecs) $(lexecs).dSYM: Sources/MacPin/*.swift Sources/MacPinIOS/*.swift Source/MacPinIOS/Package.swift
+	@$(swiftbuild) --product MacPin_static
 endif
 
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
@@ -278,9 +283,9 @@ $(appdir)/%.app/LaunchScreen.nib: templates/$(platform)/LaunchScreen.xib
 	@install -d $(dir $@)
 	ibtool --compile $@ $<
 
-$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.plist $(appdir)/%.app/Info.plist templates/$(platform)/LaunchScreen.xib $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Assets.car templates/Resources templates/Resources/* $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/lexec/$(macpin)
+$(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(outdir)/%.entitlements.plist $(appdir)/%.app/Info.plist templates/$(platform)/LaunchScreen.xib $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Assets.car templates/Resources templates/Resources/* $(appdir)/%.app/en.lproj/InfoPlist.strings $(lexecs)
 	install -d $@
-	$(patsubst %,COMMAND_MODE=legacy cp -f % $@/$*;,$(filter $(outdir)/lexec/%,$^))
+	COMMAND_MODE=legacy cp -f $(lexecs) $@/$*
 	#[ -z "$(debug)" ] || $(patsubst %,cp -RL % $@/$*.dSYM;,$(filter $(outdir)/exec/%.dSYM,$^))
 	rsync -av --exclude='Library/' $(macpin_sites)/$*/ $@
 	COMMAND_MODE=legacy cp -fRL templates/Resources/* $@/
@@ -333,8 +338,7 @@ clean: unregister
 	-rm -rf $(outdir) $(xcassets)
 
 binclean:
-	rm -rf modules/MacPin/.build
-	rm -rf $(outdir)/SwiftSupport $(outdir)/Frameworks
+	rm -rf $(outdir)/swiftpm $(outdir)/Frameworks
 
 cached:
 	-find ~/Library/Caches/$(template_bundle_id).$(APP)* ~/Library/WebKit/$(template_bundle_id).$(APP)*
