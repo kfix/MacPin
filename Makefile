@@ -5,14 +5,6 @@ builddir			?= build
 
 VERSION				:= 2022.0.0
 
-# 1 == link against STP.app's WebKit if its present
-STP 				?= 1
-# https://github.com/Homebrew/homebrew-cask-versions/commits/master/Casks/safari-technology-preview.rb
-# https://webkit.org/build-archives/
-
-# 1 == link against Safari.app's WebKit if its present
-SF					?= 1
-
 macpin				:= MacPin
 macpin_sites		?= sites
 installdir			:= ~/Applications/MacPin.localized
@@ -98,12 +90,9 @@ env += DYLD_PRINT_LIBRARIES_POST_LAUNCH=1
 
 webkitdir				?= /System/Library/Frameworks/WebKit.framework
 jscdir					?= /System/Library/Frameworks/JavaScriptCore.framework
-safaridir				?= /Applications/Safari.app
 
-safariver				:= $(shell defaults read "$(safaridir)/Contents/Info" CFBundleShortVersionString)
 webkitver				:= $(shell defaults read "$(webkitdir)/Resources/Info" CFBundleVersion)
 xcodever				:= $(shell defaults read "$(xcode)/Contents/Info" CFBundleShortVersionString)
-$(info $(safaridir) => $(safariver))
 $(info $(webkitdir) => $(webkitver))
 $(info $(xcode) => $(xcodever))
 
@@ -446,10 +435,6 @@ upload:
 	@exit 1
 endif
 
-sf_symbols:
-	symbols "$(sfframesdir)/WebKit.framework/WebKit" | less
-	symbols "$(sfframesdir)/JavaScriptCore.framework/JavaScriptCore" | less
-
 wk_symbols:
 	symbols "$(webkitdir)/Versions/A/WebKit" | less
 
@@ -459,19 +444,10 @@ jsc_symbols:
 jsc:
 	$(env) "$(jscdir)/Resources/jsc" -i
 
-stp_symbols:
-	symbols "$(stpframes)/WebKit.framework/Versions/A/WebKit" | less
-	symbols "$(stpframes)/JavaScriptCore.framework/Versions/Current/JavaScriptCore" | less
-	symbols "$(stpframes)/Safari.framework/Versions/Current/Safari" | less
-
 sim_symbols:
 	symbols /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS.simruntime/Contents/Resources/RuntimeRoot/System/Library/Frameworks/WebKit.framework/WebKit | less
 
-stp_jsc:
-	JSC_useDollarVM=1 JSC_reportCompileTimes=true JSC_logHeapStatisticsAtExit=true \
-	$(env) "$(stpframes)/JavaScriptCore.framework/Resources/jsc" -i
-
 $(V).SILENT: # enjoy the silence
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/SwiftSupport $(outdir)/Frameworks/%.framework $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist $(outdir)/Frameworks/%.framework/Versions/A/Frameworks
-.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release  %.app zip $(ZIP) upload sites/% modules/% submake_% stp_symbols stp_jsc
+.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release  %.app zip $(ZIP) upload sites/% modules/% submake_% wk_symbols jsc_symbols jsc sim_symbols
 .SUFFIXES:
