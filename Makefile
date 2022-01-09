@@ -23,9 +23,12 @@ usage help:
 	@printf '\nusage:\tmake (V=1) <target>\n\ntargets:\n%s'
 	@printf '\t%s\n' allapps reinstall uninstall test test.app sites/*
 
-platform := macos
-outdir := $(builddir)/swiftpm-$(platform)
-mp_build := $(shell cd modules/$(macpin); swift build -c release --show-bin-path)
+include eXcode.mk
+mk := $(firstword $(MAKEFILE_LIST))
+$(info )
+$(info [$(mk)])
+$(info )
+mp_build := $(shell cd modules/$(macpin); $(swiftbuild) --show-bin-path)
 $(info $(platform) => $(mp_build))
 
 appdir				:= $(outdir)/apps
@@ -77,7 +80,7 @@ lexecs := $(mp_build)/MacPinApp_osx
 # XXX: swiftpm does the building now
 $(jumbody) $(jumbody).dSYM $(lexecs) $(lexecs).dSYM: modules/$(macpin)/*.swift modules/$(macpin)/_$(platform)/*.swift
 	cd modules/$(macpin) && \
-		swift build -c release
+		$(swiftbuild)
 endif
 
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
