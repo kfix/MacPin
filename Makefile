@@ -28,7 +28,7 @@ mk := $(firstword $(MAKEFILE_LIST))
 $(info )
 $(info [$(mk)])
 $(info )
-mp_build := $(shell cd modules/$(macpin); $(swiftbuild) --show-bin-path)
+mp_build := $(shell $(swiftbuild) --show-bin-path)
 $(info $(platform) => $(mp_build))
 
 appdir				:= $(outdir)/apps
@@ -75,12 +75,11 @@ ifeq ($(platform),macos)
 jumbolib := $(outdir)/Frameworks/$(macpin).framework
 # need SharedFramework https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Tasks/InstallingFrameworks.html
 jumbody := $(mp_build)/libMacPin.dylib
-lexecs := $(mp_build)/MacPinApp_osx
+lexecs := $(mp_build)/MacPin_stub
 
 # XXX: swiftpm does the building now
-$(jumbody) $(jumbody).dSYM $(lexecs) $(lexecs).dSYM: modules/$(macpin)/*.swift modules/$(macpin)/_$(platform)/*.swift
-	cd modules/$(macpin) && \
-		$(swiftbuild)
+$(jumbody) $(jumbody).dSYM $(lexecs) $(lexecs).dSYM: Sources/$(macpin)/*.swift Sources/$(macpin)/_$(platform)/*.swift modules/*/Package.swift
+	$(swiftbuild)
 endif
 
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
