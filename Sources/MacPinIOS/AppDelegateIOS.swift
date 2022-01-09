@@ -3,7 +3,7 @@ import ObjectiveC
 import WebKitPrivates
 import Darwin
 
-//UIApplicationMain
+@main
 public class MacPinAppDelegateIOS: NSObject, MacPinAppDelegate {
 	var browserController: BrowserViewController = MobileBrowserViewController() //frame: UIScreen.mainScreen().applicationFrame)
 	let window = UIWindow(frame: UIScreen.main.bounds) // total pixels w/ rotation

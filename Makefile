@@ -83,8 +83,8 @@ $(jumbody) $(jumbody).dSYM $(lexecs) $(lexecs).dSYM: Sources/MacPin/*.swift Sour
 else
 # other platforms don't use the dynamiclib+stubexe
 lexecs := $(spm_build)/MacPin_static
-$(lexecs) $(lexecs).dSYM: Sources/MacPin/*.swift Sources/MacPinIOS/*.swift Source/MacPinIOS/Package.swift
-	@$(swiftbuild) --product MacPin_static
+$(lexecs) $(lexecs).dSYM: Sources/MacPin/*.swift Sources/MacPinIOS/*.swift Sources/MacPinIOS/Package.swift
+	@$(swiftbuild) --package-path Sources/MacPinIOS --product MacPin
 endif
 
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
