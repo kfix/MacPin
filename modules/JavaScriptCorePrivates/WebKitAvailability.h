@@ -25,9 +25,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __WebKitAvailabilityP__
-#define __WebKitAvailabilityP__
-
 #ifndef JSC_FRAMEWORK_HEADER_POSTPROCESSING_ENABLED
 // https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/postprocess-headers.sh
 
@@ -44,7 +41,6 @@
 // API_AVAILABLE
 
 #endif
-#endif /* __WebKitAvailabilityP__ */
 
 #ifdef __OBJC__
 #import <Foundation/Foundation.h>
