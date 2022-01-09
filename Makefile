@@ -82,8 +82,8 @@ endif
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
 allapps install: $(gen_apps)
 
-#zip test apirepl tabrepl wknightly stp $(gen_apps): $(lexecs)
-#doc test apirepl tabrepl test.app test.ios test_% $(appnames:%=test_%):
+test apirepl tabrepl test.app test.ios test_% $(appnames:%=test_%):
+test apirepl tabrepl test.app test.ios: | $(lexecs:%=%.dSYM)
 
 # older OSX/macOS with backported Safari.app have vendored WK/JSC frameworks
 env += DYLD_PRINT_LIBRARIES_POST_LAUNCH=1
@@ -95,8 +95,6 @@ webkitver				:= $(shell defaults read "$(webkitdir)/Resources/Info" CFBundleVers
 xcodever				:= $(shell defaults read "$(xcode)/Contents/Info" CFBundleShortVersionString)
 $(info $(webkitdir) => $(webkitver))
 $(info $(xcode) => $(xcodever))
-
-test apirepl tabrepl test.app test.ios: | $(lexecs:%=%.dSYM)
 
 ifeq (iphonesimulator, $(sdk))
 codesign :=
