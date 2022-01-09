@@ -7,7 +7,7 @@
 const {app, BrowserWindow, WebView} = require('@MacPin');
 
 let slackTab, slack = {
-	url: 'https://slack.com/signin', // show workspace picker on open
+	url: 'https://slack.com/get-started', // show workspace picker on open
 	authorizedOriginsForNotifications: [
 		'https://app.slack.com',
 		'https://app.slack.com:443'
@@ -58,14 +58,9 @@ app.on('receivedRedirectionToURL', (url, tab) => {
 				// https://support.google.com/a/answer/60224#userSSO
 				// process starts w/ https://accounts.google.com/ServiceLogin(Auth) and ends w/ /MergeSession
 				tab.allowAnyRedir = true;
-			} else if (url.endsWith(".slack.com//signin?ssb_success=1")) {
-				tab.allowAnyRedir = false; // we are back home
-				// if login was success, navigate to team page
-				host = url.split('/')[2]
-				let redir = `${scheme}://${host}/`
-				console.log(`app redirecting from ${url} to ${redir}!`);
-				tab.loadURL(redir);
-				return true; //tell webkit that we handled this
+			} else if (url.startsWith("https://app.slack.com/client/")) {
+				// we've been sent back to a workspace, so re-disable redirections
+				tab.allowAnyRedir = false;
 			}
 		case "about":
 		case "file":
@@ -76,7 +71,7 @@ app.on('receivedRedirectionToURL', (url, tab) => {
 });
 
 let clicker = (url, tab, mainFrame) => {
-	console.log(`navigation-delegating ${url} ...`);
+	console.log(`navigation-delegating from '${tab.url}' => '${url}' ...`);
 	var comps = url.split('/'),
 		scheme = comps.shift();
 	comps.shift();
@@ -85,13 +80,21 @@ let clicker = (url, tab, mainFrame) => {
 	switch (scheme) {
 		case "http:":
 		case "https:":
+			if (tab.url.endsWith("/slack.com/signin") || (
+				tab.url.endsWith("slack.com/get-started#/landing") && url.endsWith(".slack.com/?")
+			)){
+				console.log(`${url} clicked from the profile picker, absorbing popup`);
+				tab.loadURL(url);
+				return true;
+			}
 			if (alwaysAllowRedir) break; //user override
 			if ((host == "slack-redir.net") && path.startsWith("link?url=")) {
 				// stripping obnoxious redirector
 				let redir = decodeURIComponent(path.slice(9));
 				app.openURL(redir); //pop all external links to system browser
 				return true; //tell webkit to do nothing
-			} else if ((host != "slack.com")
+			}
+			if ((host != "slack.com")
 				&& !host.endsWith('.slack.com')
 
 				// CDNs for unfurled/inline media shares
@@ -116,10 +119,6 @@ let clicker = (url, tab, mainFrame) => {
 				&& !host.endsWith('.duosecurity.com')
 			) {
 				app.openURL(url);
-				return true;
-			} else if (tab.url.endsWith("/slack.com/signin")) {
-				console.log(`${url} clicked from the profile picker, absorbing popup`);
-				tab.loadURL(url);
 				return true;
 			}
 		default:
