@@ -22,7 +22,7 @@ arch				?= $(shell uname -m)
 target_ver_macos	?= 10.15.04
 # can we get the running version, if not pre-set?
 target_macos		?= apple-macosx$(target_ver_macos)
-target_ver_ios		?= 12.0
+target_ver_ios		?= 13.0
 target_ios			?= apple-ios$(target_ver_ios)
 target				?= $(target_macos)
 

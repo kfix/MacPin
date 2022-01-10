@@ -74,7 +74,7 @@ $(jumbody) $(jumbody).dSYM $(lexecs) $(lexecs).dSYM: Sources/MacPin/*.swift Sour
 	@$(swiftbuild) --product MacPin_stub
 else
 # other platforms don't use the dynamiclib+stubexe
-lexecs := $(spm_build)/MacPin_static
+lexecs := $(spm_build)/MacPin
 $(lexecs) $(lexecs).dSYM: Sources/MacPin/*.swift Sources/MacPinIOS/*.swift Sources/MacPinIOS/Package.swift
 	@$(swiftbuild) --package-path Sources/MacPinIOS --product MacPin
 endif
