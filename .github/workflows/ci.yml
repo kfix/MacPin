@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v1
       - name: Build All Apps
         run: |
-          sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "insert into access (service, client, client_type, allowed, prompt_count, indirect_object_identifier_type, indirect_object_identifier) values ('kTCCServiceAppleEvents', '/bin/bash', 1, 2, 1, 0, 'com.apple.imageevents')"
+          sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR IGNORE INTO access VALUES("'kTCCServiceAppleEvents','/bin/bash',1,2,0,1,NULL,NULL,0,'com.apple.imageevents',NULL,NULL,1591532620")"
           make allapps
         env:
           DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@v1
       - name: Build All Apps
         run: |
-          sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "insert into access (service, client, client_type, allowed, prompt_count, indirect_object_identifier_type, indirect_object_identifier) values ('kTCCServiceAppleEvents', '/bin/bash', 1, 2, 1, 0, 'com.apple.imageevents')"
+          sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR IGNORE INTO access VALUES("'kTCCServiceAppleEvents','/bin/bash',1,2,0,1,NULL,NULL,0,'com.apple.imageevents',NULL,NULL,1591532620")"
           make allapps
         env:
           DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
