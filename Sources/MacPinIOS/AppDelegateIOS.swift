@@ -17,10 +17,10 @@ public class MacPinAppDelegateIOS: NSObject, MacPinAppDelegate {
 
 	public func application(_ application: UIApplication, willFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool { // state not restored, UI not presented
 		application.registerUserNotificationSettings(UIUserNotificationSettings(types: [UIUserNotificationType.sound, UIUserNotificationType.alert, UIUserNotificationType.badge], categories: nil))
-
+		AppScriptRuntime.shared.setBrowserWindowClass(MobileBrowserViewController.self)
 		if !AppScriptRuntime.shared.loadMainScript() { // load main.js, if present
 			self.browserController.extend(AppScriptRuntime.shared.exports) // expose our default browser instance early on, because legacy
-			BrowserController.self.exportSelf(AppScriptRuntime.shared.context.globalObject) // & the type for self-setup
+			MobileBrowserViewController.self.exportSelf(AppScriptRuntime.shared.context.globalObject) // & the type for self-setup
 			AppScriptRuntime.shared.exports.setObject(MPWebView.self, forKeyedSubscript: "WebView" as NSString) // because legacy
 			AppScriptRuntime.shared.exports.setObject("", forKeyedSubscript: "launchedWithURL" as NSString)
 			AppScriptRuntime.shared.loadSiteApp() // load app.js, if present

@@ -42,6 +42,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 			NSWindow.allowsAutomaticWindowTabbing = false
 		}
 
+		AppScriptRuntime.shared.setBrowserWindowClass(BrowserViewControllerOSX.self)
 		super.init()
 	}
 
@@ -222,7 +223,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 		warn()
 		if !AppScriptRuntime.shared.loadMainScript() { // load main.js, if present
 			self.browserController.extend(AppScriptRuntime.shared.exports) // expose our default browser instance early on, because legacy
-			BrowserController.self.exportSelf(AppScriptRuntime.shared.context.globalObject) // & the type for self-setup
+			BrowserViewControllerOSX.self.exportSelf(AppScriptRuntime.shared.context.globalObject) // & the type for self-setup
 			AppScriptRuntime.shared.exports.setObject(MPWebView.self, forKeyedSubscript: "WebView" as NSString) // because legacy
 			AppScriptRuntime.shared.exports.setObject("", forKeyedSubscript: "launchedWithURL" as NSString)
 			AppScriptRuntime.shared.loadSiteApp() // load app.js, if present

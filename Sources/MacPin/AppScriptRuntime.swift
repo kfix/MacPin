@@ -570,6 +570,8 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	static let legacyAppFile = "app" // => site/app.js
 	static let mainScriptFile = "main" // => site/main.js
 	static let shared = AppScriptRuntime() //global: AppScriptRuntime.legacyGlobal) // create & export the singleton
+	/// XXX: the per-platform apps should really init & manage this themselves instead of using this singleton that
+	//   cyclically depends on the per-platform BrowserController typealiases (see the nativeModules)
 
 	enum ScriptStates {
 		case Unloaded, Promised, Evaluated, Errored
@@ -740,9 +742,6 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 			// https://electronjs.org/docs/api/app
 			"app":				JSValue(object: self, in: context)
 			//,"app2":			self // crash bandicoot (because of JSC GC?)s
-			// https://electronjs.org/docs/api/browser-window
-			,"BrowserWindow":	BrowserController.self.wrapSelf(context)
-			// https://electronjs.org/docs/api/browser-view
 			,"WebView":			JSValue(object: MPWebView.self, in: context)
 		]
 
@@ -1384,6 +1383,10 @@ class AppScriptRuntime: NSObject, AppScriptExports  {
 	}
 
 	var messageHandlers: [String: [JSValue]] = [:]
+	func setBrowserWindowClass(_ inclass: BrowserViewController.Type) {
+			nativeModules["BrowserWindow"] = inclass.wrapSelf(context, "Browser")
+			// https://electronjs.org/docs/api/browser-view
+	}
 }
 
 enum AppScriptReactions: CustomStringConvertible {

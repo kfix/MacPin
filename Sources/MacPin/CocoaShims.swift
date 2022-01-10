@@ -22,7 +22,6 @@ public typealias View = NSView
 public typealias ViewController = NSViewController
 public typealias Application = NSApplication
 public typealias ApplicationDelegate = NSApplicationDelegate
-public typealias MacPinAppDelegatePlatform = MacPinAppDelegateOSX
 
 #elseif os(iOS)
 
@@ -35,6 +34,5 @@ public typealias View = UIView
 public typealias ViewController = UIViewController
 public typealias Application = UIApplication
 public typealias ApplicationDelegate = UIApplicationDelegate
-public typealias MacPinAppDelegatePlatform = MacPinAppDelegateIOS
 
 #endif

@@ -45,6 +45,7 @@ import AppKit
 #endif
 	//var children: [ViewController] { get set }
 	static func exportSelf(_ mountObj: JSValue, _ name: String)
+	static func wrapSelf(_ context: JSContext, _ name: String) -> JSValue
 }
 
 // this.tabs: Proxy wrapper actively assigns `fn()`s results back to their originating
@@ -138,9 +139,3 @@ func g_browserHelperJS(_ className: String) -> String {
 		})
 	"""
 }
-
-#if os(OSX)
-typealias BrowserController = BrowserViewControllerOSX
-#elseif os(iOS)
-typealias BrowserController = MobileBrowserViewController
-#endif
