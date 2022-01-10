@@ -80,9 +80,11 @@ let clicker = (url, tab, mainFrame) => {
 	switch (scheme) {
 		case "http:":
 		case "https:":
-			if (tab.url.endsWith("/slack.com/signin") || (
-				tab.url.endsWith("slack.com/get-started#/landing") && url.endsWith(".slack.com/?")
-			)){
+			if (tab.url.endsWith("slack.com/signin") ||
+				tab.url.endsWith("slack.com/signin#/signin") ||
+				tab.url.endsWith("slack.com/get-started#/landing") ||
+				tab.url.endsWith("slack.com/get-started#/createnew")
+			) {
 				console.log(`${url} clicked from the profile picker, absorbing popup`);
 				tab.loadURL(url);
 				return true;
