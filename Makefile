@@ -402,8 +402,7 @@ tag:
 zip: $(ZIP)
 $(ZIP): .zipignore
 	[ ! -f $(ZIP) ] || rm $(ZIP)
-	zip -9 -r $@ extras/*.workflow --exclude @extras/.zipignore
-	cd $(appdir) && zip -g -ws -r $@ *.app --exclude @$(realpath $+)
+	cd $(appdir) && tar -v -c -f $@ -X $(realpath $+) *.app
 # zip can't do head-to-tail cross-file dedup ... so astoundingly poor non-compression of all the duplicate SwiftSupport/*s
 
 # xcrun altool --notarize-app --primary-bundle-id {APP_BUNDLE_ID} -u {APPLE_ID} -f YOUR_APP.zip  -p "@keychain:Application Loader: {APPLE_ID}"
@@ -414,6 +413,7 @@ $(TXZ): .zipignore
 	[ ! -f $(TXZ) ] || rm $(TXZ)
 	cd $(appdir) && tar -v -c --xz -f $@ -X $(realpath $+) *.app
 # Archive Utility after 10.10 has a bug with unpacking these ...
+# fixed in Big Sur (at least)
 
 dmg: $(DMG)
 $(DMG):
@@ -447,5 +447,5 @@ sim_symbols:
 
 $(V).SILENT: # enjoy the silence
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/SwiftSupport $(outdir)/Frameworks/%.framework $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist $(outdir)/Frameworks/%.framework/Versions/A/Frameworks
-.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release  %.app zip $(ZIP) upload sites/% modules/% submake_% wk_symbols jsc_symbols jsc sim_symbols
+.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release  %.app zip $(ZIP) txz $(TXZ) upload sites/% modules/% submake_% wk_symbols jsc_symbols jsc sim_symbols
 .SUFFIXES:
