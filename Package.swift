@@ -1,6 +1,6 @@
 // swift-tools-version:5.4
 import PackageDescription
-
+import Foundation
 let package = Package(
     name: "MacPin",
     //platforms: [.macOS(.v10_15)],
@@ -32,6 +32,27 @@ let package = Package(
             name: "JavaScriptCorePrivates",
             path: "modules/JavaScriptCorePrivates"
         ),
+    ]
+)
+if let iosvar = ProcessInfo.processInfo.environment["MACPIN_IOS"], !iosvar.isEmpty {
+    package.platforms = [.iOS(.v13)]
+    package.products = [ .executable(name: "MacPin", targets: ["MacPin"]) ]
+    package.targets.append(
+        .executableTarget(
+            name: "MacPin",
+            dependencies: [
+                "WebKitPrivates",
+                "JavaScriptCorePrivates",
+                "ViewPrivates",
+                "UserNotificationPrivates",
+                "Linenoise",
+                "UTIKit",
+            ],
+            path: "Sources/MacPinIOS"
+        )
+    )
+} else {
+    package.targets.append(contentsOf: [
         .target(name: "MacPin",
             dependencies: [
                 "WebKitPrivates",
@@ -55,6 +76,6 @@ let package = Package(
             linkerSettings: [
                 .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@loader_path:@loader_path/../Frameworks"])
             ]
-        ),
-    ]
-)
+        )
+    ])
+}
