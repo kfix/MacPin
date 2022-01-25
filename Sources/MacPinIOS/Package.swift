@@ -8,14 +8,26 @@ let package = Package(
         .executable(name: "MacPin", targets: ["MacPin"]),
     ],
     dependencies: [
-        .package(path: "../../modules/WebKitPrivates"),
-        .package(path: "../../modules/ViewPrivates"),
-        .package(path: "../../modules/UserNotificationPrivates"),
-        .package(path: "../../modules/JavaScriptCorePrivates"),
         .package(path: "../../modules/Linenoise"),
         .package(path: "../../modules/UTIKit"),
     ],
     targets: [
+        .systemLibrary(
+            name: "WebKitPrivates",
+            path: "modules/WebKitPrivates"
+        ),
+        .systemLibrary(
+            name: "ViewPrivates",
+            path: "modules/ViewPrivates"
+        ),
+        .systemLibrary(
+            name: "UserNotificationPrivates",
+            path: "modules/UserNotificationPrivates"
+        ),
+        .systemLibrary(
+            name: "JavaScriptCorePrivates",
+            path: "modules/JavaScriptCorePrivates"
+        ),
         .executableTarget(name: "MacPin",
             dependencies: [
                 "WebKitPrivates",
@@ -27,7 +39,8 @@ let package = Package(
             ],
             path: "./",
             exclude: [
-                "Package.swift"
+                "Package.swift",
+                "./modules"
             ]
         ),
     ]

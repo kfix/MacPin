@@ -12,14 +12,26 @@ let package = Package(
         .executable(name: "MacPin_stub", targets: ["MacPin_stub"]),
     ],
     dependencies: [
-        .package(path: "modules/WebKitPrivates"),
-        .package(path: "modules/ViewPrivates"),
-        .package(path: "modules/UserNotificationPrivates"),
-        .package(path: "modules/JavaScriptCorePrivates"),
         .package(path: "modules/Linenoise"),
         .package(path: "modules/UTIKit"),
     ],
     targets: [
+        .systemLibrary(
+            name: "WebKitPrivates",
+            path: "modules/WebKitPrivates"
+        ),
+        .systemLibrary(
+            name: "ViewPrivates",
+            path: "modules/ViewPrivates"
+        ),
+        .systemLibrary(
+            name: "UserNotificationPrivates",
+            path: "modules/UserNotificationPrivates"
+        ),
+        .systemLibrary(
+            name: "JavaScriptCorePrivates",
+            path: "modules/JavaScriptCorePrivates"
+        ),
         .target(name: "MacPin",
             dependencies: [
                 "WebKitPrivates",
