@@ -132,14 +132,8 @@ func imageExplode(src: NSImage, outdir: String, options: IconOptions) -> Array<[
             }
             // do rescaling
             var imageName = options.basename
-            guard let sizeVal = options.sizes[size] else {
-                continue
-            }
-            if Int(sizeVal) != nil {
-                imageName.append("\(sizeVal)x\(sizeVal)")
-            } else {
-                imageName.append(sizeVal)
-            }
+            let sizeVal = options.sizes[size] ?? "\(size)x\(size)"
+            imageName.append(sizeVal)
             if (scale > 1) {
                 imageName.append("@\(scale)x")
             }
@@ -162,7 +156,7 @@ func imageExplode(src: NSImage, outdir: String, options: IconOptions) -> Array<[
             guard let data = bmp.representation(using: NSBitmapImageRep.FileType.png, properties: [.compressionFactor: 0.85]) else { continue }
             try? data.write(to: imagePath.fileURL)
             images.append([
-                "filename": imageName,
+                "filename": imagePath.lastPathComponent,
                 "idiom": options.idiom.rawValue,
                 "size": "\(size)x\(size)",
                 "scale": "\(scale)x"
