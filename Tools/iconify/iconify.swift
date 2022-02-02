@@ -48,7 +48,7 @@ struct RuntimeError: Error, CustomStringConvertible {
 // https://github.com/raphaelhanneken/iconizer
 // https://github.com/raphaelhanneken/iconizer/tree/master/Iconizer/Models
 
-enum IconIdiom {
+enum IconIdiom: String {
     case mac
     case universal
 }
@@ -109,8 +109,53 @@ var imagesetOpts = IconOptions(
 func imageExplode(src: NSImage, outdir: String, options: IconOptions) -> Array<[String:String]> {
     warn("generating \(outdir)")
     // mkdir outdir
+    try? FileManager.default.createDirectory(atPath: outdir, withIntermediateDirectories: true)
     var images: Array<[String:String]> = []
-
+    for size in options.sizes.keys.sorted() {
+        for scale in options.scales {
+            let pxs = CGFloat(size * scale)
+            if !options.scaleUp && (src.size.width < pxs) {
+                continue
+            }
+            // do rescaling
+            var imageName = options.basename
+            guard let sizeVal = options.sizes[size] else {
+                continue
+            }
+            if Int(sizeVal) != nil {
+                imageName.append("\(sizeVal)x\(sizeVal)")
+            } else {
+                imageName.append(sizeVal)
+            }
+            if (scale > 1) {
+                imageName.append("@\(scale)x")
+            }
+            let imagePath = outdir + "/" + imageName + ".png"
+            warn("\(size) @ \(scale)x => \(imageName) => \(imagePath)")
+            let newImage = NSImage(size: NSMakeSize(pxs, pxs))
+            newImage.lockFocus()
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current?.imageInterpolation = .high
+            src.draw(
+                in: NSMakeRect(0, 0, pxs, pxs),
+                from: NSZeroRect,
+                operation: .sourceOver,
+                fraction: 1.0
+            )
+            newImage.unlockFocus()
+            NSGraphicsContext.restoreGraphicsState()
+            guard let newTiff = newImage.tiffRepresentation, let bmp = NSBitmapImageRep(data: newTiff) else { continue }
+            bmp.hasAlpha = true
+            guard let data = bmp.representation(using: NSBitmapImageRep.FileType.png, properties: [.compressionFactor: 0.85]) else { continue }
+            try? data.write(to: imagePath.fileURL)
+            images.append([
+                "filename": imageName,
+                "idiom": options.idiom.rawValue,
+                "size": "\(size)x\(size)",
+                "scale": "\(scale)x"
+            ])
+        }
+    }
     return images
 }
 
@@ -163,14 +208,13 @@ struct Iconify: ParsableCommand {
                     ],
                 ]
                 info["images"] = imagesinfo
-                let manifest = "outputPath/Contents.json"
+                let manifest = "\(outputPath)/Contents.json"
                 guard let jsonString = info.toJSONString() else {
                     throw RuntimeError("could not serialize JSON for \(manifest)")
                 }
-                warn("============= \(manifest) ==========\n\(jsonString)")
-                // write strJson to manifest
+                //warn("============= \(manifest) ==========\n\(jsonString)")
+                try? jsonString.write(to: manifest.fileURL, atomically: true, encoding: String.Encoding.utf8)
         }
-        throw RuntimeError("not finished!")
     }
 }
 // vim: filetype=swift
