@@ -106,6 +106,19 @@ var imagesetOpts = IconOptions(
     scales: []
 )
 
+func setScalesFromImageSize(src: NSImage, options: inout IconOptions) {
+    // find the scales that can be evenly-derived from the source image's nativeSize
+    let nativeSize = src.size.width
+    for scale in [3, 2, 1] {
+        if ((nativeSize.truncatingRemainder(dividingBy: CGFloat(scale))) == 0) {
+            let pts = Int(nativeSize / CGFloat(scale))
+            options.sizes[pts] = "\(pts)"
+            for i in 1...scale { options.scales.append(i) }
+            break
+        }
+    }
+}
+
 func imageExplode(src: NSImage, outdir: String, options: IconOptions) -> Array<[String:String]> {
     warn("generating \(outdir)")
     // mkdir outdir
@@ -191,7 +204,7 @@ struct Iconify: ParsableCommand {
             case .imageset:
                 outputPath = "\(xcassetPath)/\(iconName).imageset"
                 iconOptions = imagesetOpts
-                //setScalesFromImageSize(sourceImage, opts)
+                setScalesFromImageSize(src: sourceImage, options: &iconOptions)
         }
         let imagesinfo = imageExplode(src: sourceImage, outdir: outputPath, options: iconOptions)
 
