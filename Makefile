@@ -133,13 +133,13 @@ GH_RELEASE_JSON = '{"tag_name": "v$(VERSION)","target_commitish": "master","name
 #####
 
 $(xcassets)/%.xcassets: $(macpin_sites)/%/icon.png
-	osascript -l JavaScript iconify.jxa $< $@ $(icontypes)
+	$(swiftrun_mac) iconify $< $@ $(icontypes)
 
 $(xcassets)/%.xcassets: templates/xcassets/$(platform)/%/*.png
-	for i in $^; do osascript -l JavaScript iconify.jxa $$i $@ imageset; done
+	for i in $^; do $(swiftrun_mac) iconify $$i $@ imageset; done
 
 $(xcassets)/%.xcassets: templates/xcassets/%/*.png
-	for i in $^; do osascript -l JavaScript iconify.jxa $$i $@ imageset; done
+	for i in $^; do $(swiftrun_mac) iconify.jxa $$i $@ imageset; done
 
 #$(appdir): ; install -d $@
 

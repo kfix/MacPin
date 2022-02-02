@@ -14,7 +14,7 @@ sdks_macos			?= macosx
 sdks_ios			?= iphoneos iphonesimulator
 sdk					?= macosx
 
-archs_macosx		?= x86_64
+archs_macosx		?= x86_64 arm64
 archs_iphonesimulator	?= $(archs_macosx)
 archs_iphoneos		?= arm64
 arch				?= $(shell uname -m)
@@ -34,7 +34,7 @@ target := $(target_ios)
 endif
 
 outdir				:= $(builddir)/$(sdk)-$(arch)-$(target_$(platform))
-
+outdir_mac			:= $(builddir)/macosx-$(arch)-$(target_macos)
 #-> platform, sdk, arch, target
 #$(info $(0) $(1) $(2) $(3) $(4))
 define REMAKE_template
@@ -83,3 +83,6 @@ swiftbuild			:= swift build --configuration release \
 	--build-path $(outdir)/swiftpm \
 	-Xswiftc "-sdk" -Xswiftc $(sdkpath) \
 	-Xswiftc "-target" -Xswiftc $(arch)-$(target_$(platform))
+
+swiftrun_mac		:= swift run --configuration release \
+	--build-path $(outdir_mac)/swiftpm
