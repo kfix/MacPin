@@ -44,10 +44,6 @@ struct RuntimeError: Error, CustomStringConvertible {
     }
 }
 
-// Idearrrs:
-// https://github.com/raphaelhanneken/iconizer
-// https://github.com/raphaelhanneken/iconizer/tree/master/Iconizer/Models
-
 enum IconIdiom: String {
     case mac
     case universal
@@ -121,7 +117,6 @@ func setScalesFromImageSize(src: NSImage, options: inout IconOptions) {
 
 func imageExplode(src: NSImage, outdir: String, options: IconOptions) -> Array<[String:String]> {
     warn("generating \(outdir)")
-    // mkdir outdir
     try? FileManager.default.createDirectory(atPath: outdir, withIntermediateDirectories: true)
     var images: Array<[String:String]> = []
     for size in options.sizes.keys.sorted() {
@@ -164,57 +159,57 @@ func imageExplode(src: NSImage, outdir: String, options: IconOptions) -> Array<[
 struct Iconify: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "generate an .icns, .iconset, .xcasset, and .car from a single big bitmap icon.")
 
-    @Flag(help: "type of icons to be generated in the xcassets dir")
-    var outputType: OutputType
-    // default to imageset
+    @Flag(help: "types of icons to generate in the xcassetdir")
+    var outputTypes: [OutputType]
 
     @Argument(help: "path of the source .png file")
     var sourcePath: String
 
     @Argument(help: "path of the output .xcassets directory")
     var xcassetPath: String
-    // default to sourcePath - ext + .xcassets
 
     mutating func run() throws {
         let iconName = sourcePath.basename
         guard let sourceImage = NSImage(contentsOfFile: sourcePath) else {
             throw RuntimeError("\(sourcePath) is unparseable as an NSImage")
         }
-        var outputPath: String
-        var iconOptions: IconOptions
-        switch (outputType) {
-            case .appiconset:
-                outputPath = "\(xcassetPath)/AppIcon.appiconset"
-                iconOptions = appIconsetOpts
-            case .iconset:
-                outputPath = "\(xcassetPath)/Icon.iconset"
-                iconOptions = iconsetOpts
-            case .imageset:
-                outputPath = "\(xcassetPath)/\(iconName).imageset"
-                iconOptions = imagesetOpts
-                setScalesFromImageSize(src: sourceImage, options: &iconOptions)
-        }
-        let imagesinfo = imageExplode(src: sourceImage, outdir: outputPath, options: iconOptions)
+        for outputType in outputTypes {
+            var outputPath: String
+            var iconOptions: IconOptions
+            switch (outputType) {
+                case .appiconset:
+                    outputPath = "\(xcassetPath)/AppIcon.appiconset"
+                    iconOptions = appIconsetOpts
+                case .iconset:
+                    outputPath = "\(xcassetPath)/Icon.iconset"
+                    iconOptions = iconsetOpts
+                case .imageset:
+                    outputPath = "\(xcassetPath)/\(iconName).imageset"
+                    iconOptions = imagesetOpts
+                    setScalesFromImageSize(src: sourceImage, options: &iconOptions)
+            }
+            let imagesinfo = imageExplode(src: sourceImage, outdir: outputPath, options: iconOptions)
 
-        switch (outputType) {
-            case .iconset:
-                // OSX icon, needs nothing
-                break;
-            case .appiconset, .imageset:
-                // write imagesinfo
-                var info: [String:Any] = [
-                    "info": [
-                        "version": 1,
-                        "author": "iconify"
-                    ],
-                ]
-                info["images"] = imagesinfo
-                let manifest = "\(outputPath)/Contents.json"
-                guard let jsonString = info.toJSONString() else {
-                    throw RuntimeError("could not serialize JSON for \(manifest)")
-                }
-                //warn("============= \(manifest) ==========\n\(jsonString)")
-                try? jsonString.write(to: manifest.fileURL, atomically: true, encoding: String.Encoding.utf8)
+            switch (outputType) {
+                case .iconset:
+                    // OSX icon, needs nothing
+                    break;
+                case .appiconset, .imageset:
+                    // write imagesinfo
+                    var info: [String:Any] = [
+                        "info": [
+                            "version": 1,
+                            "author": "iconify"
+                        ],
+                    ]
+                    info["images"] = imagesinfo
+                    let manifest = "\(outputPath)/Contents.json"
+                    guard let jsonString = info.toJSONString() else {
+                        throw RuntimeError("could not serialize JSON for \(manifest)")
+                    }
+                    //warn("============= \(manifest) ==========\n\(jsonString)")
+                    try? jsonString.write(to: manifest.fileURL, atomically: true, encoding: String.Encoding.utf8)
+            }
         }
     }
 }
