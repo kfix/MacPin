@@ -126,9 +126,9 @@ endif
 LAST_TAG	 != git describe --abbrev=0 --tags
 USER		 := kfix
 REPO		 := MacPin
-ZIP			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch)-$(VERSION).zip
-TXZ			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch)-$(VERSION).tar.xz
-DMG			 := $(realpath $(outdir))/$(REPO)-$(platform)-$(arch)-$(VERSION).dmg
+ZIP			 := $(outdir)/$(REPO)-$(platform)-$(arch)-$(VERSION).zip
+TXZ			 := $(outdir)/$(REPO)-$(platform)-$(arch)-$(VERSION).tar.xz
+DMG			 := $(outdir)/$(REPO)-$(platform)-$(arch)-$(VERSION).dmg
 GH_RELEASE_JSON = '{"tag_name": "v$(VERSION)","target_commitish": "master","name": "v$(VERSION)","body": "MacPin $(plaform) $(arch) build of version $(VERSION)","draft": false, "prerelease": true}'
 #####
 
@@ -402,22 +402,31 @@ tag:
 zip: $(ZIP)
 $(ZIP): .zipignore
 	[ ! -f $(ZIP) ] || rm $(ZIP)
-	cd $(appdir) && tar -v -c -f $@ -X $(realpath $+) *.app
+	tar -v -C $(appdir) -c -f $@ -X $(realpath $+) .
+
+where-zip:
+	$(info $(ZIP))
+
 # zip can't do head-to-tail cross-file dedup ... so astoundingly poor non-compression of all the duplicate SwiftSupport/*s
 
 # xcrun altool --notarize-app --primary-bundle-id {APP_BUNDLE_ID} -u {APPLE_ID} -f YOUR_APP.zip  -p "@keychain:Application Loader: {APPLE_ID}"
 # xcrun stapler staple YOUR_APP.zip
 
+where-txz:
+	$(info $(TXZ))
+
 txz: $(TXZ)
 $(TXZ): .zipignore
 	[ ! -f $(TXZ) ] || rm $(TXZ)
-	cd $(appdir) && tar -v -c --xz -f $@ -X $(realpath $+) *.app
+	tar -v -C $(appdir) -c --xz -f $@ -X $(realpath $+) .
 # Archive Utility after 10.10 has a bug with unpacking these ...
 # fixed in Big Sur (at least)
 
 dmg: $(DMG)
 $(DMG):
 	hdiutil create -srcfolder "$(appdir)" -format UDZO -imagekey zlib-level=9 "$@" -volname "$(macpin) $(VERSION)" -scrub -quiet
+where-dmg:
+	$(info $(DMG))
 
 release: clean tag allapps $(ZIP)
 ifneq ($(GITHUB_ACCESS_TOKEN),)
@@ -445,7 +454,10 @@ jsc:
 sim_symbols:
 	symbols /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS.simruntime/Contents/Resources/RuntimeRoot/System/Library/Frameworks/WebKit.framework/WebKit | less
 
+where-out:
+	$(info $(outdir))
+
 $(V).SILENT: # enjoy the silence
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/SwiftSupport $(outdir)/Frameworks/%.framework $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist $(outdir)/Frameworks/%.framework/Versions/A/Frameworks
-.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release  %.app zip $(ZIP) txz $(TXZ) upload sites/% modules/% submake_% wk_symbols jsc_symbols jsc sim_symbols
+.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release  %.app zip $(ZIP) txz $(TXZ) upload sites/% modules/% submake_% wk_symbols jsc_symbols jsc sim_symbols where-txz where-zip where-dmg where-out
 .SUFFIXES:
