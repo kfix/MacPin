@@ -19,7 +19,7 @@ archs_iphonesimulator	?= $(archs_macosx)
 archs_iphoneos		?= arm64
 arch				?= $(shell uname -m)
 
-target_ver_macos	?= 10.15.04
+target_ver_macos	?= 11.6
 # can we get the running version, if not pre-set?
 target_macos		?= apple-macosx$(target_ver_macos)
 target_ver_ios		?= 13.0
