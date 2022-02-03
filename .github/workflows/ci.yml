@@ -1,11 +1,9 @@
 name: CI
-on: workflow_dispatch
-## XXX: manually CI trigger for now, because we only get 200 mins of MacOS CI time per month!
-## on:
-##   push:
-##     branches: [main]
-##   pull_request:
-##     branches: [main]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   macos_big_sur:
