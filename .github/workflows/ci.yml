@@ -21,8 +21,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v1
+      - name: Get build paths
+        id: getpaths
+        run: |
+          echo ::set-output name=OUT_PATH::$(make where-out 2>/dev/null | tail -n1)
+          echo ::set-output name=TXZ_PATH::$(make where-txz 2>/dev/null | tail -n1)
       - name: Build All Apps
         run: |
           make allapps
         env:
           DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
+      - name: Create Package
+        run: |
+          make txz
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: allapps.tar.xz
+          path: ${{ steps.getpaths.outputs.TXZ_PATH }}
