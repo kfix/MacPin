@@ -10,10 +10,12 @@ let package = Package(
         .library(name: "MacPin", type: .dynamic, targets: ["MacPin"]),
         .executable(name: "MacPin_static", targets: ["MacPin_static"]),
         .executable(name: "MacPin_stub", targets: ["MacPin_stub"]),
+        .executable(name: "iconify", targets: ["iconify"]),
     ],
     dependencies: [
         .package(path: "modules/Linenoise"),
         .package(path: "modules/UTIKit"),
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
     ],
     targets: [
         .systemLibrary(
@@ -53,6 +55,13 @@ if let iosvar = ProcessInfo.processInfo.environment["MACPIN_IOS"], !iosvar.isEmp
     )
 } else {
     package.targets.append(contentsOf: [
+        .executableTarget(
+            name: "iconify",
+            dependencies: [
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ],
+            path: "Tools/iconify"
+        ),
         .target(name: "MacPin",
             dependencies: [
                 "WebKitPrivates",

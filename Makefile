@@ -33,12 +33,12 @@ gen_apps			= $(patsubst $(macpin_sites)/%,$(appdir)/%.app,$(wildcard $(macpin_si
 
 template_bundle_id	:= com.github.kfix.MacPin
 xcassets			:= $(builddir)/xcassets/$(platform)
-icontypes			:= imageset
+icontypes			:= --imageset
 
 ifeq ($(platform),macos)
-icontypes			+= iconset
+icontypes			+= --iconset
 else
-icontypes			+= appiconset
+icontypes			+= --appiconset
 endif
 
 # http://www.objc.io/issue-17/inside-code-signing.html
@@ -133,13 +133,13 @@ GH_RELEASE_JSON = '{"tag_name": "v$(VERSION)","target_commitish": "master","name
 #####
 
 $(xcassets)/%.xcassets: $(macpin_sites)/%/icon.png
-	osascript -l JavaScript iconify.jxa $< $@ $(icontypes)
+	$(swiftrun_mac) iconify $(icontypes) $< $@
 
 $(xcassets)/%.xcassets: templates/xcassets/$(platform)/%/*.png
-	for i in $^; do osascript -l JavaScript iconify.jxa $$i $@ imageset; done
+	for i in $^; do $(swiftrun_mac) iconify --imageset $$i $@; done
 
 $(xcassets)/%.xcassets: templates/xcassets/%/*.png
-	for i in $^; do osascript -l JavaScript iconify.jxa $$i $@ imageset; done
+	for i in $^; do $(swiftrun_mac) iconify --imageset $$i $@; done
 
 #$(appdir): ; install -d $@
 
