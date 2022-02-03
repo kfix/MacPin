@@ -15,7 +15,7 @@ $ du -hs build/macosx-x86_64-apple-macosx10.13/apps/{Slack,MacPin}.app/
 ```
 
 ## Project Status
-Uses swift 5 & WKWebView.
+Uses swift 5.4 & WKWebView.
 `sites/**/main.js` tries to support some Electron idioms.  
 * federation of the applet packaging using ES6 modules [is being explored](https://github.com/kfix/MacPin/issues/31)
 
@@ -96,8 +96,7 @@ app.on('AppFinishedLaunching', function() {
 ```
 
 ## Hacking MacPin
-Building `main` branch requires macOS 11 "Big Sur" with Xcode 12.
-* The built apps *should* be compatible Catalina/10.15 but there is a bug atm preventing compiling down that far.
+Building `main` branch requires macOS 11 "Big Sur" with Xcode 12.5+.
 
 All other branches are obsolete & archived for users locked on older macOS (hardware),  
 but they will recieve no updates.  
