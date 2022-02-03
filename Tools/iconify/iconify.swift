@@ -126,8 +126,8 @@ func imageExplode(src: NSImage, outdir: String, options: IconOptions) -> Array<[
     var images: Array<[String:String]> = []
     for size in options.sizes.keys.sorted() {
         for scale in options.scales {
-            let pxs = CGFloat(size * scale)
-            if !options.scaleUp && (src.size.width < pxs) {
+            let pxs = size * scale
+            if !options.scaleUp && (Float(src.size.width) < Float(pxs)) {
                 continue
             }
             // do rescaling
@@ -138,22 +138,16 @@ func imageExplode(src: NSImage, outdir: String, options: IconOptions) -> Array<[
                 imageName.append("@\(scale)x")
             }
             let imagePath = outdir + "/" + imageName + ".png"
-            warn("\(size) @ \(scale)x => \(imageName) => \(imagePath)")
-            let newImage = NSImage(size: NSMakeSize(pxs, pxs))
-            newImage.lockFocus()
-            NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current?.imageInterpolation = .high
-            src.draw(
-                in: NSMakeRect(0, 0, pxs, pxs),
-                from: NSZeroRect,
-                operation: .sourceOver,
-                fraction: 1.0
-            )
-            newImage.unlockFocus()
-            NSGraphicsContext.restoreGraphicsState()
+            warn("\(size) @ \(scale)x => \(pxs)px => \(imagePath)")
+            let newSize = NSSize(width: Int(pxs), height: Int(pxs))
+            let frame = NSRect(x: 0, y: 0, width: newSize.width, height: newSize.height)
+            guard let representation = src.bestRepresentation(for: frame, context: nil, hints: nil) else { continue }
+            let newImage = NSImage(size: newSize, flipped: false, drawingHandler: { (_) -> Bool in
+                return representation.draw(in: frame)
+            })
             guard let newTiff = newImage.tiffRepresentation, let bmp = NSBitmapImageRep(data: newTiff) else { continue }
             bmp.hasAlpha = true
-            guard let data = bmp.representation(using: NSBitmapImageRep.FileType.png, properties: [.compressionFactor: 0.85]) else { continue }
+            guard let data = bmp.representation(using: .png, properties: [.compressionFactor: 0.85]) else { continue }
             try? data.write(to: imagePath.fileURL)
             images.append([
                 "filename": imagePath.lastPathComponent,
