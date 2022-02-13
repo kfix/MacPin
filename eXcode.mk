@@ -64,25 +64,36 @@ $(info [$(eXcode)] $$(sdk) := $(sdk))
 $(info [$(eXcode)] $$(target) := $(target))
 ###########################
 
-###################
-# llvm scaffolding
-###################
 debug				?=
 verbose				?=
 
+###################
+# swift scaffolding
+###################
+# https://github.com/apple/swift-driver
+ifeq (1,$(CLTOOLS))
+sdkpath				:= /$(shell pkgutil --volume / --only-dirs --files com.apple.pkg.CLTools_SDK_macOS110 | grep -m1 MacOSX11.3.sdk$$)
+swiftc				:= /$(shell pkgutil --volume / --only-dirs --files com.apple.pkg.CLTools_Executables | grep -m1 usr/bin$$)/swiftc -sdk $(sdk) -target $(arch)-$(target_$(platform)) $(verbose)
+swiftbuildbin		:= /$(patsubst %-build,%,$(shell pkgutil --volume / --only-files --files com.apple.pkg.CLTools_Executables | grep -m1 bin/swift-build$$))
+### XXX: appears CLTools doesn't ship SPM libraries yet, so Package.swift can't be compiled
+else
 sdkpath				:= $(shell xcrun --show-sdk-path --sdk $(sdk))
 swiftc				:= xcrun -sdk $(sdk) swiftc -target $(arch)-$(target_$(platform)) $(verbose)
+swiftbuildbin		:= $(shell command -v swift)
+endif
 
-swiftlibdir			:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift/$(sdk) $(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(sdk)))
-swiftstaticdir		:= $(lastword $(wildcard /Library/Developer/CommandLineTools/usr/lib/swift_static/$(sdk) $(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift_static/$(sdk)))
-$(info [$(eXcode)] compiling against $(sdkpath))
-$(info [$(eXcode)] swift libraries: $(swiftlibdir) $(swiftstaticdir))
 ########################
-
-swiftbuild			:= swift build --configuration release \
+# SPM configuration
+########################
+swiftbuild			:= $(swiftbuildbin) build --configuration release \
 	--build-path $(outdir)/swiftpm \
 	-Xswiftc "-sdk" -Xswiftc $(sdkpath) \
 	-Xswiftc "-target" -Xswiftc $(arch)-$(target_$(platform))
 
-swiftrun_mac		:= swift run --configuration release \
+swiftrun_mac		:= $(swiftbuildbin) run --configuration release \
 	--build-path $(outdir_mac)/swiftpm
+
+spm_build := $(shell $(swiftbuild) --show-bin-path)
+
+$(info [$(eXcode)] $$(swiftbuild) := $(swiftbuild))
+$(info [$(eXcode)] $$(spm_build) := $(spm_build))

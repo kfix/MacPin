@@ -19,9 +19,6 @@ include eXcode.mk
 mk := $(firstword $(MAKEFILE_LIST))
 $(info )
 $(info [$(mk)])
-$(info SPM options: $(swiftbuild))
-spm_build := $(shell $(swiftbuild) --show-bin-path)
-$(info $(platform) => $(spm_build))
 
 appdir				:= $(outdir)/apps
 
@@ -92,9 +89,7 @@ webkitdir				?= /System/Library/Frameworks/WebKit.framework
 jscdir					?= /System/Library/Frameworks/JavaScriptCore.framework
 
 webkitver				:= $(shell defaults read "$(webkitdir)/Resources/Info" CFBundleVersion)
-xcodever				:= $(shell defaults read "$(xcode)/Contents/Info" CFBundleShortVersionString)
 $(info $(webkitdir) => $(webkitver))
-$(info $(xcode) => $(xcodever))
 
 ifeq (iphonesimulator, $(sdk))
 codesign :=
