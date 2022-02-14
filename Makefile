@@ -177,9 +177,6 @@ test_%: $(appdir)/%.app | $(appdir)/MacPin.app
 
 ifeq ($(platform),macos)
 
-%.scpt: %.jxa
-	osacompile -l JavaScript -o "$@" "$<"
-
 #--platform $(sdk)\ 
 $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/Assets.car: $(xcassets)/%.xcassets
 	@install -d $(dir $@)
