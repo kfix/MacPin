@@ -50,6 +50,8 @@
 	<array>
 		<string>/Library/</string>
 	</array>
+	<key>com.apple.webinspector.allow</key>
+	<true/>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>com.apple.managed.vpn.shared</string>

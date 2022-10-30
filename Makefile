@@ -162,6 +162,7 @@ $(appdir)/%/Contents/PlugIns/ActionExtension.appex/Contents/Info.plist $(appdir)
 	$(gen_plist_template)
 
 # https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html
+# TODO: use WK-API to enable "(Remote (Safari)) Inspectability" instead of the entitlements: https://github.com/WebKit/WebKit/commit/a0a26311c18df6a6b7aa596ee06ee0b4257f765a
 $(outdir)/%.entitlements.plist: templates/$(platform)/entitlements.plist
 	$(gen_plist_template)
 
