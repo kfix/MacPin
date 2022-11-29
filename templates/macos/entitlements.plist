@@ -2,12 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>com.apple.developer.networking.networkextension</key>
-	<array>
-		<string>packet-tunnel-provider</string>
-		<string>app-proxy-provider</string>
-		<string>content-filter-provider</string>
-	</array>
 	<key>com.apple.security.app-sandbox</key>
 	<false/>
 	<key>com.apple.security.application-groups</key>
@@ -49,12 +43,6 @@
 	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
 	<array>
 		<string>/Library/</string>
-	</array>
-	<key>com.apple.webinspector.allow</key>
-	<true/>
-	<key>keychain-access-groups</key>
-	<array>
-		<string>com.apple.managed.vpn.shared</string>
 	</array>
 </dict>
 </plist>

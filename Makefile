@@ -233,10 +233,10 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	[ ! -d $@/Contents/Resources/Library ] || ln -sfh Resources/Library $@/Contents/Library
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist >/dev/null
 	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
-	[ ! -n "$(codesign)" ] || codesign --verbose=4 --sign '$(appsig)' --timestamp --options runtime --force --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
+	plutil -convert xml1 $(outdir)/$*.entitlements.plist
+	[ ! -n "$(codesign)" ] || codesign --verbose=4 --sign '$(appsig)' --timestamp --force --ignore-resources --entitlements $(outdir)/$*.entitlements.plist $@
 	-codesign --display -r- --verbose=4 --deep --entitlements :- $@
 	-spctl -vvvv --assess --type execute $@ # App Store-ability
-	-asctl container acl list -file $@
 	[ ! -n "$(codesign)" ] || codesign --verbose=4 --deep --verify --strict $@
 	-[ ! -z "$(codesign)" ] || codesign --verbose=4 --remove-signature $@
 	@touch $@
