@@ -1,11 +1,9 @@
-// swift-tools-version:5.4
+// swift-tools-version:6.0
 import PackageDescription
 import Foundation
 let package = Package(
     name: "MacPin",
-    //platforms: [.macOS(.v10_15)],
-    // whines about a lot of unguarded calls to 10.15.4 apis
-    platforms: [.macOS(.v11)],
+    platforms: [.macOS(.v13)],
     products: [
         .library(name: "MacPin", type: .dynamic, targets: ["MacPin"]),
         .executable(name: "MacPin_static", targets: ["MacPin_static"]),
@@ -60,7 +58,10 @@ if let iosvar = ProcessInfo.processInfo.environment["MACPIN_IOS"], !iosvar.isEmp
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
-            path: "Tools/iconify"
+            path: "Tools/iconify",
+            swiftSettings: [
+                .swiftLanguageMode(.v5)
+            ]
         ),
         .target(name: "MacPin",
             dependencies: [
@@ -71,17 +72,29 @@ if let iosvar = ProcessInfo.processInfo.environment["MACPIN_IOS"], !iosvar.isEmp
                 "Linenoise",
                 "UTIKit",
             ],
-            path: "Sources/MacPinOSX"
+            path: "Sources/MacPinOSX",
+            swiftSettings: [
+                .swiftLanguageMode(.v5),
+                //.interoperabilityMode(.Cxx)
+            ]
         ),
         .executableTarget(
             name: "MacPin_static",
             dependencies: [
                 .target(name: "MacPin")
+            ],
+            swiftSettings: [
+                .swiftLanguageMode(.v5),
+                //.interoperabilityMode(.Cxx)
             ]
         ),
         .executableTarget(
             name: "MacPin_stub",
             dependencies: [],
+            swiftSettings: [
+                .swiftLanguageMode(.v5),
+                //.interoperabilityMode(.Cxx)
+            ],
             linkerSettings: [
                 .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@loader_path:@loader_path/../Frameworks"])
             ]
