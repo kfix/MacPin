@@ -219,6 +219,7 @@ $(outdir)/Frameworks/%.framework: $(jumbody) $(jumbody).dSYM $(outdir)/Framework
 	@cp -RL $(jumbody) $@/Versions/A/$*
 	@cp -RL $(jumbody).dSYM $@/Versions/A/$*.dSYM
 	# need a Resources/Info-macos.plist & version.plist
+	touch $@/Versions/A/Resources/stamp.file
 	-[ ! -n "$(codesign)" ] || codesign --verbose=4 --sign '$(appsig)' --timestamp --options runtime --force --deep --ignore-resources --strict --entitlements $(outdir)/$*.entitlements.plist $@
 
 #build the app bundle
