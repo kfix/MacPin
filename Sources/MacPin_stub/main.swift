@@ -47,7 +47,7 @@ if let sharedURL = FileManager.default.containerURL(forSecurityApplicationGroupI
 	// https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_security_application-groups
 	// print("\(sharedURL)") // could load self-modified, user customized, main.js's from here
 }
-	
+
 if !loadMPframework(fromBundle: mainBundle) {
 	// not found locally, so search for the LaunchServices-registered MacPin.app
 	// https://github.com/chromium/chromium/blob/master/chrome/app_shim/chrome_main_app_mode_mac.mm

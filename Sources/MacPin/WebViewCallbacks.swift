@@ -31,6 +31,7 @@ struct WebViewUICallbacks {
 
 	static func makeClient() -> WKPageUIClientV2 {
 		var uiClient = WKPageUIClientV2()
+		// https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/PageClient.h
 		uiClient.base.version = 2
 #if os(OSX)
 		uiClient.decidePolicyForGeolocationPermissionRequest = decidePolicyForGeolocationPermissionRequestCallBack
@@ -44,6 +45,7 @@ struct WebViewUICallbacks {
 
 		// V6:
 		//  checkUserMediaPermissionForOrigin = checkUserMediaPermissionCallback
+        //    ^ want this -- don't wanna add SSL to my home assistant to use my macbook microphone with it
 		//	decidePolicyForUserMediaPermissionRequest = decidePolicyForUserMediaPermissionRequest
 
 		// V9:
@@ -62,7 +64,7 @@ struct WebViewUICallbacks {
 	}
 
 	static func subscribe(_ webview: MPWebView) {
-		warn("UI")
+		warn("subscribe to UI callbacks")
 		var uiClient = makeClient()
 		uiClient.base.clientInfo = UnsafeRawPointer(Unmanaged.passUnretained(webview).toOpaque()) // +0
 		guard let page = webview._page else { return }

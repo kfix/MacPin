@@ -61,7 +61,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 
 	// FUTURE: didPerformClientRedirectForNavigation https://github.com/WebKit/webkit/commit/9475f62f3602aa91309f00c64e4430a25d5ae4e9
 
-	func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+	@objc func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
 		if let url = webView.url {
 			warn("'\(url)'")
 			// check url against regex'd keys of MatchedAddressOptions
@@ -72,7 +72,7 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 #endif
 	}
 
-	func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+	@objc func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
 		//navigationAction ._originalURL ._userInitiated ._canHandleRequest 13+:._isRedirect 11+:._shouldOpenExternalSchemes 11+:._shouldOpenAppLinks
 		if let url = navigationAction.request.url, let scheme = url.scheme {
 			switch scheme {
@@ -146,13 +146,13 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 		}
 	}
 
-	func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
+	@objc func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
 		guard let url = webView.url else { return }
 		warn("~> [\(url)]")
 		browsingReactor.anyHandled(.receivedRedirectionToURL, url.absoluteString as NSString, webView)
 	}
 
-	func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { //error returned by webkit when loading content
+	@objc func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { //error returned by webkit when loading content
 		let url = webView.url ?? URL(string: "about:nil-url")! // no URL? pish-posh!
 		// maybe if webView.loadData was used...
 		//	& the anon-URL data had a head/metadata redirect to a URL, which failed. oic wut u did there
@@ -258,7 +258,8 @@ extension AppScriptRuntime: WKScriptMessageHandler {
 		//content starts arriving...I assume <body> has materialized in the DOM?
 	}
 
-	func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+	@objc func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+	    warn("")
 		let mime = navigationResponse.response.mimeType!
 		let url = navigationResponse.response.url!
 		let fn = navigationResponse.response.suggestedFilename!

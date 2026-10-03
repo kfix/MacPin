@@ -7,7 +7,6 @@ import WebKitPrivates
 import JavaScriptCore
 
 // https://github.com/apple/swift-evolution/blob/master/proposals/0160-objc-inference.md#re-enabling-objc-inference-within-a-class-hierarchy
-@objcMembers
 class WebViewController: ViewController { //, WebViewControllerScriptExports {
 	@objc unowned var webview: MPWebView
 
@@ -37,9 +36,9 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 		}
 		//webview._historyDelegate = self
 
-#if DEBUG
-		//webview._diagnosticLoggingDelegate = self
-#endif
+//#if DEBUG
+		webview._diagnosticLoggingDelegate = self
+//#endif
 		webview.configuration.processPool._downloadDelegate = self
 		webview.configuration.processPool._setCanHandleHTTPSServerTrustEvaluation(true)
 

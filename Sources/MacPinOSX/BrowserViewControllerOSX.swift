@@ -359,15 +359,15 @@ struct WeakThing<T: AnyObject> {
 
 #if DEBUG
 extension TabViewController: NSViewControllerPresentationAnimator {
-    public func animatePresentation(of viewController: NSViewController, from fromViewController: NSViewController) {
-    	warn(fromViewController)
-    	warn(viewController)
-    	super.transition(from: fromViewController, to: viewController, options: transitionOptions, completionHandler: nil)
-    }
+	public func animatePresentation(of viewController: NSViewController, from fromViewController: NSViewController) {
+		warn(fromViewController)
+		warn(viewController)
+		super.transition(from: fromViewController, to: viewController, options: transitionOptions, completionHandler: nil)
+	}
 
-    public func animateDismissal(of viewController: NSViewController, from fromViewController: NSViewController) {
-    	warn()
-    }
+	public func animateDismissal(of viewController: NSViewController, from fromViewController: NSViewController) {
+		warn()
+	}
 }
 #endif
 
@@ -585,7 +585,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 					}
 					if let tvi = self.tabViewItem(for: vc) {
 						let idx = self.tabView.indexOfTabViewItem(tvi)
-						warn(idx.description)
+						warn(idx.description) // looks corrupt: >> [tabSelected] 9223372036854775807
 						if idx != Int.max && idx > -1 {
 							self.selectedTabViewItemIndex = idx
 							prepareTab(vc)
@@ -594,6 +594,11 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 				case let wv as MPWebView: // find the view's existing controller or else make one and re-assign
 					self.tabSelected = self.children.filter({ ($0 as? WebViewControllerOSX)?.webview === wv }).first as? WebViewControllerOSX ?? WebViewControllerOSX(webview: wv)
 					//FIXME: a backref in the wv to wvc would be helpful
+				case let wv as WKWebView:
+					let vc = NSViewController(nibName:nil, bundle:nil)
+					vc.view = wv
+					vc.representedObject = wv
+					self.tabSelected = vc
 				//case let js as JSValue: guard let wv = js.toObjectOfClass(MPWebView.self) { self.tabSelected = wv } //custom bridging coercion
 				default:
 					warn("invalid object")
@@ -687,7 +692,7 @@ class BrowserViewControllerOSX: TabViewController, BrowserViewController {
 	}
 
 	func prepareTab(_ viewController: NSViewController) {
-		guard let webview = viewController.representedObject as? MPWebView else {
+		guard let webview = viewController.representedObject as? WKWebView else {
 			warn("making plain view first responder!!!")
 			view.window?.makeFirstResponder(viewController.view)
 			return

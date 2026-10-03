@@ -63,7 +63,7 @@ extension NSPasteboard {
 					// https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/UTIRef/Articles/System-DeclaredUniformTypeIdentifiers.html
 					// http://arstechnica.com/apple/2005/04/macosx-10-4/11/ http://www.cocoanetics.com/2012/09/fun-with-uti/
 					if !uti.rawValue.isEmpty, let value = item.string(forType: uti) {
-				 		if let cfdesc = UTTypeCopyDescription(uti as CFString), let cfmime = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassMIMEType) {
+						if let cfdesc = UTTypeCopyDescription(uti as CFString), let cfmime = UTTypeCopyPreferredTagWithClass(uti as CFString, kUTTagClassMIMEType) {
 							let desc = cfdesc.takeUnretainedValue()
 							let mime = cfmime.takeUnretainedValue()
 							warn("DnD: uti(\(uti)) `\(desc)` => types['\(mime)'] = '\(value)'")
