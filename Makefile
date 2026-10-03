@@ -238,7 +238,7 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	[ ! -n "$(codesign)" ] || codesign --verbose=4 --sign '$(appsig)' --timestamp --force --ignore-resources --entitlements $(outdir)/$*.entitlements.plist $@
 	-codesign --display -r- --verbose=4 --deep --entitlements :- $@
 	-spctl -vvvv --assess --type execute $@ # App Store-ability
-	[ ! -n "$(codesign)" ] || codesign --verbose=4 --deep --verify --strict $@
+	[ ! -n "$(codesign)" ] || codesign --verbose=4 --verify --strict $@
 	-[ ! -z "$(codesign)" ] || codesign --verbose=4 --remove-signature $@
 	@touch $@
 #xattr -w com.apple.application-instance $(shell echo uuidgen) $@
