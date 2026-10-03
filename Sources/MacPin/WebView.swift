@@ -633,7 +633,6 @@ final class MPWebView: WKWebView, WebViewScriptExports {
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false
 
-        /*
 		var dataStore = privacy ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default()
 
 		if #available(macOS 10.14.4, iOS 12.2, *) {
@@ -647,7 +646,8 @@ final class MPWebView: WKWebView, WebViewScriptExports {
 				dataStoreConf.httpsProxy = sproxyURL
 				warn("HTTPS proxy: \(dataStoreConf.httpsProxy?.absoluteString)")
 			}
-			dataStore = dataStore._init(with: dataStoreConf)
+			// buggy! _init creates broken webviews....
+			//dataStore = dataStore._init(with: dataStoreConf)
 		}
 
 		//if #available(OSX 10.11, iOS 9, *) {
@@ -660,7 +660,6 @@ final class MPWebView: WKWebView, WebViewScriptExports {
 		} else {
 			configuration.processPool = configuration.processPool ?? (MPWebView.self.sharedWebProcessPool)!
 		}
-		*/
 
 		self.init(frame: CGRect.zero, configuration: configuration) // This is the real init()
 		// its an ObjC++ ctor which is why we couldn't override its impl to do these defaultings
