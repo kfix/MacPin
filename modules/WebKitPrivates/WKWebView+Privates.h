@@ -210,6 +210,10 @@ typedef NS_OPTIONS(NSInteger, _WKMediaMutedState) {
 
 @property (nonatomic, setter=_setMediaCaptureEnabled:) BOOL _mediaCaptureEnabled WK_API_AVAILABLE(macos(10.13), ios(11.0));
 
+- (void)_uninstallScreenTimeWebpageController;
+- (void)_updateScreenTimeViewGeometry;
+- (void)_updateScreenTimeBasedOnWindowVisibility;
+
 #if !TARGET_OS_IPHONE
 @property (nonatomic, readonly) BOOL _hasInspectorFrontend WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
 @property (nonatomic, readonly) _WKInspector *_inspector WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
