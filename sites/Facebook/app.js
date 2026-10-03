@@ -26,7 +26,7 @@ $.browser.addShortcut('Dark Mode', [], enDarken);
 
 function search(query) {
 	$.browser.tabSelected = fbTab;
-	//fbTab.loadURL("https://m.facebook.com/graphsearch/str/" + query + "/keywords_top?ref=content_filter&source=typeahead")
+	//fbTab.load_url("https://m.facebook.com/graphsearch/str/" + query + "/keywords_top?ref=content_filter&source=typeahead")
 	fbTab.evalJS(
 		'document.querySelector("#search_jewel > a").click();' +
 		'document.getElementById("main-search-input").value = "'+query+'";' +

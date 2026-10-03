@@ -136,7 +136,7 @@ app.on('didWindowOpenForURL', function(url, newTab, tab) {
 	if (tab==voiceTab && url.startsWith("https://plus.google.com/hangouts/_/")) { //G+ hangouts a/v chat
 		//newTab.userAgent = mozUA; // will force use of WebRTC instead of vidyo plugin
 		newTab.allowsRecording = true;
-		newTab.loadURL(url);
+		newTab.load_url(url);
 		browser.tabSelected = newTab; // take focus
 		return true; // macpin will return the newTab to tab's JS
 	}
@@ -189,7 +189,7 @@ app.on('launchURL', function(url) { // app.openURL(/[sms|hangouts|tel]:.*/) call
 			}
 			break;
 		case 'https':
-			if (!url.startsWith("//accounts.google.com")) { browser.tabSelected.loadURL(url); break; }
+			if (!url.startsWith("//accounts.google.com")) { browser.tabSelected.load_url(url); break; }
 		default:
 			app.openURL(url);
 	}
