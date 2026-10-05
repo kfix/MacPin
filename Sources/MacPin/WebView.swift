@@ -660,7 +660,7 @@ final class MPWebView: WKWebView, WebViewScriptExports {
 				let host = sproxyURL.host, let port = sproxyURL.port, let uport = UInt16(exactly: port) {
 				let endpoint = NWEndpoint.hostPort(
 					host: NWEndpoint.Host(host),
-					port: NWEndpoint.Port(integerLiteral: uport),
+					port: NWEndpoint.Port(integerLiteral: uport)
 				)
 				let proxyConf = ProxyConfiguration(
 					httpCONNECTProxy: endpoint,
