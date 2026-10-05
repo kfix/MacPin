@@ -16,7 +16,41 @@ jobs:
           # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-Readme.md
           - "15.4"
 
-    name: "macOS 14 Sonoma (Xcode ${{ matrix.xcode }})"
+    name: "macOS 14 Sonoma ARM (Xcode ${{ matrix.xcode }})"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Get build paths
+        id: getpaths
+        run: |
+          echo ::set-output name=OUT_PATH::$(make where-out 2>/dev/null | tail -n1)
+          echo ::set-output name=TXZ_PATH::$(make where-txz 2>/dev/null | tail -n1)
+      - name: Build All Apps
+        run: |
+          make allapps
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
+      - name: Create Package
+        run: |
+          make txz
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allapps-${{ matrix.runs-on }}.tar.xz
+          path: ${{ steps.getpaths.outputs.TXZ_PATH }}
+
+  macos_sonoma_x86:
+    # check https://github.com/actions/runner-images for available versions
+    runs-on: macos-14-large
+
+    strategy:
+      matrix:
+        xcode:
+          # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-Readme.md
+          - "15.4"
+
+    name: "macOS 14 Sonoma x86 (Xcode ${{ matrix.xcode }})"
 
     steps:
       - name: Checkout
