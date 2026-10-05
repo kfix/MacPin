@@ -1,4 +1,4 @@
-// swift-tools-version:6.0
+// swift-tools-version:5.10
 import PackageDescription
 import Foundation
 let package = Package(
@@ -60,7 +60,7 @@ if let iosvar = ProcessInfo.processInfo.environment["MACPIN_IOS"], !iosvar.isEmp
             ],
             path: "Tools/iconify",
             swiftSettings: [
-                .swiftLanguageMode(.v5)
+                //.swiftLanguageMode(.v5)
             ]
         ),
         .target(name: "MacPin",
@@ -74,7 +74,7 @@ if let iosvar = ProcessInfo.processInfo.environment["MACPIN_IOS"], !iosvar.isEmp
             ],
             path: "Sources/MacPinOSX",
             swiftSettings: [
-                .swiftLanguageMode(.v5),
+                //.swiftLanguageMode(.v5),
                 //.interoperabilityMode(.Cxx)
             ]
         ),
@@ -84,7 +84,7 @@ if let iosvar = ProcessInfo.processInfo.environment["MACPIN_IOS"], !iosvar.isEmp
                 .target(name: "MacPin")
             ],
             swiftSettings: [
-                .swiftLanguageMode(.v5),
+                //.swiftLanguageMode(.v5),
                 //.interoperabilityMode(.Cxx)
             ]
         ),
@@ -92,7 +92,7 @@ if let iosvar = ProcessInfo.processInfo.environment["MACPIN_IOS"], !iosvar.isEmp
             name: "MacPin_stub",
             dependencies: [],
             swiftSettings: [
-                .swiftLanguageMode(.v5),
+                //.swiftLanguageMode(.v5),
                 //.interoperabilityMode(.Cxx)
             ],
             linkerSettings: [
