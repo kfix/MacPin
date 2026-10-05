@@ -19,7 +19,7 @@ archs_iphonesimulator	?= $(archs_macosx)
 archs_iphoneos		?= arm64
 arch				?= $(shell uname -m)
 
-target_ver_macos	?= 11.6
+target_ver_macos	?= 13.0
 # can we get the running version, if not pre-set?
 target_macos		?= apple-macosx$(target_ver_macos)
 target_ver_ios		?= 13.0
@@ -72,9 +72,13 @@ verbose				?=
 ###################
 # https://github.com/apple/swift-driver
 ifeq (1,$(CLTOOLS))
-sdkpath				:= /$(shell pkgutil --volume / --only-dirs --files com.apple.pkg.CLTools_SDK_macOS110 | grep -m1 MacOSX11.3.sdk$$)
+sdkpath				:= /$(shell pkgutil --volume / --only-dirs --regexp --files com.apple.pkg.CLTools.* | grep -m1 -E SDKs/MacOSX\\d+.*.sdk$$)
+$(info [$(eXcode)] $$(sdkpath) := $(sdkpath))
 swiftc				:= /$(shell pkgutil --volume / --only-dirs --files com.apple.pkg.CLTools_Executables | grep -m1 usr/bin$$)/swiftc -sdk $(sdk) -target $(arch)-$(target_$(platform)) $(verbose)
-swiftbuildbin		:= /$(patsubst %-build,%,$(shell pkgutil --volume / --only-files --files com.apple.pkg.CLTools_Executables | grep -m1 bin/swift-build$$))
+
+# not a thing anymore
+#swiftbuildbin		:= /$(patsubst %-build,%,$(shell pkgutil --volume / --only-files --files com.apple.pkg.CLTools_Executables | grep -m1 bin/swift-build$$))
+swiftbuildbin		:= /usr/bin/swift
 ### XXX: appears CLTools doesn't ship SPM libraries yet, so Package.swift can't be compiled
 else
 sdkpath				:= $(shell xcrun --show-sdk-path --sdk $(sdk))

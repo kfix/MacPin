@@ -421,7 +421,7 @@ public class MacPinAppDelegateOSX: NSObject, MacPinAppDelegate {
 				case "com.apple.web-internet-location": //.webloc http://stackoverflow.com/questions/146575/crafting-webloc-file
 					if let webloc = NSDictionary(contentsOfFile: filename), let urlstr = webloc.value(forKey: "URL") as? String {
 						if AppScriptRuntime.shared.anyHandled(.handleDragAndDroppedURLs, [urlstr]) {
-					 		return true  // app.js indicated it handled drag itself
+							return true  // app.js indicated it handled drag itself
 						} else if let url = validateURL(urlstr) {
 							browserController.tabSelected = MPWebView(url: url)
 							return true

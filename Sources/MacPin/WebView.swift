@@ -21,6 +21,19 @@ extension WKWebView {
 	func wkclone(_ options: MPWebViewConfigOptions...) -> MPWebView {
 		return (self as! MPWebView).clone(options)
 	}
+
+	@nonobjc func gotoURL(_ url: NSURL) { gotoURL(url as URL) }
+	func gotoURL(_ url: URL) {
+		let act = ProcessInfo.processInfo.beginActivity(options: [ProcessInfo.ActivityOptions.userInitiated, ProcessInfo.ActivityOptions.idleSystemSleepDisabled], reason: "browsing begun")
+		if url.scheme == "file", #available(OSX 10.11, iOS 9.1, *) {
+			let readURL = url.deletingLastPathComponent()
+			warn("Bypassing CORS: \(readURL)")
+			loadFileURL(url as URL, allowingReadAccessTo: readURL)
+		} else {
+			load(URLRequest(url: url))
+		}
+		ProcessInfo.processInfo.endActivity(act)
+	}
 }
 
 enum MPWebViewConfigOptions {
@@ -269,7 +282,7 @@ extension MPWebViewConfigOptions: RawRepresentable, Hashable {
 	//   https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/API/JSWrapperMap.mm#L258
 	@objc(evalJS::) func evalJS(_ js: String, callback: JSValue?)
 	@objc(asyncEvalJS:::) func asyncEvalJS(_ js: String, delay: Int, callback: JSValue?)
-	func loadURL(_ urlstr: String) -> Bool
+	func load_url(_ urlstr: String) -> Bool
 	func loadIcon(_ icon: String) -> Bool
 	func popStyle(_ idx: Int)
 	func style(_ css: String) -> Bool
@@ -291,8 +304,7 @@ extension MPWebViewConfigOptions: RawRepresentable, Hashable {
 // https://github.com/apple/swift-evolution/blob/master/proposals/0195-dynamic-member-lookup.md
 // https://github.com/apple/swift-evolution/blob/master/proposals/0216-dynamic-callable.md
 
-@objcMembers
-class MPWebView: WKWebView, WebViewScriptExports {
+final class MPWebView: WKWebView, WebViewScriptExports {
 
 	//@objc dynamic var isLoading: Bool
 	//@objc dynamic var estimatedProgress: Double
@@ -331,7 +343,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 
 	override var urlstr: String { // accessor for JSC, which doesn't support `new URL()`
 		get { return url?.absoluteString ?? "" }
-		set { loadURL(newValue) }
+		set { load_url(newValue) }
 	}
 
 	var userAgent: String {
@@ -407,7 +419,6 @@ class MPWebView: WKWebView, WebViewScriptExports {
 	var inspector: _WKInspector? {
 		get {
 			if WebKit_version >= (607, 1, 3) {
-				// https://github.com/WebKit/webkit/commit/1f7d382aa1e6fc67476787ce6a7b9a791b32f434
 				return _inspector
 			} else {
 				return nil
@@ -426,7 +437,6 @@ class MPWebView: WKWebView, WebViewScriptExports {
 			}
 		}
 	}
-
 
 	var inspectorAttachmentView: NSView? {
 		// when inspector is open, subviews.first is actually the inspector (WKWebInspectorWKWebView), not the WKView
@@ -563,7 +573,7 @@ class MPWebView: WKWebView, WebViewScriptExports {
 				}
 			}
 		}
-		let prefs = WKPreferences() // http://trac.webkit.org/browser/trunk/Source/WebKit2/UIProcess/API/Cocoa/WKPreferences.mm
+		let prefs = WKPreferences() // https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/API/Cocoa/WKPreferences.mm
 #if os(OSX)
 		prefs._developerExtrasEnabled = true // Enable "Inspect Element" in context menu
 		prefs._fullScreenEnabled = true
@@ -595,6 +605,14 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		if !caching, #available(macOS 10.13.4, *) {
 			prefs._usesPageCache = false
 		}
+
+		// https://github.com/home-assistant/iOS/issues/4044
+		// https://github.com/ahalekelly/iOS/commit/3712028
+		for feat in WKPreferences._features() {
+			if feat.key == "ScreenTimeEnabled" {
+				prefs._setEnabled(false, for: feat)
+			}
+		}
 #endif
 
 		if privacy {
@@ -616,19 +634,41 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		configuration.suppressesIncrementalRendering = false
 
 		var dataStore = privacy ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default()
+		// macOS14: https://webkit.org/blog/14423/building-profiles-with-new-webkit-api/
+		//  if isolated: WKWebsiteDataStore(forIdentifier: <UUID-or-string>)
 
-		if #available(macOS 10.14.4, iOS 12.2, *) {
-			let dataStoreConf = privacy ? _WKWebsiteDataStoreConfiguration(nonPersistentConfiguration: ()) : _WKWebsiteDataStoreConfiguration()
+		// configure proxy settings, which is oddly-slaved to the dataStore's config
+		if #available(macOS 14.0, *) {
+			// https://developer.apple.com/documentation/network/proxyconfiguration
+			// seems like direct-to "plain" proxies are no longer on the menu
 
-			if let proxyURL = URL(string: proxy), !proxy.isEmpty {
-				dataStoreConf.httpProxy = proxyURL
-				warn("HTTP proxy: \(dataStoreConf.httpProxy?.absoluteString)")
+			if let proxyURL = URL(string: proxy), !proxy.isEmpty,
+				let host = proxyURL.host, let port = proxyURL.port, let uport = UInt16(exactly: port) {
+				let endpoint = NWEndpoint.hostPort(
+					host: NWEndpoint.Host(host),
+					port: NWEndpoint.Port(integerLiteral: uport)
+				)
+				let proxyConf = ProxyConfiguration(
+					httpCONNECTProxy: endpoint,
+					tlsOptions: nil // FIXME: check port == 443 || scheme == https
+				)
+				warn("HTTP (CONNECT) proxy: \(endpoint)")
+				dataStore.proxyConfigurations.append(proxyConf)
 			}
-			if let sproxyURL = URL(string: sproxy), !sproxy.isEmpty {
-				dataStoreConf.httpsProxy = sproxyURL
-				warn("HTTPS proxy: \(dataStoreConf.httpsProxy?.absoluteString)")
+
+			if let sproxyURL = URL(string: sproxy), !sproxy.isEmpty,
+				let host = sproxyURL.host, let port = sproxyURL.port, let uport = UInt16(exactly: port) {
+				let endpoint = NWEndpoint.hostPort(
+					host: NWEndpoint.Host(host),
+					port: NWEndpoint.Port(integerLiteral: uport)
+				)
+				let proxyConf = ProxyConfiguration(
+					httpCONNECTProxy: endpoint,
+					tlsOptions: nil // FIXME: check port == 443 || scheme == https
+				)
+				warn("HTTPS (CONNECT) proxy: \(endpoint)")
+				dataStore.proxyConfigurations.append(proxyConf)
 			}
-			dataStore = dataStore._init(with: dataStoreConf)
 		}
 
 		//if #available(OSX 10.11, iOS 9, *) {
@@ -671,7 +711,6 @@ class MPWebView: WKWebView, WebViewScriptExports {
 #elseif os(iOS)
 		_applicationNameForUserAgent = "Version/10 Mobile/12F70 Safari/\(WebKit_version.major).\(WebKit_version.minor).\(WebKit_version.tiny)"
 #endif
-
 		var url: URL? = nil
 
 		for option in config.options {
@@ -739,7 +778,6 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		}
 
 		self.notifier = WebNotifier(self)
-
 		for originStr in authorizedOriginsForNotifications {
 			self.notifier?.authorizeNotifications(fromOrigin: URL(string: originStr))
 		}
@@ -898,27 +936,14 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		}
 	}
 
-	@nonobjc func gotoURL(_ url: NSURL) { gotoURL(url as URL) }
-	func gotoURL(_ url: URL) {
-		let act = ProcessInfo.processInfo.beginActivity(options: [ProcessInfo.ActivityOptions.userInitiated, ProcessInfo.ActivityOptions.idleSystemSleepDisabled], reason: "browsing begun")
-		if url.scheme == "file", #available(OSX 10.11, iOS 9.1, *) {
-			let readURL = url.deletingLastPathComponent()
-			warn("Bypassing CORS: \(readURL)")
-			loadFileURL(url as URL, allowingReadAccessTo: readURL)
-		} else {
-			load(URLRequest(url: url))
-		}
-		ProcessInfo.processInfo.endActivity(act)
-	}
-
 	@discardableResult
-	func loadURL(_ urlstr: String) -> Bool {
+	func load_url(_ urlstr: String) -> Bool {
 		if let url = URL(string: urlstr) {
 			gotoURL(url)
 			return true
 		}
 		warn("ILLEGAL URL! \(url)") // getting SIGILLd by incomplete URLs:
-		// $.browser.tabs[0].loadURL("www.example.com")
+		// $.browser.tabs[0].load_url("www.example.com")
 		return false // tell JS we were given a malformed URL
 	}
 
@@ -1182,6 +1207,11 @@ class MPWebView: WKWebView, WebViewScriptExports {
 		// https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSView_Class/index.html#//apple_ref/occ/instm/NSView/beginDraggingSessionWithItems:event:source:
 	}
 */
+	//override func _updateScreenTimeBasedOnWindowVisibility() {
+	//    // https://github.com/WebKit/WebKit/blob/101392f63ca9966babdf9757a1a85793f2b38073/Source/WebKit/UIProcess/API/Cocoa/WKWebView.mm#L504
+	//    // this is constantly being called .... *sigh**
+	//    super._updateScreenTimeBasedOnWindowVisibility()
+	//}
 
 	//func dumpImage() -> NSImage { return NSImage(data: view.dataWithPDFInsideRect(view.bounds)) }
 	//var snapshotURL: String { get { NSImage(data: thumbnail.dataWithPDFInsideRect(thumbnail.bounds)) } } //data::
@@ -1327,7 +1357,7 @@ extension MPWebView { // NSTextFinderClient
 		warn(obj: scrollBox)
 		//_setFrame(frame, andScrollBy: scrollBox) // WebKit availability?
 		//scrollRangeToVisible(range)
-    }
+	}
 
 	// https://developer.apple.com/documentation/appkit/nstextfinderclient/1526989-scrollrangetovisible
 	@objc override public func scrollRangeToVisible(_ range: NSRange) {

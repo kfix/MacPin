@@ -15,7 +15,7 @@ $ du -hs build/macosx-x86_64-apple-macosx10.13/apps/{Slack,MacPin}.app/
 ```
 
 ## Project Status
-Uses swift 5.4 & WKWebView.
+Uses swift 5.7 & WKWebView.
 `sites/**/main.js` tries to support some Electron idioms.  
 * federation of the applet packaging using ES6 modules [is being explored](https://github.com/kfix/MacPin/issues/31)
 
@@ -74,8 +74,7 @@ Work is ongoing to make editing and creating app scripts easier, without requiri
 
 ## App porting issues
 
-* DRM: Many sites (Spotify, Netflix) are using Chrome/FF only DRMs (Widevine) but Apple-built WebKit only supports FairPlay DRM.
-* WebRTC: WebKit is compatible with [H264 & VP8 codecs](https://webkit.org/blog/8672/on-the-road-to-webrtc-1-0-including-vp8/), but Google Chrome is pushing hardware-unaccelerated VP9 on all fronts (incl. general `<video>`).
+* DRM: Many content-streaming sites use ["Widevine" DRM](https://en.wikipedia.org/wiki/Widevine) but WebKit only support FairPlay DRM.
 
 ### sample main.js
 ```
@@ -96,7 +95,7 @@ app.on('AppFinishedLaunching', function() {
 ```
 
 ## Hacking MacPin
-Building `main` branch requires macOS 11 "Big Sur" with Xcode 12.5+.
+Building `main` branch requires [macOS 13 "Ventura" with Xcode 14+](https://developer.apple.com/xcode/system-requirements/).
 
 All other branches are obsolete & archived for users locked on older macOS (hardware),  
 but they will recieve no updates.  

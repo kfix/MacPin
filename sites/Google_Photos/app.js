@@ -10,7 +10,7 @@ $.browser.tabSelected = photosTab = new $.WebView(photos);
 var delegate = {}; // our delegate to receive events from the webview app
 
 function search(query) {
-	photosTab.loadURL("https://photos.google.com/search/"+query); // FIXME: do this in JS
+	photosTab.load_url("https://photos.google.com/search/"+query); // FIXME: do this in JS
 }
 
 delegate.launchURL = function(url) {

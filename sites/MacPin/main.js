@@ -18,10 +18,10 @@ var docTab = new WebView({
 	caching: false,
 	url: "file:///usr/share/doc/cups/index.html",
 	useSystemAppearance: true,
-	inspectorVisible: true
+	//inspectorVisible: true // works but is floating window, annoying
 });
 var gitTab = new WebView('https://github.com/kfix/MacPin');
-//var gooTab = new WebView({url: "http://google.com"})
+var wkbTab = new WebView({url: "https://webkit.org/blog"})
 
 let browser = new BrowserWindow();
 
@@ -126,7 +126,7 @@ app.on('decideNavigationForMIME', (mime, url, webview) => {
 		case 'application/x-mpegurl':
 		case 'application/vnd.apple.mpegurl':
 			// FIXME: ensure url is for main frame
-			webview.loadURL('file://' + app.resourcePath + '/media_player.html?src=' + encodeURIComponent(url)); // FIXME: urldecode(url)
+			webview.load_url('file://' + app.resourcePath + '/media_player.html?src=' + encodeURIComponent(url)); // FIXME: urldecode(url)
 			return true;
 		default:
 			break;
@@ -323,7 +323,6 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut('MacPin Playground', [true], launchRepl);
 
 	if (app.platform === "OSX") app.changeAppIcon('icon.png');
-	//browser.tabSelected = new $.WebView({url: 'http://github.com/kfix/MacPin'});
 
 	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
 	console.log(app.browserController);
@@ -333,6 +332,7 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 
 	// shuffle the _tabs using the tabs Proxy
 	browser.tabs.push(gitTab);
+	browser.tabs.push(wkbTab);
 	browser.tabs.push(docTab);
 	browser.tabs.reverse(); // selection will change to the pushed tab that was flipped #0
 

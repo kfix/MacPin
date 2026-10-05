@@ -33,7 +33,7 @@ app.on('networkIsOffline', (url, tab) => {
 	// Slack.app might be set to start at boot but wifi lags behind
 	// so this is crazy, but here's my number, so call me maybe?
 	console.log("reloading from offline!");
-	slackTab.loadURL(slack.url);
+	slackTab.load_url(slack.url);
 });
 
 app.on('receivedRedirectionToURL', (url, tab) => {
@@ -86,7 +86,7 @@ let clicker = (url, tab, mainFrame) => {
 				tab.url.endsWith("slack.com/get-started#/createnew")
 			) {
 				console.log(`${url} clicked from the profile picker, absorbing popup`);
-				tab.loadURL(url);
+				tab.load_url(url);
 				return true;
 			}
 			if (alwaysAllowRedir) break; //user override
@@ -159,7 +159,7 @@ app.on('didWindowOpenForURL', function(url, newTab, tab) {
 		console.log(`window.open(${url})`);
 
 	if (tab==slackTab) {
-		newTab.loadURL(url);
+		newTab.load_url(url);
 		browser.tabSelected = newTab; // take focus
 		return true; // macpin will return the newTab to tab's JS
 	}

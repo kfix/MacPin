@@ -1,7 +1,7 @@
 /*
- * https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/API/Cocoa/_WKInspector.h
+ * https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/API/Cocoa/_WKFeature.h
  *
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,39 +27,17 @@
 
 #import <Foundation/Foundation.h>
 #import <WebKit/WKFoundation.h>
-#import "_WKInspectorExtensionHost.h"
-#import "_WKInspectorIBActions.h"
+#import "WebFeature.h"
 
-NS_ASSUME_NONNULL_BEGIN
+WK_CLASS_AVAILABLE(macos(13.3), ios(16.4))
+@interface _WKFeature : NSObject
 
-@class WKWebView;
-@class _WKFrameHandle;
-@class _WKInspectorExtension;
-@protocol _WKInspectorDelegate;
-
-WK_CLASS_AVAILABLE(macos(10.14.4), ios(12.2))
-@interface _WKInspector : NSObject <_WKInspectorExtensionHost, _WKInspectorIBActions>
-
-- (instancetype)init NS_UNAVAILABLE;
-
-@property (nonatomic, weak) id <_WKInspectorDelegate> delegate WK_API_AVAILABLE(macos(12.0), ios(15.0));
-
-@property (nonatomic, readonly) WKWebView *webView;
-@property (nonatomic, readonly) BOOL isConnected;
-@property (nonatomic, readonly) BOOL isVisible;
-@property (nonatomic, readonly) BOOL isFront;
-@property (nonatomic, readonly) BOOL isProfilingPage;
-@property (nonatomic, readonly) BOOL isElementSelectionActive;
-
-- (void)connect;
-- (void)hide;
-- (void)showMainResourceForFrame:(_WKFrameHandle *)frame;
-- (void)attach;
-- (void)detach;
-- (void)togglePageProfiling;
-- (void)toggleElementSelection;
-- (void)printErrorToConsole:(NSString *)error;
+@property (nonatomic, readonly, copy) NSString *key;
+@property (nonatomic, readonly, copy) NSString *name;
+@property (nonatomic, readonly) WebFeatureStatus status;
+@property (nonatomic, readonly) WebFeatureCategory category;
+@property (nonatomic, readonly, copy) NSString *details;
+@property (nonatomic, readonly) BOOL defaultValue;
+@property (nonatomic, readonly, getter=isHidden) BOOL hidden;
 
 @end
-
-NS_ASSUME_NONNULL_END

@@ -30,7 +30,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 		var bezel: NSBezierPath = NSBezierPath(roundedRect: NSInsetRect(bounds, 2, 2), xRadius: 5, yRadius: 5)
 			// approximating the geo of 10.10's .roundedBezel
 			NSColor.darkGray.set(); bezel.stroke() // draw bezel
-	    	bezel.addClip() // constrain further drawing within bezel
+			bezel.addClip() // constrain further drawing within bezel
 
 		if isLoading {
 			// draw a Safari style progress-line along edge of the text box's focus ring
@@ -45,7 +45,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			NSColor.systemBlue.set() // matches "Highlight Color: Blue" from SysPrefs:General
 			progressRect.fill(using: .sourceOver)
 		} else {
-	    	NSColor.clear.setFill() // clear background
+			NSColor.clear.setFill() // clear background
 			bounds.fill(using: .copy) // .clear
 		}
 
@@ -75,7 +75,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 
 @objc class OmniBoxController: NSViewController {
 	let urlbox = URLAddressField()
-	@objc weak var webview: MPWebView? = nil {
+	@objc weak var webview: WKWebView? = nil {
 		didSet { //KVC to copy updates to webviews url & title (user navigations, history.pushState(), window.title=)
 			if let wv = webview {
 				view.bind(NSBindingName.toolTip, to: wv, withKeyPath: #keyPath(MPWebView.title), options: nil)
@@ -106,7 +106,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 	override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) { super.init(nibName:nil, bundle:nil) } // calls loadView()
 	override func loadView() { view = urlbox } // NIBless
 
-	func popup(_ webview: MPWebView?) {
+	func popup(_ webview: WKWebView?) {
 		guard let webview = webview else { return }
 		MacPinApp.shared.appDelegate?.browserController.tabSelected = webview // EWW
 	}
@@ -126,7 +126,7 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
- 		// prepareForReuse() {...} ?
+		// prepareForReuse() {...} ?
 
 		urlbox.isBezeled = true
 		urlbox.bezelStyle = .roundedBezel
@@ -180,12 +180,17 @@ class URLAddressField: NSTextField { // FIXMEios UILabel + UITextField
 			//FIXME: it should be able to return URL<->NSURL
 			return searchForKeywords(urlstr)
 		}){
-			if let wv = webview { // FIXME: Selector(gotoURL:) to nextResponder
+			if let wv = webview as? MPWebView { // FIXME: Selector(gotoURL:) to nextResponder
 				wv.notifier?.authorizeNotifications(fromOrigin: url) // user typed this address in so they "trust" it to not be spammy?
 				view.window?.makeFirstResponder(wv) // no effect if this vc was brought up as a modal sheet
 				warn(url.description)
 				wv.gotoURL(url)
-				cancelOperation(self)
+				cancelOperation(self) // cancel our text-inputting session
+			} else if let wv = webview { // FIXME: Selector(gotoURL:) to nextResponder
+				view.window?.makeFirstResponder(wv) // no effect if this vc was brought up as a modal sheet
+				warn(url.description)
+				wv.gotoURL(url)
+				cancelOperation(self) // cancel our text-inputting session
 			} else if let parent = parent { // tab-less browser window ...
 				parent.addChild(WebViewControllerOSX(webview: MPWebView(url: url))) // is parentVC the toolbar or contentView VC??
 			} else if let presenter = presentingViewController { // urlbox is a popover/sheet ...
