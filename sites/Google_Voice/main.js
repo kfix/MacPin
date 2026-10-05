@@ -10,7 +10,7 @@ const voice = {
 	url: "https://voice.google.com",
 	postinject: ["automators"]
 };
-let voiceTab = new WebView(voice); // start loading right away, its a big gClosure app
+let voiceTab = new WebView(voice); // start loading right away, it's a big app
 
 function unhideApp(tab) {
 	if (tab) browser.tabSelected = tab;

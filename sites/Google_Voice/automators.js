@@ -1,3 +1,11 @@
+/*
+ * injected funcs for doing stuff with the googlePhone
+ *
+ *  take a look at https://github.com/jerrod-lankford/google-voice-desktop-app for more possibilities
+ *  (SMS send/recv)
+ * _gv.soyProto has some interseting stuff in it, like .VoiceClientAccount (current phone number)
+ */
+
 	function getCallBox() { return document.getElementsByTagName('gv-make-call-panel')[0].getElementsByTagName('input')[0]; }
 
 	function inputAddress(addr, endkeys) {
@@ -54,6 +62,3 @@
 		tgt.click();
 		return;
 	}, 1000); } //wait for contact to get found
-
-
-// _gv.soyProto has some interseting stuff in it, like ..VoiceClientAccount (current phoen number)
