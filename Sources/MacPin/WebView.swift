@@ -624,11 +624,11 @@ final class MPWebView: WKWebView, WebViewScriptExports {
 		//prefs._isStandalone = true // `window.navigator.standalone == true` mimicing MobileSafari's springboard-link shell mode
 		//prefs.minimumFontSize = 14 //for blindies
 		prefs.javaScriptCanOpenWindowsAutomatically = true;
-//#if WK2LOG
+#if WK2LOG
 		prefs._diagnosticLoggingEnabled = true
-		//prefs._logsPageMessagesToSystemConsoleEnabled = true // dumps to ASL
+		prefs._logsPageMessagesToSystemConsoleEnabled = true // dumps to ASL
 		//prefs._javaScriptRuntimeFlags = 0 // ??
-//#endif
+#endif
 		//prefs._loadsImagesAutomatically = true // STP v20: https://github.com/WebKit/webkit/commit/326fc529da43b4a028a3a1644edb2198d23ecb68
 		configuration.preferences = prefs
 		configuration.suppressesIncrementalRendering = false

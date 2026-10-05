@@ -36,9 +36,9 @@ class WebViewController: ViewController { //, WebViewControllerScriptExports {
 		}
 		//webview._historyDelegate = self
 
-//#if DEBUG
+#if DEBUG
 		webview._diagnosticLoggingDelegate = self
-//#endif
+#endif
 		webview.configuration.processPool._downloadDelegate = self
 		webview.configuration.processPool._setCanHandleHTTPSServerTrustEvaluation(true)
 
