@@ -29,6 +29,9 @@ Custom URL schemes can also be registered to launch a MacPin App from any other 
 
 ## Included Apps in the [Release](https://github.com/kfix/MacPin/releases)
 
+### selfhosterings
+* [Home Assistant.app](https://my.home-assistant.io)
+
 ### Gooblers
 * [Google Drive.app](https://drive.google.com)
 * [Google Photos.app](https://photos.google.com)
