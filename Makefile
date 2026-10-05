@@ -3,7 +3,7 @@ export
 #^ export all the variables
 builddir			?= build
 
-VERSION				:= 2022.0.0
+VERSION				:= 2026.0.0
 
 macpin				:= MacPin
 macpin_sites		?= sites
@@ -230,7 +230,7 @@ $(appdir)/%.app: $(macpin_sites)/% $(macpin_sites)/%/* $(appdir)/%.app/Contents/
 	COMMAND_MODE=legacy cp -fRL templates/Resources $@/Contents
 	#git ls-files -zc $(bundle_untracked) $(macpin_sites)/$* | xargs -0 -J % install -DT % $@/Contents/Resources/
 	(($(bundle_untracked))) || git archive HEAD $(macpin_sites)/$*/ | tar -xv --strip-components 2 -C $@/Contents/Resources
-	(($(bundle_untracked))) && COMMAND_MODE=legacy cp -fRL $(macpin_sites)/$*/* $@/Contents/Resources/ || true
+	(($(bundle_untracked))) && COMMAND_MODE=legacy cp -lfRL $(macpin_sites)/$*/* $@/Contents/Resources/ || true
 	[ ! -d $@/Contents/Resources/Library ] || ln -sfh Resources/Library $@/Contents/Library
 	plutil -replace NSHumanReadableCopyright -string "built $(shell date) by $(shell id -F)" $@/Contents/Info.plist >/dev/null
 	[ ! -f "$(macpin_sites)/$*/Makefile" ] || $(MAKE) -C $@/Contents/Resources
