@@ -21,7 +21,7 @@ var docTab = new WebView({
 	//inspectorVisible: true // works but is floating window, annoying
 });
 var gitTab = new WebView('https://github.com/kfix/MacPin');
-var gooTab = new WebView({url: "http://google.com"})
+var wkbTab = new WebView({url: "https://webkit.org/blog"})
 
 let browser = new BrowserWindow();
 
@@ -332,7 +332,7 @@ app.on('AppWillFinishLaunching', (AppUI) => {
 
 	// shuffle the _tabs using the tabs Proxy
 	browser.tabs.push(gitTab);
-	browser.tabs.push(gooTab);
+	browser.tabs.push(wkbTab);
 	browser.tabs.push(docTab);
 	browser.tabs.reverse(); // selection will change to the pushed tab that was flipped #0
 
