@@ -38,7 +38,7 @@ Custom URL schemes can also be registered to launch a MacPin App from any other 
 
 ### MetaVerses
 * [Facebook.app](https://m.facebook.com/home.php) (mobile version!)
-* [Messenger.app](https://www.messenger.com/hangouts)
+* [Messenger.app](https://www.messenger.com/)
 * [WhatsApp.app](https://web.whatsapp.com)
 
 ### et cetera
