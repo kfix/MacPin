@@ -37,7 +37,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: allapps-${{ matrix.runs-on }}.tar.xz
+          name: macpin-allapps-arm64.tar.xz
           path: ${{ steps.getpaths.outputs.TXZ_PATH }}
 
 ##macos_sonoma_x86:
@@ -71,5 +71,5 @@ jobs:
 ##    - name: Upload artifact
 ##      uses: actions/upload-artifact@v4
 ##      with:
-##        name: allapps-${{ matrix.runs-on }}.tar.xz
+##        name: macpin-allapps-x86.tar.xz
 ##        path: ${{ steps.getpaths.outputs.TXZ_PATH }}
