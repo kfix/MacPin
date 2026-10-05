@@ -35,7 +35,7 @@ jobs:
         run: |
           make txz
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
-          name: allapps.tar.xz
+          name: allapps-${{ matrix.runs-on }}.tar.xz
           path: ${{ steps.getpaths.outputs.TXZ_PATH }}
