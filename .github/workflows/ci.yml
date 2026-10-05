@@ -6,15 +6,17 @@ on:
     branches: [main]
 
 jobs:
-  macos_ventura:
-    runs-on: macos-13
+  macos_sonoma:
+    # check https://github.com/actions/runner-images for available versions
+    runs-on: macos-14
 
     strategy:
       matrix:
         xcode:
-          - "14.0" # Swift 5.5
+          # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-Readme.md
+          - "15.4"
 
-    name: "macOS Ventura (Xcode ${{ matrix.xcode }})"
+    name: "macOS 14 Sonoma (Xcode ${{ matrix.xcode }})"
 
     steps:
       - name: Checkout
