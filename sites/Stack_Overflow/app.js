@@ -4,13 +4,20 @@
 
 var delegate = {}; // our delegate to receive events from the webview app
 
+var stO = {
+	url: "http://stackoverflow.com/",
+	useSystemAppearance: true,
+	agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Mobile/12B411" // mobile version uses full screen for content
+};
+
 function search(query) {
 	console.log(query);
 	$.browser.tabSelected = new $.WebView({
-		url: "http://stackoverflow.com/search?q=" + query,
-		agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Mobile/12B411" // mobile version uses full screen for content
+		...stO,
+		url: "http://stackoverflow.com/search?q=" + query
 	});
 }
+
 delegate.launchURL = function(url) {
 	console.log("app.js: launching " + url);
 	var comps = url.split(':'),
@@ -34,7 +41,10 @@ delegate.decideNavigationForURL = function(url) {
 		case "https":
 			if (!addr.startsWith("//stackoverflow.com") &&
 				!addr.startsWith("//stackexchange.com") &&
+				!addr.startsWith("//www.google.com/recaptcha") &&
+				!addr.startsWith("//challenges.cloudflare.com") &&
 				!addr.startsWith("//tpc.googlesyndication.com")
+				// FIXME: and a ton of other ad-tracking domains...
 			) {
 				$.app.openURL(url); //pop all external links to system browser
 				console.log("opened "+url+" externally!");
@@ -59,10 +69,7 @@ delegate.AppFinishedLaunching = function() {
 		this.launchURL($.launchedWithURL);
 		$.launchedWithURL = '';
 	} else {
-		$.browser.tabSelected = new $.WebView({
-			url: "http://stackoverflow.com",
-			agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Mobile/12B411" // mobile version uses full screen for content
-		});
+		$.browser.tabSelected = new $.WebView(stO);
 	}
 };
 

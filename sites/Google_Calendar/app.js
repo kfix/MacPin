@@ -10,6 +10,7 @@
 var delegate = {}; // our delegate to receive events from the webview app
 var calTab, calendar = {
 	transparent: false,
+	useSystemAppearance: true,
 	url: "https://calendar.google.com"
 };
 var calendarAlt = Object.assign({}, calendar, {url: "https://calendar.google.com/calendar/b/1"});
@@ -144,6 +145,7 @@ delegate.decideNavigationForURL = function(url, tab) {
 				!addr.startsWith("//www.youtube.com") && // yt vids are usually embedded players
 				!addr.startsWith("//youtube.googleapis.com/embed/") &&
 				!addr.startsWith("//www.google.com/a/") &&
+				!addr.startsWith("//ogs.google.com") &&
 				!addr.startsWith("//myaccount.google.com") &&
 				!addr.startsWith("//www.google.com/tools/feedback/content_frame") &&
 				!addr.startsWith("//www.google.com/settings")
@@ -174,8 +176,6 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 	}
 }
 
-let enDarken = require('enDarken.js');
-
 delegate.AppFinishedLaunching = function() {
 	//$.app.registerURLScheme('gcalendar');
 	//$.app.registerUTI('dyn.???'); // *.ical
@@ -197,7 +197,6 @@ delegate.AppFinishedLaunching = function() {
 		);
 	}
 
-	$.browser.addShortcut('Paint It Black', [], enDarken);
 
 };
 delegate; //return this to macpin

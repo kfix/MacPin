@@ -8,15 +8,14 @@ let browser = new BrowserWindow();
 
 const chat = {
 	url: "https://chat.google.com",
+	useSystemAppearance: true
 };
-let chatTab = new WebView(chat); // start loading right way, its a big Closure app
+let chatTab = new WebView(chat); // start loading right way, its a big app
 
 function unhideApp(tab) {
 	if (tab) browser.tabSelected = tab;
 	browser.unhideApp();
 };
-
-const enDarken = require('enDarken.js');
 
 const setAgent = function(agent, tab) { tab.userAgent = agent; };
 // looks like a reload has to be done for this to take full effect.
@@ -24,7 +23,7 @@ const setAgent = function(agent, tab) { tab.userAgent = agent; };
 app.on("decideNavigationForClickedURL", function(url, tab, mainFrame) {
 	if (
 		!url.startsWith("https://accounts.google.com")
-		&& !url.startsWith("https://hangouts.google.com")
+		&& !url.startsWith("https://ogs.google.com")
 		&& !url.startsWith("https://www.google.com/a/")
 		&& !url.startsWith("https://g.co")
 		) { // open all links externally except those above
@@ -57,11 +56,9 @@ app.on('handleClickedNotification', (note) => {
 
 app.on('AppWillFinishLaunching', (AppUI) => {
 	browser.addShortcut("Log into Google Account", "https://accounts.google.com/signin");
-	browser.addShortcut('Dark Mode', [], enDarken);
 	browser.addShortcut('UA: default', [false], setAgent);
 
 	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
-	enDarken(chatTab);
 });
 
 

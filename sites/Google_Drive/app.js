@@ -9,7 +9,8 @@
 
 var delegate = {}; // our delegate to receive events from the webview app
 var driveTab, drive = {
-	url: "https://drive.google.com"
+	url: "https://drive.google.com",
+	useSystemAppearance: true,
 };
 var driveAlt = Object.assign({}, drive, {url: "https://drive.google.com/drive/u/1"});
 var sheets = Object.assign({}, drive, {url: "https://docs.google.com/spreadsheets/"});
@@ -142,6 +143,7 @@ delegate.decideNavigationForURL = function(url, tab) {
 				!addr.startsWith("//www.youtube.com") && // yt vids are usually embedded players
 				!addr.startsWith("//youtube.googleapis.com/embed/") &&
 				!addr.startsWith("//www.google.com/a/") &&
+				!addr.startsWith("//ogs.google.com") &&
 				!addr.startsWith("//myaccount.google.com") &&
 				!addr.startsWith("//www.google.com/tools/feedback/content_frame") &&
 				!addr.startsWith("//www.google.com/settings")
@@ -172,8 +174,6 @@ delegate.handleDragAndDroppedURLs = function(urls) {
 	}
 }
 
-let enDarken = require('enDarken.js');
-
 delegate.AppFinishedLaunching = function() {
 	$.app.registerURLScheme('gdrive');
 	//$.app.registerURLScheme('googledrive'); //iOS
@@ -187,7 +187,6 @@ delegate.AppFinishedLaunching = function() {
 	$.browser.addShortcut('Presentations', presentation);
 	$.browser.addShortcut("Add a Google log-in", 'https://accounts.google.com/AddSession');
 	$.browser.addShortcut('Use next Google log-in', ['gotoNextGoogleAccount']);
-	$.browser.addShortcut("Install 'Open in Google Drive app' service", `http://github.com/kfix/MacPin/tree/master/extras/${escape('Open in Google Drive app.workflow')}`);
 	$.browser.addShortcut('Enable Redirection to external domains', ['toggleRedirection', true]);
 	$.browser.addShortcut('Disable Redirection (default)', ['toggleRedirection', false]);
 
@@ -201,8 +200,5 @@ delegate.AppFinishedLaunching = function() {
 			}
 		);
 	}
-
-	$.browser.addShortcut('Paint It Black', [], enDarken);
-
 };
 delegate; //return this to macpin

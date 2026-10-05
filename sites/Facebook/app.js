@@ -10,9 +10,10 @@
 var delegate = {}; // our delegate to receive events from the webview app
 var fbTab, fb = {
 		url: "https://m.facebook.com/home.php",
-		preinject: ['unpreloader'], // this prevents buffering every video in a feed. If you have a fast Mac and Internet, comment out this line
+		useSystemAppearance: true,
+		//preinject: ['unpreloader'], // this prevents buffering every video in a feed. If you have a fast Mac and Internet, comment out this line
 		//postinject: ['styler'], agent: "Mozilla/5.0 (iPad; CPU OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4"
-		agent: "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.2311.38 Mobile Safari/537.36" //news-feed on Chromedroid is full-width
+		//agent: "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.2311.38 Mobile Safari/537.36" //news-feed on Chromedroid is full-width
 };
 fbTab = $.browser.tabSelected = new $.WebView(fb);
 $.browser.addShortcut("Facebook Home", fb);
@@ -20,9 +21,6 @@ $.browser.addShortcut("Facebook Home", fb);
 delegate.setAgent = function(agent) { $.browser.tabSelected.userAgent = agent; };
 $.browser.addShortcut('UA: Android 5 / Chrome 36', ["setAgent", "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.2311.38 Mobile Safari/537.36"]);
 // FB sets margin-* to be 0 on a bunch of elements (header jewels) for chr36
-
-let enDarken = require('enDarken.js');
-$.browser.addShortcut('Dark Mode', [], enDarken);
 
 function search(query) {
 	$.browser.tabSelected = fbTab;
@@ -58,7 +56,7 @@ delegate.handleUserInputtedInvalidURL = function(query) {
 };
 
 delegate.AppFinishedLaunching = function() {
-	$.app.registerURLScheme('facebook');
+	//$.app.registerURLScheme('facebook');
 	//$.app.registerURLScheme('fb'); // claimed by AddressBookUrlForwarder.app http://apple.stackexchange.com/a/105047
 	//`open -a AddressBookUrlForwarder.app fb://profile/4` to see the Zuckster in safari ...
 
