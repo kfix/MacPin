@@ -6,20 +6,35 @@
 const {app, BrowserWindow, WebView} = require('@MacPin');
 let browser = new BrowserWindow();
 
-const ha = {
-	url: "http://homeassistant",
+const ha_redir = {
+	url: "https://my.home-assistant.io/redirect/overview/",
+	// FIXME: bundle a local html that functions as a redirector
+	useSystemAppearance: true,
 };
-let haTab = new WebView(ha); // start loading right away
+let haTab = new WebView(ha_redir); // start loading right away
 
 function unhideApp(tab) {
 	if (tab) browser.tabSelected = tab;
 	browser.unhideApp();
 };
 
-const setAgent = function(agent, tab) { tab.userAgent = agent; };
-// looks like a reload has to be done for this to take full effect.
-
 app.on("decideNavigationForClickedURL", function(url, tab, mainFrame) {
+	if (!tab.allowAnyRedir) {
+		tab.allowAnyRedir = false
+		tab.load_url(url);
+		return true;
+	}
+	if (
+		!url.startsWith("https://homeassistant")
+		&& !url.startsWith("http://homeassistant")
+		&& !url.startsWith("https://my.home-assistant.io")
+		) { // open all links externally except those above
+			app.openURL(url);
+			return true;
+	}
+	if (!mainFrame) {
+		console.log(`<a href="${url}" target=_blank>`);
+	}
 	return false;
 });
 
@@ -36,8 +51,6 @@ app.on('handleClickedNotification', (note) => {
 
 
 app.on('AppWillFinishLaunching', (AppUI) => {
-	browser.addShortcut('UA: default', [false], setAgent);
-
 	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
 });
 
