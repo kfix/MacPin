@@ -6,15 +6,15 @@ on:
     branches: [main]
 
 jobs:
-  macos_big_sur:
-    runs-on: macos-11
+  macos_ventura:
+    runs-on: macos-13
 
     strategy:
       matrix:
         xcode:
-          - "13.2" # Swift 5.5
+          - "14.0" # Swift 5.5
 
-    name: "macOS Big Sur (Xcode ${{ matrix.xcode }})"
+    name: "macOS Ventura (Xcode ${{ matrix.xcode }})"
 
     steps:
       - name: Checkout
