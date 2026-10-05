@@ -1,4 +1,4 @@
-// swift-tools-version:5.10
+// swift-tools-version:5.7
 import PackageDescription
 import Foundation
 let package = Package(
