@@ -634,20 +634,41 @@ final class MPWebView: WKWebView, WebViewScriptExports {
 		configuration.suppressesIncrementalRendering = false
 
 		var dataStore = privacy ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default()
+		// macOS14: https://webkit.org/blog/14423/building-profiles-with-new-webkit-api/
+		//  if isolated: WKWebsiteDataStore(forIdentifier: <UUID-or-string>)
 
-		if #available(macOS 10.14.4, iOS 12.2, *) {
-			let dataStoreConf = privacy ? _WKWebsiteDataStoreConfiguration(nonPersistentConfiguration: ()) : _WKWebsiteDataStoreConfiguration()
+		// configure proxy settings, which is oddly-slaved to the dataStore's config
+		if #available(macOS 14.0, *) {
+			// https://developer.apple.com/documentation/network/proxyconfiguration
+			// seems like direct-to "plain" proxies are no longer on the menu
 
-			if let proxyURL = URL(string: proxy), !proxy.isEmpty {
-				dataStoreConf.httpProxy = proxyURL
-				warn("HTTP proxy: \(dataStoreConf.httpProxy?.absoluteString)")
+			if let proxyURL = URL(string: proxy), !proxy.isEmpty,
+				let host = proxyURL.host, let port = proxyURL.port, let uport = UInt16(exactly: port) {
+				let endpoint = NWEndpoint.hostPort(
+					host: NWEndpoint.Host(host),
+					port: NWEndpoint.Port(integerLiteral: uport)
+				)
+				let proxyConf = ProxyConfiguration(
+					httpCONNECTProxy: endpoint,
+					tlsOptions: nil // FIXME: check port == 443 || scheme == https
+				)
+				warn("HTTP (CONNECT) proxy: \(endpoint)")
+				dataStore.proxyConfigurations.append(proxyConf)
 			}
-			if let sproxyURL = URL(string: sproxy), !sproxy.isEmpty {
-				dataStoreConf.httpsProxy = sproxyURL
-				warn("HTTPS proxy: \(dataStoreConf.httpsProxy?.absoluteString)")
+
+			if let sproxyURL = URL(string: sproxy), !sproxy.isEmpty,
+				let host = sproxyURL.host, let port = sproxyURL.port, let uport = UInt16(exactly: port) {
+				let endpoint = NWEndpoint.hostPort(
+					host: NWEndpoint.Host(host),
+					port: NWEndpoint.Port(integerLiteral: uport),
+				)
+				let proxyConf = ProxyConfiguration(
+					httpCONNECTProxy: endpoint,
+					tlsOptions: nil // FIXME: check port == 443 || scheme == https
+				)
+				warn("HTTPS (CONNECT) proxy: \(endpoint)")
+				dataStore.proxyConfigurations.append(proxyConf)
 			}
-			// buggy! _init creates broken webviews....
-			//dataStore = dataStore._init(with: dataStoreConf)
 		}
 
 		//if #available(OSX 10.11, iOS 9, *) {
