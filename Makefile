@@ -186,6 +186,7 @@ $(appdir)/%.app/Contents/Resources/Icon.icns $(appdir)/%.app/Contents/Resources/
 	    --platform macosx \
 		--minimum-deployment-target 10.12 --target-device mac \
 		--compress-pngs --compile $(dir $@) $(realpath $(filter %.xcassets, $^)) >/dev/null
+	cp $(realpath $(filter %.xcassets, $^)/Icon.icns) $(dir $@)/
 	test -f $@ || { echo "error: $@ was not created by actool!" && cat $@.plist && exit 1; }
 	# | grep '/* com.apple.actool.compilation-results */\n\w+ Icon.icns'
 
@@ -259,7 +260,6 @@ $(appdir)/%.app/Assets.car: $(xcassets)/%.xcassets $(xcassets)/icons8.xcassets
 	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
 		--platform $(sdk) --minimum-deployment-target $(target_ver_ios)  --target-device iphone  --target-device ipad --app-icon AppIcon \
 		--compress-pngs --compile $(dir $@) $(realpath $(filter %.xcassets, $^)) > /dev/null
-	cp $(realpath $(filter %.xcassets, $^)/Icon.icns) $(dir $@)/
 	test -f $@ || { echo "error: $@ was not created by actool!" && cat $@.plist && exit 1; }
 
 $(appdir)/%.app/LaunchScreen.nib: templates/$(platform)/LaunchScreen.xib
