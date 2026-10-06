@@ -8,6 +8,7 @@ let browser = new BrowserWindow();
 
 const voice = {
 	url: "https://voice.google.com",
+	useSystemAppearance: true,
 	postinject: ["automators"]
 };
 let voiceTab = new WebView(voice); // start loading right away, it's a big app
@@ -23,12 +24,9 @@ const setAgent = function(agent, tab) { tab.userAgent = agent; };
 app.on("decideNavigationForClickedURL", function(url, tab, mainFrame) {
 	if (
 		!url.startsWith("https://talkgadget.google.com")
+		&& !url.startsWith("https://ogs.google.com")
 		&& !url.startsWith("https://accounts.google.com")
-		&& !url.startsWith("https://hangouts.google.com")
-		&& !url.startsWith("https://plus.google.com/hangouts/")
 		&& !url.startsWith("https://www.google.com/a/")
-		&& !url.startsWith(meet.url)
-		&& !url.startsWith(allo.url)
 		&& !url.startsWith(voice.url)
 		&& !url.startsWith("https://g.co")
 		) { // open all links externally except those above
@@ -77,7 +75,7 @@ app.on('handleUserInputtedInvalidURL', function(query, tab) {
 	return false;
 });
 
-app.on('launchURL', function(url) { // app.openURL(/[sms|hangouts|tel]:.*/) calls this
+app.on('launchURL', function(url) { // app.openURL(/[sms|tel]:.*/) calls this
 	console.log("app.js: launching " + url);
 	var comps = url.split(':'),
 		scheme = comps.shift(),

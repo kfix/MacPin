@@ -6,35 +6,30 @@
 const {app, BrowserWindow, WebView} = require('@MacPin');
 let browser = new BrowserWindow();
 
-const chat = {
-	url: "https://chat.google.com",
-	useSystemAppearance: true
+const ha_redir = {
+	url: `file://${app.resourcePath}/ha_redirector.html`,
+	useSystemAppearance: true,
 };
-let chatTab = new WebView(chat); // start loading right way, its a big app
+let haTab = new WebView(ha_redir); // start loading right away
 
-function unhideApp(tab) {
-	if (tab) browser.tabSelected = tab;
-	browser.unhideApp();
+function navToPage(url, tab) {
+	tab.load_url(url)
 };
-
-const setAgent = function(agent, tab) { tab.userAgent = agent; };
-// looks like a reload has to be done for this to take full effect.
 
 app.on("decideNavigationForClickedURL", function(url, tab, mainFrame) {
+	if (!tab.allowAnyRedir) {
+		tab.allowAnyRedir = false
+		tab.load_url(url);
+		return true;
+	}
 	if (
-		!url.startsWith("https://accounts.google.com")
-		&& !url.startsWith("https://ogs.google.com")
-		&& !url.startsWith("https://www.google.com/a/")
-		&& !url.startsWith("https://g.co")
+		!url.startsWith(`file://${app.resourcePath}`)
+		&& !url.startsWith("https://homeassistant")
+		&& !url.startsWith("http://homeassistant")
+		&& !url.startsWith("https://my.home-assistant.io")
 		) { // open all links externally except those above
 			app.openURL(url);
 			return true;
-	}
-	if (url.startsWith("https://www.google.com/url?q=")) {
-		// stripping obnoxious google redirector
-		url = decodeURIComponent(url.slice(29));
-		app.openURL(url);
-		return true;
 	}
 	if (!mainFrame) {
 		console.log(`<a href="${url}" target=_blank>`);
@@ -53,15 +48,11 @@ app.on('handleClickedNotification', (note) => {
 	return false;
 });
 
-
 app.on('AppWillFinishLaunching', (AppUI) => {
-	browser.addShortcut("Log into Google Account", "https://accounts.google.com/signin");
-	browser.addShortcut('UA: default', [false], setAgent);
-
+	browser.addShortcut('Reset Home Assistant URL', [`file://${app.resourcePath}/ha_redirector.html#reset`], navToPage); // maybe per-tab shortcuts could be a thing...
 	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
 });
 
-
 app.on('AppFinishedLaunching', function(launchURLs) {
-	browser.tabSelected = chatTab;
+	browser.tabSelected = haTab;
 });

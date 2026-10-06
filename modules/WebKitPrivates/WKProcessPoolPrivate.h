@@ -35,6 +35,11 @@
 //- (void)_automationCapabilitiesDidChange WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 //- (void)_setAutomationSession:(_WKAutomationSession *)automationSession WK_AVAILABLE(WK_MAC_TBA, WK_IOS_TBA);
 
+- (void)_registerURLSchemeAsCanDisplayOnlyIfCanRequest:(NSString *)scheme WK_API_AVAILABLE(macos(10.14), ios(12.0));
+- (void)_registerURLSchemeAsSecure:(NSString *)scheme WK_API_AVAILABLE(macos(12.0), ios(15.0));
+- (void)_registerURLSchemeAsBypassingContentSecurityPolicy:(NSString *)scheme WK_API_AVAILABLE(macos(12.0), ios(15.0));
+- (void)_setDomainRelaxationForbiddenForURLScheme:(NSString *)scheme WK_API_AVAILABLE(macos(12.0), ios(15.0));
+
 // Test only. Returns web processes running web pages (does not include web processes running service workers)
 - (size_t)_webPageContentProcessCount WK_API_AVAILABLE(macos(10.13.4), ios(11.3));
 
