@@ -129,6 +129,7 @@ GH_RELEASE_JSON = '{"tag_name": "v$(VERSION)","target_commitish": "master","name
 
 $(xcassets)/%.xcassets: $(macpin_sites)/%/icon.png
 	$(swiftrun_mac) iconify $(icontypes) $< $@
+	iconutil --convert icns $@/Icon.iconset
 
 $(xcassets)/%.xcassets: templates/xcassets/$(platform)/%/*.png
 	for i in $^; do $(swiftrun_mac) iconify --imageset $$i $@; done
@@ -258,6 +259,7 @@ $(appdir)/%.app/Assets.car: $(xcassets)/%.xcassets $(xcassets)/icons8.xcassets
 	xcrun actool --output-format human-readable-text --notices --warnings --print-contents --output-partial-info-plist $@.plist \
 		--platform $(sdk) --minimum-deployment-target $(target_ver_ios)  --target-device iphone  --target-device ipad --app-icon AppIcon \
 		--compress-pngs --compile $(dir $@) $(realpath $(filter %.xcassets, $^)) > /dev/null
+	cp $(realpath $(filter %.xcassets, $^)/Icon.icns) $(dir $@)/
 	test -f $@ || { echo "error: $@ was not created by actool!" && cat $@.plist && exit 1; }
 
 $(appdir)/%.app/LaunchScreen.nib: templates/$(platform)/LaunchScreen.xib
