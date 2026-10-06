@@ -12,7 +12,7 @@ bundle_untracked	?= 0
 appnames			= $(patsubst $(macpin_sites)/%,%.app,$(wildcard $(macpin_sites)/*))
 
 usage help:
-	@printf '\nusage:\tmake (V=1) <target>\n\ntargets:\n%s'
+	@printf '\nusage:\tmake (V=1) (XCODE=1) <target>\n\ntargets:\n%s'
 	@printf '\t%s\n' allapps reinstall uninstall test test.app sites/*
 
 include eXcode.mk

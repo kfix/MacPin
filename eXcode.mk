@@ -70,16 +70,11 @@ verbose				?=
 ###################
 # swift scaffolding
 ###################
-# https://github.com/apple/swift-driver
-ifeq (1,$(CLTOOLS))
+ifneq (1,$(XCODE))
 sdkpath				:= /$(shell pkgutil --volume / --only-dirs --regexp --files com.apple.pkg.CLTools.* | grep -m1 -E SDKs/MacOSX\\d+.*.sdk$$)
 $(info [$(eXcode)] $$(sdkpath) := $(sdkpath))
 swiftc				:= /$(shell pkgutil --volume / --only-dirs --files com.apple.pkg.CLTools_Executables | grep -m1 usr/bin$$)/swiftc -sdk $(sdk) -target $(arch)-$(target_$(platform)) $(verbose)
-
-# not a thing anymore
-#swiftbuildbin		:= /$(patsubst %-build,%,$(shell pkgutil --volume / --only-files --files com.apple.pkg.CLTools_Executables | grep -m1 bin/swift-build$$))
 swiftbuildbin		:= /usr/bin/swift
-### XXX: appears CLTools doesn't ship SPM libraries yet, so Package.swift can't be compiled
 else
 sdkpath				:= $(shell xcrun --show-sdk-path --sdk $(sdk))
 swiftc				:= xcrun -sdk $(sdk) swiftc -target $(arch)-$(target_$(platform)) $(verbose)

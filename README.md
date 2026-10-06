@@ -98,7 +98,8 @@ app.on('AppFinishedLaunching', function() {
 ```
 
 ## Hacking MacPin
-Building `main` branch requires [macOS 13 "Ventura" with Xcode 14+](https://developer.apple.com/xcode/system-requirements/).
+Building `main` branch requires [macOS 13 "Ventura" with Xcode 14+](https://developer.apple.com/xcode/system-requirements/).  
+Later versions of macOS can build with the [Command Line Tools](https://developer.apple.com/documentation/xcode/installing-the-command-line-tools#Install-the-Command-Line-Tools-package-in-Terminal).
 
 All other branches are obsolete & archived for users locked on older macOS (hardware),  
 but they will recieve no updates.  
