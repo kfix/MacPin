@@ -71,7 +71,7 @@ verbose				?=
 # swift scaffolding
 ###################
 ifneq (1,$(XCODE))
-sdkpath				:= /$(shell pkgutil --volume / --only-dirs --regexp --files com.apple.pkg.CLTools.* | grep -m1 -E SDKs/MacOSX\\d+.*.sdk$$)
+sdkpath				:= /$(shell pkgutil --volume / --only-dirs --regexp --files com.apple.pkg.CLTools.* | grep -E SDKs/MacOSX\\d+.*.sdk$$ | tail -n1)
 $(info [$(eXcode)] $$(sdkpath) := $(sdkpath))
 swiftc				:= /$(shell pkgutil --volume / --only-dirs --files com.apple.pkg.CLTools_Executables | grep -m1 usr/bin$$)/swiftc -sdk $(sdk) -target $(arch)-$(target_$(platform)) $(verbose)
 swiftbuildbin		:= /usr/bin/swift
