@@ -7,15 +7,13 @@ const {app, BrowserWindow, WebView} = require('@MacPin');
 let browser = new BrowserWindow();
 
 const ha_redir = {
-	url: "https://my.home-assistant.io/redirect/overview/",
-	// FIXME: bundle a local html that functions as a redirector
+	url: `file://${app.resourcePath}/ha_redirector.html`,
 	useSystemAppearance: true,
 };
 let haTab = new WebView(ha_redir); // start loading right away
 
-function unhideApp(tab) {
-	if (tab) browser.tabSelected = tab;
-	browser.unhideApp();
+function navToPage(url, tab) {
+	tab.load_url(url)
 };
 
 app.on("decideNavigationForClickedURL", function(url, tab, mainFrame) {
@@ -25,7 +23,8 @@ app.on("decideNavigationForClickedURL", function(url, tab, mainFrame) {
 		return true;
 	}
 	if (
-		!url.startsWith("https://homeassistant")
+		!url.startsWith(`file://${app.resourcePath}`)
+		&& !url.startsWith("https://homeassistant")
 		&& !url.startsWith("http://homeassistant")
 		&& !url.startsWith("https://my.home-assistant.io")
 		) { // open all links externally except those above
@@ -49,8 +48,8 @@ app.on('handleClickedNotification', (note) => {
 	return false;
 });
 
-
 app.on('AppWillFinishLaunching', (AppUI) => {
+	browser.addShortcut('Reset Home Assistant URL', [`file://${app.resourcePath}/ha_redirector.html#reset`], navToPage); // maybe per-tab shortcuts could be a thing...
 	AppUI.browserController = browser; // make sure main app menu can get at our shortcuts
 });
 

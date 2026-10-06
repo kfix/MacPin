@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>HA Redirector</title>
+	<script>
+		const fullHash = window.location.hash;
+
+		// Check if a specific item exists in localStorage
+		var ha_url = localStorage.getItem("homeAssistantUrl");
+
+		if (!ha_url || fullHash == '#reset') {
+			// prompt for the url
+			ha_url = prompt("Enter the URL to your Home Assistant", "http://homeassistant");
+			if (ha_url && URL.canParse(ha_url)) {
+				localStorage.setItem("homeAssistantUrl", ha_url);
+				window.location.href = ha_url;
+			}
+		} else if (URL.canParse(ha_url)) {
+			window.location.href = ha_url;
+		}
+	</script>
+</head>
+<body>
+	<p>No valid URL for Home Assistant stored, please reload to provide one.</p>
+</body>
+</html>
