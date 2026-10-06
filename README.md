@@ -66,7 +66,7 @@ $EDITOR sites/MySite/main.js
 # ideally it should have a transparent back field
 cp ~/Pictures/MySite.png sites/MySite/icon.png
 
-make test_MySite
+make demo_MySite
 # test, tweak, repeat
 
 make install
@@ -115,7 +115,7 @@ Swift Package Manager and GNU Make are the actual builders of the project, Xcode
 ```
 vim Sources/MacPin/*.swift
 vim sites/MacPin/main.js
-make test.app
+make demo.app
 # CTRL-D when finished debugging ...
 ```
 
@@ -123,7 +123,7 @@ make test.app
 The JavaScript API for `*.app/main.js` vaguely mimics Electron's `main.js`.  
 If you want to play with it, run any MacPin app with the `-i` argument in Terminal to get a JS console (or `make repl`).  
 
-~~Debug builds (`make test|test.app|apirepl`) can also be remotely inspected from Safari->Develop-><ComputerName>~~
+~~Debug builds (`make demo|demo.app|apirepl`) can also be remotely inspected from Safari->Develop-><ComputerName>~~
 * Remote Inspection appears broken ATM
 
 ### TODOs
@@ -141,3 +141,4 @@ Some things I just haven't had need to write, but wouldn't mind having:
 * [Firefox for iOS](https://github.com/mozilla/firefox-ios/): another Swift-based browser for iOS.
 * [Chrome for iOS](https://chromium.googlesource.com/chromium/src/+/master/docs/ios/build_instructions.md)[*](https://chromium.googlesource.com/chromium/src.git/+/master/ios/chrome/app/main_application_delegate.mm)
 * [yue](https://github.com/yue/yue-sample-apps/tree/master/browser) on [Mac](https://github.com/yue/yue/blob/master/nativeui/mac/browser_mac.mm) & [Linux](https://github.com/yue/yue/blob/master/nativeui/gtk/browser_gtk.cc)
+* [Pake](https://github.com/tw93/Pake): based on Rust's tauri-wry library

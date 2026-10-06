@@ -13,7 +13,7 @@ appnames			= $(patsubst $(macpin_sites)/%,%.app,$(wildcard $(macpin_sites)/*))
 
 usage help:
 	@printf '\nusage:\tmake (V=1) (XCODE=1) <target>\n\ntargets:\n%s'
-	@printf '\t%s\n' allapps reinstall uninstall test test.app sites/*
+	@printf '\t%s\n' allapps reinstall uninstall demo demo.app sites/*
 
 include eXcode.mk
 mk := $(firstword $(MAKEFILE_LIST))
@@ -79,8 +79,8 @@ endif
 allicons: $(patsubst %,%/Contents/Resources/Icon.icns,$(gen_apps))
 allapps install: $(gen_apps)
 
-zip test apirepl tabrepl $(gen_apps): $(lexecs)
-zip test apirepl tabrepl test.app test.ios: | $(lexecs:%=%.dSYM)
+zip demo apirepl tabrepl $(gen_apps): $(lexecs)
+zip demo apirepl tabrepl demo.app demo.ios: | $(lexecs:%=%.dSYM)
 
 # older OSX/macOS with backported Safari.app have vendored WK/JSC frameworks
 env += DYLD_PRINT_LIBRARIES_POST_LAUNCH=1
@@ -173,7 +173,7 @@ sites/% %.app: $(appdir)/%.app
 	@echo Finished building $<
 #modules/%: $(outdir)/obj/%.o
 
-test_%: $(appdir)/%.app | $(appdir)/MacPin.app
+demo_%: $(appdir)/%.app | $(appdir)/MacPin.app
 	-/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -v $(outdir)/apps/ -apps com.github.kfix.MacPin.MacPin
 	($(env) $^/Contents/MacOS/$(basename $(notdir $^)) -i)
 
@@ -337,33 +337,33 @@ reset:
 uninstall: $(wildcard $(appnames:%=$(installdir)/%))
 	for a in $(filter %.app,$^); do echo del $$a; rm -rf $$a; done
 
-stp test: $(appdir)/$(macpin).app
+stp demo: $(appdir)/$(macpin).app
 	#-defaults delete $(macpin)
 	($(env) $</Contents/MacOS/$(macpin) -i)
 
 apirepl: ; ($< -i)
 tabrepl: ; ($< -t)
 
-stp.app test.app: $(appdir)/$(macpin).app
+stp.app demo.app: $(appdir)/$(macpin).app
 	#banner ':-}' | open -a $$PWD/$^ -f
 	#-defaults delete $(template_bundle_id).$(macpin)
 	#(open $^) &
 	($(env) $^/Contents/MacOS/$(macpin) -i)
 # https://github.com/WebKit/webkit/blob/master/Tools/Scripts/webkitdirs.pm
 
-# debug: $(appdir)/test.app
+# debug: $(appdir)/demo.app
 # http://stackoverflow.com/questions/24715891/access-a-swift-repl-in-cocoa-programs
 dbg.app: $(appdir)/$(macpin).app
 	lldb -f $^/Contents/MacOS/$(macpin) -- -i
 
-# make cross test.ios
+# make cross demo.ios
 # .crash: https://developer.apple.com/library/ios/technotes/tn2151/_index.html
 # & https://developer.apple.com/library/ios/qa/qa1747/_index.html
 # https://github.com/rpetrich/deviceconsole
 /usr/local/bin/ios-sim: ; npm -g install ios-sim
 /usr/local/bin/ios-deploy: ; npm -g install ios-deploy
 ifeq ($(sdk),iphonesimulator)
-test.ios: $(appdir)/$(macpin).app
+demo.ios: $(appdir)/$(macpin).app
 	plutil -convert binary1 $</Info.plist
 	open -a "/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app"
 	@xcrun simctl list | grep $(shell defaults read com.apple.iphonesimulator CurrentDeviceUDID)
@@ -372,11 +372,11 @@ test.ios: $(appdir)/$(macpin).app
 	xcrun simctl install booted $<
 	xcrun simctl launch --console-pty booted $(template_bundle_id).$(macpin) -i
 else ifeq ($(sdk),iphoneos)
-test.ios: $(appdir)/$(macpin).app /usr/local/bin/ios-deploy
+demo.ios: $(appdir)/$(macpin).app /usr/local/bin/ios-deploy
 	ios-deploy -d -b $<
 else
-test.ios: ;
-# make only=sim test.ios
+demo.ios: ;
+# make only=sim demo.ios
 endif
 
 iossim.dump:
@@ -455,5 +455,5 @@ where-out:
 
 $(V).SILENT: # enjoy the silence
 .PRECIOUS: $(appdir)/%.app/Info.plist $(appdir)/%.app/Contents/Info.plist $(appdir)/%.app/entitlements.plist $(appdir)/%.app/Contents/entitlements.plist $(appdir)/%.app/Contents/Resources/Icon.icns $(xcassets)/%.xcassets $(appdir)/%.app/Assets.car $(appdir)/%.app/LaunchScreen.nib $(appdir)/%.app/Contents/Resources/en.lproj/InfoPlist.strings $(appdir)/%.app/en.lproj/InfoPlist.strings $(outdir)/%.entitlements.plist $(appdir)/%.app/Contents/SwiftSupport $(outdir)/Frameworks/%.framework $(outdir)/Frameworks/%.framework/Versions/A/Resources/Info-macOS.plist $(outdir)/Frameworks/%.framework/Versions/A/Frameworks
-.PHONY: clean install reset uninstall reinstall test test.app test.ios apirepl tabrepl allapps tag release  %.app zip $(ZIP) txz $(TXZ) upload sites/% modules/% submake_% wk_symbols jsc_symbols jsc sim_symbols where-txz where-zip where-dmg where-out
+.PHONY: clean install reset uninstall reinstall demo demo.app demo.ios apirepl tabrepl allapps tag release  %.app zip $(ZIP) txz $(TXZ) upload sites/% modules/% submake_% wk_symbols jsc_symbols jsc sim_symbols where-txz where-zip where-dmg where-out
 .SUFFIXES:
